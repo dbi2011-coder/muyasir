@@ -1,0 +1,13 @@
+// data/users.json (سيتم تخزينه في localStorage)
+[
+    {
+        "id": 1,
+        "username": "admin",
+        "password": "admin123",
+        "role": "admin",
+        "name": "مدير النظام",
+        "email": "admin@maysir.com",
+        "phone": "0500000000",
+        "createdAt": "2025-01-01"
+    }
+]

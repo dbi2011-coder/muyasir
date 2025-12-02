@@ -63,7 +63,7 @@
             <div class="filters-section">
                 <div class="search-box">
                     <input type="text" id="teacherSearch" class="form-control" 
-                           placeholder="ابحث عن معلم بالاسم أو رقم الهاتف..." 
+                           placeholder="ابحث عن معلم بالاسم أو البريد الإلكتروني أو رقم الهاتف..." 
                            onkeyup="searchTeachers()">
                     <button class="btn btn-secondary" onclick="searchTeachers()">
                         🔍 بحث
@@ -86,6 +86,7 @@
                         <tr>
                             <th>#</th>
                             <th>اسم المعلم</th>
+                            <th>البريد الإلكتروني</th>
                             <th>رقم الهاتف</th>
                             <th>عدد الطلاب</th>
                             <th>حالة الحساب</th>
@@ -127,6 +128,10 @@
                         <input type="text" id="teacherName" class="form-control" required>
                     </div>
                     <div class="form-group">
+                        <label class="form-label" for="teacherEmail">البريد الإلكتروني *</label>
+                        <input type="email" id="teacherEmail" class="form-control" required>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label" for="teacherPhone">رقم الهاتف *</label>
                         <input type="tel" id="teacherPhone" class="form-control" required>
                     </div>
@@ -164,6 +169,10 @@
                     <div class="form-group">
                         <label class="form-label" for="editTeacherName">اسم المعلم *</label>
                         <input type="text" id="editTeacherName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="editTeacherEmail">البريد الإلكتروني *</label>
+                        <input type="email" id="editTeacherEmail" class="form-control" required>
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="editTeacherPhone">رقم الهاتف *</label>

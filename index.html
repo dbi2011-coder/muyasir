@@ -130,59 +130,3 @@
     <script src="assets/js/main.js"></script>
 </body>
 </html>
-<!-- تحديث التذييل في index.html -->
-<footer class="main-footer">
-    <div class="footer-content">
-        <div class="footer-logo">
-            <img src="assets/images/logo.png" alt="شعار ميسر التعلم">
-            <h3>ميسر التعلم</h3>
-        </div>
-        <div class="footer-info">
-            <p>نظام متكامل لإدارة صعوبات التعلم</p>
-            <p>جميع الحقوق محفوظة &copy; <span id="currentYear">2025</span></p>
-            <p>للمعلم/ صالح عبد العزيز عبدالله العجلان</p>
-        </div>
-        <div class="footer-links">
-            <a href="#" onclick="showPrivacyPolicy()">سياسة الخصوصية</a>
-            <a href="#" onclick="showTerms()">الشروط والأحكام</a>
-            <a href="#" onclick="showContact()">اتصل بنا</a>
-        </div>
-    </div>
-</footer>
-
-<script>
-    // تحديث السنة تلقائياً
-    document.getElementById('currentYear').textContent = new Date().getFullYear();
-    
-    // دوال سياسة الخصوصية والشروط
-    function showPrivacyPolicy() {
-        showModal('سياسة الخصوصية', `
-            <div class="privacy-policy">
-                <h3>سياسة الخصوصية</h3>
-                <p>نحن نحترم خصوصيتك ونلتزم بحماية بياناتك الشخصية...</p>
-                <!-- محتوى سياسة الخصوصية -->
-            </div>
-        `);
-    }
-    
-    function showTerms() {
-        showModal('الشروط والأحكام', `
-            <div class="terms-conditions">
-                <h3>الشروط والأحكام</h3>
-                <p>باستخدامك لهذا النظام، فإنك توافق على الشروط التالية...</p>
-                <!-- محتوى الشروط والأحكام -->
-            </div>
-        `);
-    }
-    
-    function showContact() {
-        showModal('اتصل بنا', `
-            <div class="contact-info">
-                <h3>معلومات الاتصال</h3>
-                <p>📧 البريد الإلكتروني: info@maysir-altaleem.com</p>
-                <p>📞 الهاتف: +966 554389110</p>
-                <p>📍 العنوان: المملكة العربية السعودية</p>
-            </div>
-        `);
-    }
-</script>

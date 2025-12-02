@@ -125,6 +125,7 @@ function loadTeachersData() {
                 <tr>
                     <td>${index + 1}</td>
                     <td>${teacher.name}</td>
+                    <td>${teacher.email}</td>
                     <td>${teacher.phone}</td>
                     <td>${studentCount}</td>
                     <td>
@@ -334,7 +335,7 @@ function searchTeachers() {
     
     rows.forEach(row => {
         const name = row.cells[1].textContent.toLowerCase();
-        const phone = row.cells[2].textContent.toLowerCase();
+        const phone = row.cells[3].textContent.toLowerCase();
         
         if (name.includes(searchTerm) || phone.includes(searchTerm)) {
             row.style.display = '';
@@ -349,7 +350,7 @@ function filterTeachers() {
     const rows = document.querySelectorAll('#teachersTableBody tr');
     
     rows.forEach(row => {
-        const status = row.cells[4].querySelector('.status-badge').className.includes(statusFilter);
+        const status = row.cells[5].querySelector('.status-badge').className.includes(statusFilter);
         
         if (statusFilter === 'all' || status) {
             row.style.display = '';

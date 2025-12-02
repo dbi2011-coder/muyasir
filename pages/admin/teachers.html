@@ -4,155 +4,149 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>إدارة المعلمين - ميسر التعلم</title>
-    <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/admin.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/admin.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="dashboard-container">
-        <!-- الشريط الجانبي -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
+    <!-- رأس النظام -->
+    <div class="header">
+        <div class="container">
+            <div class="header-content">
                 <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
-                    <h2>ميسر التعلم</h2>
+                    <img src="../assets/images/logo.png" alt="شعار ميسر التعلم">
+                    <h1>ميسر التعلم - لوحة المدير</h1>
                 </div>
-            </div>
-            
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
-                <li><a href="teachers.html" class="active"><span class="menu-icon">👨‍🏫</span>إدارة المعلمين</a></li>
-                <li><a href="reports.html"><span class="menu-icon">📋</span>التقارير</a></li>
-                <li><a href="settings.html"><span class="menu-icon">⚙️</span>الإعدادات</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
-            </ul>
-        </aside>
-
-        <!-- المحتوى الرئيسي -->
-        <main class="main-content-dashboard">
-            <!-- رأس اللوحة -->
-            <header class="dashboard-header">
-                <button class="mobile-menu-btn">☰</button>
                 <div class="user-info">
                     <div class="user-welcome">
-                        <div class="welcome-text">مرحباً بعودتك</div>
+                        <div class="welcome-text">مرحباً</div>
                         <div class="user-name" id="userName">مدير النظام</div>
                     </div>
                     <div class="user-avatar" id="userAvatar">م</div>
                 </div>
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="showNotifications()">🔔 الإشعارات</button>
-                </div>
-            </header>
-
-            <!-- محتوى اللوحة -->
-            <div class="dashboard-content">
-                <div class="content-header">
-                    <h1>إدارة المعلمين</h1>
-                    <div class="header-actions">
-                        <button class="btn btn-success" onclick="showAddTeacherModal()">
-                            <span>+ إضافة معلم جديد</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- حقل البحث والتصفية -->
-                <div class="filters-section">
-                    <div class="search-box">
-                        <input type="text" id="teacherSearch" placeholder="ابحث عن معلم..." class="form-control">
-                        <button class="btn btn-primary" onclick="searchTeachers()">بحث</button>
-                    </div>
-                    <div class="filter-options">
-                        <select id="statusFilter" class="form-control" onchange="filterTeachers()">
-                            <option value="all">جميع الحالات</option>
-                            <option value="active">نشط</option>
-                            <option value="suspended">موقوف</option>
-                            <option value="inactive">غير نشط</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- جدول المعلمين -->
-                <div class="table-container">
-                    <table class="table" id="teachersTable">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>اسم المعلم</th>
-                                <th>البريد الإلكتروني</th>
-                                <th>رقم الجوال</th>
-                                <th>عدد الطلاب</th>
-                                <th>الحالة</th>
-                                <th>الإجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody id="teachersTableBody">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- حالة التحميل -->
-                <div id="loadingState" class="loading-state">
-                    <div class="loading-spinner"></div>
-                    <p>جاري تحميل بيانات المعلمين...</p>
-                </div>
-
-                <!-- حالة عدم وجود بيانات -->
-                <div id="emptyState" class="empty-state" style="display: none;">
-                    <div class="empty-icon">👨‍🏫</div>
-                    <h3>لا يوجد معلمين مضافين</h3>
-                    <p>ابدأ بإضافة أول معلم إلى النظام</p>
-                    <button class="btn btn-success" onclick="showAddTeacherModal()">إضافة معلم جديد</button>
-                </div>
             </div>
-        </main>
+        </div>
     </div>
 
-    <!-- نافذة إضافة معلم -->
+    <!-- الشريط الجانبي -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <img src="../assets/images/logo.png" alt="شعار ميسر التعلم">
+                <h2>لوحة التحكم</h2>
+            </div>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="dashboard.html"><span class="menu-icon">🏠</span>لوحة التحكم</a></li>
+            <li><a href="teachers.html" class="active"><span class="menu-icon">👨‍🏫</span>المعلمون</a></li>
+            <li><a href="students.html"><span class="menu-icon">🎓</span>الطلاب</a></li>
+            <li><a href="reports.html"><span class="menu-icon">📊</span>التقارير</a></li>
+            <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
+        </ul>
+    </div>
+
+    <!-- المحتوى الرئيسي -->
+    <div class="main-content-dashboard">
+        <div class="dashboard-header">
+            <div class="content-header">
+                <h1>إدارة المعلمين</h1>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="showAddTeacherModal()">
+                    <span class="btn-icon">➕</span>إضافة معلم جديد
+                </button>
+            </div>
+        </div>
+
+        <div class="dashboard-content">
+            <!-- قسم التصفية والبحث -->
+            <div class="filters-section">
+                <div class="search-box">
+                    <input type="text" id="teacherSearch" class="form-control" 
+                           placeholder="ابحث عن معلم بالاسم أو رقم الهاتف..." 
+                           onkeyup="searchTeachers()">
+                    <button class="btn btn-secondary" onclick="searchTeachers()">
+                        🔍 بحث
+                    </button>
+                </div>
+                <div class="filter-options">
+                    <select id="statusFilter" class="form-control" onchange="filterTeachers()">
+                        <option value="all">جميع الحالات</option>
+                        <option value="active">نشط فقط</option>
+                        <option value="suspended">موقوف فقط</option>
+                        <option value="inactive">غير نشط فقط</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- جدول المعلمين -->
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>اسم المعلم</th>
+                            <th>رقم الهاتف</th>
+                            <th>عدد الطلاب</th>
+                            <th>حالة الحساب</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="teachersTableBody">
+                        <!-- سيتم تعبئة البيانات بواسطة JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- حالات التحميل والبيانات الفارغة -->
+            <div id="loadingState" class="loading-state" style="display: none;">
+                <div class="loading-spinner"></div>
+                <p>جاري تحميل بيانات المعلمين...</p>
+            </div>
+
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <div class="empty-icon">👨‍🏫</div>
+                <h3>لا توجد معلمون مسجلون</h3>
+                <p>ابدأ بإضافة أول معلم إلى النظام</p>
+                <button class="btn btn-success" onclick="showAddTeacherModal()">إضافة معلم جديد</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة إضافة معلم جديد -->
     <div id="addTeacherModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
                 <h3>إضافة معلم جديد</h3>
-                <button class="modal-close" onclick="closeAddTeacherModal()">&times;</button>
+                <button class="modal-close" onclick="closeAddTeacherModal()">×</button>
             </div>
             <div class="modal-body">
                 <form id="addTeacherForm">
                     <div class="form-group">
-                        <label for="teacherName" class="form-label">اسم المعلم</label>
+                        <label class="form-label" for="teacherName">اسم المعلم *</label>
                         <input type="text" id="teacherName" class="form-control" required>
                     </div>
-                    
                     <div class="form-group">
-                        <label for="teacherEmail" class="form-label">البريد الإلكتروني</label>
-                        <input type="email" id="teacherEmail" class="form-control" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="teacherPhone" class="form-label">رقم الجوال</label>
+                        <label class="form-label" for="teacherPhone">رقم الهاتف *</label>
                         <input type="tel" id="teacherPhone" class="form-control" required>
                     </div>
-                    
                     <div class="form-group">
-                        <label for="teacherUsername" class="form-label">اسم المستخدم</label>
+                        <label class="form-label" for="teacherUsername">اسم المستخدم *</label>
                         <input type="text" id="teacherUsername" class="form-control" required>
                     </div>
-                    
                     <div class="form-group">
-                        <label for="teacherPassword" class="form-label">كلمة المرور</label>
-                        <input type="password" id="teacherPassword" class="form-control" required>
+                        <label class="form-label" for="teacherPassword">كلمة المرور *</label>
+                        <input type="password" id="teacherPassword" class="form-control" required minlength="6">
                     </div>
-                    
                     <div class="form-group">
-                        <label for="confirmPassword" class="form-label">تأكيد كلمة المرور</label>
-                        <input type="password" id="confirmPassword" class="form-control" required>
+                        <label class="form-label" for="confirmPassword">تأكيد كلمة المرور *</label>
+                        <input type="password" id="confirmPassword" class="form-control" required minlength="6">
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeAddTeacherModal()">إلغاء</button>
-                <button type="button" class="btn btn-success" onclick="addNewTeacher()">حفظ المعلم</button>
+                <button class="btn btn-secondary" onclick="closeAddTeacherModal()">إلغاء</button>
+                <button class="btn btn-success" onclick="addNewTeacher()">حفظ المعلم</button>
             </div>
         </div>
     </div>
@@ -162,29 +156,22 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3>تعديل بيانات المعلم</h3>
-                <button class="modal-close" onclick="closeEditTeacherModal()">&times;</button>
+                <button class="modal-close" onclick="closeEditTeacherModal()">×</button>
             </div>
             <div class="modal-body">
                 <form id="editTeacherForm">
                     <input type="hidden" id="editTeacherId">
                     <div class="form-group">
-                        <label for="editTeacherName" class="form-label">اسم المعلم</label>
+                        <label class="form-label" for="editTeacherName">اسم المعلم *</label>
                         <input type="text" id="editTeacherName" class="form-control" required>
                     </div>
-                    
                     <div class="form-group">
-                        <label for="editTeacherEmail" class="form-label">البريد الإلكتروني</label>
-                        <input type="email" id="editTeacherEmail" class="form-control" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="editTeacherPhone" class="form-label">رقم الجوال</label>
+                        <label class="form-label" for="editTeacherPhone">رقم الهاتف *</label>
                         <input type="tel" id="editTeacherPhone" class="form-control" required>
                     </div>
-                    
                     <div class="form-group">
-                        <label for="editTeacherStatus" class="form-label">حالة الحساب</label>
-                        <select id="editTeacherStatus" class="form-control">
+                        <label class="form-label" for="editTeacherStatus">حالة الحساب *</label>
+                        <select id="editTeacherStatus" class="form-control" required>
                             <option value="active">نشط</option>
                             <option value="suspended">موقوف</option>
                             <option value="inactive">غير نشط</option>
@@ -193,14 +180,14 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeEditTeacherModal()">إلغاء</button>
-                <button type="button" class="btn btn-primary" onclick="updateTeacher()">حفظ التعديلات</button>
+                <button class="btn btn-secondary" onclick="closeEditTeacherModal()">إلغاء</button>
+                <button class="btn btn-success" onclick="updateTeacher()">تحديث البيانات</button>
             </div>
         </div>
     </div>
 
-    <script src="../../assets/js/dashboard.js"></script>
-    <script src="../../assets/js/admin.js"></script>
-    <script src="../../assets/js/auth.js"></script>
+    <!-- الروابط الخارجية -->
+    <script src="../assets/js/auth.js"></script>
+    <script src="../assets/js/admin.js"></script>
 </body>
 </html>

@@ -1,3 +1,7 @@
+// ============================================
+// 📁 الملف: muyasir-main/assets/js/admin.js
+// ============================================
+
 // إدارة لوحة تحكم المدير
 document.addEventListener('DOMContentLoaded', function() {
     initializeAdminDashboard();
@@ -121,7 +125,6 @@ function loadTeachersData() {
                 <tr>
                     <td>${index + 1}</td>
                     <td>${teacher.name}</td>
-                    <td>${teacher.email}</td>
                     <td>${teacher.phone}</td>
                     <td>${studentCount}</td>
                     <td>
@@ -177,14 +180,13 @@ function closeEditTeacherModal() {
 function addNewTeacher() {
     const form = document.getElementById('addTeacherForm');
     const name = document.getElementById('teacherName').value.trim();
-    const email = document.getElementById('teacherEmail').value.trim();
     const phone = document.getElementById('teacherPhone').value.trim();
     const username = document.getElementById('teacherUsername').value.trim();
     const password = document.getElementById('teacherPassword').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
 
     // التحقق من صحة البيانات
-    if (!name || !email || !phone || !username || !password) {
+    if (!name || !phone || !username || !password) {
         showAuthNotification('يرجى ملء جميع الحقول', 'error');
         return;
     }
@@ -214,7 +216,6 @@ function addNewTeacher() {
         password: password,
         role: 'teacher',
         name: name,
-        email: email,
         phone: phone,
         status: 'active',
         createdAt: new Date().toISOString(),
@@ -242,7 +243,6 @@ function editTeacher(teacherId) {
     // تعبئة النموذج
     document.getElementById('editTeacherId').value = teacher.id;
     document.getElementById('editTeacherName').value = teacher.name;
-    document.getElementById('editTeacherEmail').value = teacher.email;
     document.getElementById('editTeacherPhone').value = teacher.phone;
     document.getElementById('editTeacherStatus').value = teacher.status;
 
@@ -252,11 +252,10 @@ function editTeacher(teacherId) {
 function updateTeacher() {
     const teacherId = parseInt(document.getElementById('editTeacherId').value);
     const name = document.getElementById('editTeacherName').value.trim();
-    const email = document.getElementById('editTeacherEmail').value.trim();
     const phone = document.getElementById('editTeacherPhone').value.trim();
     const status = document.getElementById('editTeacherStatus').value;
 
-    if (!name || !email || !phone) {
+    if (!name || !phone) {
         showAuthNotification('يرجى ملء جميع الحقول', 'error');
         return;
     }
@@ -271,7 +270,6 @@ function updateTeacher() {
 
     // تحديث البيانات
     users[teacherIndex].name = name;
-    users[teacherIndex].email = email;
     users[teacherIndex].phone = phone;
     users[teacherIndex].status = status;
 
@@ -336,10 +334,9 @@ function searchTeachers() {
     
     rows.forEach(row => {
         const name = row.cells[1].textContent.toLowerCase();
-        const email = row.cells[2].textContent.toLowerCase();
-        const phone = row.cells[3].textContent.toLowerCase();
+        const phone = row.cells[2].textContent.toLowerCase();
         
-        if (name.includes(searchTerm) || email.includes(searchTerm) || phone.includes(searchTerm)) {
+        if (name.includes(searchTerm) || phone.includes(searchTerm)) {
             row.style.display = '';
         } else {
             row.style.display = 'none';
@@ -352,7 +349,7 @@ function filterTeachers() {
     const rows = document.querySelectorAll('#teachersTableBody tr');
     
     rows.forEach(row => {
-        const status = row.cells[5].querySelector('.status-badge').className.includes(statusFilter);
+        const status = row.cells[4].querySelector('.status-badge').className.includes(statusFilter);
         
         if (statusFilter === 'all' || status) {
             row.style.display = '';

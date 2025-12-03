@@ -1,3 +1,7 @@
+// ============================================
+// 📁 الملف: muyasir-main/assets/js/committee.js
+// ============================================
+
 // إدارة لجنة صعوبات التعلم
 let currentEditingMemberId = null;
 
@@ -396,32 +400,6 @@ function deleteNote(noteId) {
     loadCommitteeNotes();
 }
 
-// دالة مساعدة لتنسيق التاريخ
-function formatDate(dateString) {
-    if (!dateString) return 'غير محدد';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ar-SA', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-// تصدير الدوال للاستخدام العالمي
-window.showAddMemberModal = showAddMemberModal;
-window.closeAddMemberModal = closeAddMemberModal;
-window.saveCommitteeMember = saveCommitteeMember;
-window.editCommitteeMember = editCommitteeMember;
-window.closeEditMemberModal = closeEditMemberModal;
-window.updateCommitteeMember = updateCommitteeMember;
-window.deleteCommitteeMember = deleteCommitteeMember;
-window.viewMemberCredentials = viewMemberCredentials;
-window.refreshNotes = refreshNotes;
-window.viewNote = viewNote;
-window.markNoteAsRead = markNoteAsRead;
-window.deleteNote = deleteNote;
 // الدوال الرئيسية لواجهة عضو لجنة صعوبات التعلم
 document.addEventListener('DOMContentLoaded', function() {
     initializeCommitteeDashboard();
@@ -485,7 +463,7 @@ function loadAssignedTeachers() {
                 <div class="teacher-avatar">${teacher.name.charAt(0)}</div>
                 <div class="teacher-info">
                     <h4>${teacher.name}</h4>
-                    <p>${teacher.email || ''}</p>
+                    <p>${teacher.phone || ''}</p>
                 </div>
             </div>
             <div class="teacher-stats">
@@ -550,7 +528,7 @@ function showTeacherDetails(teacherId) {
                 <strong>الاسم:</strong> ${teacher.name}
             </div>
             <div class="detail-item">
-                <strong>البريد الإلكتروني:</strong> ${teacher.email || 'غير متوفر'}
+                <strong>اسم المستخدم:</strong> ${teacher.username || 'غير متوفر'}
             </div>
             <div class="detail-item">
                 <strong>رقم الجوال:</strong> ${teacher.phone || 'غير متوفر'}
@@ -770,6 +748,39 @@ function addCommitteeActivity(activity) {
     localStorage.setItem('committeeActivities', JSON.stringify(activities));
 }
 
+// دالة مساعدة لتنسيق التاريخ
+function formatDate(dateString) {
+    if (!dateString) return 'غير محدد';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ar-SA', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function formatTimeAgo(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'الآن';
+    if (diffMins < 60) return `منذ ${diffMins} دقيقة`;
+    if (diffHours < 24) return `منذ ${diffHours} ساعة`;
+    if (diffDays < 7) return `منذ ${diffDays} يوم`;
+    return formatDateShort(dateString);
+}
+
+function generateId() {
+    return Math.floor(Math.random() * 1000000) + 1;
+}
+
 // إنشاء بيانات تجريبية للجنة (للتطوير)
 function createSampleCommitteeData() {
     const currentUser = getCurrentUser();
@@ -805,6 +816,18 @@ function createSampleCommitteeData() {
 }
 
 // تصدير الدوال للاستخدام العالمي
+window.showAddMemberModal = showAddMemberModal;
+window.closeAddMemberModal = closeAddMemberModal;
+window.saveCommitteeMember = saveCommitteeMember;
+window.editCommitteeMember = editCommitteeMember;
+window.closeEditMemberModal = closeEditMemberModal;
+window.updateCommitteeMember = updateCommitteeMember;
+window.deleteCommitteeMember = deleteCommitteeMember;
+window.viewMemberCredentials = viewMemberCredentials;
+window.refreshNotes = refreshNotes;
+window.viewNote = viewNote;
+window.markNoteAsRead = markNoteAsRead;
+window.deleteNote = deleteNote;
 window.showTeacherDetails = showTeacherDetails;
 window.closeTeacherModal = closeTeacherModal;
 window.generateTeacherReport = generateTeacherReport;

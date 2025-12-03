@@ -387,3 +387,19 @@ window.toggleTeacherStatus = toggleTeacherStatus;
 window.deleteTeacher = deleteTeacher;
 window.searchTeachers = searchTeachers;
 window.filterTeachers = filterTeachers;
+// دالة للوصول إلى صفحة الإعدادات
+function showSettings() {
+    window.location.href = 'settings.html';
+}
+
+// تحديث القائمة الجانبية
+document.querySelectorAll('.sidebar-menu a').forEach(link => {
+    if (link.getAttribute('href') === 'settings.html') {
+        link.addEventListener('click', function(e) {
+            if (!getCurrentUser()) {
+                e.preventDefault();
+                showAuthNotification('يجب تسجيل الدخول أولاً', 'error');
+            }
+        });
+    }
+});

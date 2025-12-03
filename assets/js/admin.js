@@ -138,6 +138,9 @@ function loadTeachersData() {
                             <button class="btn btn-sm btn-primary" onclick="editTeacher(${teacher.id})">
                                 تعديل
                             </button>
+                            <button class="btn btn-sm btn-info" onclick="viewTeacherCredentials(${teacher.id})">
+                                بيانات الدخول
+                            </button>
                             <button class="btn btn-sm btn-warning" onclick="toggleTeacherStatus(${teacher.id})">
                                 ${teacher.status === 'active' ? 'إيقاف' : 'تفعيل'}
                             </button>
@@ -230,6 +233,9 @@ function addNewTeacher() {
     showAuthNotification('تم إضافة المعلم بنجاح', 'success');
     closeAddTeacherModal();
     loadTeachersData();
+    
+    // إضافة سجل النظام
+    addSystemLog(`تم إضافة معلم جديد: ${name} (${username})`, 'user');
 }
 
 function editTeacher(teacherId) {
@@ -279,6 +285,9 @@ function updateTeacher() {
     showAuthNotification('تم تحديث بيانات المعلم بنجاح', 'success');
     closeEditTeacherModal();
     loadTeachersData();
+    
+    // إضافة سجل النظام
+    addSystemLog(`تم تحديث بيانات المعلم: ${name}`, 'user');
 }
 
 function toggleTeacherStatus(teacherId) {
@@ -300,6 +309,9 @@ function toggleTeacherStatus(teacherId) {
         
         showAuthNotification(`تم ${actionText} حساب المعلم بنجاح`, 'success');
         loadTeachersData();
+        
+        // إضافة سجل النظام
+        addSystemLog(`تم ${actionText} حساب المعلم: ${teacher.name}`, 'security');
     }
 }
 
@@ -326,6 +338,9 @@ function deleteTeacher(teacherId) {
         
         showAuthNotification('تم حذف المعلم بنجاح', 'success');
         loadTeachersData();
+        
+        // إضافة سجل النظام
+        addSystemLog(`تم حذف المعلم: ${teacher.name}`, 'user');
     }
 }
 
@@ -379,45 +394,6 @@ function updateUserInterface(user) {
     document.getElementById('userAvatar').textContent = user.name.charAt(0);
 }
 
-// تصدير الدوال للاستخدام العالمي
-window.showAddTeacherModal = showAddTeacherModal;
-window.closeAddTeacherModal = closeAddTeacherModal;
-window.editTeacher = editTeacher;
-window.toggleTeacherStatus = toggleTeacherStatus;
-window.deleteTeacher = deleteTeacher;
-window.searchTeachers = searchTeachers;
-window.filterTeachers = filterTeachers;
-// دالة للوصول إلى صفحة الإعدادات
-function showSettings() {
-    window.location.href = 'settings.html';
-}
-
-// تحديث القائمة الجانبية
-document.querySelectorAll('.sidebar-menu a').forEach(link => {
-    if (link.getAttribute('href') === 'settings.html') {
-        link.addEventListener('click', function(e) {
-            if (!getCurrentUser()) {
-                e.preventDefault();
-                showAuthNotification('يجب تسجيل الدخول أولاً', 'error');
-            }
-        });
-    }
-});
-// معالجة الروابط المكسورة
-function handleBrokenLinks() {
-    const links = document.querySelectorAll('a');
-    links.forEach(link => {
-        link.addEventListener('click', function(e) {
-            const href = this.getAttribute('href');
-            if (href && href.includes('.html')) {
-                // يمكن إضافة تحقق إضافي هنا إذا لزم الأمر
-            }
-        });
-    });
-}
-
-// استدعاء الدالة عند تحميل الصفحة
-document.addEventListener('DOMContentLoaded', handleBrokenLinks);
 // ============================================
 // وظائف إدارة بيانات الدخول للمعلمين
 // ============================================
@@ -435,13 +411,16 @@ function viewTeacherCredentials(teacherId) {
     document.getElementById('viewTeacherId').value = teacher.id;
     document.getElementById('viewTeacherName').textContent = teacher.name;
     document.getElementById('viewTeacherUsername').textContent = teacher.username;
-    document.getElementById('viewTeacherPassword').textContent = teacher.password;
+    document.getElementById('viewTeacherPassword').value = teacher.password;
     
     // إخفاء/إظهار كلمة المرور
     const passwordField = document.getElementById('viewTeacherPassword');
     passwordField.type = 'password';
     
     document.getElementById('viewCredentialsModal').classList.add('show');
+    
+    // إضافة سجل النظام
+    addSystemLog(`عرض بيانات دخول المعلم: ${teacher.name}`, 'security');
 }
 
 function closeViewCredentialsModal() {
@@ -499,13 +478,13 @@ function resetTeacherPassword() {
     localStorage.setItem('users', JSON.stringify(users));
     
     // تحديث العرض
-    document.getElementById('viewTeacherPassword').textContent = newPassword;
+    document.getElementById('viewTeacherPassword').value = newPassword;
     document.getElementById('viewTeacherPassword').type = 'password';
     document.querySelector('.toggle-password-btn').innerHTML = '👁️ إظهار';
     
     showAuthNotification('تم تحديث كلمة المرور بنجاح', 'success');
     
-    // إضافة سجل
+    // إضافة سجل النظام
     addSystemLog(`تم إعادة تعيين كلمة مرور المعلم ${users[teacherIndex].name}`, 'security');
 }
 
@@ -579,7 +558,7 @@ function saveTeacherCredentials() {
     
     localStorage.setItem('users', JSON.stringify(users));
     
-    // إضافة سجل
+    // إضافة سجل النظام
     addSystemLog(`تم تحديث بيانات دخول المعلم ${users[teacherIndex].name}`, 'security');
     
     showAuthNotification('تم تحديث بيانات الدخول بنجاح', 'success');
@@ -592,7 +571,81 @@ function saveTeacherCredentials() {
     }, 500);
 }
 
-// تصدير الدوال الجديدة للاستخدام العالمي
+// ============================================
+// دالة مساعدة لإضافة سجل النظام
+// ============================================
+
+function addSystemLog(message, type = 'info', user = null) {
+    try {
+        const logs = JSON.parse(localStorage.getItem('systemLogs') || '[]');
+        const currentUser = getCurrentUser();
+        
+        logs.push({
+            timestamp: new Date().toISOString(),
+            type: type,
+            message: message,
+            user: user || (currentUser ? currentUser.name : 'النظام')
+        });
+        
+        // الاحتفاظ فقط بآخر 1000 سجل
+        if (logs.length > 1000) {
+            logs.splice(0, logs.length - 1000);
+        }
+        
+        localStorage.setItem('systemLogs', JSON.stringify(logs));
+    } catch (error) {
+        console.error('خطأ في إضافة سجل النظام:', error);
+    }
+}
+
+// ============================================
+// دوال إضافية
+// ============================================
+
+// دالة للوصول إلى صفحة الإعدادات
+function showSettings() {
+    window.location.href = 'settings.html';
+}
+
+// تحديث القائمة الجانبية
+document.querySelectorAll('.sidebar-menu a').forEach(link => {
+    if (link.getAttribute('href') === 'settings.html') {
+        link.addEventListener('click', function(e) {
+            if (!getCurrentUser()) {
+                e.preventDefault();
+                showAuthNotification('يجب تسجيل الدخول أولاً', 'error');
+            }
+        });
+    }
+});
+
+// معالجة الروابط المكسورة
+function handleBrokenLinks() {
+    const links = document.querySelectorAll('a');
+    links.forEach(link => {
+        link.addEventListener('click', function(e) {
+            const href = this.getAttribute('href');
+            if (href && href.includes('.html')) {
+                // يمكن إضافة تحقق إضافي هنا إذا لزم الأمر
+            }
+        });
+    });
+}
+
+// استدعاء الدالة عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', handleBrokenLinks);
+
+// تصدير الدوال للاستخدام العالمي
+window.showAddTeacherModal = showAddTeacherModal;
+window.closeAddTeacherModal = closeAddTeacherModal;
+window.editTeacher = editTeacher;
+window.toggleTeacherStatus = toggleTeacherStatus;
+window.deleteTeacher = deleteTeacher;
+window.searchTeachers = searchTeachers;
+window.filterTeachers = filterTeachers;
+window.showSettings = showSettings;
+
+// تصدير دوال إدارة بيانات الدخول
 window.viewTeacherCredentials = viewTeacherCredentials;
 window.closeViewCredentialsModal = closeViewCredentialsModal;
 window.togglePasswordVisibility = togglePasswordVisibility;

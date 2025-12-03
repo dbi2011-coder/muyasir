@@ -202,7 +202,6 @@ function createDefaultUsers() {
             password: 'admin123',
             role: 'admin',
             name: 'مدير النظام',
-            email: 'admin@maysir.com',
             phone: '0500000000',
             status: 'active',
             createdAt: new Date().toISOString(),
@@ -215,7 +214,6 @@ function createDefaultUsers() {
             password: 'teacher123',
             role: 'teacher',
             name: 'المعلم الأول',
-            email: 'teacher1@maysir.com',
             phone: '0511111111',
             status: 'active',
             createdAt: new Date().toISOString(),
@@ -228,7 +226,6 @@ function createDefaultUsers() {
             password: 'student123',
             role: 'student',
             name: 'الطالب الأول',
-            email: 'student1@maysir.com',
             grade: 'الصف الأول',
             subject: 'لغتي',
             teacherId: 2,
@@ -243,7 +240,6 @@ function createDefaultUsers() {
             password: 'committee123',
             role: 'committee',
             name: 'عضو اللجنة الأول',
-            email: 'committee1@maysir.com',
             position: 'مشرف',
             status: 'active',
             createdAt: new Date().toISOString(),
@@ -392,23 +388,23 @@ function handleFailedLogin(username) {
     }
 }
 
-function logLoginAttempt(username, success) {
-    const attempts = JSON.parse(localStorage.getItem('loginAttempts') || '[]');
+function logLoginAttempt(username, success, ipAddress = '127.0.0.1') {
+    const logs = JSON.parse(localStorage.getItem('loginLogs') || '[]');
     
-    attempts.push({
-        username: username,
-        success: success,
+    logs.push({
+        username,
+        success,
+        ipAddress,
         timestamp: new Date().toISOString(),
-        ip: 'localhost', // في تطبيق حقيقي، سيتم الحصول على IP الفعلي
         userAgent: navigator.userAgent
     });
     
-    // الاحتفاظ فقط بآخر 100 محاولة
-    if (attempts.length > 100) {
-        attempts.splice(0, attempts.length - 100);
+    // الاحتفاظ فقط بآخر 1000 محاولة
+    if (logs.length > 1000) {
+        logs.splice(0, logs.length - 1000);
     }
     
-    localStorage.setItem('loginAttempts', JSON.stringify(attempts));
+    localStorage.setItem('loginLogs', JSON.stringify(logs));
 }
 
 function resetLoginForm(submitBtn, originalText) {
@@ -720,38 +716,7 @@ function renewSession() {
     }
 }
 
-// تصدير الدوال للاستخدام العالمي
-window.logout = logout;
-window.getCurrentUser = getCurrentUser;
-window.getSessionData = getSessionData;
-window.renewSession = renewSession;
-// إضافة إلى نهاية الملف الأصلي
-
-/**
- * تسجيل محاولات تسجيل الدخول
- */
-function logLoginAttempt(username, success, ipAddress = '127.0.0.1') {
-    const logs = JSON.parse(localStorage.getItem('loginLogs') || '[]');
-    
-    logs.push({
-        username,
-        success,
-        ipAddress,
-        timestamp: new Date().toISOString(),
-        userAgent: navigator.userAgent
-    });
-    
-    // الاحتفاظ فقط بآخر 1000 محاولة
-    if (logs.length > 1000) {
-        logs.splice(0, logs.length - 1000);
-    }
-    
-    localStorage.setItem('loginLogs', JSON.stringify(logs));
-}
-
-/**
- * التحقق من محاولات تسجيل الدخول الفاشلة المتتالية
- */
+// التحقق من محاولات تسجيل الدخول الفاشلة المتتالية
 function checkFailedLoginAttempts(username, threshold = 5) {
     const logs = JSON.parse(localStorage.getItem('loginLogs') || '[]');
     const recentFailures = logs.filter(log => 
@@ -762,28 +727,6 @@ function checkFailedLoginAttempts(username, threshold = 5) {
     
     return recentFailures.length >= threshold;
 }
-
-/**
- * تحديث الدالة login() الأصلية لتسجيل المحاولات
- */
-const originalLogin = window.login;
-window.login = function() {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    
-    const success = originalLogin.call(this);
-    
-    // تسجيل محاولة تسجيل الدخول
-    logLoginAttempt(username, success);
-    
-    // التحقق من محاولات فاشلة متتالية
-    if (!success && checkFailedLoginAttempts(username)) {
-        showAuthNotification('تم حظر الحساب مؤقتاً بسبب محاولات تسجيل دخول فاشلة متعددة', 'error');
-        return false;
-    }
-    
-    return success;
-};
 
 /**
  * تسجيل تسجيلات الخروج
@@ -799,16 +742,55 @@ function logLogout(userId) {
     localStorage.setItem('logoutLogs', JSON.stringify(logs));
 }
 
-/**
- * تحديث الدالة logout() لتسجيل الخروج
- */
-const originalLogout = window.logout;
-window.logout = function() {
-    const currentUser = getCurrentUser();
+// دالة مساعدة لإنشاء معرف فريد
+function generateId() {
+    return Math.floor(Math.random() * 1000000) + 1;
+}
+
+// دالة مساعدة لتنسيق الوقت
+function formatTimeAgo(dateString) {
+    if (!dateString) return 'منذ فترة';
     
-    if (currentUser) {
-        logLogout(currentUser.id);
-    }
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
     
-    return originalLogout.call(this);
-};
+    if (diffMins < 1) return 'الآن';
+    if (diffMins < 60) return `منذ ${diffMins} دقيقة`;
+    if (diffHours < 24) return `منذ ${diffHours} ساعة`;
+    if (diffDays < 7) return `منذ ${diffDays} يوم`;
+    return `منذ ${Math.floor(diffDays / 7)} أسبوع`;
+}
+
+// دالة مساعدة لتنسيق التاريخ
+function formatDate(dateString) {
+    if (!dateString) return 'غير محدد';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ar-SA', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+// دالة مساعدة لتنسيق التاريخ المختصر
+function formatDateShort(dateString) {
+    if (!dateString) return 'غير محدد';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ar-SA');
+}
+
+// تصدير الدوال للاستخدام العالمي
+window.logout = logout;
+window.getCurrentUser = getCurrentUser;
+window.getSessionData = getSessionData;
+window.renewSession = renewSession;
+window.generateId = generateId;
+window.formatDate = formatDate;
+window.formatDateShort = formatDateShort;
+window.formatTimeAgo = formatTimeAgo;

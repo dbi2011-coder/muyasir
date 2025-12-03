@@ -3,220 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إدارة المعلمين - نظام ميسر التعلم</title>
-    
+    <title>إدارة المعلمين - ميسر التعلم</title>
     <!-- الخطوط -->
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-    
     <!-- الأيقونات -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- الأنماط -->
     <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../assets/css/admin.css">
-    
-    <style>
-        .teacher-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: var(--primary-color);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-size: 1rem;
-        }
-        
-        .teacher-info-cell {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .search-actions {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        
-        .action-buttons .btn-sm {
-            padding: 4px 8px;
-            font-size: 0.8rem;
-        }
-    </style>
+    <link rel="stylesheet" href="../../assets/css/dashboard.css">
 </head>
 <body>
-    <!-- الهيكل الرئيسي -->
-    <div class="dashboard-container">
-        <!-- الشريط الجانبي -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
-                    <h2>ميسر التعلم</h2>
+    <!-- الشريط الجانبي -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
+                <h2>ميسر التعلم</h2>
+            </div>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li><a href="dashboard.html"><i class="menu-icon fas fa-home"></i> لوحة التحكم</a></li>
+            <li><a href="teachers.html" class="active"><i class="menu-icon fas fa-chalkboard-teacher"></i> إدارة المعلمين</a></li>
+            <li><a href="students.html"><i class="menu-icon fas fa-user-graduate"></i> إدارة الطلاب</a></li>
+            <li><a href="reports.html"><i class="menu-icon fas fa-chart-bar"></i> التقارير والإحصائيات</a></li>
+            <li><a href="settings.html"><i class="menu-icon fas fa-cog"></i> إعدادات النظام</a></li>
+            <li><a href="#" onclick="logout()"><i class="menu-icon fas fa-sign-out-alt"></i> تسجيل الخروج</a></li>
+        </ul>
+    </div>
+
+    <!-- المحتوى الرئيسي -->
+    <div class="main-content-dashboard">
+        <!-- رأس الصفحة -->
+        <div class="dashboard-header">
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">م</div>
+                <div class="user-welcome">
+                    <div class="welcome-text">مرحباً بعودتك</div>
+                    <div class="user-name" id="userName">مدير النظام</div>
                 </div>
             </div>
             
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><i class="menu-icon fas fa-home"></i> لوحة التحكم</a></li>
-                <li><a href="teachers.html" class="active"><i class="menu-icon fas fa-chalkboard-teacher"></i> إدارة المعلمين</a></li>
-                <li><a href="students.html"><i class="menu-icon fas fa-user-graduate"></i> إدارة الطلاب</a></li>
-                <li><a href="reports.html"><i class="menu-icon fas fa-chart-bar"></i> التقارير</a></li>
-                <li><a href="settings.html"><i class="menu-icon fas fa-cog"></i> الإعدادات</a></li>
-                <li><a href="#" onclick="logout()"><i class="menu-icon fas fa-sign-out-alt"></i> تسجيل الخروج</a></li>
-            </ul>
-        </aside>
-        
-        <!-- المحتوى الرئيسي -->
-        <main class="main-content-dashboard">
-            <!-- رأس الصفحة -->
-            <header class="dashboard-header">
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="showNotifications()">
+                    <i class="fas fa-bell"></i>
+                    <span class="notification-badge" id="notificationCount">0</span>
+                </button>
                 <button class="mobile-menu-btn" onclick="toggleSidebar()">
                     <i class="fas fa-bars"></i>
                 </button>
-                
-                <div class="header-actions">
-                    <button class="btn btn-secondary" onclick="showNotifications()">
-                        <i class="fas fa-bell"></i>
-                        <span id="notificationCount" class="notification-badge">0</span>
-                    </button>
-                    <div class="user-info">
-                        <div class="user-welcome">
-                            <div class="welcome-text">مرحباً</div>
-                            <div class="user-name" id="userName">مدير النظام</div>
+            </div>
+        </div>
+
+        <!-- محتوى الصفحة -->
+        <div class="dashboard-content">
+            <!-- عنوان الصفحة -->
+            <div class="content-header">
+                <h1><i class="fas fa-chalkboard-teacher"></i> إدارة المعلمين</h1>
+                <button class="btn btn-success" onclick="showAddTeacherModal()">
+                    <i class="fas fa-plus"></i> إضافة معلم جديد
+                </button>
+            </div>
+
+            <!-- الإحصائيات -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-chalkboard-teacher"></i>
                         </div>
-                        <div class="user-avatar" id="userAvatar">م</div>
+                        <div class="stat-numbers">
+                            <div class="stat-number" id="teachersCount">0</div>
+                            <div class="stat-label">معلم مسجل</div>
+                        </div>
                     </div>
                 </div>
-            </header>
-            
-            <!-- محتوى الصفحة -->
-            <div class="dashboard-content">
-                <div class="content-header">
-                    <h1><i class="fas fa-chalkboard-teacher"></i> إدارة المعلمين</h1>
+                
+                <div class="stat-card success">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-user-check"></i>
+                        </div>
+                        <div class="stat-numbers">
+                            <div class="stat-number" id="activeTeachers">0</div>
+                            <div class="stat-label">معلم نشط</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stat-card warning">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-user-clock"></i>
+                        </div>
+                        <div class="stat-numbers">
+                            <div class="stat-number" id="inactiveTeachers">0</div>
+                            <div class="stat-label">معلم غير نشط</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stat-card danger">
+                    <div class="stat-header">
+                        <div class="stat-icon">
+                            <i class="fas fa-user-slash"></i>
+                        </div>
+                        <div class="stat-numbers">
+                            <div class="stat-number" id="suspendedTeachers">0</div>
+                            <div class="stat-label">معلم موقوف</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- فلترة البحث -->
+            <div class="filters-section">
+                <div class="search-box">
+                    <input type="text" id="teacherSearch" class="form-control" 
+                           placeholder="ابحث عن معلم بالاسم، اسم المستخدم أو رقم الجوال..."
+                           onkeyup="searchTeachers()">
+                    <button class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                
+                <select id="statusFilter" class="form-control filter-options" onchange="filterTeachers()">
+                    <option value="all">جميع الحالات</option>
+                    <option value="active">نشط</option>
+                    <option value="inactive">غير نشط</option>
+                    <option value="suspended">موقوف</option>
+                </select>
+            </div>
+
+            <!-- جدول المعلمين -->
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>اسم المعلم</th>
+                            <th>اسم المستخدم</th>
+                            <th>رقم الجوال</th>
+                            <th>عدد الطلاب</th>
+                            <th>الحالة</th>
+                            <th>الإجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody id="teachersTableBody">
+                        <!-- سيتم تعبئته بواسطة JavaScript -->
+                    </tbody>
+                </table>
+                
+                <!-- حالة التحميل -->
+                <div id="loadingState" class="loading-state" style="display: none;">
+                    <div class="loading-spinner"></div>
+                    <p>جاري تحميل بيانات المعلمين...</p>
+                </div>
+                
+                <!-- حالة عدم وجود بيانات -->
+                <div id="emptyState" class="empty-state" style="display: none;">
+                    <div class="empty-icon">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                    </div>
+                    <h3>لا يوجد معلمون مسجلون</h3>
+                    <p>قم بإضافة أول معلم للبدء</p>
                     <button class="btn btn-success" onclick="showAddTeacherModal()">
                         <i class="fas fa-plus"></i> إضافة معلم جديد
                     </button>
                 </div>
-                
-                <!-- بطاقات الإحصائيات -->
-                <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-header">
-                            <div>
-                                <div class="stat-number" id="teachersCount">0</div>
-                                <div class="stat-label">إجمالي المعلمين</div>
-                            </div>
-                            <div class="stat-icon">
-                                <i class="fas fa-chalkboard-teacher"></i>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card success">
-                        <div class="stat-header">
-                            <div>
-                                <div class="stat-number" id="activeTeachers">0</div>
-                                <div class="stat-label">معلمون نشطون</div>
-                            </div>
-                            <div class="stat-icon">
-                                <i class="fas fa-user-check"></i>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card warning">
-                        <div class="stat-header">
-                            <div>
-                                <div class="stat-number" id="suspendedTeachers">0</div>
-                                <div class="stat-label">معلمون موقوفون</div>
-                            </div>
-                            <div class="stat-icon">
-                                <i class="fas fa-user-slash"></i>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="stat-card info">
-                        <div class="stat-header">
-                            <div>
-                                <div class="stat-number" id="totalStudents">0</div>
-                                <div class="stat-label">إجمالي الطلاب</div>
-                            </div>
-                            <div class="stat-icon">
-                                <i class="fas fa-users"></i>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- أدوات البحث والتصفية -->
-                <div class="filters-section">
-                    <div class="search-box">
-                        <input type="text" 
-                               id="teacherSearch" 
-                               class="form-control" 
-                               placeholder="بحث بالاسم أو اسم المستخدم أو رقم الجوال..."
-                               onkeyup="searchTeachers()">
-                        <button class="btn btn-secondary" onclick="searchTeachers()">
-                            <i class="fas fa-search"></i> بحث
-                        </button>
-                    </div>
-                    
-                    <select id="statusFilter" class="form-control filter-options" onchange="filterTeachers()">
-                        <option value="all">جميع الحالات</option>
-                        <option value="active">نشط</option>
-                        <option value="suspended">موقوف</option>
-                        <option value="inactive">غير نشط</option>
-                    </select>
-                    
-                    <button class="btn btn-outline-primary" onclick="resetFilters()">
-                        <i class="fas fa-redo"></i> إعادة تعيين
-                    </button>
-                </div>
-                
-                <!-- جدول المعلمين -->
-                <div class="table-container">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>المعلم</th>
-                                <th>اسم المستخدم</th>
-                                <th>رقم الجوال</th>
-                                <th>عدد الطلاب</th>
-                                <th>الحالة</th>
-                                <th>الإجراءات</th>
-                            </tr>
-                        </thead>
-                        <tbody id="teachersTableBody">
-                            <!-- البيانات سيتم تعبئتها بواسطة JavaScript -->
-                        </tbody>
-                    </table>
-                    
-                    <!-- حالة التحميل -->
-                    <div id="loadingState" class="loading-state" style="display: none;">
-                        <div class="loading-spinner"></div>
-                        <p>جاري تحميل بيانات المعلمين...</p>
-                    </div>
-                    
-                    <!-- حالة عدم وجود بيانات -->
-                    <div id="emptyState" class="empty-state" style="display: none;">
-                        <div class="empty-icon">👨‍🏫</div>
-                        <h3>لا توجد معلمين</h3>
-                        <p>لم يتم إضافة أي معلمين بعد</p>
-                        <button class="btn btn-success" onclick="showAddTeacherModal()">
-                            <i class="fas fa-plus"></i> إضافة أول معلم
-                        </button>
-                    </div>
+            </div>
+
+            <!-- النشاط الأخير -->
+            <div class="recent-activity">
+                <h3><i class="fas fa-history"></i> النشاط الأخير</h3>
+                <div class="activity-list" id="activityList">
+                    <!-- سيتم تعبئته بواسطة JavaScript -->
                 </div>
             </div>
-        </main>
+        </div>
     </div>
-    
+
+    <!-- =========================================== -->
+    <!-- النوافذ المنبثقة (Modals) -->
+    <!-- =========================================== -->
+
     <!-- نافذة إضافة معلم جديد -->
     <div id="addTeacherModal" class="modal">
         <div class="modal-content">
@@ -239,28 +210,24 @@
                     <div class="form-group">
                         <label class="form-label">اسم المستخدم *</label>
                         <input type="text" id="teacherUsername" class="form-control" required>
-                        <small class="password-hint">سيستخدم هذا الاسم لتسجيل الدخول</small>
+                        <small class="form-text text-muted">سيستخدمه المعلم لتسجيل الدخول</small>
                     </div>
                     
                     <div class="form-group">
                         <label class="form-label">كلمة المرور *</label>
                         <input type="password" id="teacherPassword" class="form-control" required>
-                        <small class="password-hint">يجب أن تكون 6 أحرف على الأقل</small>
+                        <small class="form-text text-muted">يجب أن تكون 6 أحرف على الأقل</small>
                     </div>
                     
                     <div class="form-group">
                         <label class="form-label">تأكيد كلمة المرور *</label>
                         <input type="password" id="confirmPassword" class="form-control" required>
                     </div>
-                    
-                    <div class="security-warning">
-                        ⚠️ يرجى حفظ اسم المستخدم وكلمة المرور وتسليمها للمعلم بشكل آمن
-                    </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-primary" onclick="addNewTeacher()">
-                    <i class="fas fa-save"></i> حفظ المعلم
+                    <i class="fas fa-save"></i> حفظ
                 </button>
                 <button type="button" class="btn btn-secondary" onclick="closeAddTeacherModal()">
                     إلغاء
@@ -268,7 +235,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- نافذة تعديل معلم -->
     <div id="editTeacherModal" class="modal">
         <div class="modal-content">
@@ -291,11 +258,11 @@
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">حالة الحساب</label>
+                        <label class="form-label">حساب الحالة</label>
                         <select id="editTeacherStatus" class="form-control">
                             <option value="active">نشط</option>
-                            <option value="suspended">موقوف</option>
                             <option value="inactive">غير نشط</option>
+                            <option value="suspended">موقوف</option>
                         </select>
                     </div>
                 </form>
@@ -310,15 +277,21 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- =========================================== -->
+    <!-- النوافذ المنبثقة الجديدة: بيانات الدخول -->
+    <!-- =========================================== -->
+
     <!-- نافذة عرض بيانات الدخول -->
     <div id="viewCredentialsModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>📋 بيانات الدخول للمعلم</h3>
+                <h3><i class="fas fa-key"></i> بيانات الدخول للمعلم</h3>
                 <button class="modal-close" onclick="closeViewCredentialsModal()">×</button>
             </div>
             <div class="modal-body">
+                <input type="hidden" id="viewTeacherId">
+                
                 <div class="credentials-info">
                     <div class="credential-item">
                         <span class="credential-label">اسم المعلم:</span>
@@ -331,7 +304,7 @@
                             <span id="viewTeacherUsername" class="credential-value" style="flex: 1;"></span>
                             <div class="credential-actions">
                                 <button class="copy-btn" onclick="copyToClipboard(document.getElementById('viewTeacherUsername').textContent, 'username')">
-                                    📋 نسخ
+                                    <i class="fas fa-copy"></i> نسخ
                                 </button>
                             </div>
                         </div>
@@ -341,30 +314,31 @@
                         <span class="credential-label">كلمة المرور:</span>
                         <div style="display: flex; align-items: center; flex: 1;">
                             <div class="password-field-container">
-                                <input type="password" id="viewTeacherPassword" class="credential-value" readonly style="border: none; background: transparent; padding: 0;">
+                                <input type="password" id="viewTeacherPassword" class="credential-value" readonly 
+                                       style="border: none; background: transparent; padding: 0; width: 100%;">
                                 <button class="toggle-password-btn" onclick="togglePasswordVisibility()">
-                                    👁️ إظهار
+                                    <i class="fas fa-eye"></i> إظهار
                                 </button>
                             </div>
                             <div class="credential-actions">
                                 <button class="copy-btn" onclick="copyToClipboard(document.getElementById('viewTeacherPassword').value, 'password')">
-                                    📋 نسخ
+                                    <i class="fas fa-copy"></i> نسخ
                                 </button>
                             </div>
                         </div>
                     </div>
                     
                     <div class="security-warning">
-                        يرجى الحفاظ على سرية هذه المعلومات وإبلاغها للمعلم بشكل آمن
+                        <i class="fas fa-exclamation-triangle"></i> يرجى الحفاظ على سرية هذه المعلومات وإبلاغها للمعلم بشكل آمن
                     </div>
                 </div>
                 
                 <div class="credentials-actions">
                     <button class="btn btn-info" onclick="editTeacherCredentials()">
-                        ✏️ تعديل البيانات
+                        <i class="fas fa-edit"></i> تعديل البيانات
                     </button>
                     <button class="btn btn-warning" onclick="resetTeacherPassword()">
-                        🔄 إعادة تعيين كلمة المرور
+                        <i class="fas fa-redo"></i> إعادة تعيين كلمة المرور
                     </button>
                     <button class="btn btn-secondary" onclick="closeViewCredentialsModal()">
                         إغلاق
@@ -373,12 +347,12 @@
             </div>
         </div>
     </div>
-    
+
     <!-- نافذة تعديل بيانات الدخول -->
     <div id="editCredentialsModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>✏️ تعديل بيانات الدخول</h3>
+                <h3><i class="fas fa-key"></i> تعديل بيانات الدخول</h3>
                 <button class="modal-close" onclick="closeEditCredentialsModal()">×</button>
             </div>
             <div class="modal-body">
@@ -403,13 +377,13 @@
                     </div>
                     
                     <div class="security-warning">
-                        ⚠️ عند تغيير اسم المستخدم، سيحتاج المعلم إلى استخدام الاسم الجديد للدخول
+                        <i class="fas fa-exclamation-triangle"></i> عند تغيير اسم المستخدم، سيحتاج المعلم إلى استخدام الاسم الجديد للدخول
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-primary" onclick="saveTeacherCredentials()">
-                    💾 حفظ التغييرات
+                    <i class="fas fa-save"></i> حفظ التغييرات
                 </button>
                 <button type="button" class="btn btn-secondary" onclick="closeEditCredentialsModal()">
                     إلغاء
@@ -417,54 +391,28 @@
             </div>
         </div>
     </div>
-    
-    <!-- السكريبتات -->
+
+    <!-- =========================================== -->
+    <!-- نهاية النوافذ المنبثقة -->
+    <!-- =========================================== -->
+
+    <!-- الأكواد البرمجية -->
     <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/admin.js"></script>
     
     <script>
-        // دوال إضافية
-        function resetFilters() {
-            document.getElementById('teacherSearch').value = '';
-            document.getElementById('statusFilter').value = 'all';
-            loadTeachersData();
-        }
-        
+        // تهيئة الشريط الجانبي المتنقل
         function toggleSidebar() {
             document.querySelector('.sidebar').classList.toggle('active');
         }
         
-        // تحديث أرقام الإحصائيات
-        function updateStatistics() {
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            const teachers = users.filter(u => u.role === 'teacher');
-            const students = users.filter(u => u.role === 'student');
-            
-            document.getElementById('teachersCount').textContent = teachers.length;
-            document.getElementById('activeTeachers').textContent = teachers.filter(t => t.status === 'active').length;
-            document.getElementById('suspendedTeachers').textContent = teachers.filter(t => t.status === 'suspended').length;
-            document.getElementById('totalStudents').textContent = students.length;
-        }
-        
-        // تحميل البيانات عند فتح الصفحة
+        // تحديث بيانات المستخدم عند تحميل الصفحة
         document.addEventListener('DOMContentLoaded', function() {
-            // التحقق من صلاحية الجلسة
-            const user = checkAuth();
-            if (!user || user.role !== 'admin') {
-                window.location.href = '../../index.html';
-                return;
+            const user = getCurrentUser();
+            if (user) {
+                document.getElementById('userName').textContent = user.name;
+                document.getElementById('userAvatar').textContent = user.name.charAt(0);
             }
-            
-            // تحديث واجهة المستخدم
-            document.getElementById('userName').textContent = user.name;
-            document.getElementById('userAvatar').textContent = user.name.charAt(0);
-            
-            // تحميل بيانات المعلمين
-            loadTeachersData();
-            updateStatistics();
-            
-            // تحديث عدد الإشعارات
-            document.getElementById('notificationCount').textContent = '0';
         });
     </script>
 </body>

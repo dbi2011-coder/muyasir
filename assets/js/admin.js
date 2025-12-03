@@ -418,3 +418,186 @@ function handleBrokenLinks() {
 
 // استدعاء الدالة عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', handleBrokenLinks);
+// ============================================
+// وظائف إدارة بيانات الدخول للمعلمين
+// ============================================
+
+function viewTeacherCredentials(teacherId) {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const teacher = users.find(u => u.id === teacherId && u.role === 'teacher');
+    
+    if (!teacher) {
+        showAuthNotification('المعلم غير موجود', 'error');
+        return;
+    }
+
+    // تعبئة النموذج
+    document.getElementById('viewTeacherId').value = teacher.id;
+    document.getElementById('viewTeacherName').textContent = teacher.name;
+    document.getElementById('viewTeacherUsername').textContent = teacher.username;
+    document.getElementById('viewTeacherPassword').textContent = teacher.password;
+    
+    // إخفاء/إظهار كلمة المرور
+    const passwordField = document.getElementById('viewTeacherPassword');
+    passwordField.type = 'password';
+    
+    document.getElementById('viewCredentialsModal').classList.add('show');
+}
+
+function closeViewCredentialsModal() {
+    document.getElementById('viewCredentialsModal').classList.remove('show');
+}
+
+function togglePasswordVisibility() {
+    const passwordField = document.getElementById('viewTeacherPassword');
+    const toggleBtn = document.querySelector('.toggle-password-btn');
+    
+    if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        toggleBtn.innerHTML = '🙈 إخفاء';
+    } else {
+        passwordField.type = 'password';
+        toggleBtn.innerHTML = '👁️ إظهار';
+    }
+}
+
+function copyToClipboard(text, type) {
+    navigator.clipboard.writeText(text).then(() => {
+        showAuthNotification(`تم نسخ ${type === 'username' ? 'اسم المستخدم' : 'كلمة المرور'}`, 'success');
+    }).catch(err => {
+        console.error('فشل النسخ: ', err);
+        showAuthNotification('فشل النسخ، يرجى المحاولة يدوياً', 'error');
+    });
+}
+
+function resetTeacherPassword() {
+    const teacherId = parseInt(document.getElementById('viewTeacherId').value);
+    const newPassword = prompt('أدخل كلمة المرور الجديدة (6 أحرف على الأقل):');
+    
+    if (!newPassword) return;
+    
+    if (newPassword.length < 6) {
+        showAuthNotification('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
+        return;
+    }
+    
+    const confirmPassword = prompt('تأكيد كلمة المرور الجديدة:');
+    if (newPassword !== confirmPassword) {
+        showAuthNotification('كلمات المرور غير متطابقة', 'error');
+        return;
+    }
+    
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const teacherIndex = users.findIndex(u => u.id === teacherId && u.role === 'teacher');
+    
+    if (teacherIndex === -1) {
+        showAuthNotification('المعلم غير موجود', 'error');
+        return;
+    }
+    
+    users[teacherIndex].password = newPassword;
+    localStorage.setItem('users', JSON.stringify(users));
+    
+    // تحديث العرض
+    document.getElementById('viewTeacherPassword').textContent = newPassword;
+    document.getElementById('viewTeacherPassword').type = 'password';
+    document.querySelector('.toggle-password-btn').innerHTML = '👁️ إظهار';
+    
+    showAuthNotification('تم تحديث كلمة المرور بنجاح', 'success');
+    
+    // إضافة سجل
+    addSystemLog(`تم إعادة تعيين كلمة مرور المعلم ${users[teacherIndex].name}`, 'security');
+}
+
+function editTeacherCredentials() {
+    const teacherId = parseInt(document.getElementById('viewTeacherId').value);
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const teacher = users.find(u => u.id === teacherId && u.role === 'teacher');
+    
+    if (!teacher) {
+        showAuthNotification('المعلم غير موجود', 'error');
+        return;
+    }
+
+    // تعبئة نموذج التعديل
+    document.getElementById('editCredTeacherId').value = teacher.id;
+    document.getElementById('editCredTeacherName').value = teacher.name;
+    document.getElementById('editCredTeacherUsername').value = teacher.username;
+    document.getElementById('editCredTeacherPassword').value = '';
+    
+    document.getElementById('viewCredentialsModal').classList.remove('show');
+    setTimeout(() => {
+        document.getElementById('editCredentialsModal').classList.add('show');
+    }, 300);
+}
+
+function closeEditCredentialsModal() {
+    document.getElementById('editCredentialsModal').classList.remove('show');
+}
+
+function saveTeacherCredentials() {
+    const teacherId = parseInt(document.getElementById('editCredTeacherId').value);
+    const username = document.getElementById('editCredTeacherUsername').value.trim();
+    const password = document.getElementById('editCredTeacherPassword').value;
+    
+    if (!username) {
+        showAuthNotification('يرجى إدخال اسم المستخدم', 'error');
+        return;
+    }
+    
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const teacherIndex = users.findIndex(u => u.id === teacherId && u.role === 'teacher');
+    
+    if (teacherIndex === -1) {
+        showAuthNotification('المعلم غير موجود', 'error');
+        return;
+    }
+    
+    // التحقق من عدم تكرار اسم المستخدم (باستثناء المعلم الحالي)
+    const existingUser = users.find(u => 
+        u.username === username && 
+        u.id !== teacherId && 
+        u.role === 'teacher'
+    );
+    
+    if (existingUser) {
+        showAuthNotification('اسم المستخدم موجود مسبقاً', 'error');
+        return;
+    }
+    
+    // تحديث اسم المستخدم
+    users[teacherIndex].username = username;
+    
+    // تحديث كلمة المرور إذا تم إدخال واحدة جديدة
+    if (password) {
+        if (password.length < 6) {
+            showAuthNotification('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
+            return;
+        }
+        users[teacherIndex].password = password;
+    }
+    
+    localStorage.setItem('users', JSON.stringify(users));
+    
+    // إضافة سجل
+    addSystemLog(`تم تحديث بيانات دخول المعلم ${users[teacherIndex].name}`, 'security');
+    
+    showAuthNotification('تم تحديث بيانات الدخول بنجاح', 'success');
+    closeEditCredentialsModal();
+    loadTeachersData();
+    
+    // إعادة فتح نافذة عرض البيانات المحدثة
+    setTimeout(() => {
+        viewTeacherCredentials(teacherId);
+    }, 500);
+}
+
+// تصدير الدوال الجديدة للاستخدام العالمي
+window.viewTeacherCredentials = viewTeacherCredentials;
+window.closeViewCredentialsModal = closeViewCredentialsModal;
+window.togglePasswordVisibility = togglePasswordVisibility;
+window.copyToClipboard = copyToClipboard;
+window.resetTeacherPassword = resetTeacherPassword;
+window.editTeacherCredentials = editTeacherCredentials;
+window.closeEditCredentialsModal = closeEditCredentialsModal;
+window.saveTeacherCredentials = saveTeacherCredentials;

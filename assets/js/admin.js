@@ -403,3 +403,18 @@ document.querySelectorAll('.sidebar-menu a').forEach(link => {
         });
     }
 });
+// معالجة الروابط المكسورة
+function handleBrokenLinks() {
+    const links = document.querySelectorAll('a');
+    links.forEach(link => {
+        link.addEventListener('click', function(e) {
+            const href = this.getAttribute('href');
+            if (href && href.includes('.html')) {
+                // يمكن إضافة تحقق إضافي هنا إذا لزم الأمر
+            }
+        });
+    });
+}
+
+// استدعاء الدالة عند تحميل الصفحة
+document.addEventListener('DOMContentLoaded', handleBrokenLinks);

@@ -606,3 +606,271 @@ window.linkObjectives = linkObjectives;
 window.nextQuestionForLinking = nextQuestionForLinking;
 window.importTest = importTest;
 window.exportTest = exportTest;
+// دالة إضافية لمعالجة البيانات
+function getAttachmentData() {
+    const fileInput = document.getElementById('questionAttachment');
+    if (!fileInput.files.length) return null;
+    
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    
+    return new Promise((resolve) => {
+        reader.onload = function(e) {
+            resolve({
+                name: file.name,
+                type: file.type,
+                size: file.size,
+                data: e.target.result
+            });
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+// دالة لإزالة خيار
+function removeChoice(button) {
+    const choiceItem = button.closest('.choice-item');
+    if (choiceItem && document.querySelectorAll('.choice-item').length > 2) {
+        choiceItem.remove();
+        updateChoiceIndices();
+    }
+}
+
+function updateChoiceIndices() {
+    const choiceItems = document.querySelectorAll('.choice-item');
+    choiceItems.forEach((item, index) => {
+        const radio = item.querySelector('input[type="radio"]');
+        if (radio) {
+            radio.value = index;
+        }
+    });
+}
+
+// دوال لرؤية الاختبار
+function viewTest(testId) {
+    const test = getDiagnosticTestById(testId);
+    if (!test) {
+        showAuthNotification('الاختبار غير موجود', 'error');
+        return;
+    }
+    
+    document.getElementById('viewTestTitle').textContent = test.title;
+    document.getElementById('viewTestSubject').textContent = test.subject;
+    document.getElementById('viewTestDescription').textContent = test.description || 'لا يوجد وصف';
+    document.getElementById('viewTestQuestionsCount').textContent = test.questions?.length || 0;
+    document.getElementById('viewTestPassCriteria').textContent = test.passCriteria + '%';
+    document.getElementById('viewTestCreatedAt').textContent = formatDate(test.createdAt);
+    
+    // عرض الأسئلة
+    const questionsList = document.getElementById('viewTestQuestions');
+    if (test.questions && test.questions.length > 0) {
+        questionsList.innerHTML = test.questions.map((q, index) => `
+            <div class="question-preview">
+                <div class="question-header">
+                    <h5>السؤال ${index + 1}: ${getQuestionTypeText(q.type)}</h5>
+                </div>
+                <div class="question-content">
+                    <p>${q.text}</p>
+                    ${q.choices ? `
+                        <div class="choices-container">
+                            ${q.choices.map((choice, i) => `
+                                <div class="choice-item ${i === q.correctChoice ? 'correct' : ''}">
+                                    ${i === q.correctChoice ? '✓ ' : ''}${choice}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `).join('');
+    } else {
+        questionsList.innerHTML = '<p>لا توجد أسئلة في هذا الاختبار</p>';
+    }
+    
+    document.getElementById('viewTestModal').classList.add('show');
+}
+
+function closeViewTestModal() {
+    document.getElementById('viewTestModal').classList.remove('show');
+}
+
+// دوال مساعدة إضافية
+function getQuestionTypeText(type) {
+    const types = {
+        'multiple-choice': 'اختيار من متعدد',
+        'drag-drop': 'سحب وإفلات',
+        'multiple-choice-attachment': 'اختيار من متعدد مع مرفق',
+        'open-ended': 'سؤال مفتوح',
+        'auto-reading': 'تقييم القراءة الآلي',
+        'auto-spelling': 'تقييم الإملاء الآلي',
+        'manual-reading': 'تقييم القراءة اليدوي',
+        'manual-spelling': 'تقييم الإملاء اليدوي',
+        'missing-letter': 'أكمل الحرف الناقص'
+    };
+    
+    return types[type] || type;
+}
+
+// دالة لربط الأهداف
+function linkObjectives(testId) {
+    const test = getDiagnosticTestById(testId);
+    if (!test || !test.questions || test.questions.length === 0) {
+        showAuthNotification('يجب أن يحتوي الاختبار على أسئلة أولاً', 'error');
+        return;
+    }
+    
+    currentTest = test;
+    currentQuestionIndex = 0;
+    selectedObjectives = {};
+    
+    loadQuestionForLinking();
+    document.getElementById('linkObjectivesModal').classList.add('show');
+}
+
+// دالة للمتابعة في الربط
+function nextQuestionForLinking() {
+    const selectedRadio = document.querySelector('input[name="selectedObjective"]:checked');
+    
+    if (!selectedRadio) {
+        showAuthNotification('يرجى اختيار هدف قصير لهذا السؤال', 'error');
+        return;
+    }
+    
+    selectedObjectives[currentQuestionIndex] = parseInt(selectedRadio.value);
+    currentQuestionIndex++;
+    
+    if (currentQuestionIndex < currentTest.questions.length) {
+        loadQuestionForLinking();
+    } else {
+        completeLinking();
+    }
+}
+
+// دالة لإكمال الربط
+function completeLinking() {
+    if (currentTest) {
+        currentTest.objectivesLinked = true;
+        currentTest.linkedObjectives = selectedObjectives;
+        saveDiagnosticTest(currentTest);
+        
+        showAuthNotification('تم ربط جميع الأسئلة بالأهداف بنجاح', 'success');
+        closeLinkObjectivesModal();
+        loadDiagnosticTests();
+    }
+}
+
+function closeLinkObjectivesModal() {
+    document.getElementById('linkObjectivesModal').classList.remove('show');
+    currentTest = null;
+    currentQuestionIndex = 0;
+    selectedObjectives = {};
+}
+
+function loadQuestionForLinking() {
+    if (!currentTest || !currentTest.questions || currentQuestionIndex >= currentTest.questions.length) {
+        completeLinking();
+        return;
+    }
+    
+    const question = currentTest.questions[currentQuestionIndex];
+    document.getElementById('linkingQuestionText').textContent = question.text;
+    
+    loadObjectivesForLinking();
+    updateLinkingProgress();
+}
+
+function loadObjectivesForLinking() {
+    const container = document.getElementById('objectivesList');
+    const objectives = getShortTermObjectives(currentTest.subject);
+    
+    if (objectives.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <p>لا توجد أهداف قصيرة لهذه المادة</p>
+                <button class="btn btn-sm btn-primary" onclick="addDefaultObjectives()">إضافة أهداف افتراضية</button>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = objectives.map((objective, index) => `
+        <div class="objective-item">
+            <input type="radio" 
+                   id="objective_${index}" 
+                   name="selectedObjective" 
+                   value="${objective.id}"
+                   ${selectedObjectives[currentQuestionIndex] === objective.id ? 'checked' : ''}
+                   onchange="selectObjective(${objective.id})">
+            <label for="objective_${index}">${objective.text} - ${objective.grade || ''}</label>
+        </div>
+    `).join('');
+}
+
+function updateLinkingProgress() {
+    const progress = document.getElementById('linkingProgress');
+    if (currentTest && currentTest.questions) {
+        progress.textContent = `السؤال ${currentQuestionIndex + 1} من ${currentTest.questions.length}`;
+    }
+}
+
+function selectObjective(objectiveId) {
+    selectedObjectives[currentQuestionIndex] = objectiveId;
+}
+
+// دالة لإضافة أهداف افتراضية
+function addDefaultObjectives() {
+    initializeShortTermObjectives();
+    loadObjectivesForLinking();
+    showAuthNotification('تمت إضافة الأهداف الافتراضية', 'success');
+}
+
+// استيراد الاختبار
+async function importTest() {
+    const fileInput = document.getElementById('importFile');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        showAuthNotification('يرجى اختيار ملف للاستيراد', 'error');
+        return;
+    }
+    
+    try {
+        const text = await readFileAsText(file);
+        const importedTest = JSON.parse(text);
+        
+        // تعديل البيانات
+        importedTest.id = generateId();
+        importedTest.createdAt = new Date().toISOString();
+        importedTest.createdBy = getCurrentUser().id;
+        importedTest.objectivesLinked = false;
+        importedTest.linkedObjectives = {};
+        
+        saveDiagnosticTest(importedTest);
+        
+        showAuthNotification('تم استيراد الاختبار بنجاح', 'success');
+        closeImportTestModal();
+        loadDiagnosticTests();
+        
+        setTimeout(() => {
+            showAuthNotification('يرجى ربط أسئلة الاختبار بالأهداف القصيرة', 'warning');
+        }, 1000);
+        
+    } catch (error) {
+        showAuthNotification('خطأ في تنسيق الملف', 'error');
+        console.error(error);
+    }
+}
+
+function readFileAsText(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.onerror = e => reject(e);
+        reader.readAsText(file);
+    });
+}
+
+// دالة للعودة لصفحة الاختبارات
+function goBackToTests() {
+    window.location.href = 'diagnostic-tests.html';
+}

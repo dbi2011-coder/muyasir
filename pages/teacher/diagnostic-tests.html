@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الاختبارات التشخيصية - ميسر التعلم</title>
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <link rel="stylesheet" href="../../assets/css/teacher.css">
+    <link rel="stylesheet" href="../../assets/css/diagnostic-tests.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- الشريط الجانبي -->
+        <div class="sidebar" id="sidebar">
+            <!-- محتوى الشريط الجانبي -->
+        </div>
+
+        <!-- المحتوى الرئيسي -->
+        <div class="main-content-dashboard">
+            <header class="dashboard-header">
+                <!-- رأس الصفحة -->
+            </header>
+
+            <main class="dashboard-content">
+                <div class="content-header">
+                    <h1>📊 الاختبارات التشخيصية</h1>
+                </div>
+
+                <div class="diagnostic-tests-container">
+                    <!-- أزرار الإجراءات السريعة -->
+                    <div class="tests-actions">
+                        <button class="btn btn-success btn-lg" onclick="showCreateTestModal()">
+                            📝 إنشاء اختبار تشخيصي جديد
+                        </button>
+                        <button class="btn btn-primary btn-lg" onclick="showImportTestModal()">
+                            📂 استيراد اختبار
+                        </button>
+                    </div>
+
+                    <!-- قائمة الاختبارات حسب المادة -->
+                    <div class="tests-list">
+                        <!-- اختبارات مادة لغتي -->
+                        <div class="subject-section">
+                            <div class="subject-header">
+                                <span class="subject-icon">📚</span>
+                                <h3>اختبارات مادة لغتي</h3>
+                            </div>
+                            <div id="arabicTestsList" class="subject-tests">
+                                <!-- سيتم تعبئته بالجافاسكريبت -->
+                            </div>
+                        </div>
+
+                        <!-- اختبارات مادة الرياضيات -->
+                        <div class="subject-section">
+                            <div class="subject-header">
+                                <span class="subject-icon">🔢</span>
+                                <h3>اختبارات مادة الرياضيات</h3>
+                            </div>
+                            <div id="mathTestsList" class="subject-tests">
+                                <!-- سيتم تعبئته بالجافاسكريبت -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- نافذة إنشاء اختبار جديد -->
+    <div id="createTestModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إنشاء اختبار تشخيصي جديد</h3>
+                <button class="modal-close" onclick="closeCreateTestModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createTestForm">
+                    <div class="form-group">
+                        <label for="testTitle">عنوان الاختبار *</label>
+                        <input type="text" id="testTitle" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="testSubject">المادة *</label>
+                        <select id="testSubject" class="form-control" required>
+                            <option value="">اختر المادة</option>
+                            <option value="لغتي">لغتي</option>
+                            <option value="رياضيات">رياضيات</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="testDescription">وصف الاختبار (اختياري)</label>
+                        <textarea id="testDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeCreateTestModal()">إلغاء</button>
+                <button class="btn btn-success" onclick="createNewTest()">إنشاء</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة استيراد اختبار -->
+    <div id="importTestModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>استيراد اختبار تشخيصي</h3>
+                <button class="modal-close" onclick="closeImportTestModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="import-export-section">
+                    <div class="file-upload-box" onclick="document.getElementById('importFile').click()">
+                        <div class="upload-icon">📁</div>
+                        <p>انقر لاختيار ملف الاختبار أو اسحب الملف هنا</p>
+                        <input type="file" id="importFile" style="display: none;" accept=".json">
+                    </div>
+                    <p><small>ملاحظة: بعد الاستيراد يجب ربط الأسئلة بالأهداف القصيرة</small></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeImportTestModal()">إلغاء</button>
+                <button class="btn btn-success" onclick="importTest()">استيراد</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة عرض تفاصيل الاختبار -->
+    <div id="viewTestModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3 id="viewTestTitle">عنوان الاختبار</h3>
+                <button class="modal-close" onclick="closeViewTestModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="test-details">
+                    <p><strong>المادة:</strong> <span id="viewTestSubject"></span></p>
+                    <p><strong>الوصف:</strong> <span id="viewTestDescription"></span></p>
+                    <p><strong>عدد الأسئلة:</strong> <span id="viewTestQuestionsCount"></span></p>
+                    <p><strong>محك الاجتياز:</strong> <span id="viewTestPassCriteria"></span></p>
+                    <p><strong>تاريخ الإنشاء:</strong> <span id="viewTestCreatedAt"></span></p>
+                </div>
+                <div class="questions-preview">
+                    <h4>الأسئلة:</h4>
+                    <div id="viewTestQuestions"></div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeViewTestModal()">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة ربط الأهداف -->
+    <div id="linkObjectivesModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>ربط الأسئلة بالأهداف القصيرة</h3>
+                <button class="modal-close" onclick="closeLinkObjectivesModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="linking-progress">
+                    <h4 id="linkingProgress"></h4>
+                    <div class="current-question">
+                        <h5>السؤال الحالي:</h5>
+                        <p id="linkingQuestionText"></p>
+                    </div>
+                    <div class="objectives-linking">
+                        <h5>اختر هدف قصير لهذا السؤال:</h5>
+                        <div id="objectivesList"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeLinkObjectivesModal()">إلغاء</button>
+                <button class="btn btn-success" onclick="nextQuestionForLinking()">التالي</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/diagnostic-tests.js"></script>
+    <script>
+        // التحقق من تسجيل الدخول
+        document.addEventListener('DOMContentLoaded', function() {
+            const user = checkAuth();
+            if (!user || user.role !== 'teacher') {
+                window.location.href = '../../index.html';
+                return;
+            }
+        });
+    </script>
+</body>
+</html>

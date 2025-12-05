@@ -5,134 +5,554 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة تحكم المعلم - ميسر التعلم</title>
     <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../assets/css/teacher.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="dashboard-container">
         <!-- الشريط الجانبي -->
-        <aside class="sidebar">
+        <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
-                    <h2>ميسر التعلم</h2>
+                    <h2>👨‍🏫 ميسر التعلم</h2>
                 </div>
             </div>
-            
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.html" class="active"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
-                <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
-                <li><a href="content-library.html"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
-                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
-                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
-                <li><a href="reports.html"><span class="menu-icon">📋</span>التقارير</a></li>
-                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة الصعوبات</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
+            <ul class="sidebar-menu" id="teacherMenu">
+                <!-- سيتم تعبئته بالجافاسكريبت -->
             </ul>
-        </aside>
+        </div>
 
         <!-- المحتوى الرئيسي -->
-        <main class="main-content-dashboard">
-            <!-- رأس اللوحة -->
+        <div class="main-content-dashboard">
             <header class="dashboard-header">
-                <button class="mobile-menu-btn">☰</button>
+                <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
                 <div class="user-info">
                     <div class="user-welcome">
                         <div class="welcome-text">مرحباً بعودتك</div>
-                        <div class="user-name" id="userName">أ/ اسم المعلم</div>
+                        <div class="user-name" id="teacherName">المعلم</div>
                     </div>
-                    <div class="user-avatar" id="userAvatar">م</div>
+                    <div class="user-avatar" id="teacherAvatar">م</div>
                 </div>
                 <div class="header-actions">
-                    <button class="btn btn-primary" onclick="showNotifications()">
-                        <span class="notification-icon">🔔</span>
-                        <span class="notification-badge" id="notificationCount">0</span>
+                    <button class="btn btn-primary btn-icon" onclick="showNotifications()">
+                        🔔 <span class="notification-badge" id="notificationCount">0</span>
                     </button>
+                    <button class="btn btn-secondary" onclick="logout()">تسجيل الخروج</button>
                 </div>
             </header>
 
-            <!-- محتوى اللوحة -->
-            <div class="dashboard-content">
+            <main class="dashboard-content">
                 <div class="content-header">
                     <h1>لوحة تحكم المعلم</h1>
                     <div class="header-actions">
-                        <button class="btn btn-success" onclick="window.location.href='students.html'">
-                            <span>+ إضافة طالب جديد</span>
+                        <button class="btn btn-primary" onclick="showQuickAddStudent()">
+                            ➕ إضافة طالب جديد
                         </button>
                     </div>
                 </div>
 
-                <!-- الإحصائيات السريعة -->
+                <!-- البطاقات الإحصائية -->
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-header">
+                            <div>
+                                <div class="stat-number" id="studentsCount">0</div>
+                                <div class="stat-label">إجمالي الطلاب</div>
+                            </div>
                             <div class="stat-icon">👨‍🎓</div>
                         </div>
-                        <div class="stat-number" id="studentsCount">0</div>
-                        <div class="stat-label">إجمالي الطلاب</div>
                     </div>
                     
                     <div class="stat-card success">
                         <div class="stat-header">
-                            <div class="stat-icon">📚</div>
+                            <div>
+                                <div class="stat-number" id="activeTests">0</div>
+                                <div class="stat-label">اختبارات نشطة</div>
+                            </div>
+                            <div class="stat-icon">📝</div>
                         </div>
-                        <div class="stat-number" id="lessonsCount">0</div>
-                        <div class="stat-label">الدروس المضافة</div>
                     </div>
                     
                     <div class="stat-card warning">
                         <div class="stat-header">
-                            <div class="stat-icon">📝</div>
+                            <div>
+                                <div class="stat-number" id="pendingAssignments">0</div>
+                                <div class="stat-label">واجبات قيد المراجعة</div>
+                            </div>
+                            <div class="stat-icon">📚</div>
                         </div>
-                        <div class="stat-number" id="assignmentsCount">0</div>
-                        <div class="stat-label>الواجبات النشطة</div>
                     </div>
                     
                     <div class="stat-card danger">
                         <div class="stat-header">
-                            <div class="stat-icon">💬</div>
+                            <div>
+                                <div class="stat-number" id="urgentActions">0</div>
+                                <div class="stat-label">إجراءات عاجلة</div>
+                            </div>
+                            <div class="stat-icon">⚠️</div>
                         </div>
-                        <div class="stat-number" id="unreadMessages">0</div>
-                        <div class="stat-label">رسائل جديدة</div>
                     </div>
                 </div>
 
-                <!-- الطلاب المميزين -->
-                <div class="featured-students">
-                    <div class="card">
-                        <h3>الطلاب المميزين هذا الأسبوع</h3>
+                <!-- الإجراءات السريعة -->
+                <div class="quick-actions">
+                    <h2>الإجراءات السريعة</h2>
+                    <div class="actions-grid">
+                        <div class="action-card" onclick="window.location.href='diagnostic-tests.html'">
+                            <div class="action-icon">📊</div>
+                            <div class="action-title">الاختبارات التشخيصية</div>
+                            <div class="action-description">
+                                إنشاء وإدارة الاختبارات التشخيصية للطلاب
+                            </div>
+                        </div>
+                        
+                        <div class="action-card" onclick="window.location.href='students.html'">
+                            <div class="action-icon">👨‍🎓</div>
+                            <div class="action-title">إدارة الطلاب</div>
+                            <div class="action-description">
+                                عرض وتعديل وإضافة طلاب جدد
+                            </div>
+                        </div>
+                        
+                        <div class="action-card" onclick="window.location.href='library.html'">
+                            <div class="action-icon">📚</div>
+                            <div class="action-title">المحتوى التعليمي</div>
+                            <div class="action-description">
+                                الوصول إلى مكتبة المحتوى التعليمي
+                            </div>
+                        </div>
+                        
+                        <div class="action-card" onclick="window.location.href='assignments.html'">
+                            <div class="action-icon">📝</div>
+                            <div class="action-title">الواجبات والاختبارات</div>
+                            <div class="action-description">
+                                إنشاء وتصحيح الواجبات والاختبارات
+                            </div>
+                        </div>
+                        
+                        <div class="action-card" onclick="window.location.href='reports.html'">
+                            <div class="action-icon">📈</div>
+                            <div class="action-title">التقارير والإحصائيات</div>
+                            <div class="action-description">
+                                تقارير أداء الطلاب والإحصائيات
+                            </div>
+                        </div>
+                        
+                        <div class="action-card" onclick="window.location.href='schedule.html'">
+                            <div class="action-icon">🗓️</div>
+                            <div class="action-title">الجدول الدراسي</div>
+                            <div class="action-description">
+                                إدارة الجدول الدراسي والحصص
+                            </div>
+                        </div>
+                        
+                        <div class="action-card" onclick="window.location.href='messages.html'">
+                            <div class="action-icon">💬</div>
+                            <div class="action-title">المراسلات</div>
+                            <div class="action-description">
+                                التواصل مع الطلاب وأولياء الأمور
+                            </div>
+                        </div>
+                        
+                        <div class="action-card" onclick="window.location.href='iep.html'">
+                            <div class="action-icon">📋</div>
+                            <div class="action-title">الخطط التربوية</div>
+                            <div class="action-description">
+                                إدارة الخطط التربوية الفردية
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- قسمين جنبًا إلى جنب -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-top: 30px;">
+                    <!-- الطلاب المميزين -->
+                    <div class="featured-students">
+                        <div class="section-header">
+                            <h2>الطلاب المميزين</h2>
+                            <button class="btn btn-sm btn-primary" onclick="window.location.href='students.html'">
+                                عرض الكل
+                            </button>
+                        </div>
                         <div class="students-list" id="featuredStudentsList">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
+                            <!-- سيتم تعبئته بالجافاسكريبت -->
+                        </div>
+                    </div>
+
+                    <!-- الإشعارات المهمة -->
+                    <div class="important-notices">
+                        <div class="section-header">
+                            <h2>الإشعارات المهمة</h2>
+                            <button class="btn btn-sm btn-primary" onclick="showAllNotifications()">
+                                عرض الكل
+                            </button>
+                        </div>
+                        <div class="notices-list" id="importantNoticesList">
+                            <!-- سيتم تعبئته بالجافاسكريبت -->
                         </div>
                     </div>
                 </div>
 
                 <!-- النشاط الأخير -->
-                <div class="recent-activity">
-                    <div class="card">
-                        <h3>النشاط الأخير</h3>
-                        <div class="activity-list" id="activityList">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </div>
+                <div class="recent-activity" style="margin-top: 30px;">
+                    <h2>النشاط الأخير</h2>
+                    <div class="activity-list" id="recentActivityList">
+                        <!-- سيتم تعبئته بالجافاسكريبت -->
                     </div>
                 </div>
-
-                <!-- الإشعارات المهمة -->
-                <div class="important-notices">
-                    <div class="card">
-                        <h3>إشعارات مهمة</h3>
-                        <div class="notices-list" id="noticesList">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
+            </main>
+        </div>
     </div>
 
-    <script src="../../assets/js/dashboard.js"></script>
-    <script src="../../assets/js/teacher.js"></script>
+    <!-- نافذة إضافة طالب سريع -->
+    <div id="quickAddStudentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إضافة طالب جديد</h3>
+                <button class="modal-close" onclick="closeQuickAddStudentModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="quickAddStudentForm">
+                    <div class="form-group">
+                        <label for="studentName">اسم الطالب *</label>
+                        <input type="text" id="studentName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="studentGrade">الصف الدراسي</label>
+                        <select id="studentGrade" class="form-control">
+                            <option value="">اختر الصف</option>
+                            <option value="الصف الأول">الصف الأول</option>
+                            <option value="الصف الثاني">الصف الثاني</option>
+                            <option value="الصف الثالث">الصف الثالث</option>
+                            <option value="الصف الرابع">الصف الرابع</option>
+                            <option value="الصف الخامس">الصف الخامس</option>
+                            <option value="الصف السادس">الصف السادس</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="studentSubject">المادة</label>
+                        <select id="studentSubject" class="form-control">
+                            <option value="">اختر المادة</option>
+                            <option value="لغتي">لغتي</option>
+                            <option value="رياضيات">رياضيات</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeQuickAddStudentModal()">إلغاء</button>
+                <button class="btn btn-success" onclick="quickAddStudent()">إضافة</button>
+            </div>
+        </div>
+    </div>
+
     <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/teacher.js"></script>
+    <script>
+        // التحقق من تسجيل الدخول وتهيئة الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            const user = checkAuth();
+            if (!user || user.role !== 'teacher') {
+                window.location.href = '../../index.html';
+                return;
+            }
+
+            // تحديث واجهة المستخدم
+            updateTeacherInterface(user);
+            
+            // تحميل البيانات
+            loadTeacherStats();
+            loadFeaturedStudents();
+            loadImportantNotices();
+            loadRecentActivity();
+            setupTeacherMenu();
+        });
+
+        function updateTeacherInterface(user) {
+            document.getElementById('teacherName').textContent = user.name;
+            document.getElementById('teacherAvatar').textContent = user.name.charAt(0);
+        }
+
+        function loadTeacherStats() {
+            // محاكاة تحميل الإحصائيات
+            setTimeout(() => {
+                const students = JSON.parse(localStorage.getItem('students') || '[]');
+                const currentTeacher = getCurrentUser();
+                
+                // تصفية طلاب المعلم الحالي
+                const teacherStudents = students.filter(student => student.teacherId === currentTeacher.id);
+                
+                // اختبارات المعلم الحالي
+                const tests = JSON.parse(localStorage.getItem('diagnosticTests') || '[]');
+                const teacherTests = tests.filter(test => test.createdBy === currentTeacher.id);
+                
+                // الواجبات القيد المراجعة
+                const assignments = JSON.parse(localStorage.getItem('assignments') || '[]');
+                const pendingAssignments = assignments.filter(assignment => 
+                    assignment.teacherId === currentTeacher.id && 
+                    assignment.status === 'pending'
+                );
+                
+                document.getElementById('studentsCount').textContent = teacherStudents.length;
+                document.getElementById('activeTests').textContent = teacherTests.length;
+                document.getElementById('pendingAssignments').textContent = pendingAssignments.length;
+                document.getElementById('urgentActions').textContent = Math.floor(Math.random() * 3);
+                document.getElementById('notificationCount').textContent = Math.floor(Math.random() * 5);
+            }, 1000);
+        }
+
+        function loadFeaturedStudents() {
+            const studentsList = document.getElementById('featuredStudentsList');
+            const students = JSON.parse(localStorage.getItem('students') || '[]');
+            const currentTeacher = getCurrentUser();
+            
+            // تصفية طلاب المعلم الحالي
+            const teacherStudents = students.filter(student => student.teacherId === currentTeacher.id);
+            
+            // اختيار أفضل 4 طلاب حسب التقدم
+            const featuredStudents = teacherStudents
+                .sort((a, b) => (b.progress || 0) - (a.progress || 0))
+                .slice(0, 4);
+            
+            if (featuredStudents.length === 0) {
+                studentsList.innerHTML = `
+                    <div class="empty-state" style="padding: 20px;">
+                        <div class="empty-icon">👨‍🎓</div>
+                        <h4>لا توجد طلاب</h4>
+                        <p>قم بإضافة طلاب لتبدأ العمل</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            studentsList.innerHTML = featuredStudents.map(student => `
+                <div class="student-card" onclick="window.location.href='student-profile.html?id=${student.id}'">
+                    <div class="student-avatar">${student.name.charAt(0)}</div>
+                    <div class="student-name">${student.name}</div>
+                    <div class="student-progress">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${student.progress || 0}%"></div>
+                        </div>
+                        <span>${student.progress || 0}% تقدم</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadImportantNotices() {
+            const noticesList = document.getElementById('importantNoticesList');
+            
+            const notices = [
+                {
+                    icon: '📝',
+                    title: 'موعد تسليم الواجبات',
+                    description: 'ينتهي موعد تسجيل درجات الواجبات في نهاية الأسبوع',
+                    time: 'منذ يوم'
+                },
+                {
+                    icon: '📊',
+                    title: 'تقرير شهري',
+                    description: 'يرجى مراجعة التقرير الشهري لأداء الطلاب',
+                    time: 'منذ 3 أيام'
+                },
+                {
+                    icon: '👥',
+                    title: 'اجتماع لجنة الصعوبات',
+                    description: 'اجتماع دوري مع لجنة صعوبات التعلم غداً',
+                    time: 'غداً'
+                }
+            ];
+            
+            noticesList.innerHTML = notices.map(notice => `
+                <div class="notice-item">
+                    <div class="notice-icon">${notice.icon}</div>
+                    <div class="notice-content">
+                        <div class="notice-title">${notice.title}</div>
+                        <div class="notice-description">${notice.description}</div>
+                    </div>
+                    <div class="notice-time">${notice.time}</div>
+                </div>
+            `).join('');
+        }
+
+        function loadRecentActivity() {
+            const activityList = document.getElementById('recentActivityList');
+            
+            const activities = [
+                {
+                    icon: '👨‍🎓',
+                    title: 'تم تسجيل طالب جديد',
+                    description: 'الطالب أحمد محمد تم تسجيله في النظام',
+                    time: 'منذ ساعتين'
+                },
+                {
+                    icon: '📝',
+                    title: 'تم تقديم واجب',
+                    description: 'الطالب سعد قدم واجب درس الجمع',
+                    time: 'منذ 4 ساعات'
+                },
+                {
+                    icon: '📊',
+                    title: 'اختبار تشخيصي جديد',
+                    description: 'تم إنشاء اختبار تشخيصي لمادة الرياضيات',
+                    time: 'منذ يوم'
+                },
+                {
+                    icon: '💬',
+                    title: 'رسالة جديدة',
+                    description: 'رسالة من ولي أمر الطالب خالد',
+                    time: 'منذ يومين'
+                }
+            ];
+            
+            activityList.innerHTML = activities.map(activity => `
+                <div class="activity-item">
+                    <div class="activity-icon">${activity.icon}</div>
+                    <div class="activity-content">
+                        <div class="activity-title">${activity.title}</div>
+                        <div class="activity-description">${activity.description}</div>
+                    </div>
+                    <div class="activity-time">${activity.time}</div>
+                </div>
+            `).join('');
+        }
+
+        function setupTeacherMenu() {
+            const menuItems = [
+                {
+                    icon: '🏠',
+                    text: 'لوحة التحكم',
+                    href: 'dashboard.html'
+                },
+                {
+                    icon: '📊',
+                    text: 'الاختبارات التشخيصية',
+                    href: 'diagnostic-tests.html'
+                },
+                {
+                    icon: '👨‍🎓',
+                    text: 'الطلاب',
+                    href: 'students.html'
+                },
+                {
+                    icon: '📚',
+                    text: 'المحتوى التعليمي',
+                    href: 'library.html'
+                },
+                {
+                    icon: '📝',
+                    text: 'الواجبات والاختبارات',
+                    href: 'assignments.html'
+                },
+                {
+                    icon: '📈',
+                    text: 'التقارير والإحصائيات',
+                    href: 'reports.html'
+                },
+                {
+                    icon: '🗓️',
+                    text: 'الجدول الدراسي',
+                    href: 'schedule.html'
+                },
+                {
+                    icon: '💬',
+                    text: 'المراسلات',
+                    href: 'messages.html'
+                },
+                {
+                    icon: '📋',
+                    text: 'الخطط التربوية',
+                    href: 'iep.html'
+                },
+                {
+                    icon: '👥',
+                    text: 'لجنة الصعوبات',
+                    href: 'committee.html'
+                },
+                {
+                    icon: '⚙️',
+                    text: 'الإعدادات',
+                    href: 'settings.html'
+                }
+            ];
+            
+            const menuList = document.getElementById('teacherMenu');
+            if (menuList) {
+                menuList.innerHTML = menuItems.map(item => {
+                    const isActive = window.location.pathname.includes(item.href);
+                    return `
+                        <li>
+                            <a href="${item.href}" class="${isActive ? 'active' : ''}">
+                                <span class="menu-icon">${item.icon}</span>
+                                <span>${item.text}</span>
+                            </a>
+                        </li>
+                    `;
+                }).join('');
+            }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('active');
+        }
+
+        function showQuickAddStudent() {
+            document.getElementById('quickAddStudentModal').classList.add('show');
+        }
+
+        function closeQuickAddStudentModal() {
+            document.getElementById('quickAddStudentModal').classList.remove('show');
+            document.getElementById('quickAddStudentForm').reset();
+        }
+
+        function quickAddStudent() {
+            const name = document.getElementById('studentName').value.trim();
+            const grade = document.getElementById('studentGrade').value;
+            const subject = document.getElementById('studentSubject').value;
+            
+            if (!name) {
+                showAuthNotification('يرجى إدخال اسم الطالب', 'error');
+                return;
+            }
+            
+            const currentTeacher = getCurrentUser();
+            const students = JSON.parse(localStorage.getItem('students') || '[]');
+            
+            // توليد اسم مستخدم وكلمة مرور تلقائي
+            const username = `student_${Date.now()}`;
+            const password = 'student123';
+            
+            const newStudent = {
+                id: generateId(),
+                username: username,
+                password: password,
+                role: 'student',
+                name: name,
+                grade: grade || '',
+                subject: subject || '',
+                teacherId: currentTeacher.id,
+                progress: 0,
+                status: 'active',
+                createdAt: new Date().toISOString(),
+                lastLogin: null
+            };
+            
+            students.push(newStudent);
+            localStorage.setItem('students', JSON.stringify(students));
+            
+            showAuthNotification('تم إضافة الطالب بنجاح', 'success');
+            closeQuickAddStudentModal();
+            loadTeacherStats();
+            loadFeaturedStudents();
+        }
+
+        function showNotifications() {
+            alert('صفحة الإشعارات ستكون متاحة في التحديثات القادمة');
+        }
+
+        function showAllNotifications() {
+            alert('عرض جميع الإشعارات');
+        }
+    </script>
 </body>
 </html>

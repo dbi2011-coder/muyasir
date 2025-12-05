@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محرر الاختبار - ميسر التعلم</title>
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <link rel="stylesheet" href="../../assets/css/teacher.css">
+    <link rel="stylesheet" href="../../assets/css/diagnostic-tests.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- الشريط الجانبي -->
+        <div class="sidebar" id="sidebar">
+            <!-- محتوى الشريط الجانبي -->
+        </div>
+
+        <!-- المحتوى الرئيسي -->
+        <div class="main-content-dashboard">
+            <header class="dashboard-header">
+                <!-- رأس الصفحة -->
+            </header>
+
+            <main class="dashboard-content">
+                <div class="content-header">
+                    <div>
+                        <button class="btn btn-secondary" onclick="window.location.href='diagnostic-tests.html'">
+                            ← العودة للاختبارات
+                        </button>
+                    </div>
+                    <div class="test-header-info">
+                        <h1 id="testTitleHeader">عنوان الاختبار</h1>
+                        <span id="testSubjectBadge" class="test-subject-badge">المادة</span>
+                    </div>
+                    <button class="btn btn-success" onclick="saveTest()">
+                        💾 حفظ الاختبار
+                    </button>
+                </div>
+
+                <div class="test-editor-container">
+                    <div class="test-description">
+                        <p id="testDescription">وصف الاختبار</p>
+                    </div>
+
+                    <div class="questions-section">
+                        <div class="section-header">
+                            <h3>أسئلة الاختبار</h3>
+                            <button class="btn btn-primary" onclick="showAddQuestionModal()">
+                                ➕ إضافة سؤال
+                            </button>
+                        </div>
+
+                        <!-- أنواع الأسئلة المتاحة -->
+                        <div class="question-types-grid">
+                            <div class="question-type-card" onclick="showQuestionForm('multiple-choice')">
+                                <div class="question-type-icon">🔘</div>
+                                <h4>اختيار من متعدد</h4>
+                            </div>
+                            <div class="question-type-card" onclick="showQuestionForm('drag-drop')">
+                                <div class="question-type-icon">↔️</div>
+                                <h4>سحب وإفلات</h4>
+                            </div>
+                            <div class="question-type-card" onclick="showQuestionForm('multiple-choice-attachment')">
+                                <div class="question-type-icon">📎</div>
+                                <h4>اختيار مع مرفق</h4>
+                            </div>
+                            <div class="question-type-card" onclick="showQuestionForm('open-ended')">
+                                <div class="question-type-icon">📝</div>
+                                <h4>سؤال مفتوح</h4>
+                            </div>
+                            <div class="question-type-card" onclick="showQuestionForm('auto-reading')">
+                                <div class="question-type-icon">📖</div>
+                                <h4>تقييم القراءة الآلي</h4>
+                            </div>
+                            <div class="question-type-card" onclick="showQuestionForm('auto-spelling')">
+                                <div class="question-type-card" onclick="showQuestionForm('auto-spelling')">
+                                <div class="question-type-icon">✍️</div>
+                                <h4>تقييم الإملاء الآلي</h4>
+                            </div>
+                            <div class="question-type-card" onclick="showQuestionForm('manual-reading')">
+                                <div class="question-type-icon">👁️</div>
+                                <h4>تقييم القراءة اليدوي</h4>
+                            </div>
+                            <div class="question-type-card" onclick="showQuestionForm('manual-spelling')">
+                                <div class="question-type-icon">✏️</div>
+                                <h4>تقييم الإملاء اليدوي</h4>
+                            </div>
+                            <div class="question-type-card" onclick="showQuestionForm('missing-letter')">
+                                <div class="question-type-icon">🔤</div>
+                                <h4>أكمل الحرف الناقص</h4>
+                            </div>
+                        </div>
+
+                        <!-- قائمة الأسئلة -->
+                        <div id="questionsList" class="questions-list">
+                            <!-- سيتم تعبئته بالجافاسكريبت -->
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- نافذة إضافة/تعديل سؤال -->
+    <div id="questionModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3 id="questionModalLabel">إضافة سؤال جديد</h3>
+                <button class="modal-close" onclick="closeQuestionModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="questionFormContainer">
+                    <!-- سيتم تعبئته بالجافاسكريبت -->
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeQuestionModal()">إلغاء</button>
+                <button class="btn btn-success" onclick="saveQuestion()">حفظ السؤال</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة إضافة سؤال -->
+    <div id="addQuestionModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>إضافة سؤال جديد</h3>
+                <button class="modal-close" onclick="closeAddQuestionModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- اختيار نوع السؤال -->
+                <div class="question-types-grid">
+                    <div class="question-type-card" onclick="selectQuestionType('multiple-choice')">
+                        <div class="question-type-icon">🔘</div>
+                        <h4>اختيار من متعدد</h4>
+                    </div>
+                    <div class="question-type-card" onclick="selectQuestionType('drag-drop')">
+                        <div class="question-type-icon">↔️</div>
+                        <h4>سحب وإفلات</h4>
+                    </div>
+                    <div class="question-type-card" onclick="selectQuestionType('multiple-choice-attachment')">
+                        <div class="question-type-icon">📎</div>
+                        <h4>اختيار مع مرفق</h4>
+                    </div>
+                    <div class="question-type-card" onclick="selectQuestionType('open-ended')">
+                        <div class="question-type-icon">📝</div>
+                        <h4>سؤال مفتوح</h4>
+                    </div>
+                    <div class="question-type-card" onclick="selectQuestionType('auto-reading')">
+                        <div class="question-type-icon">📖</div>
+                        <h4>تقييم القراءة الآلي</h4>
+                    </div>
+                    <div class="question-type-card" onclick="selectQuestionType('auto-spelling')">
+                        <div class="question-type-icon">✍️</div>
+                        <h4>تقييم الإملاء الآلي</h4>
+                    </div>
+                    <div class="question-type-card" onclick="selectQuestionType('manual-reading')">
+                        <div class="question-type-icon">👁️</div>
+                        <h4>تقييم القراءة اليدوي</h4>
+                    </div>
+                    <div class="question-type-card" onclick="selectQuestionType('manual-spelling')">
+                        <div class="question-type-icon">✏️</div>
+                        <h4>تقييم الإملاء اليدوي</h4>
+                    </div>
+                    <div class="question-type-card" onclick="selectQuestionType('missing-letter')">
+                        <div class="question-type-icon">🔤</div>
+                        <h4>أكمل الحرف الناقص</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAddQuestionModal()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/test-editor.js"></script>
+    <script>
+        // التحقق من تسجيل الدخول
+        document.addEventListener('DOMContentLoaded', function() {
+            const user = checkAuth();
+            if (!user || user.role !== 'teacher') {
+                window.location.href = '../../index.html';
+                return;
+            }
+        });
+    </script>
+</body>
+</html>

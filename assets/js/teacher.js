@@ -1,151 +1,253 @@
-// إدارة لوحة تحكم المعلم
-document.addEventListener('DOMContentLoaded', function() {
-    initializeTeacherDashboard();
-});
+// ============================================
+// 📁 الملف: muyasir-main/assets/js/teacher.js
+// ============================================
 
-function initializeTeacherDashboard() {
-    // التحقق من المصادقة والدور
+// إدارة لوحة تحكم المعلم
+let selectedStudents = new Set();
+let currentViewingStudentId = null;
+let currentViewingTestId = null;
+let currentViewingLessonId = null;
+let currentViewingAssignmentId = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // التحقق من المصادقة
     const user = checkAuth();
-    if (!user) return;
-    
-    if (user.role !== 'teacher') {
-        showAuthNotification('غير مصرح لك بالوصول إلى هذه الصفحة', 'error');
-        setTimeout(() => {
-            window.location.href = '../../index.html';
-        }, 2000);
+    if (!user) {
+        window.location.href = '../../index.html';
         return;
     }
 
-    // تحديث واجهة المستخدم
-    updateUserInterface(user);
+    // تهيئة واجهة المستخدم
+    updateTeacherInterface(user);
     
-    // تحميل البيانات
+    // إعداد القائمة الجانبية
+    setupTeacherMenu();
+    
+    // تحميل البيانات حسب الصفحة
+    if (window.location.pathname.includes('dashboard.html')) {
+        initializeTeacherDashboard();
+    } else if (window.location.pathname.includes('students.html')) {
+        loadStudentsData();
+    } else if (window.location.pathname.includes('library.html')) {
+        loadEducationalContent();
+    } else if (window.location.pathname.includes('messages.html')) {
+        loadTeacherMessages();
+    } else if (window.location.pathname.includes('schedule.html')) {
+        loadTeacherSchedule();
+    } else if (window.location.pathname.includes('student-file.html')) {
+        loadStudentFile();
+    } else if (window.location.pathname.includes('committee.html')) {
+        loadCommitteeData();
+    } else if (window.location.pathname.includes('diagnostic-tests.html')) {
+        // يتم التعامل معه في ملف diagnostic-tests.js
+        return;
+    }
+
+    // إعداد القائمة المتنقلة
+    setupMobileMenu();
+});
+
+function setupTeacherMenu() {
+    const menuContainer = document.getElementById('sidebarMenu');
+    if (!menuContainer) return;
+
+    const currentUser = getCurrentUser();
+    if (!currentUser) return;
+
+    const menuItems = [
+        {
+            icon: '🏠',
+            text: 'لوحة التحكم',
+            href: 'dashboard.html',
+            active: window.location.pathname.includes('dashboard.html')
+        },
+        {
+            icon: '📊',
+            text: 'الاختبارات التشخيصية',
+            href: 'diagnostic-tests.html',
+            active: window.location.pathname.includes('diagnostic-tests.html')
+        },
+        {
+            icon: '👨‍🎓',
+            text: 'الطلاب',
+            href: 'students.html',
+            active: window.location.pathname.includes('students.html')
+        },
+        {
+            icon: '📚',
+            text: 'المحتوى التعليمي',
+            href: 'library.html',
+            active: window.location.pathname.includes('library.html')
+        },
+        {
+            icon: '📅',
+            text: 'الجدول الدراسي',
+            href: 'schedule.html',
+            active: window.location.pathname.includes('schedule.html')
+        },
+        {
+            icon: '💬',
+            text: 'المراسلات',
+            href: 'messages.html',
+            active: window.location.pathname.includes('messages.html')
+        },
+        {
+            icon: '👥',
+            text: 'لجنة صعوبات التعلم',
+            href: 'committee.html',
+            active: window.location.pathname.includes('committee.html')
+        },
+        {
+            icon: '⚙️',
+            text: 'الإعدادات',
+            href: 'settings.html',
+            active: window.location.pathname.includes('settings.html')
+        },
+        {
+            icon: '🚪',
+            text: 'تسجيل الخروج',
+            href: '#',
+            onClick: 'logout()'
+        }
+    ];
+
+    menuContainer.innerHTML = menuItems.map(item => `
+        <li>
+            <a href="${item.href}" 
+               class="${item.active ? 'active' : ''}"
+               ${item.onClick ? `onclick="${item.onClick}; return false;"` : ''}>
+                <span class="menu-icon">${item.icon}</span>
+                <span>${item.text}</span>
+            </a>
+        </li>
+    `).join('');
+}
+
+function initializeTeacherDashboard() {
     loadTeacherStats();
     loadFeaturedStudents();
-    loadRecentActivity();
     loadImportantNotices();
+    loadUpcomingAssignments();
+}
+
+function updateTeacherInterface(user) {
+    const userNameElement = document.getElementById('userName');
+    const userAvatarElement = document.getElementById('userAvatar');
+    const welcomeTextElement = document.getElementById('welcomeText');
     
-    // إذا كانت صفحة الطلاب، تحميل بياناتهم
-    if (window.location.pathname.includes('students.html')) {
-        loadStudentsData();
+    if (userNameElement) {
+        userNameElement.textContent = user.name;
+    }
+    
+    if (userAvatarElement) {
+        userAvatarElement.textContent = user.name.charAt(0);
+    }
+    
+    if (welcomeTextElement) {
+        welcomeTextElement.textContent = `مرحباً بعودتك، ${user.name}`;
     }
 }
 
 function loadTeacherStats() {
-    // محاكاة تحميل الإحصائيات
-    setTimeout(() => {
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const currentTeacher = getCurrentUser();
-        const students = users.filter(u => u.role === 'student' && u.teacherId === currentTeacher.id);
-        
-        // محاكاة بيانات أخرى
-        document.getElementById('studentsCount').textContent = students.length;
-        document.getElementById('lessonsCount').textContent = Math.floor(Math.random() * 20) + 5;
-        document.getElementById('assignmentsCount').textContent = Math.floor(Math.random() * 10) + 1;
-        document.getElementById('unreadMessages').textContent = Math.floor(Math.random() * 5);
-        
-        // تحديث عدد الإشعارات
-        document.getElementById('notificationCount').textContent = Math.floor(Math.random() * 3);
-    }, 1000);
+    const currentUser = getCurrentUser();
+    const students = JSON.parse(localStorage.getItem('students') || '[]');
+    const teacherStudents = students.filter(student => student.teacherId === currentUser.id);
+    
+    const stats = {
+        totalStudents: teacherStudents.length,
+        activeStudents: teacherStudents.filter(s => s.status === 'active').length,
+        completedTests: teacherStudents.reduce((sum, student) => sum + (student.completedTests || 0), 0),
+        pendingAssignments: teacherStudents.reduce((sum, student) => sum + (student.pendingAssignments || 0), 0)
+    };
+    
+    updateStatsElements(stats);
+}
+
+function updateStatsElements(stats) {
+    const elements = {
+        'totalStudentsCount': stats.totalStudents,
+        'activeStudentsCount': stats.activeStudents,
+        'completedTestsCount': stats.completedTests,
+        'pendingAssignmentsCount': stats.pendingAssignments
+    };
+    
+    Object.keys(elements).forEach(id => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = elements[id];
+        }
+    });
 }
 
 function loadFeaturedStudents() {
-    const featuredList = document.getElementById('featuredStudentsList');
-    if (!featuredList) return;
-
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const currentTeacher = getCurrentUser();
-    const students = users.filter(u => u.role === 'student' && u.teacherId === currentTeacher.id);
+    const container = document.getElementById('featuredStudentsList');
+    if (!container) return;
     
-    // أخذ أول 4 طلاب كمثال للطلاب المميزين
-    const featuredStudents = students.slice(0, 4);
+    const currentUser = getCurrentUser();
+    const students = JSON.parse(localStorage.getItem('students') || '[]');
+    const teacherStudents = students.filter(student => student.teacherId === currentUser.id);
+    
+    // أخذ أفضل 4 طلاب حسب التقدم
+    const featuredStudents = teacherStudents
+        .sort((a, b) => (b.progress || 0) - (a.progress || 0))
+        .slice(0, 4);
     
     if (featuredStudents.length === 0) {
-        featuredList.innerHTML = '<p style="text-align: center; color: #666; padding: 20px;">لا توجد بيانات للعرض</p>';
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">👨‍🎓</div>
+                <h3>لا توجد طلاب</h3>
+                <p>لم يتم إضافة أي طلاب بعد</p>
+            </div>
+        `;
         return;
     }
-
-    featuredList.innerHTML = featuredStudents.map(student => `
+    
+    container.innerHTML = featuredStudents.map(student => `
         <div class="student-card">
             <div class="student-avatar">${student.name.charAt(0)}</div>
             <div class="student-name">${student.name}</div>
-            <div class="student-progress">تقدم ${Math.floor(Math.random() * 100)}%</div>
-            <div class="progress-bar">
-                <div class="progress-fill" style="width: ${Math.floor(Math.random() * 100)}%"></div>
-            </div>
-        </div>
-    `).join('');
-}
-
-function loadRecentActivity() {
-    const activityList = document.getElementById('activityList');
-    if (!activityList) return;
-
-    const activities = [
-        {
-            icon: '👨‍🎓',
-            title: 'تم إضافة طالب جديد',
-            time: 'منذ 5 دقائق',
-            color: '#3498db'
-        },
-        {
-            icon: '📚',
-            title: 'تم إنشاء درس جديد',
-            time: 'منذ ساعة',
-            color: '#27ae60'
-        },
-        {
-            icon: '📝',
-            title: 'طالب أنجز واجباً',
-            time: 'منذ 3 ساعات',
-            color: '#f39c12'
-        },
-        {
-            icon: '💬',
-            title: 'رسالة جديدة من طالب',
-            time: 'منذ يوم',
-            color: '#e74c3c'
-        }
-    ];
-
-    activityList.innerHTML = activities.map(activity => `
-        <div class="activity-item">
-            <div class="activity-icon" style="background: ${activity.color}20; color: ${activity.color}">
-                ${activity.icon}
-            </div>
-            <div class="activity-content">
-                <div class="activity-title">${activity.title}</div>
-                <div class="activity-time">${activity.time}</div>
+            <div class="student-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${student.progress || 0}%"></div>
+                </div>
+                <span>${student.progress || 0}%</span>
             </div>
         </div>
     `).join('');
 }
 
 function loadImportantNotices() {
-    const noticesList = document.getElementById('noticesList');
-    if (!noticesList) return;
-
+    const container = document.getElementById('importantNoticesList');
+    if (!container) return;
+    
+    // محاكاة بيانات الإشعارات
     const notices = [
         {
             icon: '⚠️',
-            title: 'اجتماع لجنة الصعوبات',
-            description: 'اجتماع شهري مع لجنة الصعوبات يوم الأحد القادم'
+            title: 'اختبار نهائي',
+            description: 'الاختبار النهائي للفصل الأول يوم الأحد القادم',
+            color: 'warning'
         },
         {
-            icon: '📊',
-            title: 'تقرير الأداء الشهري',
-            description: 'يرجى مراجعة تقرير الأداء الشهري وإرسال الملاحظات'
+            icon: '📅',
+            title: 'اجتماع المعلمين',
+            description: 'اجتماع مهم مع مدير المدرسة غداً الساعة 10 صباحاً',
+            color: 'primary'
         },
         {
             icon: '🎓',
-            title: 'تدريب جديد متاح',
-            description: 'تدريب حول استراتيجيات التعلم النشط متاح الآن'
+            title: 'تسليم التقارير',
+            description: 'آخر موعد لتسليم تقارير الطلاب نهاية هذا الأسبوع',
+            color: 'info'
         }
     ];
-
-    noticesList.innerHTML = notices.map(notice => `
+    
+    container.innerHTML = notices.map(notice => `
         <div class="notice-item">
-            <div class="notice-icon">${notice.icon}</div>
+            <div class="notice-icon" style="background: var(--${notice.color}-color)">
+                ${notice.icon}
+            </div>
             <div class="notice-content">
                 <div class="notice-title">${notice.title}</div>
                 <div class="notice-description">${notice.description}</div>
@@ -154,70 +256,110 @@ function loadImportantNotices() {
     `).join('');
 }
 
+function loadUpcomingAssignments() {
+    const container = document.getElementById('upcomingAssignments');
+    if (!container) return;
+    
+    // محاكاة بيانات الواجبات
+    const assignments = [
+        {
+            title: 'تمرين الحروف',
+            subject: 'لغتي',
+            dueDate: 'غداً',
+            students: '5 طلاب'
+        },
+        {
+            title: 'تمارين الجمع',
+            subject: 'رياضيات',
+            dueDate: 'بعد غد',
+            students: '8 طلاب'
+        }
+    ];
+    
+    container.innerHTML = assignments.map(assignment => `
+        <tr>
+            <td>${assignment.title}</td>
+            <td>${assignment.subject}</td>
+            <td>${assignment.dueDate}</td>
+            <td>${assignment.students}</td>
+            <td>
+                <button class="btn btn-sm btn-primary">عرض</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
 function loadStudentsData() {
-    const loadingState = document.getElementById('loadingState');
-    const emptyState = document.getElementById('emptyState');
     const tableBody = document.getElementById('studentsTableBody');
+    const currentUser = getCurrentUser();
     
     if (!tableBody) return;
-
-    // إظهار حالة التحميل
-    loadingState.style.display = 'block';
-    emptyState.style.display = 'none';
-    tableBody.innerHTML = '';
-
-    setTimeout(() => {
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const currentTeacher = getCurrentUser();
-        const students = users.filter(u => u.role === 'student' && u.teacherId === currentTeacher.id);
+    
+    const students = JSON.parse(localStorage.getItem('students') || '[]');
+    const teacherStudents = students.filter(student => student.teacherId === currentUser.id);
+    
+    if (teacherStudents.length === 0) {
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-4">
+                    <div class="empty-state">
+                        <div class="empty-icon">👨‍🎓</div>
+                        <h3>لا توجد طلاب</h3>
+                        <p>لم يتم إضافة أي طلاب بعد</p>
+                        <button class="btn btn-primary" onclick="showAddStudentModal()">إضافة طالب جديد</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tableBody.innerHTML = teacherStudents.map((student, index) => {
+        const progress = student.progress || 0;
+        const progressClass = progress < 30 ? 'danger' : progress < 60 ? 'warning' : 'success';
         
-        loadingState.style.display = 'none';
-        
-        if (students.length === 0) {
-            emptyState.style.display = 'block';
-            return;
-        }
-
-        // تعبئة الجدول
-        tableBody.innerHTML = students.map((student, index) => {
-            const progress = Math.floor(Math.random() * 100);
-            const progressColor = progress >= 80 ? 'success' : progress >= 50 ? 'warning' : 'danger';
-            
-            return `
-                <tr>
-                    <td>${index + 1}</td>
-                    <td>${student.name}</td>
-                    <td>الصف ${student.grade}</td>
-                    <td>${student.subject}</td>
-                    <td class="progress-cell">
-                        <div class="progress-text text-${progressColor}">${progress}%</div>
+        return `
+            <tr data-student-id="${student.id}">
+                <td>${index + 1}</td>
+                <td>
+                    <div class="student-info">
+                        <div class="student-avatar-small">${student.name.charAt(0)}</div>
+                        <div class="student-details">
+                            <div class="student-name">${student.name}</div>
+                            <div class="student-grade">${student.grade || 'غير محدد'}</div>
+                        </div>
+                    </div>
+                </td>
+                <td>${student.subject || 'غير محدد'}</td>
+                <td>
+                    <div class="progress-cell">
                         <div class="progress-bar">
-                            <div class="progress-fill bg-${progressColor}" style="width: ${progress}%"></div>
+                            <div class="progress-fill" style="width: ${progress}%; background-color: var(--${progressClass}-color)"></div>
                         </div>
-                    </td>
-                    <td>
-                        <div class="student-actions">
-                            <button class="btn btn-sm btn-primary" onclick="viewStudent(${student.id})" title="عرض">
-                                👁️
-                            </button>
-                            <button class="btn btn-sm btn-warning" onclick="editStudent(${student.id})" title="تعديل">
-                                ✏️
-                            </button>
-                            <button class="btn btn-sm btn-info" onclick="exportStudent(${student.id})" title="تصدير">
-                                📤
-                            </button>
-                            <button class="btn btn-sm btn-secondary" onclick="manageLoginData(${student.id})" title="بيانات الدخول">
-                                🔑
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})" title="حذف">
-                                🗑️
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-    }, 1500);
+                        <span class="progress-text">${progress}%</span>
+                    </div>
+                </td>
+                <td>${student.completedTests || 0}</td>
+                <td>${student.pendingAssignments || 0}</td>
+                <td>
+                    <div class="student-actions">
+                        <button class="btn btn-icon btn-primary" onclick="viewStudent(${student.id})" title="عرض">
+                            👁️
+                        </button>
+                        <button class="btn btn-icon btn-success" onclick="assignTest(${student.id})" title="تعيين اختبار">
+                            📝
+                        </button>
+                        <button class="btn btn-icon btn-warning" onclick="sendMessage(${student.id})" title="إرسال رسالة">
+                            💬
+                        </button>
+                        <button class="btn btn-icon btn-info" onclick="viewStudentFile(${student.id})" title="الملف الشخصي">
+                            📋
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
 function showAddStudentModal() {
@@ -229,133 +371,228 @@ function closeAddStudentModal() {
     document.getElementById('addStudentForm').reset();
 }
 
-function showImportStudentModal() {
-    document.getElementById('importStudentModal').classList.add('show');
-}
-
-function closeImportStudentModal() {
-    document.getElementById('importStudentModal').classList.remove('show');
-    document.getElementById('studentFile').value = '';
-    document.getElementById('fileInfo').style.display = 'none';
-}
-
 function addNewStudent() {
     const form = document.getElementById('addStudentForm');
     const name = document.getElementById('studentName').value.trim();
     const grade = document.getElementById('studentGrade').value;
     const subject = document.getElementById('studentSubject').value;
+    const username = document.getElementById('studentUsername').value.trim();
+    const password = document.getElementById('studentPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
 
     // التحقق من صحة البيانات
-    if (!name || !grade || !subject) {
+    if (!name || !grade || !subject || !username || !password) {
         showAuthNotification('يرجى ملء جميع الحقول', 'error');
         return;
     }
 
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const currentTeacher = getCurrentUser();
+    if (password !== confirmPassword) {
+        showAuthNotification('كلمات المرور غير متطابقة', 'error');
+        return;
+    }
 
-    // إنشاء الطالب الجديد
-    const newStudent = {
+    // التحقق من عدم تكرار اسم المستخدم
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const existingUser = users.find(u => u.username === username);
+    if (existingUser) {
+        showAuthNotification('اسم المستخدم موجود مسبقاً', 'error');
+        return;
+    }
+
+    const currentUser = getCurrentUser();
+    
+    // إنشاء المستخدم الطالب
+    const newStudentUser = {
         id: generateId(),
-        teacherId: currentTeacher.id,
+        username: username,
+        password: password,
         role: 'student',
         name: name,
         grade: grade,
         subject: subject,
-        progress: 0,
-        createdAt: new Date().toISOString(),
-        lastActive: null
+        teacherId: currentUser.id,
+        status: 'active',
+        createdAt: new Date().toISOString()
     };
 
-    users.push(newStudent);
+    // حفظ المستخدم
+    users.push(newStudentUser);
     localStorage.setItem('users', JSON.stringify(users));
+
+    // إضافة إلى قائمة الطلاب
+    const students = JSON.parse(localStorage.getItem('students') || '[]');
+    students.push({
+        id: newStudentUser.id,
+        name: name,
+        grade: grade,
+        subject: subject,
+        teacherId: currentUser.id,
+        progress: 0,
+        completedTests: 0,
+        pendingAssignments: 0,
+        lastLogin: null
+    });
+    
+    localStorage.setItem('students', JSON.stringify(students));
 
     showAuthNotification('تم إضافة الطالب بنجاح', 'success');
     closeAddStudentModal();
     loadStudentsData();
+    
+    // إضافة سجل النظام
+    addSystemLog(`تم إضافة طالب جديد: ${name}`, 'user');
 }
 
 function viewStudent(studentId) {
-    // حفظ معرف الطالب في التخزين المؤقت للوصول إليه من صفحة الطالب
-    sessionStorage.setItem('currentStudentId', studentId);
-    window.location.href = 'student-profile.html';
-}
-
-function editStudent(studentId) {
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const student = users.find(u => u.id === studentId && u.role === 'student');
+    currentViewingStudentId = studentId;
+    const student = getStudentById(studentId);
     
     if (!student) {
         showAuthNotification('الطالب غير موجود', 'error');
         return;
     }
-
-    // تعبئة النموذج في نافذة منبثقة (سيتم تطويرها بالكامل لاحقاً)
-    const newName = prompt('أدخل الاسم الجديد للطالب:', student.name);
-    const newGrade = prompt('أدخل الصف الجديد:', student.grade);
     
-    if (newName && newGrade) {
-        const studentIndex = users.findIndex(u => u.id === studentId);
-        users[studentIndex].name = newName;
-        users[studentIndex].grade = newGrade;
-        
-        localStorage.setItem('users', JSON.stringify(users));
-        showAuthNotification('تم تحديث بيانات الطالب بنجاح', 'success');
-        loadStudentsData();
+    document.getElementById('viewStudentName').textContent = student.name;
+    document.getElementById('viewStudentGrade').textContent = student.grade || 'غير محدد';
+    document.getElementById('viewStudentSubject').textContent = student.subject || 'غير محدد';
+    document.getElementById('viewStudentProgress').textContent = (student.progress || 0) + '%';
+    document.getElementById('viewStudentTests').textContent = student.completedTests || 0;
+    document.getElementById('viewStudentAssignments').textContent = student.pendingAssignments || 0;
+    
+    // تحديث شريط التقدم
+    const progressBar = document.getElementById('viewStudentProgressBar');
+    const progress = student.progress || 0;
+    const progressClass = progress < 30 ? 'danger' : progress < 60 ? 'warning' : 'success';
+    progressBar.style.width = progress + '%';
+    progressBar.style.backgroundColor = `var(--${progressClass}-color)`;
+    
+    document.getElementById('viewStudentModal').classList.add('show');
+}
+
+function closeViewStudentModal() {
+    document.getElementById('viewStudentModal').classList.remove('show');
+    currentViewingStudentId = null;
+}
+
+function assignTest(studentId) {
+    currentViewingStudentId = studentId;
+    showTestAssignmentModal();
+}
+
+function showTestAssignmentModal() {
+    // تحميل قائمة الاختبارات المتاحة
+    const tests = getDiagnosticTests();
+    const testSelect = document.getElementById('testToAssign');
+    
+    if (testSelect) {
+        testSelect.innerHTML = '<option value="">اختر الاختبار</option>';
+        tests.forEach(test => {
+            const option = document.createElement('option');
+            option.value = test.id;
+            option.textContent = `${test.title} (${test.subject})`;
+            testSelect.appendChild(option);
+        });
     }
-}
-
-function exportStudent(studentId) {
-    showAuthNotification('جاري تجهيز ملف التصدير...', 'info');
-    // محاكاة عملية التصدير
-    setTimeout(() => {
-        showAuthNotification('تم تصدير بيانات الطالب بنجاح', 'success');
-    }, 2000);
-}
-
-function manageLoginData(studentId) {
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const student = users.find(u => u.id === studentId && u.role === 'student');
     
-    if (!student) {
-        showAuthNotification('الطالب غير موجود', 'error');
+    document.getElementById('assignTestModal').classList.add('show');
+}
+
+function closeAssignTestModal() {
+    document.getElementById('assignTestModal').classList.remove('show');
+    currentViewingStudentId = null;
+}
+
+function assignTestToStudent() {
+    const testId = parseInt(document.getElementById('testToAssign').value);
+    const dueDate = document.getElementById('testDueDate').value;
+    
+    if (!testId || !dueDate) {
+        showAuthNotification('يرجى اختيار الاختبار وتحديد التاريخ', 'error');
         return;
     }
+    
+    if (!currentViewingStudentId) {
+        showAuthNotification('لم يتم تحديد طالب', 'error');
+        return;
+    }
+    
+    // حفظ التعيين
+    const assignments = JSON.parse(localStorage.getItem('testAssignments') || '[]');
+    const newAssignment = {
+        id: generateId(),
+        studentId: currentViewingStudentId,
+        testId: testId,
+        dueDate: dueDate,
+        assignedAt: new Date().toISOString(),
+        status: 'pending',
+        score: null,
+        completedAt: null
+    };
+    
+    assignments.push(newAssignment);
+    localStorage.setItem('testAssignments', JSON.stringify(assignments));
+    
+    // تحديث عدد الواجبات المعلقة للطالب
+    updateStudentPendingAssignments(currentViewingStudentId, 1);
+    
+    showAuthNotification('تم تعيين الاختبار بنجاح', 'success');
+    closeAssignTestModal();
+    loadStudentsData();
+}
 
-    if (!student.username) {
-        // إنشاء بيانات دخول تلقائية
-        const username = `student${studentId}`;
-        const password = generatePassword();
-        
-        const studentIndex = users.findIndex(u => u.id === studentId);
-        users[studentIndex].username = username;
-        users[studentIndex].password = password;
-        
-        localStorage.setItem('users', JSON.stringify(users));
-        
-        showAuthNotification(`تم إنشاء بيانات الدخول:<br>اسم المستخدم: ${username}<br>كلمة المرور: ${password}`, 'success');
-    } else {
-        // عرض بيانات الدخول الحالية
-        showAuthNotification(`بيانات الدخول الحالية:<br>اسم المستخدم: ${student.username}<br>كلمة المرور: ${student.password}`, 'info');
+function updateStudentPendingAssignments(studentId, increment) {
+    const students = JSON.parse(localStorage.getItem('students') || '[]');
+    const studentIndex = students.findIndex(s => s.id === studentId);
+    
+    if (studentIndex !== -1) {
+        students[studentIndex].pendingAssignments = (students[studentIndex].pendingAssignments || 0) + increment;
+        localStorage.setItem('students', JSON.stringify(students));
     }
 }
 
-function deleteStudent(studentId) {
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const student = users.find(u => u.id === studentId && u.role === 'student');
+function sendMessage(studentId) {
+    currentViewingStudentId = studentId;
+    document.getElementById('sendMessageModal').classList.add('show');
+}
+
+function closeSendMessageModal() {
+    document.getElementById('sendMessageModal').classList.remove('show');
+    currentViewingStudentId = null;
+}
+
+function sendMessageToStudent() {
+    const message = document.getElementById('messageContent').value.trim();
     
-    if (!student) {
-        showAuthNotification('الطالب غير موجود', 'error');
+    if (!message) {
+        showAuthNotification('يرجى كتابة الرسالة', 'error');
         return;
     }
-
-    if (confirm(`هل أنت متأكد من حذف الطالب ${student.name}؟ هذا الإجراء سيحذف جميع بيانات الطالب ولا يمكن التراجع عنه.`)) {
-        const updatedUsers = users.filter(u => u.id !== studentId);
-        localStorage.setItem('users', JSON.stringify(updatedUsers));
-        
-        showAuthNotification('تم حذف الطالب بنجاح', 'success');
-        loadStudentsData();
+    
+    if (!currentViewingStudentId) {
+        showAuthNotification('لم يتم تحديد طالب', 'error');
+        return;
     }
+    
+    // حفظ الرسالة
+    const messages = JSON.parse(localStorage.getItem('messages') || '[]');
+    const newMessage = {
+        id: generateId(),
+        senderId: getCurrentUser().id,
+        receiverId: currentViewingStudentId,
+        message: message,
+        sentAt: new Date().toISOString(),
+        isRead: false
+    };
+    
+    messages.push(newMessage);
+    localStorage.setItem('messages', JSON.stringify(messages));
+    
+    showAuthNotification('تم إرسال الرسالة بنجاح', 'success');
+    closeSendMessageModal();
+}
+
+function viewStudentFile(studentId) {
+    window.location.href = `student-file.html?id=${studentId}`;
 }
 
 function searchStudents() {
@@ -363,11 +600,10 @@ function searchStudents() {
     const rows = document.querySelectorAll('#studentsTableBody tr');
     
     rows.forEach(row => {
-        const name = row.cells[1].textContent.toLowerCase();
-        const grade = row.cells[2].textContent.toLowerCase();
-        const subject = row.cells[3].textContent.toLowerCase();
+        const studentName = row.querySelector('.student-name')?.textContent.toLowerCase() || '';
+        const studentGrade = row.querySelector('.student-grade')?.textContent.toLowerCase() || '';
         
-        if (name.includes(searchTerm) || grade.includes(searchTerm) || subject.includes(searchTerm)) {
+        if (studentName.includes(searchTerm) || studentGrade.includes(searchTerm)) {
             row.style.display = '';
         } else {
             row.style.display = 'none';
@@ -378,392 +614,472 @@ function searchStudents() {
 function filterStudents() {
     const gradeFilter = document.getElementById('gradeFilter').value;
     const subjectFilter = document.getElementById('subjectFilter').value;
-    const rows = document.querySelectorAll('#studentsTableBody tr');
+    const progressFilter = document.getElementById('progressFilter').value;
+    
+    const rows = document.querySelectorAll('#studentsTableBody tr[data-student-id]');
     
     rows.forEach(row => {
-        const grade = row.cells[2].textContent.includes(gradeFilter);
-        const subject = row.cells[3].textContent.includes(subjectFilter);
+        const grade = row.cells[2].textContent;
+        const subject = row.cells[3].textContent;
+        const progressText = row.querySelector('.progress-text')?.textContent || '0%';
+        const progress = parseInt(progressText);
         
-        const gradeMatch = gradeFilter === 'all' || grade;
-        const subjectMatch = subjectFilter === 'all' || subject;
+        let showRow = true;
         
-        if (gradeMatch && subjectMatch) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
+        // فلترة حسب الصف
+        if (gradeFilter && gradeFilter !== 'all' && grade !== gradeFilter) {
+            showRow = false;
+        }
+        
+        // فلترة حسب المادة
+        if (subjectFilter && subjectFilter !== 'all' && subject !== subjectFilter) {
+            showRow = false;
+        }
+        
+        // فلترة حسب التقدم
+        if (progressFilter && progressFilter !== 'all') {
+            const [min, max] = progressFilter.split('-').map(Number);
+            if (progress < min || progress > max) {
+                showRow = false;
+            }
+        }
+        
+        row.style.display = showRow ? '' : 'none';
+    });
+}
+
+function getStudentById(studentId) {
+    const students = JSON.parse(localStorage.getItem('students') || '[]');
+    return students.find(s => s.id === studentId);
+}
+
+function loadEducationalContent() {
+    const arabicContent = document.getElementById('arabicContent');
+    const mathContent = document.getElementById('mathContent');
+    
+    if (arabicContent) {
+        loadSubjectContent(arabicContent, 'لغتي');
+    }
+    
+    if (mathContent) {
+        loadSubjectContent(mathContent, 'رياضيات');
+    }
+}
+
+function loadSubjectContent(container, subject) {
+    // محاكاة بيانات المحتوى التعليمي
+    const contentItems = [
+        {
+            id: 1,
+            title: 'الدرس الأول: الحروف العربية',
+            description: 'تعلم نطق وكتابة الحروف العربية',
+            questions: 10,
+            exercises: 5,
+            strategy: 'التعلم باللعب',
+            priority: 'عالي',
+            totalGrade: 100
+        },
+        {
+            id: 2,
+            title: 'الدرس الثاني: الحركات',
+            description: 'التعرف على الحركات في اللغة العربية',
+            questions: 8,
+            exercises: 4,
+            strategy: 'التعلم المرئي',
+            priority: 'متوسط',
+            totalGrade: 80
+        }
+    ];
+    
+    if (subject === 'رياضيات') {
+        contentItems[0].title = 'الدرس الأول: الأرقام من 1 إلى 10';
+        contentItems[0].description = 'تعلم الأرقام والعد';
+        contentItems[1].title = 'الدرس الثاني: الجمع البسيط';
+        contentItems[1].description = 'تعلم عمليات الجمع';
+    }
+    
+    container.innerHTML = contentItems.map(item => `
+        <div class="content-card">
+            <div class="content-header">
+                <h4>${item.title}</h4>
+                <span class="content-badge subject-${subject === 'لغتي' ? 'لغتي' : 'رياضيات'}">
+                    ${subject}
+                </span>
+            </div>
+            <div class="content-body">
+                <p>${item.description}</p>
+                <div class="content-meta">
+                    <span class="questions-count">${item.questions} سؤال</span>
+                    <span class="exercises-count">${item.exercises} تمرين</span>
+                    <span class="strategy">${item.strategy}</span>
+                    <span class="priority">${item.priority}</span>
+                    <span class="total-grade">${item.totalGrade} درجة</span>
+                    <span class="objectives-status not-linked">لم يتم الربط</span>
+                </div>
+            </div>
+            <div class="content-actions">
+                <button class="btn btn-sm btn-primary">عرض</button>
+                <button class="btn btn-sm btn-warning">تعديل</button>
+                <button class="btn btn-sm btn-info">ربط الأهداف</button>
+                <button class="btn btn-sm btn-success">تعيين</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function loadTeacherMessages() {
+    const messagesList = document.getElementById('messagesList');
+    if (!messagesList) return;
+    
+    // محاكاة بيانات الرسائل
+    const messages = [
+        {
+            id: 1,
+            sender: 'لجنة صعوبات التعلم',
+            subject: 'ملاحظة حول الطالب أحمد',
+            preview: 'نود إعلامكم بملاحظة هامة حول أداء الطالب أحمد...',
+            date: '2024-01-15',
+            unread: true
+        },
+        {
+            id: 2,
+            sender: 'مدير النظام',
+            subject: 'تحديث جديد للنظام',
+            preview: 'تم إضافة ميزات جديدة للنظام...',
+            date: '2024-01-14',
+            unread: false
+        }
+    ];
+    
+    messagesList.innerHTML = messages.map(msg => `
+        <div class="message-item ${msg.unread ? 'unread' : ''}">
+            <div class="message-sender">
+                <div class="sender-avatar">${msg.sender.charAt(0)}</div>
+                <div class="sender-info">
+                    <strong>${msg.sender}</strong>
+                    <span class="message-subject">${msg.subject}</span>
+                </div>
+            </div>
+            <div class="message-meta">
+                <span class="message-date">${formatDateShort(msg.date)}</span>
+                <span class="message-status">${msg.unread ? '📬' : '📭'}</span>
+            </div>
+            <div class="message-preview">
+                ${msg.preview}
+            </div>
+            <div class="message-actions">
+                <button class="btn btn-sm btn-primary" onclick="viewMessage(${msg.id})">عرض</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteMessage(${msg.id})">حذف</button>
+                ${msg.unread ? `<button class="btn btn-sm btn-success" onclick="markAsRead(${msg.id})">تعليم كمقروء</button>` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function loadTeacherSchedule() {
+    const scheduleTable = document.getElementById('scheduleTable');
+    if (!scheduleTable) return;
+    
+    // محاكاة بيانات الجدول
+    const schedule = [
+        {
+            time: '8:00 - 9:00',
+            sunday: 'لغتي - أحمد',
+            monday: 'رياضيات - محمد',
+            tuesday: 'مراجعة',
+            wednesday: 'لغتي - سارة',
+            thursday: 'رياضيات - خالد'
+        },
+        {
+            time: '9:00 - 10:00',
+            sunday: 'رياضيات - علي',
+            monday: 'لغتي - فاطمة',
+            tuesday: 'أنشطة',
+            wednesday: 'رياضيات - نور',
+            thursday: 'لغتي - عمر'
+        }
+    ];
+    
+    const tbody = scheduleTable.querySelector('tbody');
+    if (tbody) {
+        tbody.innerHTML = schedule.map(session => `
+            <tr>
+                <td class="period-name">${session.time}</td>
+                <td class="schedule-cell booked">
+                    <div class="session-info">
+                        <div class="session-subject">${session.sunday}</div>
+                        <button class="btn btn-sm btn-outline-secondary">تعديل</button>
+                    </div>
+                </td>
+                <td class="schedule-cell booked">
+                    <div class="session-info">
+                        <div class="session-subject">${session.monday}</div>
+                        <button class="btn btn-sm btn-outline-secondary">تعديل</button>
+                    </div>
+                </td>
+                <td class="schedule-cell break">
+                    <div class="cell-placeholder">${session.tuesday}</div>
+                </td>
+                <td class="schedule-cell booked">
+                    <div class="session-info">
+                        <div class="session-subject">${session.wednesday}</div>
+                        <button class="btn btn-sm btn-outline-secondary">تعديل</button>
+                    </div>
+                </td>
+                <td class="schedule-cell booked">
+                    <div class="session-info">
+                        <div class="session-subject">${session.thursday}</div>
+                        <button class="btn btn-sm btn-outline-secondary">تعديل</button>
+                    </div>
+                </td>
+            </tr>
+        `).join('');
+    }
+}
+
+function loadStudentFile() {
+    const studentId = getUrlParameter('id');
+    if (!studentId) {
+        showAuthNotification('لم يتم تحديد طالب', 'error');
+        window.location.href = 'students.html';
+        return;
+    }
+    
+    const student = getStudentById(parseInt(studentId));
+    if (!student) {
+        showAuthNotification('الطالب غير موجود', 'error');
+        window.location.href = 'students.html';
+        return;
+    }
+    
+    updateStudentFileUI(student);
+    loadStudentFileData(student.id);
+}
+
+function updateStudentFileUI(student) {
+    document.getElementById('studentFileName').textContent = student.name;
+    document.getElementById('studentFileAvatar').textContent = student.name.charAt(0);
+    document.getElementById('studentFileGrade').textContent = student.grade || 'غير محدد';
+    document.getElementById('studentFileSubject').textContent = student.subject || 'غير محدد';
+}
+
+function loadStudentFileData(studentId) {
+    loadStudentTests(studentId);
+    loadStudentLessons(studentId);
+    loadStudentAssignments(studentId);
+    loadStudentIEP(studentId);
+}
+
+function loadStudentTests(studentId) {
+    const container = document.getElementById('studentTestsList');
+    if (!container) return;
+    
+    // محاكاة بيانات الاختبارات
+    const tests = [
+        {
+            id: 1,
+            title: 'الاختبار التشخيصي الأول',
+            subject: 'لغتي',
+            date: '2024-01-10',
+            score: 85,
+            status: 'مكتمل'
+        },
+        {
+            id: 2,
+            title: 'اختبار الحروف',
+            subject: 'لغتي',
+            date: '2024-01-15',
+            score: null,
+            status: 'معلق'
+        }
+    ];
+    
+    container.innerHTML = tests.map(test => `
+        <div class="test-info-card">
+            <div class="test-header">
+                <h4>${test.title}</h4>
+                <span class="test-status ${test.status === 'مكتمل' ? 'completed' : 'assigned'}">
+                    ${test.status}
+                </span>
+            </div>
+            <div class="test-details">
+                <p>المادة: ${test.subject}</p>
+                <p>التاريخ: ${test.date}</p>
+                ${test.score ? `<p>الدرجة: ${test.score}/100</p>` : ''}
+            </div>
+            <div class="test-actions">
+                <button class="btn btn-sm btn-primary" onclick="viewTestDetails(${test.id})">عرض</button>
+                ${test.status !== 'مكتمل' ? `<button class="btn btn-sm btn-warning" onclick="gradeTest(${test.id})">تصحيح</button>` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function loadCommitteeData() {
+    loadCommitteeMembers();
+    loadCommitteeNotes();
+}
+
+function loadCommitteeMembers() {
+    const container = document.getElementById('committeeMembersList');
+    if (!container) return;
+    
+    // محاكاة بيانات أعضاء اللجنة
+    const members = [
+        {
+            id: 1,
+            name: 'د. أحمد محمد',
+            role: 'مشرف',
+            username: 'ahmed_committee'
+        },
+        {
+            id: 2,
+            name: 'أ. فاطمة علي',
+            role: 'عضو',
+            username: 'fatma_committee'
+        }
+    ];
+    
+    container.innerHTML = members.map(member => `
+        <div class="member-card">
+            <div class="member-info">
+                <div class="member-avatar">${member.name.charAt(0)}</div>
+                <div class="member-details">
+                    <h4>${member.name}</h4>
+                    <div class="member-meta">
+                        <span class="member-role">${member.role}</span>
+                        <span class="member-username">${member.username}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="member-actions">
+                <button class="btn btn-sm btn-primary">مراسلة</button>
+                <button class="btn btn-sm btn-info" onclick="viewMemberCredentials(${member.id})">عرض بيانات الدخول</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function loadCommitteeNotes() {
+    const container = document.getElementById('committeeNotesList');
+    if (!container) return;
+    
+    // محاكاة بيانات الملاحظات
+    const notes = [
+        {
+            id: 1,
+            from: 'د. أحمد محمد',
+            role: 'مشرف',
+            date: '2024-01-15',
+            content: 'نود توجيه انتباهكم لأداء الطالب في القراءة...',
+            isRead: false
+        }
+    ];
+    
+    container.innerHTML = notes.map(note => `
+        <div class="note-card ${note.isRead ? 'read' : 'unread'}">
+            <div class="note-header">
+                <div class="note-sender">
+                    <strong>${note.from}</strong>
+                    <span class="sender-role">${note.role}</span>
+                </div>
+                <div class="note-date">${note.date}</div>
+            </div>
+            <div class="note-content">
+                <p>${note.content}</p>
+            </div>
+            <div class="note-actions">
+                <button class="btn btn-sm btn-primary" onclick="viewNote(${note.id})">عرض</button>
+                <button class="btn btn-sm btn-success" onclick="replyToNote(${note.id})">رد</button>
+                ${!note.isRead ? `<button class="btn btn-sm btn-warning" onclick="markNoteAsRead(${note.id})">تعليم كمقروء</button>` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function setupMobileMenu() {
+    const menuBtn = document.querySelector('.mobile-menu-btn');
+    const sidebar = document.querySelector('.sidebar');
+    
+    if (menuBtn && sidebar) {
+        menuBtn.addEventListener('click', function() {
+            sidebar.classList.toggle('active');
+        });
+    }
+    
+    // إغلاق القائمة عند النقر خارجها
+    document.addEventListener('click', function(event) {
+        if (sidebar && sidebar.classList.contains('active') && 
+            !sidebar.contains(event.target) && 
+            !event.target.classList.contains('mobile-menu-btn')) {
+            sidebar.classList.remove('active');
         }
     });
 }
 
-function downloadTemplate() {
-    showAuthNotification('جاري تحميل النموذج...', 'info');
-    // محاكاة تحميل النموذج
-    setTimeout(() => {
-        showAuthNotification('تم تحميل النموذج بنجاح', 'success');
-    }, 1000);
+function getUrlParameter(name) {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get(name);
 }
 
-function importStudents() {
-    const fileInput = document.getElementById('studentFile');
-    if (!fileInput.files.length) {
-        showAuthNotification('يرجى اختيار ملف للاستيراد', 'error');
-        return;
-    }
-    
-    showAuthNotification('جاري استيراد البيانات...', 'info');
-    // محاكاة عملية الاستيراد
-    setTimeout(() => {
-        showAuthNotification('تم استيراد الطلاب بنجاح', 'success');
-        closeImportStudentModal();
-        loadStudentsData();
-    }, 2000);
+function getDiagnosticTests() {
+    return JSON.parse(localStorage.getItem('diagnosticTests') || '[]');
 }
 
-function generatePassword() {
-    return Math.random().toString(36).slice(-8);
+function addSystemLog(message, type = 'info', user = null) {
+    try {
+        const logs = JSON.parse(localStorage.getItem('systemLogs') || '[]');
+        const currentUser = getCurrentUser();
+        
+        logs.push({
+            timestamp: new Date().toISOString(),
+            type: type,
+            message: message,
+            user: user || (currentUser ? currentUser.name : 'النظام')
+        });
+        
+        // الاحتفاظ فقط بآخر 1000 سجل
+        if (logs.length > 1000) {
+            logs.splice(0, logs.length - 1000);
+        }
+        
+        localStorage.setItem('systemLogs', JSON.stringify(logs));
+    } catch (error) {
+        console.error('خطأ في إضافة سجل النظام:', error);
+    }
 }
 
-// التعامل مع سحب وإفلات الملفات
-document.addEventListener('DOMContentLoaded', function() {
-    const uploadArea = document.querySelector('.upload-placeholder');
-    const fileInput = document.getElementById('studentFile');
-    const fileInfo = document.getElementById('fileInfo');
-
-    if (uploadArea && fileInput) {
-        // سحب وإفلات
-        uploadArea.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            this.style.borderColor = 'var(--primary-color)';
-            this.style.background = '#f8f9fa';
-        });
-
-        uploadArea.addEventListener('dragleave', function(e) {
-            e.preventDefault();
-            this.style.borderColor = 'var(--border-color)';
-            this.style.background = 'transparent';
-        });
-
-        uploadArea.addEventListener('drop', function(e) {
-            e.preventDefault();
-            this.style.borderColor = 'var(--border-color)';
-            this.style.background = 'transparent';
-            
-            const files = e.dataTransfer.files;
-            if (files.length) {
-                fileInput.files = files;
-                updateFileInfo(files[0]);
-            }
-        });
-
-        // تغيير الملف عبر الزر
-        fileInput.addEventListener('change', function() {
-            if (this.files.length) {
-                updateFileInfo(this.files[0]);
-            }
-        });
+// دوال الواجهة العامة
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+        sidebar.classList.toggle('active');
     }
+}
 
-    function updateFileInfo(file) {
-        const fileSize = (file.size / 1024 / 1024).toFixed(2);
-        fileInfo.innerHTML = `
-            <div class="file-name">${file.name}</div>
-            <div class="file-size">الحجم: ${fileSize} MB</div>
-        `;
-        fileInfo.style.display = 'block';
-    }
-});
+function showSettings() {
+    window.location.href = 'settings.html';
+}
+
+function showNotifications() {
+    alert('نظام الإشعارات سيتم تفعيله قريباً');
+}
 
 // تصدير الدوال للاستخدام العالمي
 window.showAddStudentModal = showAddStudentModal;
 window.closeAddStudentModal = closeAddStudentModal;
-window.showImportStudentModal = showImportStudentModal;
-window.closeImportStudentModal = closeImportStudentModal;
+window.addNewStudent = addNewStudent;
 window.viewStudent = viewStudent;
-window.editStudent = editStudent;
-window.exportStudent = exportStudent;
-window.manageLoginData = manageLoginData;
-window.deleteStudent = deleteStudent;
+window.closeViewStudentModal = closeViewStudentModal;
+window.assignTest = assignTest;
+window.closeAssignTestModal = closeAssignTestModal;
+window.assignTestToStudent = assignTestToStudent;
+window.sendMessage = sendMessage;
+window.closeSendMessageModal = closeSendMessageModal;
+window.sendMessageToStudent = sendMessageToStudent;
+window.viewStudentFile = viewStudentFile;
 window.searchStudents = searchStudents;
 window.filterStudents = filterStudents;
-window.downloadTemplate = downloadTemplate;
-window.importStudents = importStudents;
-// إضافة هذه الدوال في نهاية الملف
-
-// دعم مكتبة المحتوى في لوحة التحكم
-function loadTeacherStats() {
-    // محاكاة تحميل الإحصائيات
-    setTimeout(() => {
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const tests = JSON.parse(localStorage.getItem('tests') || '[]');
-        const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-        const assignments = JSON.parse(localStorage.getItem('assignments') || '[]');
-        
-        const currentTeacher = getCurrentUser();
-        const students = users.filter(u => u.role === 'student' && u.teacherId === currentTeacher.id);
-        const teacherTests = tests.filter(test => test.teacherId === currentTeacher.id);
-        const teacherLessons = lessons.filter(lesson => lesson.teacherId === currentTeacher.id);
-        const teacherAssignments = assignments.filter(assignment => assignment.teacherId === currentTeacher.id);
-        
-        document.getElementById('studentsCount').textContent = students.length;
-        document.getElementById('lessonsCount').textContent = teacherLessons.length;
-        document.getElementById('assignmentsCount').textContent = teacherAssignments.length;
-        document.getElementById('unreadMessages').textContent = Math.floor(Math.random() * 5);
-        
-        // تحديث عدد الإشعارات
-        document.getElementById('notificationCount').textContent = Math.floor(Math.random() * 3);
-    }, 1000);
-}
-
-// دوال حذف المحتوى
-function deleteTest(testId) {
-    const tests = JSON.parse(localStorage.getItem('tests') || '[]');
-    const test = tests.find(t => t.id === testId);
-    
-    if (!test) {
-        showAuthNotification('الاختبار غير موجود', 'error');
-        return;
-    }
-
-    if (confirm(`هل أنت متأكد من حذف الاختبار "${test.title}"؟`)) {
-        const updatedTests = tests.filter(t => t.id !== testId);
-        localStorage.setItem('tests', JSON.stringify(updatedTests));
-        
-        showAuthNotification('تم حذف الاختبار بنجاح', 'success');
-        loadTests();
-    }
-}
-
-function deleteLesson(lessonId) {
-    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const lesson = lessons.find(l => l.id === lessonId);
-    
-    if (!lesson) {
-        showAuthNotification('الدرس غير موجود', 'error');
-        return;
-    }
-
-    if (confirm(`هل أنت متأكد من حذف الدرس "${lesson.title}"؟`)) {
-        const updatedLessons = lessons.filter(l => l.id !== lessonId);
-        localStorage.setItem('lessons', JSON.stringify(updatedLessons));
-        
-        showAuthNotification('تم حذف الدرس بنجاح', 'success');
-        loadLessons();
-    }
-}
-
-function deleteObjective(objectiveId) {
-    const objectives = JSON.parse(localStorage.getItem('objectives') || '[]');
-    const objective = objectives.find(o => o.id === objectiveId);
-    
-    if (!objective) {
-        showAuthNotification('الهدف غير موجود', 'error');
-        return;
-    }
-
-    if (confirm(`هل أنت متأكد من حذف الهدف "${objective.shortTerm}"؟`)) {
-        const updatedObjectives = objectives.filter(o => o.id !== objectiveId);
-        localStorage.setItem('objectives', JSON.stringify(updatedObjectives));
-        
-        showAuthNotification('تم حذف الهدف بنجاح', 'success');
-        loadObjectives();
-    }
-}
-
-function deleteAssignment(assignmentId) {
-    const assignments = JSON.parse(localStorage.getItem('assignments') || '[]');
-    const assignment = assignments.find(a => a.id === assignmentId);
-    
-    if (!assignment) {
-        showAuthNotification('الواجب غير موجود', 'error');
-        return;
-    }
-
-    if (confirm(`هل أنت متأكد من حذف الواجب "${assignment.title}"؟`)) {
-        const updatedAssignments = assignments.filter(a => a.id !== assignmentId);
-        localStorage.setItem('assignments', JSON.stringify(updatedAssignments));
-        
-        showAuthNotification('تم حذف الواجب بنجاح', 'success');
-        loadAssignments();
-    }
-}
-
-// دوال العرض
-function viewTest(testId) {
-    showAuthNotification('جاري فتح صفحة عرض الاختبار...', 'info');
-    // سيتم تطوير هذه الوظيفة لاحقاً
-}
-
-function viewLesson(lessonId) {
-    showAuthNotification('جاري فتح صفحة عرض الدرس...', 'info');
-    // سيتم تطوير هذه الوظيفة لاحقاً
-}
-
-function viewAssignment(assignmentId) {
-    showAuthNotification('جاري فتح صفحة عرض الواجب...', 'info');
-    // سيتم تطوير هذه الوظيفة لاحقاً
-}
-
-function editTest(testId) {
-    showAuthNotification('جاري فتح نافذة تعديل الاختبار...', 'info');
-    // سيتم تطوير هذه الوظيفة لاحقاً
-}
-
-function editLesson(lessonId) {
-    showAuthNotification('جاري فتح نافذة تعديل الدرس...', 'info');
-    // سيتم تطوير هذه الوظيفة لاحقاً
-}
-
-function editObjective(objectiveId) {
-    showAuthNotification('جاري فتح نافذة تعديل الهدف...', 'info');
-    // سيتم تطوير هذه الوظيفة لاحقاً
-}
-
-function editAssignment(assignmentId) {
-    showAuthNotification('جاري فتح نافذة تعديل الواجب...', 'info');
-    // سيتم تطوير هذه الوظيفة لاحقاً
-}
-
-// تصدير الدوال الإضافية
-window.deleteTest = deleteTest;
-window.deleteLesson = deleteLesson;
-window.deleteObjective = deleteObjective;
-window.deleteAssignment = deleteAssignment;
-window.viewTest = viewTest;
-window.viewLesson = viewLesson;
-window.viewAssignment = viewAssignment;
-window.editTest = editTest;
-window.editLesson = editLesson;
-window.editObjective = editObjective;
-window.editAssignment = editAssignment;
-// إضافة هذه الدوال في نهاية الملف
-
-// دوال التنقل لملف الطالب
-function openStudentProfile(studentId) {
-    window.location.href = `student-profile.html?id=${studentId}`;
-}
-
-// دوال إدارة الجدول الدراسي
-function openStudySchedule() {
-    window.location.href = 'study-schedule.html';
-}
-
-// دوال المراسلة
-function openMessages() {
-    window.location.href = 'messages.html';
-}
-
-// دوال التقارير
-function openReports() {
-    window.location.href = 'reports.html';
-}
-
-// دوال لجنة الصعوبات
-function openCommittee() {
-    window.location.href = 'committee.html';
-}
-
-// دالة مساعدة للانتقال بين الصفحات
-function navigateTo(page) {
-    window.location.href = page;
-}
-
-// تصدير الدوال الإضافية
-window.openStudentProfile = openStudentProfile;
-window.openStudySchedule = openStudySchedule;
-window.openMessages = openMessages;
-window.openReports = openReports;
-window.openCommittee = openCommittee;
-window.navigateTo = navigateTo;
-// إضافة هذه الدوال في نهاية الملف
-
-// دوال لجنة الصعوبات
-function openCommittee() {
-    window.location.href = 'committee.html';
-}
-
-// دوال المراسلات
-function openMessages() {
-    window.location.href = 'messages.html';
-}
-
-// دالة لإنشاء بيانات تجريبية للجنة (للتطوير)
-function createSampleCommitteeData() {
-    const currentTeacher = getCurrentUser();
-    
-    const sampleMembers = [
-        {
-            id: generateId(),
-            teacherId: currentTeacher.id,
-            name: "أحمد محمد",
-            role: "مدير",
-            username: "ahmed_manager",
-            password: "123456",
-            createdAt: new Date().toISOString(),
-            isActive: true
-        },
-        {
-            id: generateId(),
-            teacherId: currentTeacher.id,
-            name: "فاطمة عبدالله",
-            role: "مشرف",
-            username: "fatima_supervisor",
-            password: "123456",
-            createdAt: new Date().toISOString(),
-            isActive: true
-        }
-    ];
-    
-    localStorage.setItem('committeeMembers', JSON.stringify(sampleMembers));
-    
-    // إنشاء حسابات مستخدمين للأعضاء
-    sampleMembers.forEach(member => {
-        createCommitteeUserAccount(member);
-    });
-    
-    showAuthNotification('تم إنشاء بيانات تجريبية للجنة', 'success');
-}
-
-// دالة لإنشاء رسائل تجريبية (للتطوير)
-function createSampleMessages() {
-    const currentTeacher = getCurrentUser();
-    const students = JSON.parse(localStorage.getItem('students') || '[]');
-    const teacherStudents = students.filter(s => s.teacherId === currentTeacher.id);
-    
-    if (teacherStudents.length === 0) {
-        showAuthNotification('لا توجد طلاب لإضافة رسائل تجريبية', 'warning');
-        return;
-    }
-    
-    const sampleMessages = [
-        {
-            id: generateId(),
-            teacherId: currentTeacher.id,
-            studentId: teacherStudents[0].id,
-            subject: "استفسار عن الواجب",
-            content: "السلام عليكم أستاذ، عندي استفسار بخصوص الواجب الأخير، هل يمكن توضيح السؤال الثالث؟",
-            sentAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // منذ يومين
-            isRead: false,
-            hasReply: false
-        },
-        {
-            id: generateId(),
-            teacherId: currentTeacher.id,
-            studentId: teacherStudents[0].id,
-            subject: "تأكيد حضور الحصة",
-            content: "أستاذ، هل حصة الغد في الوقت المعتاد؟",
-            sentAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // منذ يوم
-            isRead: true,
-            hasReply: true,
-            repliedAt: new Date().toISOString()
-        }
-    ];
-    
-    localStorage.setItem('teacherMessages', JSON.stringify(sampleMessages));
-    showAuthNotification('تم إنشاء رسائل تجريبية', 'success');
-}
-
-// تصدير الدوال الإضافية
-window.openCommittee = openCommittee;
-window.openMessages = openMessages;
-window.createSampleCommitteeData = createSampleCommitteeData;
-window.createSampleMessages = createSampleMessages;
+window.toggleSidebar = toggleSidebar;
+window.showSettings = showSettings;
+window.showNotifications = showNotifications;

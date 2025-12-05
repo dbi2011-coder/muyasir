@@ -7,18 +7,544 @@
     <link rel="stylesheet" href="../../assets/css/main.css">
     <link rel="stylesheet" href="../../assets/css/teacher.css">
     <link rel="stylesheet" href="../../assets/css/diagnostic-tests.css">
+    <style>
+        /* أنماط إضافية */
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .sidebar {
+            width: 250px;
+            background: var(--secondary-color);
+            color: white;
+            position: fixed;
+            right: 0;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            background: rgba(0,0,0,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .sidebar-header .logo h2 {
+            color: white;
+            margin: 0;
+            text-align: center;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .sidebar-menu li {
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .sidebar-menu a {
+            display: block;
+            padding: 15px 20px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .sidebar-menu a:hover,
+        .sidebar-menu a.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-right: 3px solid var(--primary-color);
+        }
+        
+        .main-content-dashboard {
+            flex: 1;
+            margin-right: 250px;
+        }
+        
+        .dashboard-header {
+            background: white;
+            padding: 15px 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .dashboard-content {
+            padding: 30px;
+        }
+        
+        .content-header {
+            margin-bottom: 30px;
+        }
+        
+        .content-header h1 {
+            color: var(--secondary-color);
+            font-size: 1.8rem;
+        }
+        
+        .test-subject-badge {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .subject-arabic {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .subject-math {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+        
+        .objectives-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+        
+        .status-linked {
+            background: var(--success-color);
+            color: white;
+        }
+        
+        .status-not-linked {
+            background: var(--warning-color);
+            color: white;
+        }
+        
+        /* الأنماط الأساسية */
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --border-color: #bdc3c7;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            font-family: 'Tajawal', sans-serif;
+        }
+        
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: var(--secondary-color);
+            color: white;
+        }
+        
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+        
+        .btn-info {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .btn-lg {
+            padding: 15px 30px;
+            font-size: 1.1rem;
+        }
+        
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 0.85rem;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            font-family: 'Tajawal', sans-serif;
+        }
+        
+        textarea.form-control {
+            resize: vertical;
+        }
+        
+        /* نافذة منبثقة */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .modal-content.large {
+            max-width: 800px;
+        }
+        
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            color: var(--secondary-color);
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #666;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+        
+        .modal-close:hover {
+            background: #f8f9fa;
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        
+        /* بطاقة الاختبار */
+        .test-card {
+            background: var(--light-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid var(--primary-color);
+            transition: all 0.3s ease;
+        }
+        
+        .test-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .test-title {
+            font-weight: bold;
+            color: var(--secondary-color);
+            flex: 1;
+        }
+        
+        .test-meta {
+            display: flex;
+            gap: 15px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .test-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        /* قسم المادة */
+        .subject-section {
+            margin-bottom: 30px;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+        }
+        
+        .subject-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--light-color);
+        }
+        
+        .subject-header h3 {
+            margin: 0;
+            color: var(--secondary-color);
+        }
+        
+        .subject-icon {
+            font-size: 1.5rem;
+        }
+        
+        /* حالة فارغة */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+        
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        
+        /* أزرار الإجراءات */
+        .tests-actions {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            justify-content: center;
+        }
+        
+        /* منطقة استيراد/تصدير */
+        .import-export-section {
+            background: var(--light-color);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .file-upload-box {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 15px 0;
+        }
+        
+        .file-upload-box:hover {
+            border-color: var(--primary-color);
+            background: white;
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            opacity: 0.5;
+        }
+        
+        /* ربط الأهداف */
+        .objectives-linking {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .objective-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .linking-progress {
+            margin-bottom: 20px;
+        }
+        
+        /* أسئلة الاختبار */
+        .questions-preview {
+            margin-top: 20px;
+        }
+        
+        .question-preview {
+            background: var(--light-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        /* خيارات متعددة */
+        .choice-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 5px 0;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .choice-item.correct {
+            background: #d4edda;
+            border-color: #c3e6cb;
+        }
+        
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+            }
+            
+            .main-content-dashboard {
+                margin-right: 200px;
+            }
+            
+            .tests-actions {
+                flex-direction: column;
+            }
+            
+            .test-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .test-meta {
+                flex-direction: column;
+                gap: 5px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .sidebar {
+                transform: translateX(100%);
+                width: 250px;
+            }
+            
+            .sidebar.active {
+                transform: translateX(0);
+            }
+            
+            .main-content-dashboard {
+                margin-right: 0;
+            }
+            
+            .dashboard-content {
+                padding: 20px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard-container">
         <!-- الشريط الجانبي -->
         <div class="sidebar" id="sidebar">
-            <!-- محتوى الشريط الجانبي -->
+            <div class="sidebar-header">
+                <div class="logo">
+                    <h2>ميسر التعلم</h2>
+                </div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html">🏠 لوحة التحكم</a></li>
+                <li><a href="diagnostic-tests.html" class="active">📊 الاختبارات التشخيصية</a></li>
+                <li><a href="students.html">👨‍🎓 الطلاب</a></li>
+                <li><a href="library.html">📚 مكتبة المحتوى</a></li>
+                <li><a href="committee.html">👥 اللجنة</a></li>
+                <li><a href="#" onclick="logout()">🚪 تسجيل الخروج</a></li>
+            </ul>
         </div>
 
         <!-- المحتوى الرئيسي -->
         <div class="main-content-dashboard">
             <header class="dashboard-header">
-                <!-- رأس الصفحة -->
+                <div class="user-info">
+                    <div class="user-welcome">
+                        <div class="welcome-text">مرحباً</div>
+                        <div class="user-name" id="userName"></div>
+                    </div>
+                    <div class="user-avatar" id="userAvatar"></div>
+                </div>
             </header>
 
             <main class="dashboard-content">
@@ -177,16 +703,363 @@
         </div>
     </div>
 
-    <script src="../../assets/js/auth.js"></script>
-    <script src="../../assets/js/diagnostic-tests.js"></script>
     <script>
-        // التحقق من تسجيل الدخول
+        // دالة إشعار بسيطة
+        function showAuthNotification(message, type = 'info') {
+            alert(type.toUpperCase() + ': ' + message);
+        }
+        
+        // دالة توليد معرف
+        function generateId() {
+            return Math.floor(Math.random() * 1000000) + 1;
+        }
+        
+        // دالة التحقق من المصادقة (مبسطة)
+        function checkAuth() {
+            return {
+                id: 1,
+                name: 'المعلم التجريبي',
+                role: 'teacher'
+            };
+        }
+        
+        // دالة تسجيل الخروج
+        function logout() {
+            if (confirm('هل تريد تسجيل الخروج؟')) {
+                window.location.href = '../../index.html';
+            }
+        }
+        
+        // دالة تنسيق التاريخ
+        function formatDate(dateString) {
+            if (!dateString) return 'غير محدد';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ar-SA') + ' ' + date.toLocaleTimeString('ar-SA');
+        }
+        
+        // دالة تنسيق التاريخ المختصر
+        function formatDateShort(dateString) {
+            if (!dateString) return 'غير محدد';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ar-SA');
+        }
+        
+        // دوال التخزين المحلي
+        function getDiagnosticTests() {
+            return JSON.parse(localStorage.getItem('diagnosticTests') || '[]');
+        }
+        
+        function getDiagnosticTestById(id) {
+            const tests = getDiagnosticTests();
+            return tests.find(test => test.id === id);
+        }
+        
+        function saveDiagnosticTest(test) {
+            const tests = getDiagnosticTests();
+            const index = tests.findIndex(t => t.id === test.id);
+            
+            if (index >= 0) {
+                tests[index] = test;
+            } else {
+                tests.push(test);
+            }
+            
+            localStorage.setItem('diagnosticTests', JSON.stringify(tests));
+            return test;
+        }
+        
+        // دالة لتحميل الاختبارات
+        function loadDiagnosticTests() {
+            const tests = getDiagnosticTests();
+            const arabicTests = tests.filter(test => test.subject === 'لغتي');
+            const mathTests = tests.filter(test => test.subject === 'رياضيات');
+            
+            displayTestsBySubject('arabicTestsList', arabicTests, '📚', 'لغتي');
+            displayTestsBySubject('mathTestsList', mathTests, '🔢', 'رياضيات');
+        }
+        
+        function displayTestsBySubject(containerId, tests, icon, subjectName) {
+            const container = document.getElementById(containerId);
+            
+            if (!container) return;
+            
+            if (tests.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">${icon}</div>
+                        <h3>لا توجد اختبارات لمادة ${subjectName}</h3>
+                        <p>قم بإنشاء أول اختبار تشخيصي</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = tests.map(test => {
+                const objectivesStatus = test.objectivesLinked ? 
+                    '<span class="objectives-status status-linked">تم الربط</span>' :
+                    '<span class="objectives-status status-not-linked">لم يتم الربط</span>';
+                
+                return `
+                    <div class="test-card">
+                        <div class="test-header">
+                            <div class="test-title">${test.title}</div>
+                            <div class="test-meta">
+                                <span class="test-subject-badge ${test.subject === 'لغتي' ? 'subject-arabic' : 'subject-math'}">
+                                    ${test.subject}
+                                </span>
+                                ${objectivesStatus}
+                                <span>${formatDateShort(test.createdAt)}</span>
+                            </div>
+                        </div>
+                        ${test.description ? `<p>${test.description}</p>` : ''}
+                        <div class="test-actions">
+                            <button class="btn btn-sm btn-primary" onclick="viewTest(${test.id})">
+                                عرض
+                            </button>
+                            <button class="btn btn-sm btn-warning" onclick="editTest(${test.id})">
+                                تعديل
+                            </button>
+                            <button class="btn btn-sm btn-info" onclick="linkObjectives(${test.id})">
+                                ربط الأهداف
+                            </button>
+                            <button class="btn btn-sm btn-secondary" onclick="exportTest(${test.id})">
+                                تصدير
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteTest(${test.id})">
+                                حذف
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // دوال النوافذ المنبثقة
+        function showCreateTestModal() {
+            console.log('فتح نافذة إنشاء اختبار');
+            document.getElementById('createTestModal').classList.add('show');
+        }
+        
+        function closeCreateTestModal() {
+            document.getElementById('createTestModal').classList.remove('show');
+            document.getElementById('createTestForm').reset();
+        }
+        
+        function showImportTestModal() {
+            document.getElementById('importTestModal').classList.add('show');
+        }
+        
+        function closeImportTestModal() {
+            document.getElementById('importTestModal').classList.remove('show');
+        }
+        
+        function closeViewTestModal() {
+            document.getElementById('viewTestModal').classList.remove('show');
+        }
+        
+        function closeLinkObjectivesModal() {
+            document.getElementById('linkObjectivesModal').classList.remove('show');
+        }
+        
+        // دالة إنشاء اختبار جديد
+        function createNewTest() {
+            const title = document.getElementById('testTitle').value.trim();
+            const subject = document.getElementById('testSubject').value;
+            const description = document.getElementById('testDescription').value.trim();
+            
+            console.log('بيانات النموذج:', { title, subject, description });
+            
+            if (!title || !subject) {
+                showAuthNotification('يرجى إدخال عنوان الاختبار وتحديد المادة', 'error');
+                return;
+            }
+            
+            const test = {
+                id: generateId(),
+                title: title,
+                subject: subject,
+                description: description,
+                questions: [],
+                passCriteria: 70,
+                objectivesLinked: false,
+                createdAt: new Date().toISOString(),
+                createdBy: checkAuth().id
+            };
+            
+            console.log('الاختبار الذي سيتم حفظه:', test);
+            
+            const savedTest = saveDiagnosticTest(test);
+            console.log('تم حفظ الاختبار:', savedTest);
+            
+            showAuthNotification('تم إنشاء الاختبار بنجاح', 'success');
+            closeCreateTestModal();
+            
+            // تحميل الاختبارات مرة أخرى
+            loadDiagnosticTests();
+            
+            // الانتقال إلى صفحة التحرير بعد ثانية
+            setTimeout(() => {
+                editTest(savedTest.id);
+            }, 1000);
+        }
+        
+        // دالة التعديل
+        function editTest(testId) {
+            console.log('تعديل الاختبار:', testId);
+            window.location.href = `test-editor.html?id=${testId}`;
+        }
+        
+        // دالة عرض الاختبار
+        function viewTest(testId) {
+            const test = getDiagnosticTestById(testId);
+            if (!test) {
+                showAuthNotification('الاختبار غير موجود', 'error');
+                return;
+            }
+            
+            document.getElementById('viewTestTitle').textContent = test.title;
+            document.getElementById('viewTestSubject').textContent = test.subject;
+            document.getElementById('viewTestDescription').textContent = test.description || 'لا يوجد وصف';
+            document.getElementById('viewTestQuestionsCount').textContent = test.questions?.length || 0;
+            document.getElementById('viewTestPassCriteria').textContent = test.passCriteria + '%';
+            document.getElementById('viewTestCreatedAt').textContent = formatDate(test.createdAt);
+            
+            const questionsList = document.getElementById('viewTestQuestions');
+            if (test.questions && test.questions.length > 0) {
+                questionsList.innerHTML = test.questions.map((q, index) => `
+                    <div class="question-preview">
+                        <div class="question-header">
+                            <h5>السؤال ${index + 1}</h5>
+                        </div>
+                        <div class="question-content">
+                            <p>${q.text}</p>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                questionsList.innerHTML = '<p>لا توجد أسئلة في هذا الاختبار</p>';
+            }
+            
+            document.getElementById('viewTestModal').classList.add('show');
+        }
+        
+        // دالة ربط الأهداف (مبسطة)
+        function linkObjectives(testId) {
+            const test = getDiagnosticTestById(testId);
+            if (!test || !test.questions || test.questions.length === 0) {
+                showAuthNotification('يجب أن يحتوي الاختبار على أسئلة أولاً', 'error');
+                return;
+            }
+            
+            showAuthNotification('يجب أن تذهب لصفحة التحرير لربط الأهداف', 'info');
+            editTest(testId);
+        }
+        
+        // دالة التصدير (مبسطة)
+        function exportTest(testId) {
+            const test = getDiagnosticTestById(testId);
+            if (!test) return;
+            
+            // إزالة الأهداف المربوطة عند التصدير
+            const exportData = {
+                ...test,
+                objectivesLinked: false,
+                linkedObjectives: {}
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `test-${test.id}-${test.title}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showAuthNotification('تم تصدير الاختبار بنجاح', 'success');
+        }
+        
+        // دالة الحذف
+        function deleteTest(testId) {
+            if (!confirm('هل أنت متأكد من حذف هذا الاختبار؟')) {
+                return;
+            }
+            
+            const tests = getDiagnosticTests();
+            const updatedTests = tests.filter(test => test.id !== testId);
+            
+            localStorage.setItem('diagnosticTests', JSON.stringify(updatedTests));
+            
+            showAuthNotification('تم حذف الاختبار بنجاح', 'success');
+            loadDiagnosticTests();
+        }
+        
+        // دالة الاستيراد
+        async function importTest() {
+            const fileInput = document.getElementById('importFile');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showAuthNotification('يرجى اختيار ملف للاستيراد', 'error');
+                return;
+            }
+            
+            try {
+                const text = await readFileAsText(file);
+                const importedTest = JSON.parse(text);
+                
+                // تعديل البيانات
+                importedTest.id = generateId();
+                importedTest.createdAt = new Date().toISOString();
+                importedTest.createdBy = checkAuth().id;
+                importedTest.objectivesLinked = false;
+                importedTest.linkedObjectives = {};
+                
+                saveDiagnosticTest(importedTest);
+                
+                showAuthNotification('تم استيراد الاختبار بنجاح', 'success');
+                closeImportTestModal();
+                loadDiagnosticTests();
+                
+                setTimeout(() => {
+                    showAuthNotification('يرجى ربط أسئلة الاختبار بالأهداف القصيرة', 'warning');
+                }, 1000);
+                
+            } catch (error) {
+                showAuthNotification('خطأ في تنسيق الملف', 'error');
+                console.error(error);
+            }
+        }
+        
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = e => reject(e);
+                reader.readAsText(file);
+            });
+        }
+        
+        // دالة الربط
+        function nextQuestionForLinking() {
+            showAuthNotification('هذه وظيفة سيتم تنفيذها في صفحة التحرير', 'info');
+        }
+        
+        // تهيئة الصفحة
         document.addEventListener('DOMContentLoaded', function() {
             const user = checkAuth();
             if (!user || user.role !== 'teacher') {
                 window.location.href = '../../index.html';
                 return;
             }
+            
+            document.getElementById('userName').textContent = user.name;
+            document.getElementById('userAvatar').textContent = user.name.charAt(0);
+            
+            loadDiagnosticTests();
+            
+            console.log('✅ صفحة الاختبارات التشخيصية جاهزة');
         });
     </script>
 </body>

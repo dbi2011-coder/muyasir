@@ -3,231 +3,777 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مكتبة المحتوى - ميسر التعلم</title>
-    <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/teacher.css">
+    <title>مكتبة المحتوى التعليمي - ميسر التعلم</title>
+    
+    <!-- الخطوط -->
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- الأيقونات -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- الأنماط -->
+    <link rel="stylesheet" href="../../../assets/css/main.css">
+    <link rel="stylesheet" href="../../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../../assets/css/teacher.css">
+    
+    <!-- أنماط إضافية لمكتبة المحتوى -->
+    <style>
+        /* تحسينات خاصة لمكتبة المحتوى */
+        .content-library-page {
+            margin-right: 280px;
+            min-height: 100vh;
+            background: #f8f9fa;
+            padding: 20px;
+            transition: margin-right 0.3s ease;
+        }
+        
+        .library-header {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .library-filters {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .search-box {
+            display: flex;
+            gap: 10px;
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .filter-select {
+            min-width: 200px;
+        }
+        
+        .library-sections {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        
+        .library-section {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+        }
+        
+        .content-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            word-break: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        .content-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            border-color: #3498db;
+        }
+        
+        .content-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .content-title {
+            flex: 1;
+            margin: 0;
+            color: #2c3e50;
+            font-size: 1.2rem;
+            line-height: 1.4;
+            min-width: 200px;
+        }
+        
+        .content-badge {
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        
+        .content-meta {
+            display: flex;
+            justify-content: space-between;
+            margin: 15px 0;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .content-description {
+            flex: 1;
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+        
+        .content-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: auto;
+            flex-wrap: wrap;
+        }
+        
+        /* حالات خاصة */
+        .subject-arabic { background: #e3f2fd; color: #1976d2; }
+        .subject-math { background: #f3e5f5; color: #7b1fa2; }
+        .subject-science { background: #e8f5e9; color: #388e3c; }
+        .subject-english { background: #fff3e0; color: #f57c00; }
+        
+        .status-linked { background: #27ae60; color: white; }
+        .status-not-linked { background: #f39c12; color: white; }
+        
+        /* رسائل فارغة */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+            grid-column: 1 / -1;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        /* تحسينات للهواتف */
+        @media (max-width: 1024px) {
+            .content-library-page {
+                margin-right: 250px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .content-library-page {
+                margin-right: 0;
+                padding: 15px;
+            }
+            
+            .library-header {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 20px;
+            }
+            
+            .search-box {
+                min-width: 100%;
+            }
+            
+            .filter-select {
+                min-width: 100%;
+            }
+            
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .section-header {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 10px;
+            }
+            
+            .content-header {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .content-title {
+                min-width: auto;
+            }
+            
+            .content-actions {
+                justify-content: center;
+            }
+            
+            .content-actions .btn {
+                flex: 1;
+                min-width: 140px;
+            }
+        }
+        
+        /* إصلاح مشكلة الشريط الجانبي المتنقل */
+        @media (max-width: 768px) {
+            .content-library-page {
+                padding-top: 80px;
+            }
+        }
+    </style>
 </head>
 <body>
+    <!-- هيكل لوحة التحكم -->
     <div class="dashboard-container">
+        
         <!-- الشريط الجانبي -->
-        <aside class="sidebar">
+        <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
+                    <img src="../../../assets/images/logo.png" alt="شعار ميسر التعلم">
                     <h2>ميسر التعلم</h2>
                 </div>
             </div>
             
             <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
-                <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
-                <li><a href="content-library.html" class="active"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
-                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
-                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
-                <li><a href="reports.html"><span class="menu-icon">📋</span>التقارير</a></li>
-                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة الصعوبات</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
+                <li><a href="dashboard.html"><i class="menu-icon fas fa-home"></i> لوحة التحكم</a></li>
+                <li><a href="students.html"><i class="menu-icon fas fa-users"></i> طلابي</a></li>
+                <li><a href="tests.html"><i class="menu-icon fas fa-clipboard-check"></i> الاختبارات</a></li>
+                <li><a href="lessons.html"><i class="menu-icon fas fa-book-open"></i> الدروس</a></li>
+                <li><a href="assignments.html"><i class="menu-icon fas fa-tasks"></i> الواجبات</a></li>
+                <li><a href="content-library.html" class="active"><i class="menu-icon fas fa-book"></i> مكتبة المحتوى</a></li>
+                <li><a href="committee.html"><i class="menu-icon fas fa-users-cog"></i> لجنة الصعوبات</a></li>
+                <li><a href="messages.html"><i class="menu-icon fas fa-envelope"></i> المراسلات</a></li>
+                <li><a href="reports.html"><i class="menu-icon fas fa-chart-bar"></i> التقارير</a></li>
+                <li><a href="profile.html"><i class="menu-icon fas fa-user"></i> الملف الشخصي</a></li>
+                <li><a href="#" onclick="logout()"><i class="menu-icon fas fa-sign-out-alt"></i> تسجيل الخروج</a></li>
             </ul>
-        </aside>
-
-        <!-- المحتوى الرئيسي -->
-        <main class="main-content-dashboard">
-            <!-- رأس اللوحة -->
-            <header class="dashboard-header">
-                <button class="mobile-menu-btn">☰</button>
-                <div class="user-info">
-                    <div class="user-welcome">
-                        <div class="welcome-text">مرحباً بعودتك</div>
-                        <div class="user-name" id="userName">أ/ اسم المعلم</div>
-                    </div>
-                    <div class="user-avatar" id="userAvatar">م</div>
-                </div>
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="showNotifications()">🔔 الإشعارات</button>
-                </div>
-            </header>
-
-            <!-- محتوى اللوحة -->
-            <div class="dashboard-content">
-                <div class="content-header">
-                    <h1>مكتبة المحتوى التعليمي</h1>
-                    <div class="header-actions">
-                        <div class="dropdown">
-                            <button class="btn btn-success dropdown-toggle" type="button" id="addContentDropdown" data-toggle="dropdown">
-                                + إضافة محتوى جديد
-                            </button>
-                            <div class="dropdown-menu">
-                                <a class="dropdown-item" href="#" onclick="showCreateTestModal()">اختبار تشخيصي</a>
-                                <a class="dropdown-item" href="#" onclick="showCreateLessonModal()">درس جديد</a>
-                                <a class="dropdown-item" href="#" onclick="showCreateObjectiveModal()">هدف قصير المدى</a>
-                                <a class="dropdown-item" href="#" onclick="showCreateAssignmentModal()">واجب جديد</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- أقسام المكتبة -->
-                <div class="library-sections">
-                    <!-- الاختبارات التشخيصية -->
-                    <div class="library-section">
-                        <div class="section-header">
-                            <h2>الاختبارات التشخيصية</h2>
-                            <div class="section-actions">
-                                <button class="btn btn-outline-primary" onclick="showImportModal('test')">📁 استيراد</button>
-                            </div>
-                        </div>
-                        <div class="content-grid" id="testsGrid">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </div>
-                    </div>
-
-                    <!-- الدروس -->
-                    <div class="library-section">
-                        <div class="section-header">
-                            <h2>الدروس</h2>
-                            <div class="section-actions">
-                                <button class="btn btn-outline-primary" onclick="showImportModal('lesson')">📁 استيراد</button>
-                            </div>
-                        </div>
-                        <div class="content-grid" id="lessonsGrid">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </div>
-                    </div>
-
-                    <!-- الأهداف قصيرة المدى -->
-                    <div class="library-section">
-                        <div class="section-header">
-                            <h2>الأهداف قصيرة المدى</h2>
-                        </div>
-                        <div class="objectives-list" id="objectivesList">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </div>
-                    </div>
-
-                    <!-- الواجبات -->
-                    <div class="library-section">
-                        <div class="section-header">
-                            <h2>الواجبات</h2>
-                            <div class="section-actions">
-                                <button class="btn btn-outline-primary" onclick="showImportModal('assignment')">📁 استيراد</button>
-                            </div>
-                        </div>
-                        <div class="content-grid" id="assignmentsGrid">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- نماذج إضافة المحتوى -->
-    <div id="createTestModal" class="modal">
-        <div class="modal-content large">
-            <div class="modal-header">
-                <h3>إنشاء اختبار تشخيصي جديد</h3>
-                <button class="modal-close" onclick="closeCreateTestModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="createTestForm">
-                    <div class="form-group">
-                        <label for="testTitle" class="form-label">عنوان الاختبار</label>
-                        <input type="text" id="testTitle" class="form-control" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="testSubject" class="form-label">المادة</label>
-                        <select id="testSubject" class="form-control" required>
-                            <option value="">اختر المادة</option>
-                            <option value="لغتي">لغتي</option>
-                            <option value="رياضيات">رياضيات</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="testDescription" class="form-label">وصف الاختبار (اختياري)</label>
-                        <textarea id="testDescription" class="form-control" rows="3"></textarea>
-                    </div>
-
-                    <div class="questions-section">
-                        <h4>أسئلة الاختبار</h4>
-                        <div id="questionsContainer">
-                            <!-- سيتم إضافة الأسئلة هنا -->
-                        </div>
-                        <button type="button" class="btn btn-outline-primary" onclick="addQuestion()">+ إضافة سؤال</button>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeCreateTestModal()">إلغاء</button>
-                <button type="button" class="btn btn-success" onclick="saveTest()">حفظ الاختبار</button>
-            </div>
         </div>
-    </div>
-
-    <!-- نموذج إضافة درس جديد -->
-    <div id="createLessonModal" class="modal">
-        <div class="modal-content large">
-            <div class="modal-header">
-                <h3>إنشاء درس جديد</h3>
-                <button class="modal-close" onclick="closeCreateLessonModal()">&times;</button>
+        
+        <!-- المحتوى الرئيسي -->
+        <div class="content-library-page">
+            
+            <!-- رأس المكتبة -->
+            <div class="library-header">
+                <div>
+                    <h1 style="margin: 0; color: #2c3e50;">📚 مكتبة المحتوى التعليمي</h1>
+                    <p style="margin: 10px 0 0 0; color: #666;">مكتبة شاملة للدروس والتمارين والاختبارات التفاعلية</p>
+                </div>
+                
+                <div class="library-filters">
+                    <div class="search-box">
+                        <input type="text" 
+                               class="form-control" 
+                               placeholder="ابحث في المكتبة..."
+                               id="searchContent">
+                        <button class="btn btn-primary">
+                            <i class="fas fa-search"></i> بحث
+                        </button>
+                    </div>
+                    
+                    <select class="form-control filter-select" id="filterSubject">
+                        <option value="all">جميع المواد</option>
+                        <option value="arabic">لغتي</option>
+                        <option value="math">الرياضيات</option>
+                        <option value="science">العلوم</option>
+                        <option value="english">الإنجليزية</option>
+                    </select>
+                    
+                    <select class="form-control filter-select" id="filterType">
+                        <option value="all">جميع الأنواع</option>
+                        <option value="lesson">دروس</option>
+                        <option value="exercise">تمارين</option>
+                        <option value="test">اختبارات</option>
+                        <option value="worksheet">أوراق عمل</option>
+                    </select>
+                </div>
             </div>
-            <div class="modal-body">
-                <form id="createLessonForm">
-                    <div class="form-group">
-                        <label for="lessonTitle" class="form-label">عنوان الدرس</label>
-                        <input type="text" id="lessonTitle" class="form-control" required>
+            
+            <!-- أقسام المكتبة -->
+            <div class="library-sections">
+                
+                <!-- قسم الدروس التفاعلية -->
+                <div class="library-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-chalkboard-teacher"></i> الدروس التفاعلية</h2>
+                        <div>
+                            <button class="btn btn-success">
+                                <i class="fas fa-plus"></i> إضافة درس جديد
+                            </button>
+                            <button class="btn btn-outline-primary">
+                                <i class="fas fa-filter"></i> ترتيب
+                            </button>
+                        </div>
                     </div>
                     
-                    <div class="form-group">
-                        <label for="lessonStrategy" class="form-label">الاستراتيجية</label>
-                        <input type="text" id="lessonStrategy" class="form-control" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="lessonSubject" class="form-label">المادة</label>
-                        <select id="lessonSubject" class="form-control" required>
-                            <option value="">اختر المادة</option>
-                            <option value="لغتي">لغتي</option>
-                            <option value="رياضيات">رياضيات</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="lessonDescription" class="form-label">وصف الدرس (اختياري)</label>
-                        <textarea id="lessonDescription" class="form-control" rows="3"></textarea>
-                    </div>
-
-                    <div class="lesson-sections">
-                        <div class="lesson-section">
-                            <h4>التمهيد</h4>
-                            <div class="section-content" id="introductionSection">
-                                <!-- محتوى التمهيد -->
+                    <div class="content-grid">
+                        
+                        <!-- درس 1 -->
+                        <div class="content-card">
+                            <div class="content-header">
+                                <h3 class="content-title">القراءة السريعة والفهم</h3>
+                                <span class="content-badge subject-arabic">لغتي</span>
+                            </div>
+                            
+                            <div class="content-description">
+                                درس تفاعلي لتحسين مهارات القراءة السريعة وفهم المقروء للصفوف الأولية مع أنشطة تفاعلية.
+                            </div>
+                            
+                            <div class="content-meta">
+                                <div class="meta-item">
+                                    <i class="fas fa-question-circle"></i>
+                                    <span>12 نشاط</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-clock"></i>
+                                    <span>45 دقيقة</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="content-badge status-linked">مرتبط بأهداف</span>
+                                </div>
+                            </div>
+                            
+                            <div class="content-actions">
+                                <button class="btn btn-primary btn-sm">
+                                    <i class="fas fa-play"></i> عرض
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-edit"></i> تعديل
+                                </button>
+                                <button class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-share"></i> مشاركة
+                                </button>
                             </div>
                         </div>
                         
-                        <div class="lesson-section">
-                            <h4>التمارين والتقييم</h4>
-                            <div id="exercisesContainer">
-                                <!-- سيتم إضافة التمارين هنا -->
+                        <!-- درس 2 -->
+                        <div class="content-card">
+                            <div class="content-header">
+                                <h3 class="content-title">الجمع والطرح حتى 100</h3>
+                                <span class="content-badge subject-math">رياضيات</span>
                             </div>
-                            <button type="button" class="btn btn-outline-primary" onclick="addExercise()">+ إضافة تمرين</button>
+                            
+                            <div class="content-description">
+                                درس تعليمي مبسط لعملية الجمع والطرح باستخدام الوسائل التعليمية التفاعلية والتمارين التطبيقية.
+                            </div>
+                            
+                            <div class="content-meta">
+                                <div class="meta-item">
+                                    <i class="fas fa-question-circle"></i>
+                                    <span>8 تمارين</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-clock"></i>
+                                    <span>60 دقيقة</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="content-badge status-linked">مرتبط بأهداف</span>
+                                </div>
+                            </div>
+                            
+                            <div class="content-actions">
+                                <button class="btn btn-primary btn-sm">
+                                    <i class="fas fa-play"></i> عرض
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-edit"></i> تعديل
+                                </button>
+                                <button class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-share"></i> مشاركة
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- درس 3 -->
+                        <div class="content-card">
+                            <div class="content-header">
+                                <h3 class="content-title">أجزاء النبات</h3>
+                                <span class="content-badge subject-science">علوم</span>
+                            </div>
+                            
+                            <div class="content-description">
+                                درس تعريفي بأجزاء النبات ووظائفها مع صور تفاعلية واختبار تقييمي في نهاية الدرس.
+                            </div>
+                            
+                            <div class="content-meta">
+                                <div class="meta-item">
+                                    <i class="fas fa-question-circle"></i>
+                                    <span>6 أنشطة</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-clock"></i>
+                                    <span>40 دقيقة</span>
+                                </div>
+                                <div class="meta-item">
+                                    <span class="content-badge status-not-linked">غير مرتبط</span>
+                                </div>
+                            </div>
+                            
+                            <div class="content-actions">
+                                <button class="btn btn-primary btn-sm">
+                                    <i class="fas fa-play"></i> عرض
+                                </button>
+                                <button class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-edit"></i> تعديل
+                                </button>
+                                <button class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-share"></i> مشاركة
+                                </button>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+                
+                <!-- قسم التمارين والأنشطة -->
+                <div class="library-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-running"></i> التمارين والأنشطة</h2>
+                        <div>
+                            <button class="btn btn-success">
+                                <i class="fas fa-plus"></i> إضافة تمرين
+                            </button>
+                            <button class="btn btn-outline-primary">
+                                <i class="fas fa-download"></i> تصدير
+                            </button>
                         </div>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeCreateLessonModal()">إلغاء</button>
-                <button type="button" class="btn btn-success" onclick="saveLesson()">حفظ الدرس</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="../../assets/js/dashboard.js"></script>
-    <script src="../../assets/js/teacher.js"></script>
-    <script src="../../assets/js/content-library.js"></script>
-    <script src="../../assets/js/auth.js"></script>
+                    
+                    <div class="content-grid">
+                        
+                        <!-- تمرين 1 -->
+                        <div class="content-card">
+                            <div class="content-header">
+                                <h3 class="content-title">تمارين التهجئة</h3>
+                                <span class="content-badge subject-arabic">لغتي</span>
+                            </div>
+                            
+                            <div class="content-description">
+                                مجموعة من التمارين التفاعلية للتهجئة الصحيحة للكلمات مع تقييم آلي للأداء.
+                            </div>
+                            
+                            <div class="content-meta">
+                                <div class="meta-item">
+                                    <i class="fas fa-star"></i>
+                                    <span>مستوى: سهل</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-file-alt"></i>
+                                    <span>20 سؤال</span>
+                                </div>
+                            </div>
+                            
+                            <div class="content-actions">
+                                <button class="btn btn-primary btn-sm">
+                                    <i class="fas fa-eye"></i> معاينة
+                                </button>
+                                <button class="btn btn-success btn-sm">
+                                    <i class="fas fa-user-plus"></i> تعيين
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- تمرين 2 -->
+                        <div class="content-card">
+                            <div class="content-header">
+                                <h3 class="content-title">مسائل الرياضيات</h3>
+                                <span class="content-badge subject-math">رياضيات</span>
+                            </div>
+                            
+                            <div class="content-description">
+                                مجموعة متنوعة من المسائل الرياضية مع حلول مفصلة وتقييم فوري للإجابات.
+                            </div>
+                            
+                            <div class="content-meta">
+                                <div class="meta-item">
+                                    <i class="fas fa-star"></i>
+                                    <span>مستوى: متوسط</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-file-alt"></i>
+                                    <span>15 مسألة</span>
+                                </div>
+                            </div>
+                            
+                            <div class="content-actions">
+                                <button class="btn btn-primary btn-sm">
+                                    <i class="fas fa-eye"></i> معاينة
+                                </button>
+                                <button class="btn btn-success btn-sm">
+                                    <i class="fas fa-user-plus"></i> تعيين
+                                </button>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+                
+                <!-- قسم الاختبارات -->
+                <div class="library-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-clipboard-check"></i> الاختبارات</h2>
+                        <div>
+                            <button class="btn btn-success">
+                                <i class="fas fa-plus"></i> اختبار جديد
+                            </button>
+                            <button class="btn btn-outline-primary">
+                                <i class="fas fa-chart-line"></i> إحصائيات
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="content-grid">
+                        
+                        <!-- اختبار 1 -->
+                        <div class="content-card">
+                            <div class="content-header">
+                                <h3 class="content-title">اختبار تشخيصي - القراءة</h3>
+                                <span class="content-badge subject-arabic">لغتي</span>
+                            </div>
+                            
+                            <div class="content-description">
+                                اختبار تشخيصي لقياس مستوى الطلاب في مهارة القراءة مع تقرير مفصل عن النقاط القوية والضعيفة.
+                            </div>
+                            
+                            <div class="content-meta">
+                                <div class="meta-item">
+                                    <i class="fas fa-star"></i>
+                                    <span>40 درجة</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-clock"></i>
+                                    <span>30 دقيقة</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-users"></i>
+                                    <span>25 طالب</span>
+                                </div>
+                            </div>
+                            
+                            <div class="content-actions">
+                                <button class="btn btn-primary btn-sm">
+                                    <i class="fas fa-play"></i> بدء
+                                </button>
+                                <button class="btn btn-warning btn-sm">
+                                    <i class="fas fa-chart-bar"></i> نتائج
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- اختبار 2 -->
+                        <div class="content-card">
+                            <div class="content-header">
+                                <h3 class="content-title">اختبار الرياضيات الشهري</h3>
+                                <span class="content-badge subject-math">رياضيات</span>
+                            </div>
+                            
+                            <div class="content-description">
+                                اختبار شهري شامل لمنهج الرياضيات للصف الرابع مع تصحيح آلي وتحليل للأخطاء الشائعة.
+                            </div>
+                            
+                            <div class="content-meta">
+                                <div class="meta-item">
+                                    <i class="fas fa-star"></i>
+                                    <span>50 درجة</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-clock"></i>
+                                    <span>45 دقيقة</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fas fa-users"></i>
+                                    <span>30 طالب</span>
+                                </div>
+                            </div>
+                            
+                            <div class="content-actions">
+                                <button class="btn btn-primary btn-sm">
+                                    <i class="fas fa-play"></i> بدء
+                                </button>
+                                <button class="btn btn-warning btn-sm">
+                                    <i class="fas fa-chart-bar"></i> نتائج
+                                </button>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+                
+                <!-- حالة فارغة (مثال) -->
+                <div class="library-section">
+                    <div class="section-header">
+                        <h2><i class="fas fa-video"></i> الفيديوهات التعليمية</h2>
+                        <button class="btn btn-success">
+                            <i class="fas fa-plus"></i> إضافة فيديو
+                        </button>
+                    </div>
+                    
+                    <div class="empty-state">
+                        <i class="fas fa-video-slash"></i>
+                        <h3>لا توجد فيديوهات حالياً</h3>
+                        <p>يمكنك إضافة فيديوهات تعليمية للمكتبة</p>
+                        <button class="btn btn-primary mt-3">
+                            <i class="fas fa-plus"></i> إضافة أول فيديو
+                        </button>
+                    </div>
+                </div>
+                
+            </div> <!-- نهاية أقسام المكتبة -->
+            
+        </div> <!-- نهاية المحتوى الرئيسي -->
+        
+    </div> <!-- نهاية حاوية لوحة التحكم -->
+    
+    <!-- الأكواد البرمجية -->
+    <script src="../../../assets/js/auth.js"></script>
+    <script src="../../../assets/js/teacher.js"></script>
+    
+    <script>
+        // التحقق من المصادقة
+        document.addEventListener('DOMContentLoaded', function() {
+            const user = checkAuth();
+            if (!user) return;
+            
+            // تحديث اسم المستخدم
+            document.getElementById('userName').textContent = user.name;
+            
+            // إعداد البحث والفلترة
+            setupLibraryFilters();
+        });
+        
+        function setupLibraryFilters() {
+            const searchInput = document.getElementById('searchContent');
+            const subjectFilter = document.getElementById('filterSubject');
+            const typeFilter = document.getElementById('filterType');
+            
+            [searchInput, subjectFilter, typeFilter].forEach(element => {
+                element.addEventListener('change', filterContent);
+            });
+        }
+        
+        function filterContent() {
+            const searchTerm = document.getElementById('searchContent').value.toLowerCase();
+            const subject = document.getElementById('filterSubject').value;
+            const type = document.getElementById('filterType').value;
+            
+            const cards = document.querySelectorAll('.content-card');
+            let visibleCount = 0;
+            
+            cards.forEach(card => {
+                const title = card.querySelector('.content-title')?.textContent.toLowerCase() || '';
+                const description = card.querySelector('.content-description')?.textContent.toLowerCase() || '';
+                const subjectBadge = card.querySelector('.content-badge[class*="subject-"]')?.className || '';
+                
+                let showCard = true;
+                
+                // البحث في النصوص
+                if (searchTerm && !title.includes(searchTerm) && !description.includes(searchTerm)) {
+                    showCard = false;
+                }
+                
+                // فلترة حسب المادة
+                if (subject !== 'all') {
+                    const subjectMap = {
+                        'arabic': 'subject-arabic',
+                        'math': 'subject-math',
+                        'science': 'subject-science',
+                        'english': 'subject-english'
+                    };
+                    
+                    if (!subjectBadge.includes(subjectMap[subject])) {
+                        showCard = false;
+                    }
+                }
+                
+                // فلترة حسب النوع (مبسطة)
+                // يمكن تطويرها لاحقاً
+                
+                card.style.display = showCard ? 'block' : 'none';
+                if (showCard) visibleCount++;
+            });
+            
+            // عرض رسالة إذا لم توجد نتائج
+            const sections = document.querySelectorAll('.library-section');
+            sections.forEach(section => {
+                const cardsInSection = section.querySelectorAll('.content-card');
+                const emptyState = section.querySelector('.empty-state');
+                
+                if (cardsInSection.length > 0) {
+                    const visibleCards = Array.from(cardsInSection).filter(card => 
+                        card.style.display !== 'none'
+                    ).length;
+                    
+                    if (visibleCards === 0 && !emptyState) {
+                        section.innerHTML += `
+                            <div class="empty-state">
+                                <i class="fas fa-search"></i>
+                                <h3>لا توجد نتائج</h3>
+                                <p>جرب مصطلحات بحث أخرى أو قم بتغيير الفلاتر</p>
+                            </div>
+                        `;
+                    } else if (emptyState && visibleCards > 0) {
+                        emptyState.remove();
+                    }
+                }
+            });
+        }
+        
+        // التحكم في الشريط الجانبي للجوال
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            sidebar.classList.toggle('active');
+        }
+        
+        // تسجيل الخروج
+        function logout() {
+            if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+                window.logout();
+            }
+        }
+        
+        // تعديل المساحة عند تغيير حجم النافذة
+        window.addEventListener('resize', function() {
+            const sidebar = document.querySelector('.sidebar');
+            const contentPage = document.querySelector('.content-library-page');
+            
+            if (window.innerWidth <= 768) {
+                contentPage.style.marginRight = '0';
+            } else {
+                const sidebarWidth = sidebar.offsetWidth;
+                contentPage.style.marginRight = `${sidebarWidth}px`;
+            }
+        });
+    </script>
+    
 </body>
 </html>

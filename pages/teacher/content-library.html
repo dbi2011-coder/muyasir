@@ -8,6 +8,294 @@
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../assets/css/teacher.css">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* أنماط إضافية لضبط النماذج */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            max-width: 800px;
+            width: 90%;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            margin: auto;
+        }
+
+        .modal-content.large {
+            max-width: 900px;
+            width: 95%;
+        }
+
+        .modal-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #f8f9fa;
+            border-radius: 8px 8px 0 0;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #2c3e50;
+            font-weight: 700;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #6c757d;
+            transition: color 0.3s;
+            line-height: 1;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-close:hover {
+            color: #dc3545;
+        }
+
+        .modal-body {
+            padding: 24px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .modal-footer {
+            padding: 20px 24px;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            background-color: #f8f9fa;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            box-sizing: border-box;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        textarea.form-control {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        select.form-control {
+            cursor: pointer;
+        }
+
+        .questions-section, .lesson-sections {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .questions-section h4, .lesson-sections h4 {
+            margin-bottom: 16px;
+            color: #2c3e50;
+        }
+
+        .lesson-section {
+            margin-bottom: 24px;
+        }
+
+        .lesson-section h4 {
+            color: #2c3e50;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .section-content {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 16px;
+            min-height: 100px;
+        }
+
+        /* تحسين الأزرار */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #1e7e34;
+        }
+
+        .btn-outline-primary {
+            background-color: transparent;
+            color: #007bff;
+            border: 1px solid #007bff;
+        }
+
+        .btn-outline-primary:hover {
+            background-color: #007bff;
+            color: white;
+        }
+
+        /* تحسين dropdown */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            background-color: white;
+            min-width: 200px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            border-radius: 6px;
+            z-index: 1001;
+            top: 100%;
+            left: 0;
+            margin-top: 5px;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            display: block;
+            padding: 12px 16px;
+            color: #495057;
+            text-decoration: none;
+            border-bottom: 1px solid #f1f3f4;
+            transition: background-color 0.3s;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        /* تحسين responsive */
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 95%;
+                max-height: 90vh;
+            }
+            
+            .modal-content.large {
+                width: 98%;
+            }
+            
+            .modal-body {
+                padding: 16px;
+            }
+            
+            .modal-header,
+            .modal-footer {
+                padding: 16px;
+            }
+            
+            .btn {
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .modal-content {
+                width: 100%;
+                height: 100%;
+                max-height: 100vh;
+                border-radius: 0;
+            }
+            
+            .modal-body {
+                padding: 12px;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard-container">
@@ -55,10 +343,10 @@
                     <h1>مكتبة المحتوى التعليمي</h1>
                     <div class="header-actions">
                         <div class="dropdown">
-                            <button class="btn btn-success dropdown-toggle" type="button" id="addContentDropdown" data-toggle="dropdown">
+                            <button class="btn btn-success dropdown-toggle" type="button" id="addContentDropdown" onclick="toggleDropdown()">
                                 + إضافة محتوى جديد
                             </button>
-                            <div class="dropdown-menu">
+                            <div class="dropdown-menu" id="contentDropdownMenu">
                                 <a class="dropdown-item" href="#" onclick="showCreateTestModal()">اختبار تشخيصي</a>
                                 <a class="dropdown-item" href="#" onclick="showCreateLessonModal()">درس جديد</a>
                                 <a class="dropdown-item" href="#" onclick="showCreateObjectiveModal()">هدف قصير المدى</a>
@@ -123,7 +411,446 @@
         </main>
     </div>
 
-    <!-- تم إزالة النماذج (Modals) من هنا -->
+    <!-- نماذج إضافة المحتوى -->
+    <div id="createTestModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>إنشاء اختبار تشخيصي جديد</h3>
+                <button class="modal-close" onclick="closeCreateTestModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createTestForm">
+                    <div class="form-group">
+                        <label for="testTitle" class="form-label">عنوان الاختبار</label>
+                        <input type="text" id="testTitle" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="testSubject" class="form-label">المادة</label>
+                        <select id="testSubject" class="form-control" required>
+                            <option value="">اختر المادة</option>
+                            <option value="لغتي">لغتي</option>
+                            <option value="رياضيات">رياضيات</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="testDescription" class="form-label">وصف الاختبار (اختياري)</label>
+                        <textarea id="testDescription" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="questions-section">
+                        <h4>أسئلة الاختبار</h4>
+                        <div id="questionsContainer">
+                            <!-- سيتم إضافة الأسئلة هنا -->
+                        </div>
+                        <button type="button" class="btn btn-outline-primary" onclick="addQuestion()">+ إضافة سؤال</button>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCreateTestModal()">إلغاء</button>
+                <button type="button" class="btn btn-success" onclick="saveTest()">حفظ الاختبار</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج إضافة درس جديد -->
+    <div id="createLessonModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>إنشاء درس جديد</h3>
+                <button class="modal-close" onclick="closeCreateLessonModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createLessonForm">
+                    <div class="form-group">
+                        <label for="lessonTitle" class="form-label">عنوان الدرس</label>
+                        <input type="text" id="lessonTitle" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="lessonStrategy" class="form-label">الاستراتيجية</label>
+                        <input type="text" id="lessonStrategy" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="lessonSubject" class="form-label">المادة</label>
+                        <select id="lessonSubject" class="form-control" required>
+                            <option value="">اختر المادة</option>
+                            <option value="لغتي">لغتي</option>
+                            <option value="رياضيات">رياضيات</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="lessonDescription" class="form-label">وصف الدرس (اختياري)</label>
+                        <textarea id="lessonDescription" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="lesson-sections">
+                        <div class="lesson-section">
+                            <h4>التمهيد</h4>
+                            <div class="section-content" id="introductionSection">
+                                <!-- محتوى التمهيد -->
+                            </div>
+                        </div>
+                        
+                        <div class="lesson-section">
+                            <h4>التمارين والتقييم</h4>
+                            <div id="exercisesContainer">
+                                <!-- سيتم إضافة التمارين هنا -->
+                            </div>
+                            <button type="button" class="btn btn-outline-primary" onclick="addExercise()">+ إضافة تمرين</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCreateLessonModal()">إلغاء</button>
+                <button type="button" class="btn btn-success" onclick="saveLesson()">حفظ الدرس</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج إضافة هدف قصير المدى -->
+    <div id="createObjectiveModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إنشاء هدف قصير المدى</h3>
+                <button class="modal-close" onclick="closeCreateObjectiveModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createObjectiveForm">
+                    <div class="form-group">
+                        <label for="objectiveTitle" class="form-label">عنوان الهدف</label>
+                        <input type="text" id="objectiveTitle" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="objectiveSubject" class="form-label">المادة</label>
+                        <select id="objectiveSubject" class="form-control" required>
+                            <option value="">اختر المادة</option>
+                            <option value="لغتي">لغتي</option>
+                            <option value="رياضيات">رياضيات</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="objectiveDescription" class="form-label">وصف الهدف</label>
+                        <textarea id="objectiveDescription" class="form-control" rows="4" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="objectiveDeadline" class="form-label">الموعد النهائي</label>
+                        <input type="date" id="objectiveDeadline" class="form-control" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCreateObjectiveModal()">إلغاء</button>
+                <button type="button" class="btn btn-success" onclick="saveObjective()">حفظ الهدف</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج إضافة واجب -->
+    <div id="createAssignmentModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>إنشاء واجب جديد</h3>
+                <button class="modal-close" onclick="closeCreateAssignmentModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createAssignmentForm">
+                    <div class="form-group">
+                        <label for="assignmentTitle" class="form-label">عنوان الواجب</label>
+                        <input type="text" id="assignmentTitle" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="assignmentSubject" class="form-label">المادة</label>
+                        <select id="assignmentSubject" class="form-control" required>
+                            <option value="">اختر المادة</option>
+                            <option value="لغتي">لغتي</option>
+                            <option value="رياضيات">رياضيات</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="assignmentDescription" class="form-label">وصف الواجب</label>
+                        <textarea id="assignmentDescription" class="form-control" rows="4" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="assignmentInstructions" class="form-label">تعليمات الواجب</label>
+                        <textarea id="assignmentInstructions" class="form-control" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="assignmentDeadline" class="form-label">الموعد النهائي للتسليم</label>
+                        <input type="datetime-local" id="assignmentDeadline" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="assignmentFile" class="form-label">رفع ملف (اختياري)</label>
+                        <input type="file" id="assignmentFile" class="form-control">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeCreateAssignmentModal()">إلغاء</button>
+                <button type="button" class="btn btn-success" onclick="saveAssignment()">حفظ الواجب</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج الاستيراد -->
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="importModalTitle">استيراد محتوى</h3>
+                <button class="modal-close" onclick="closeImportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="importForm">
+                    <div class="form-group">
+                        <label for="importType" class="form-label">نوع المحتوى</label>
+                        <select id="importType" class="form-control" disabled>
+                            <option value="test">اختبار تشخيصي</option>
+                            <option value="lesson">درس</option>
+                            <option value="assignment">واجب</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="importFile" class="form-label">اختر ملف للاستيراد</label>
+                        <input type="file" id="importFile" class="form-control" accept=".json,.xml,.txt" required>
+                        <small class="form-text text-muted">يدعم الملفات: JSON, XML, TXT</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="importOptions" class="form-label">خيارات الاستيراد</label>
+                        <div class="form-check">
+                            <input type="checkbox" id="importOverwrite" class="form-check-input">
+                            <label for="importOverwrite" class="form-check-label">استبدال المحتوى الموجود</label>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeImportModal()">إلغاء</button>
+                <button type="button" class="btn btn-primary" onclick="processImport()">استيراد</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // دالة لعرض/إخفاء dropdown
+        function toggleDropdown() {
+            const dropdownMenu = document.getElementById('contentDropdownMenu');
+            dropdownMenu.classList.toggle('show');
+        }
+
+        // إغلاق dropdown عند النقر خارجها
+        document.addEventListener('click', function(event) {
+            const dropdownMenu = document.getElementById('contentDropdownMenu');
+            const dropdownButton = document.getElementById('addContentDropdown');
+            
+            if (!dropdownButton.contains(event.target) && !dropdownMenu.contains(event.target)) {
+                dropdownMenu.classList.remove('show');
+            }
+        });
+
+        // دوال عرض النماذج
+        function showCreateTestModal() {
+            document.getElementById('createTestModal').classList.add('active');
+            document.getElementById('contentDropdownMenu').classList.remove('show');
+        }
+
+        function showCreateLessonModal() {
+            document.getElementById('createLessonModal').classList.add('active');
+            document.getElementById('contentDropdownMenu').classList.remove('show');
+        }
+
+        function showCreateObjectiveModal() {
+            document.getElementById('createObjectiveModal').classList.add('active');
+            document.getElementById('contentDropdownMenu').classList.remove('show');
+        }
+
+        function showCreateAssignmentModal() {
+            document.getElementById('createAssignmentModal').classList.add('active');
+            document.getElementById('contentDropdownMenu').classList.remove('show');
+        }
+
+        function showImportModal(type) {
+            const modal = document.getElementById('importModal');
+            const title = document.getElementById('importModalTitle');
+            const importType = document.getElementById('importType');
+            
+            importType.value = type;
+            
+            switch(type) {
+                case 'test':
+                    title.textContent = 'استيراد اختبار تشخيصي';
+                    break;
+                case 'lesson':
+                    title.textContent = 'استيراد درس';
+                    break;
+                case 'assignment':
+                    title.textContent = 'استيراد واجب';
+                    break;
+            }
+            
+            modal.classList.add('active');
+        }
+
+        // دوال إغلاق النماذج
+        function closeCreateTestModal() {
+            document.getElementById('createTestModal').classList.remove('active');
+        }
+
+        function closeCreateLessonModal() {
+            document.getElementById('createLessonModal').classList.remove('active');
+        }
+
+        function closeCreateObjectiveModal() {
+            document.getElementById('createObjectiveModal').classList.remove('active');
+        }
+
+        function closeCreateAssignmentModal() {
+            document.getElementById('createAssignmentModal').classList.remove('active');
+        }
+
+        function closeImportModal() {
+            document.getElementById('importModal').classList.remove('active');
+        }
+
+        // إغلاق النماذج عند النقر خارجها
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(event) {
+                if (event.target === this) {
+                    this.classList.remove('active');
+                }
+            });
+        });
+
+        // إغلاق النماذج بمفتاح ESC
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                document.querySelectorAll('.modal.active').forEach(modal => {
+                    modal.classList.remove('active');
+                });
+            }
+        });
+
+        // دوال حفظ المحتوى (مثال - تحتاج للتطبيق الكامل)
+        function saveTest() {
+            alert('تم حفظ الاختبار بنجاح!');
+            closeCreateTestModal();
+        }
+
+        function saveLesson() {
+            alert('تم حفظ الدرس بنجاح!');
+            closeCreateLessonModal();
+        }
+
+        function saveObjective() {
+            alert('تم حفظ الهدف بنجاح!');
+            closeCreateObjectiveModal();
+        }
+
+        function saveAssignment() {
+            alert('تم حفظ الواجب بنجاح!');
+            closeCreateAssignmentModal();
+        }
+
+        function processImport() {
+            alert('تم استيراد المحتوى بنجاح!');
+            closeImportModal();
+        }
+
+        // دالة إضافة سؤال (مثال)
+        function addQuestion() {
+            const container = document.getElementById('questionsContainer');
+            const questionIndex = container.children.length + 1;
+            
+            const questionDiv = document.createElement('div');
+            questionDiv.className = 'question-item';
+            questionDiv.innerHTML = `
+                <div style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 6px;">
+                    <div class="form-group">
+                        <label>السؤال ${questionIndex}</label>
+                        <input type="text" class="form-control" placeholder="ادخل نص السؤال">
+                    </div>
+                    <div class="form-group">
+                        <label>الإجابة</label>
+                        <textarea class="form-control" rows="2" placeholder="ادخل الإجابة"></textarea>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.parentElement.remove()">حذف السؤال</button>
+                </div>
+            `;
+            
+            container.appendChild(questionDiv);
+        }
+
+        // دالة إضافة تمرين (مثال)
+        function addExercise() {
+            const container = document.getElementById('exercisesContainer');
+            const exerciseIndex = container.children.length + 1;
+            
+            const exerciseDiv = document.createElement('div');
+            exerciseDiv.className = 'exercise-item';
+            exerciseDiv.innerHTML = `
+                <div style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 6px;">
+                    <div class="form-group">
+                        <label>التمرين ${exerciseIndex}</label>
+                        <input type="text" class="form-control" placeholder="عنوان التمرين">
+                    </div>
+                    <div class="form-group">
+                        <label>وصف التمرين</label>
+                        <textarea class="form-control" rows="3" placeholder="وصف التمرين"></textarea>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="this.parentElement.remove()">حذف التمرين</button>
+                </div>
+            `;
+            
+            container.appendChild(exerciseDiv);
+        }
+
+        // دالة تسجيل الخروج
+        function logout() {
+            if (confirm('هل تريد تسجيل الخروج؟')) {
+                alert('تم تسجيل الخروج بنجاح');
+                // توجيه إلى صفحة تسجيل الدخول
+                window.location.href = '../../index.html';
+            }
+        }
+
+        // دالة عرض الإشعارات
+        function showNotifications() {
+            alert('قائمة الإشعارات ستظهر هنا');
+        }
+
+        // تهيئة بعض المحتوى عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            // تعيين التاريخ الحالي كحد أدنى للمواعيد
+            const today = new Date().toISOString().split('T')[0];
+            const now = new Date();
+            const datetime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+            
+            const objectiveDeadline = document.getElementById('objectiveDeadline');
+            const assignmentDeadline = document.getElementById('assignmentDeadline');
+            
+            if (objectiveDeadline) {
+                objectiveDeadline.min = today;
+            }
+            
+            if (assignmentDeadline) {
+                assignmentDeadline.min = datetime;
+            }
+        });
+    </script>
 
     <script src="../../assets/js/dashboard.js"></script>
     <script src="../../assets/js/teacher.js"></script>

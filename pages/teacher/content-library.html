@@ -968,3 +968,159 @@
     </script>
 </body>
 </html>
+<style>
+    /* ============================================
+       تحسينات المسافات والتخطيط
+       ============================================ */
+    
+    .content-library-page {
+        padding: 20px;
+        margin-top: 20px;
+        margin-right: 280px; /* يعادل عرض الشريط الجانبي */
+        min-height: calc(100vh - 80px);
+        transition: all 0.3s ease;
+    }
+    
+    /* تحسين الرأس */
+    .page-header {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: var(--shadow);
+        margin-bottom: 30px;
+        margin-top: 10px;
+    }
+    
+    /* تحسين تبويبات المحتوى */
+    .content-library-tabs {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: var(--shadow);
+        margin-bottom: 30px;
+        width: 100%;
+    }
+    
+    .library-tabs-header {
+        display: flex;
+        background: var(--light-color);
+        border-bottom: 1px solid var(--border-color);
+        flex-wrap: wrap;
+        position: sticky;
+        top: 80px;
+        z-index: 100;
+    }
+    
+    /* تحسين قسم الاستيراد */
+    .import-export-section {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: var(--shadow);
+        margin-bottom: 30px;
+        margin-top: 10px;
+    }
+    
+    /* تحسين ملخص الاختبارات */
+    .test-summary {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        border-radius: 10px;
+        padding: 25px;
+        margin-bottom: 30px;
+        margin-top: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+    }
+    
+    /* ============================================
+       تحسينات للهواتف والأجهزة الصغيرة
+       ============================================ */
+    
+    @media (max-width: 768px) {
+        .content-library-page {
+            margin-right: 0 !important;
+            padding: 15px !important;
+            margin-top: 15px !important;
+        }
+        
+        .library-tabs-header {
+            top: 60px;
+        }
+        
+        .page-header,
+        .import-export-section,
+        .test-summary {
+            margin-top: 5px;
+            margin-bottom: 20px;
+            padding: 15px;
+        }
+        
+        .test-summary {
+            flex-direction: column;
+            gap: 20px;
+            text-align: center;
+        }
+        
+        .summary-stats {
+            justify-content: center;
+        }
+        
+        .import-export-buttons {
+            flex-direction: column;
+        }
+        
+        .import-export-buttons .btn {
+            width: 100%;
+        }
+    }
+    
+    /* ============================================
+       تحسينات الشريط الجانبي
+       ============================================ */
+    
+    /* التأكد من أن المحتوى لا يختبئ خلف الشريط */
+    .main-content-dashboard {
+        flex: 1;
+        margin-right: 280px;
+        transition: all 0.3s ease;
+        overflow-x: hidden;
+    }
+    
+    /* تحسين الروابط النشطة */
+    .sidebar-menu li a.active {
+        background: rgba(255,255,255,0.15);
+        color: white;
+        border-right: 3px solid var(--primary-color);
+        font-weight: 500;
+    }
+    
+    /* تحسين الهوامش للشاشات الكبيرة */
+    @media (min-width: 1200px) {
+        .content-library-page {
+            margin-right: 300px;
+        }
+        
+        .main-content-dashboard {
+            margin-right: 300px;
+        }
+    }
+    
+    /* تحسين للمسافات على الشاشات الصغيرة */
+    @media (max-width: 480px) {
+        .content-library-page {
+            padding: 10px !important;
+        }
+        
+        .page-header h1 {
+            font-size: 1.5rem;
+        }
+        
+        .library-tab-btn {
+            padding: 12px 15px;
+            font-size: 0.9rem;
+        }
+    }
+</style>

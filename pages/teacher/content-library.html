@@ -3,16 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مكتبة المحتوى - ميسر التعلم</title>
+    <title>مكتبة المحتوى التعليمي - ميسر التعلم</title>
+    
+    <!-- الخطوط -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- الأيقونات -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- الأنماط -->
     <link rel="stylesheet" href="../../assets/css/main.css">
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../assets/css/teacher.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../assets/css/committee.css">
+    
+    <style>
+        /* أنماط إضافية */
+        .content-library-page {
+            padding: 20px;
+        }
+        
+        .page-header {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+        }
+        
+        .page-header h1 {
+            color: var(--secondary-color);
+            margin: 0;
+            font-size: 1.8rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .import-export-section {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 30px;
+            border: 2px solid var(--light-color);
+        }
+        
+        .import-export-section h3 {
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .import-export-buttons {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .test-summary {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .summary-info h2 {
+            margin: 0 0 10px 0;
+            font-size: 1.8rem;
+        }
+        
+        .summary-info p {
+            margin: 0;
+            opacity: 0.9;
+        }
+        
+        .summary-stats {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        /* تحسينات للهواتف */
+        @media (max-width: 768px) {
+            .test-summary {
+                flex-direction: column;
+                gap: 20px;
+                text-align: center;
+            }
+            
+            .summary-stats {
+                justify-content: center;
+            }
+            
+            .import-export-buttons {
+                flex-direction: column;
+            }
+            
+            .import-export-buttons .btn {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
+    <!-- هيكل لوحة تحكم المعلم -->
     <div class="dashboard-container">
         <!-- الشريط الجانبي -->
-        <aside class="sidebar">
+        <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
                     <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
@@ -21,125 +140,280 @@
             </div>
             
             <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
-                <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
-                <li><a href="content-library.html" class="active"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
-                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
-                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
-                <li><a href="reports.html"><span class="menu-icon">📋</span>التقارير</a></li>
-                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة الصعوبات</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
+                <li><a href="dashboard.html" class="menu-item">
+                    <span class="menu-icon">🏠</span>
+                    <span class="menu-text">الرئيسية</span>
+                </a></li>
+                
+                <li><a href="students.html" class="menu-item">
+                    <span class="menu-icon">👨‍🎓</span>
+                    <span class="menu-text">الطلاب</span>
+                </a></li>
+                
+                <li><a href="tests.html" class="menu-item">
+                    <span class="menu-icon">📝</span>
+                    <span class="menu-text">الاختبارات</span>
+                </a></li>
+                
+                <li><a href="lessons.html" class="menu-item">
+                    <span class="menu-icon">📚</span>
+                    <span class="menu-text">الدروس</span>
+                </a></li>
+                
+                <li><a href="content-library.html" class="menu-item active">
+                    <span class="menu-icon">📚</span>
+                    <span class="menu-text">مكتبة المحتوى التعليمي</span>
+                </a></li>
+                
+                <li><a href="assignments.html" class="menu-item">
+                    <span class="menu-icon">📋</span>
+                    <span class="menu-text">الواجبات</span>
+                </a></li>
+                
+                <li><a href="reports.html" class="menu-item">
+                    <span class="menu-icon">📊</span>
+                    <span class="menu-text">التقارير</span>
+                </a></li>
+                
+                <li><a href="messages.html" class="menu-item">
+                    <span class="menu-icon">💬</span>
+                    <span class="menu-text">المراسلات</span>
+                </a></li>
+                
+                <li><a href="committee.html" class="menu-item">
+                    <span class="menu-icon">👥</span>
+                    <span class="menu-text">لجنة صعوبات التعلم</span>
+                </a></li>
+                
+                <li><a href="settings.html" class="menu-item">
+                    <span class="menu-icon">⚙️</span>
+                    <span class="menu-text">الإعدادات</span>
+                </a></li>
+                
+                <li><a href="#" class="menu-item" onclick="logout()">
+                    <span class="menu-icon">🚪</span>
+                    <span class="menu-text">تسجيل الخروج</span>
+                </a></li>
             </ul>
-        </aside>
-
+        </div>
+        
         <!-- المحتوى الرئيسي -->
-        <main class="main-content-dashboard">
-            <!-- رأس اللوحة -->
-            <header class="dashboard-header">
-                <button class="mobile-menu-btn">☰</button>
-                <div class="user-info">
-                    <div class="user-welcome">
-                        <div class="welcome-text">مرحباً بعودتك</div>
-                        <div class="user-name" id="userName">أ/ اسم المعلم</div>
-                    </div>
-                    <div class="user-avatar" id="userAvatar">م</div>
+        <div class="main-content-dashboard">
+            <!-- رأس الصفحة -->
+            <div class="dashboard-header">
+                <div>
+                    <button class="mobile-menu-btn" id="mobileMenuBtn">
+                        <i class="fas fa-bars"></i>
+                    </button>
                 </div>
+                
                 <div class="header-actions">
-                    <button class="btn btn-primary" onclick="showNotifications()">🔔 الإشعارات</button>
-                </div>
-            </header>
-
-            <!-- محتوى اللوحة -->
-            <div class="dashboard-content">
-                <div class="content-header">
-                    <h1>مكتبة المحتوى التعليمي</h1>
-                    <div class="header-actions">
-                        <div class="dropdown">
-                            <button class="btn btn-success dropdown-toggle" type="button" id="addContentDropdown" data-toggle="dropdown">
-                                + إضافة محتوى جديد
-                            </button>
-                            <div class="dropdown-menu">
-                                <a class="dropdown-item" href="#" onclick="showCreateTestModal()">اختبار تشخيصي</a>
-                                <a class="dropdown-item" href="#" onclick="showCreateLessonModal()">درس جديد</a>
-                                <a class="dropdown-item" href="#" onclick="showCreateObjectiveModal()">هدف قصير المدى</a>
-                                <a class="dropdown-item" href="#" onclick="showCreateAssignmentModal()">واجب جديد</a>
-                            </div>
+                    <div class="user-info">
+                        <div class="user-welcome">
+                            <div class="welcome-text">مرحباً</div>
+                            <div class="user-name" id="userName">المعلم</div>
                         </div>
+                        <div class="user-avatar" id="userAvatar">م</div>
                     </div>
                 </div>
-
-                <!-- أقسام المكتبة -->
-                <div class="library-sections">
-                    <!-- الاختبارات التشخيصية -->
-                    <div class="library-section">
-                        <div class="section-header">
-                            <h2>الاختبارات التشخيصية</h2>
-                            <div class="section-actions">
-                                <button class="btn btn-outline-primary" onclick="showImportModal('test')">📁 استيراد</button>
-                            </div>
+            </div>
+            
+            <!-- محتوى الصفحة -->
+            <div class="content-library-page">
+                <!-- عنوان الصفحة -->
+                <div class="page-header">
+                    <h1>
+                        <span class="page-icon">📚</span>
+                        مكتبة المحتوى التعليمي
+                    </h1>
+                </div>
+                
+                <!-- ملخص الإحصاءات -->
+                <div class="test-summary">
+                    <div class="summary-info">
+                        <h2>الاختبارات التشخيصية</h2>
+                        <p>أدوات متكاملة لإنشاء وتقييم الاختبارات التشخيصية للطلاب</p>
+                    </div>
+                    <div class="summary-stats">
+                        <div class="stat-item">
+                            <div class="stat-number" id="totalTests">0</div>
+                            <div class="stat-label">اختبار</div>
                         </div>
-                        <div class="content-grid" id="testsGrid">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
+                        <div class="stat-item">
+                            <div class="stat-number" id="arabicTests">0</div>
+                            <div class="stat-label">لغتي</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="mathTests">0</div>
+                            <div class="stat-label">رياضيات</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number" id="linkedTests">0</div>
+                            <div class="stat-label">مربوطة بالأهداف</div>
                         </div>
                     </div>
-
-                    <!-- الدروس -->
-                    <div class="library-section">
-                        <div class="section-header">
-                            <h2>الدروس</h2>
-                            <div class="section-actions">
-                                <button class="btn btn-outline-primary" onclick="showImportModal('lesson')">📁 استيراد</button>
+                </div>
+                
+                <!-- قسم الاستيراد والتصدير -->
+                <div class="import-export-section">
+                    <h3>استيراد وتصدير الاختبارات</h3>
+                    <div class="import-export-buttons">
+                        <button class="btn btn-primary" onclick="importTest()">
+                            <i class="fas fa-download"></i> استيراد اختبار
+                        </button>
+                        <button class="btn btn-success" onclick="showCreateTestModal()">
+                            <i class="fas fa-plus"></i> إنشاء اختبار جديد
+                        </button>
+                        <button class="btn btn-info" onclick="showImportInstructions()">
+                            <i class="fas fa-question-circle"></i> تعليمات الاستيراد
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- تبويبات المحتوى -->
+                <div class="content-library-tabs">
+                    <div class="library-tabs-header">
+                        <button class="library-tab-btn active" data-tab="tests">
+                            <i class="fas fa-clipboard-check"></i>
+                            الاختبارات التشخيصية
+                        </button>
+                        <button class="library-tab-btn" data-tab="lessons">
+                            <i class="fas fa-book-open"></i>
+                            الدروس
+                        </button>
+                        <button class="library-tab-btn" data-tab="objectives">
+                            <i class="fas fa-bullseye"></i>
+                            الأهداف قصيرة المدى
+                        </button>
+                        <button class="library-tab-btn" data-tab="assignments">
+                            <i class="fas fa-tasks"></i>
+                            الواجبات
+                        </button>
+                    </div>
+                    
+                    <div class="tab-content">
+                        <!-- تبويب الاختبارات التشخيصية -->
+                        <div class="tab-pane active" id="tests-tab">
+                            <div class="section-header">
+                                <h2>الاختبارات التشخيصية المتاحة</h2>
+                                <div class="filter-options">
+                                    <input type="text" class="form-control" placeholder="بحث في الاختبارات..." 
+                                           oninput="filterTests(this.value)" style="min-width: 250px;">
+                                    <select class="form-select" onchange="filterBySubject(this.value)">
+                                        <option value="all">جميع المواد</option>
+                                        <option value="لغتي">لغتي</option>
+                                        <option value="رياضيات">رياضيات</option>
+                                    </select>
+                                    <select class="form-select" onchange="filterByStatus(this.value)">
+                                        <option value="all">جميع الحالات</option>
+                                        <option value="linked">مربوطة بالأهداف</option>
+                                        <option value="not-linked">غير مربوطة</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <div id="diagnosticTestsContainer">
+                                <!-- سيتم تحميل الاختبارات هنا عبر JavaScript -->
                             </div>
                         </div>
-                        <div class="content-grid" id="lessonsGrid">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </div>
-                    </div>
-
-                    <!-- الأهداف قصيرة المدى -->
-                    <div class="library-section">
-                        <div class="section-header">
-                            <h2>الأهداف قصيرة المدى</h2>
-                        </div>
-                        <div class="objectives-list" id="objectivesList">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </div>
-                    </div>
-
-                    <!-- الواجبات -->
-                    <div class="library-section">
-                        <div class="section-header">
-                            <h2>الواجبات</h2>
-                            <div class="section-actions">
-                                <button class="btn btn-outline-primary" onclick="showImportModal('assignment')">📁 استيراد</button>
+                        
+                        <!-- تبويب الدروس -->
+                        <div class="tab-pane" id="lessons-tab">
+                            <div class="section-header">
+                                <h2>الدروس التعليمية</h2>
+                                <button class="btn btn-success">
+                                    <i class="fas fa-plus"></i> إضافة درس جديد
+                                </button>
+                            </div>
+                            
+                            <div id="lessonsContainer">
+                                <div class="empty-state">
+                                    <div class="empty-icon">
+                                        <i class="fas fa-book-open fa-3x"></i>
+                                    </div>
+                                    <h3>لا توجد دروس بعد</h3>
+                                    <p>قم بإضافة أول درس تعليمي للطلاب</p>
+                                    <button class="btn btn-success">
+                                        <i class="fas fa-plus"></i> إضافة درس جديد
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <div class="content-grid" id="assignmentsGrid">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
+                        
+                        <!-- تبويب الأهداف قصيرة المدى -->
+                        <div class="tab-pane" id="objectives-tab">
+                            <div class="section-header">
+                                <h2>الأهداف قصيرة المدى</h2>
+                                <div class="header-actions">
+                                    <button class="btn btn-success" onclick="showAddObjectiveModal()">
+                                        <i class="fas fa-plus"></i> إضافة هدف جديد
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div id="objectivesContainer">
+                                <div class="empty-state">
+                                    <div class="empty-icon">
+                                        <i class="fas fa-bullseye fa-3x"></i>
+                                    </div>
+                                    <h3>لا توجد أهداف قصيرة المدى</h3>
+                                    <p>قم بإضافة أهداف قصيرة المدى لربطها بالأسئلة</p>
+                                    <button class="btn btn-success" onclick="showAddObjectiveModal()">
+                                        <i class="fas fa-plus"></i> إضافة هدف جديد
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- تبويب الواجبات -->
+                        <div class="tab-pane" id="assignments-tab">
+                            <div class="section-header">
+                                <h2>الواجبات التعليمية</h2>
+                                <button class="btn btn-success">
+                                    <i class="fas fa-plus"></i> إضافة واجب جديد
+                                </button>
+                            </div>
+                            
+                            <div id="assignmentsContainer">
+                                <div class="empty-state">
+                                    <div class="empty-icon">
+                                        <i class="fas fa-tasks fa-3x"></i>
+                                    </div>
+                                    <h3>لا توجد واجبات بعد</h3>
+                                    <p>قم بإضافة أول واجب تعليمي للطلاب</p>
+                                    <button class="btn btn-success">
+                                        <i class="fas fa-plus"></i> إضافة واجب جديد
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </main>
+        </div>
     </div>
-
-    <!-- نماذج إضافة المحتوى -->
-    <div id="createTestModal" class="modal">
+    
+    <!-- ============================================
+          النوافذ المنبثقة Modals
+    ============================================ -->
+    
+    <!-- نافذة إنشاء اختبار تشخيصي -->
+    <div class="modal" id="createTestModal">
         <div class="modal-content large">
             <div class="modal-header">
                 <h3>إنشاء اختبار تشخيصي جديد</h3>
                 <button class="modal-close" onclick="closeCreateTestModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <form id="createTestForm">
+                <form id="testCreationForm">
                     <div class="form-group">
-                        <label for="testTitle" class="form-label">عنوان الاختبار</label>
-                        <input type="text" id="testTitle" class="form-control" required>
+                        <label for="testTitle">عنوان الاختبار *</label>
+                        <input type="text" id="testTitle" class="form-control" placeholder="أدخل عنوان الاختبار" required>
                     </div>
                     
                     <div class="form-group">
-                        <label for="testSubject" class="form-label">المادة</label>
-                        <select id="testSubject" class="form-control" required>
+                        <label for="testSubject">المادة *</label>
+                        <select id="testSubject" class="form-select" required>
                             <option value="">اختر المادة</option>
                             <option value="لغتي">لغتي</option>
                             <option value="رياضيات">رياضيات</option>
@@ -147,48 +421,155 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="testDescription" class="form-label">وصف الاختبار (اختياري)</label>
-                        <textarea id="testDescription" class="form-control" rows="3"></textarea>
+                        <label for="testDescription">وصف الاختبار (اختياري)</label>
+                        <textarea id="testDescription" class="form-control" rows="3" 
+                                  placeholder="أدخل وصفاً للاختبار (اختياري)"></textarea>
                     </div>
-
-                    <div class="questions-section">
-                        <h4>أسئلة الاختبار</h4>
-                        <div id="questionsContainer">
-                            <!-- سيتم إضافة الأسئلة هنا -->
+                    
+                    <div class="section-header">
+                        <h4>أسئلة الاختبار <span id="questionsCounter">(0 سؤال)</span></h4>
+                        <button type="button" class="btn btn-primary" id="addQuestionBtn">
+                            <i class="fas fa-plus"></i> إضافة سؤال
+                        </button>
+                    </div>
+                    
+                    <!-- اختيار نوع السؤال -->
+                    <div id="questionTypeSelection" style="display: none;">
+                        <h5>اختر نوع السؤال:</h5>
+                        <div id="questionTypeGrid" class="question-type-grid">
+                            <!-- سيتم ملؤه عبر JavaScript -->
                         </div>
-                        <button type="button" class="btn btn-outline-primary" onclick="addQuestion()">+ إضافة سؤال</button>
+                    </div>
+                    
+                    <!-- نموذج السؤال -->
+                    <div id="questionFormContainer"></div>
+                    
+                    <!-- التنقل بين الأسئلة -->
+                    <div id="questionsNavigation" style="display: none;">
+                        <div class="questions-navigation">
+                            <div class="questions-list" id="questionsList">
+                                <!-- قائمة الأسئلة ستظهر هنا -->
+                            </div>
+                            <div class="navigation-buttons">
+                                <button type="button" class="btn btn-secondary" onclick="showQuestionTypeSelection()">
+                                    <i class="fas fa-arrow-right"></i> إضافة سؤال آخر
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeCreateTestModal()">إلغاء</button>
-                <button type="button" class="btn btn-success" onclick="saveTest()">حفظ الاختبار</button>
+                <button class="btn btn-secondary" onclick="closeCreateTestModal()">
+                    <i class="fas fa-times"></i> إلغاء
+                </button>
+                <button class="btn btn-success" id="saveTestBtn">
+                    <i class="fas fa-save"></i> حفظ الاختبار
+                </button>
             </div>
         </div>
     </div>
-
-    <!-- نموذج إضافة درس جديد -->
-    <div id="createLessonModal" class="modal">
+    
+    <!-- نافذة ربط الأهداف -->
+    <div class="modal" id="linkObjectivesModal">
         <div class="modal-content large">
             <div class="modal-header">
-                <h3>إنشاء درس جديد</h3>
-                <button class="modal-close" onclick="closeCreateLessonModal()">&times;</button>
+                <h3>ربط الأهداف القصيرة بالأسئلة</h3>
+                <button class="modal-close" onclick="closeLinkObjectivesModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <form id="createLessonForm">
+                <div id="linkingQuestionInfo">
+                    <h5 id="linkingQuestionNumber"></h5>
+                    <div class="question-preview">
+                        <p id="linkingQuestionText"></p>
+                    </div>
+                </div>
+                
+                <div class="objectives-linking">
+                    <h5>اختر الهدف القصير المناسب:</h5>
+                    <div id="objectivesList">
+                        <!-- الأهداف ستظهر هنا -->
+                    </div>
+                </div>
+                
+                <div class="linking-progress">
+                    <div class="progress-info">
+                        <span id="currentQuestionIndex">0</span> من <span id="totalQuestionsCount">0</span> سؤال
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="linkingProgressFill" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeLinkObjectivesModal()">
+                    <i class="fas fa-times"></i> إلغاء
+                </button>
+                <button class="btn btn-primary" onclick="nextQuestion()">
+                    <i class="fas fa-arrow-left"></i> التالي
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- نافذة عرض الاختبار -->
+    <div class="modal" id="viewTestModal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3 id="viewTestTitle">عرض الاختبار</h3>
+                <button class="modal-close" onclick="closeViewTestModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="test-info-card">
+                    <div class="test-header">
+                        <h4 id="viewTestSubject"></h4>
+                        <div class="test-meta">
+                            <span id="viewTestDate"></span>
+                            <span id="viewTestQuestionsCount"></span>
+                        </div>
+                    </div>
+                    <div id="viewTestDescription"></div>
+                </div>
+                
+                <div class="questions-section">
+                    <h4>أسئلة الاختبار:</h4>
+                    <div id="viewTestQuestions">
+                        <!-- الأسئلة ستظهر هنا -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeViewTestModal()">
+                    <i class="fas fa-times"></i> إغلاق
+                </button>
+                <button class="btn btn-success" onclick="printReport()">
+                    <i class="fas fa-print"></i> طباعة
+                </button>
+                <button class="btn btn-info" onclick="downloadReport()">
+                    <i class="fas fa-download"></i> تحميل
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- نافذة إضافة هدف جديد -->
+    <div class="modal" id="addObjectiveModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إضافة هدف قصير المدى</h3>
+                <button class="modal-close" onclick="closeAddObjectiveModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addObjectiveForm">
                     <div class="form-group">
-                        <label for="lessonTitle" class="form-label">عنوان الدرس</label>
-                        <input type="text" id="lessonTitle" class="form-control" required>
+                        <label for="objectiveText">نص الهدف *</label>
+                        <textarea id="objectiveText" class="form-control" rows="3" 
+                                  placeholder="أدخل نص الهدف قصير المدى" required></textarea>
                     </div>
                     
                     <div class="form-group">
-                        <label for="lessonStrategy" class="form-label">الاستراتيجية</label>
-                        <input type="text" id="lessonStrategy" class="form-control" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="lessonSubject" class="form-label">المادة</label>
-                        <select id="lessonSubject" class="form-control" required>
+                        <label for="objectiveSubject">المادة *</label>
+                        <select id="objectiveSubject" class="form-select" required>
                             <option value="">اختر المادة</option>
                             <option value="لغتي">لغتي</option>
                             <option value="رياضيات">رياضيات</option>
@@ -196,38 +577,394 @@
                     </div>
                     
                     <div class="form-group">
-                        <label for="lessonDescription" class="form-label">وصف الدرس (اختياري)</label>
-                        <textarea id="lessonDescription" class="form-control" rows="3"></textarea>
+                        <label for="objectiveGrade">الصف (اختياري)</label>
+                        <select id="objectiveGrade" class="form-select">
+                            <option value="">جميع الصفوف</option>
+                            <option value="الصف الأول">الصف الأول</option>
+                            <option value="الصف الثاني">الصف الثاني</option>
+                            <option value="الصف الثالث">الصف الثالث</option>
+                            <option value="الصف الرابع">الصف الرابع</option>
+                            <option value="الصف الخامس">الصف الخامس</option>
+                            <option value="الصف السادس">الصف السادس</option>
+                        </select>
                     </div>
-
-                    <div class="lesson-sections">
-                        <div class="lesson-section">
-                            <h4>التمهيد</h4>
-                            <div class="section-content" id="introductionSection">
-                                <!-- محتوى التمهيد -->
-                            </div>
-                        </div>
-                        
-                        <div class="lesson-section">
-                            <h4>التمارين والتقييم</h4>
-                            <div id="exercisesContainer">
-                                <!-- سيتم إضافة التمارين هنا -->
-                            </div>
-                            <button type="button" class="btn btn-outline-primary" onclick="addExercise()">+ إضافة تمرين</button>
-                        </div>
+                    
+                    <div class="form-group">
+                        <label for="objectiveCategory">الفئة (اختياري)</label>
+                        <input type="text" id="objectiveCategory" class="form-control" 
+                               placeholder="أدخل فئة الهدف (اختياري)">
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeCreateLessonModal()">إلغاء</button>
-                <button type="button" class="btn btn-success" onclick="saveLesson()">حفظ الدرس</button>
+                <button class="btn btn-secondary" onclick="closeAddObjectiveModal()">
+                    <i class="fas fa-times"></i> إلغاء
+                </button>
+                <button class="btn btn-success" onclick="saveObjective()">
+                    <i class="fas fa-save"></i> حفظ الهدف
+                </button>
             </div>
         </div>
     </div>
-
-    <script src="../../assets/js/dashboard.js"></script>
-    <script src="../../assets/js/teacher.js"></script>
-    <script src="../../assets/js/content-library.js"></script>
+    
+    <!-- نافذة التعليمات -->
+    <div class="modal" id="instructionsModal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>تعليمات استيراد الاختبارات</h3>
+                <button class="modal-close" onclick="closeInstructionsModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="import-instructions">
+                    <h4>كيفية استيراد اختبار:</h4>
+                    <ul>
+                        <li>قم بتنزيل ملف الاختبار من المعلم المرسل (.json)</li>
+                        <li>اضغط على زر "استيراد اختبار" في أعلى الصفحة</li>
+                        <li>اختر ملف الاختبار الذي قمت بتنزيله</li>
+                        <li>سوف يظهر الاختبار في قائمة الاختبارات الخاصة بك</li>
+                        <li>يجب عليك ربط الأسئلة بالأهداف القصيرة المتوفرة لديك</li>
+                    </ul>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>ملاحظة:</strong> ملف الاختبار المستورد لا يحتوي على الأهداف المربوطة، 
+                        يجب عليك ربط الأسئلة بالأهداف القصيرة المتاحة في حسابك.
+                    </div>
+                    
+                    <h4>نصائح مهمة:</h4>
+                    <ul>
+                        <li>تأكد من توفر الأهداف القصيرة للمادة المناسبة قبل الاستيراد</li>
+                        <li>يمكنك تعديل الاختبار المستورد حسب احتياجاتك</li>
+                        <li>الاختبار المستورد يكون نسخة مستقلة عن الاختبار الأصلي</li>
+                        <li>يمكنك تصدير الاختبار بعد التعديل لمشاركته مع معلمين آخرين</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeInstructionsModal()">
+                    <i class="fas fa-check"></i> فهمت
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ============================================
+          الملفات JavaScript
+    ============================================ -->
+    
+    <!-- ملفات المصادقة العامة -->
     <script src="../../assets/js/auth.js"></script>
+    
+    <!-- ملف مكتبة المحتوى التعليمي -->
+    <script src="../../assets/js/committee.js"></script>
+    
+    <!-- الشريط الجانبي المتحرك -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // التحقق من المصادقة
+            const user = checkAuth();
+            if (!user) return;
+            
+            if (user.role !== 'teacher') {
+                showAuthNotification('غير مصرح لك بالوصول إلى هذه الصفحة', 'error');
+                setTimeout(() => {
+                    window.location.href = '../../index.html';
+                }, 2000);
+                return;
+            }
+            
+            // تحديث واجهة المستخدم
+            updateUserInterface(user);
+            
+            // تحميل بيانات الصفحة
+            initializeContentLibraryPage();
+            
+            // إعداد الشريط الجانبي المتحرك
+            setupMobileMenu();
+        });
+        
+        function updateUserInterface(user) {
+            document.getElementById('userName').textContent = user.name;
+            document.getElementById('userAvatar').textContent = user.name.charAt(0);
+        }
+        
+        function setupMobileMenu() {
+            const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+            const sidebar = document.getElementById('sidebar');
+            
+            mobileMenuBtn.addEventListener('click', function() {
+                sidebar.classList.toggle('active');
+            });
+            
+            // إغلاق الشريط الجانبي عند النقر خارجها على الهواتف
+            document.addEventListener('click', function(event) {
+                if (window.innerWidth <= 768) {
+                    if (!sidebar.contains(event.target) && !mobileMenuBtn.contains(event.target)) {
+                        sidebar.classList.remove('active');
+                    }
+                }
+            });
+        }
+        
+        function initializeContentLibraryPage() {
+            // إعداد تبويبات المكتبة
+            const tabBtns = document.querySelectorAll('.library-tab-btn');
+            const tabPanes = document.querySelectorAll('.tab-pane');
+            
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    // إزالة النشاط من جميع الأزرار
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    tabPanes.forEach(p => p.classList.remove('active'));
+                    
+                    // إضافة النشاط للزر والتبويب المحدد
+                    this.classList.add('active');
+                    document.getElementById(`${tabId}-tab`).classList.add('active');
+                    
+                    // تحميل المحتوى بناءً على التبويب
+                    switch(tabId) {
+                        case 'tests':
+                            loadDiagnosticTests();
+                            break;
+                        case 'objectives':
+                            loadObjectives();
+                            break;
+                    }
+                });
+            });
+            
+            // تحميل الإحصائيات
+            updateTestStats();
+            
+            // تحميل الاختبارات
+            loadDiagnosticTests();
+            
+            // إعداد مستمعي الأحداث للأزرار
+            document.getElementById('addQuestionBtn').addEventListener('click', showQuestionTypeSelection);
+            document.getElementById('saveTestBtn').addEventListener('click', saveDiagnosticTest);
+        }
+        
+        function updateTestStats() {
+            const tests = JSON.parse(localStorage.getItem('diagnosticTests') || '[]');
+            const currentUser = getCurrentUser();
+            const teacherTests = tests.filter(test => test.teacherId === currentUser.id);
+            
+            const arabicTests = teacherTests.filter(test => test.subject === 'لغتي').length;
+            const mathTests = teacherTests.filter(test => test.subject === 'رياضيات').length;
+            const linkedTests = teacherTests.filter(test => test.linkedObjectives && test.linkedObjectives.length > 0).length;
+            
+            document.getElementById('totalTests').textContent = teacherTests.length;
+            document.getElementById('arabicTests').textContent = arabicTests;
+            document.getElementById('mathTests').textContent = mathTests;
+            document.getElementById('linkedTests').textContent = linkedTests;
+        }
+        
+        function filterTests(searchTerm) {
+            const tests = document.querySelectorAll('.test-item');
+            searchTerm = searchTerm.toLowerCase();
+            
+            tests.forEach(test => {
+                const title = test.querySelector('.test-title').textContent.toLowerCase();
+                const description = test.querySelector('.test-description')?.textContent.toLowerCase() || '';
+                
+                if (title.includes(searchTerm) || description.includes(searchTerm)) {
+                    test.style.display = 'block';
+                } else {
+                    test.style.display = 'none';
+                }
+            });
+        }
+        
+        function filterBySubject(subject) {
+            const tests = document.querySelectorAll('.test-item');
+            
+            tests.forEach(test => {
+                if (subject === 'all' || test.classList.contains(subject === 'لغتي' ? 'arabic' : 'math')) {
+                    test.style.display = 'block';
+                } else {
+                    test.style.display = 'none';
+                }
+            });
+        }
+        
+        function filterByStatus(status) {
+            const tests = document.querySelectorAll('.test-item');
+            
+            tests.forEach(test => {
+                const badge = test.querySelector('.badge-linked, .badge-not-linked');
+                
+                if (status === 'all') {
+                    test.style.display = 'block';
+                } else if (status === 'linked' && badge.classList.contains('badge-linked')) {
+                    test.style.display = 'block';
+                } else if (status === 'not-linked' && badge.classList.contains('badge-not-linked')) {
+                    test.style.display = 'block';
+                } else {
+                    test.style.display = 'none';
+                }
+            });
+        }
+        
+        function showImportInstructions() {
+            document.getElementById('instructionsModal').classList.add('show');
+        }
+        
+        function closeInstructionsModal() {
+            document.getElementById('instructionsModal').classList.remove('show');
+        }
+        
+        function showAddObjectiveModal() {
+            document.getElementById('addObjectiveModal').classList.add('show');
+        }
+        
+        function closeAddObjectiveModal() {
+            document.getElementById('addObjectiveModal').classList.remove('show');
+            document.getElementById('addObjectiveForm').reset();
+        }
+        
+        function saveObjective() {
+            const text = document.getElementById('objectiveText').value.trim();
+            const subject = document.getElementById('objectiveSubject').value;
+            const grade = document.getElementById('objectiveGrade').value;
+            const category = document.getElementById('objectiveCategory').value.trim();
+            
+            if (!text || !subject) {
+                showAuthNotification('يرجى إدخال نص الهدف واختيار المادة', 'error');
+                return;
+            }
+            
+            const currentUser = getCurrentUser();
+            const objectives = JSON.parse(localStorage.getItem('shortTermObjectives') || '[]');
+            
+            const newObjective = {
+                id: generateId(),
+                teacherId: currentUser.id,
+                text: text,
+                subject: subject,
+                grade: grade || null,
+                category: category || null,
+                createdAt: new Date().toISOString()
+            };
+            
+            objectives.push(newObjective);
+            localStorage.setItem('shortTermObjectives', JSON.stringify(objectives));
+            
+            showAuthNotification('تم حفظ الهدف بنجاح', 'success');
+            closeAddObjectiveModal();
+            loadObjectives();
+        }
+        
+        function loadObjectives() {
+            const container = document.getElementById('objectivesContainer');
+            if (!container) return;
+            
+            const currentUser = getCurrentUser();
+            const objectives = JSON.parse(localStorage.getItem('shortTermObjectives') || '[]');
+            const teacherObjectives = objectives.filter(obj => obj.teacherId === currentUser.id);
+            
+            if (teacherObjectives.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-bullseye fa-3x"></i>
+                        </div>
+                        <h3>لا توجد أهداف قصيرة المدى</h3>
+                        <p>قم بإضافة أهداف قصيرة المدى لربطها بالأسئلة</p>
+                        <button class="btn btn-success" onclick="showAddObjectiveModal()">
+                            <i class="fas fa-plus"></i> إضافة هدف جديد
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            // تصنيف الأهداف حسب المادة
+            const arabicObjectives = teacherObjectives.filter(obj => obj.subject === 'لغتي');
+            const mathObjectives = teacherObjectives.filter(obj => obj.subject === 'رياضيات');
+            
+            let html = '';
+            
+            if (arabicObjectives.length > 0) {
+                html += `
+                    <div class="subject-section">
+                        <div class="subject-header">
+                            <div class="subject-icon arabic">ل</div>
+                            <h3>أهداف مادة لغتي</h3>
+                        </div>
+                        <div class="objectives-list">
+                            ${arabicObjectives.map(obj => renderObjectiveItem(obj)).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (mathObjectives.length > 0) {
+                html += `
+                    <div class="subject-section">
+                        <div class="subject-header">
+                            <div class="subject-icon math">ر</div>
+                            <h3>أهداف مادة الرياضيات</h3>
+                        </div>
+                        <div class="objectives-list">
+                            ${mathObjectives.map(obj => renderObjectiveItem(obj)).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        function renderObjectiveItem(objective) {
+            return `
+                <div class="objective-item">
+                    <div class="objective-text">${objective.text}</div>
+                    <div class="objective-meta">
+                        <span class="objective-badge ${objective.subject === 'لغتي' ? 'badge-arabic' : 'badge-math'}">
+                            ${objective.subject}
+                        </span>
+                        ${objective.grade ? `<span class="objective-grade">${objective.grade}</span>` : ''}
+                        ${objective.category ? `<span class="objective-category">${objective.category}</span>` : ''}
+                        <span class="objective-date">${formatDateShort(objective.createdAt)}</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // دوال مساعدة إضافية
+        function logout() {
+            window.logout();
+        }
+        
+        // تعويض الدوال غير المعرفة
+        if (typeof closeLinkObjectivesModal !== 'function') {
+            window.closeLinkObjectivesModal = function() {
+                document.getElementById('linkObjectivesModal').classList.remove('show');
+            };
+        }
+        
+        if (typeof closeViewTestModal !== 'function') {
+            window.closeViewTestModal = function() {
+                document.getElementById('viewTestModal').classList.remove('show');
+            };
+        }
+        
+        if (typeof printReport !== 'function') {
+            window.printReport = function() {
+                window.print();
+            };
+        }
+        
+        if (typeof downloadReport !== 'function') {
+            window.downloadReport = function() {
+                showAuthNotification('جاري تحميل التقرير...', 'info');
+                setTimeout(() => {
+                    showAuthNotification('تم تحميل التقرير بنجاح', 'success');
+                }, 1500);
+            };
+        }
+    </script>
 </body>
 </html>

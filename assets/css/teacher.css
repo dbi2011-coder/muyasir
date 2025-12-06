@@ -228,11 +228,14 @@
         width: calc(100% - 20px);
     }
 }
+
 /* أنماط مكتبة المحتوى التعليمي */
 .library-sections {
     display: flex;
     flex-direction: column;
     gap: 30px;
+    position: relative;
+    z-index: 1;
 }
 
 .library-section {
@@ -260,6 +263,7 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 20px;
+    padding-right: 20px; /* مساحة إضافية من اليمين */
 }
 
 .content-card {
@@ -541,6 +545,7 @@
 @media (max-width: 768px) {
     .content-grid {
         grid-template-columns: 1fr;
+        padding-right: 10px;
     }
     
     .section-header {
@@ -569,6 +574,7 @@
 @media (max-width: 480px) {
     .library-section {
         padding: 15px;
+        margin: 10px;
     }
     
     .content-actions {
@@ -580,6 +586,37 @@
         align-items: flex-start;
     }
 }
+
+/* تحسينات إضافية لمنع التداخل مع الشريط الجانبي */
+@media (min-width: 769px) {
+    .library-section {
+        margin-right: 20px; /* تأكد من عدم التداخل مع الشريط */
+    }
+    
+    .content-card {
+        max-width: calc(100% - 20px); /* منع التجاوز */
+    }
+}
+
+/* تحسينات للتجاوب على الهواتف */
+@media (max-width: 768px) {
+    .library-section {
+        margin: 15px;
+        padding: 15px;
+    }
+}
+
+/* تأكد من أن المحتوى لا يختفي تحت الشريط */
+.teacher-dashboard {
+    position: relative;
+    min-height: 100vh;
+}
+
+/* تحسينات للجزء السفلي من الصفحة */
+.library-section:last-child {
+    margin-bottom: 50px; /* مسافة إضافية في الأسفل */
+}
+
 /* أنماط ملف الطالب */
 .student-info-card {
     background: white;
@@ -1169,80 +1206,6 @@
     margin-bottom: 10px;
 }
 
-/* تحسينات للهواتف */
-@media (max-width: 768px) {
-    .student-basic-info {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .student-meta {
-        justify-content: center;
-    }
-    
-    .tabs-header {
-        flex-direction: column;
-    }
-    
-    .tab-btn {
-        width: 100%;
-        text-align: center;
-    }
-    
-    .plan-summary {
-        grid-template-columns: 1fr;
-    }
-    
-    .plan-stats {
-        grid-template-columns: 1fr;
-    }
-    
-    .progress-container {
-        grid-template-columns: 1fr;
-    }
-    
-    .tab-header {
-        flex-direction: column;
-        gap: 10px;
-        align-items: flex-start;
-    }
-    
-    .plan-actions-full,
-    .test-actions,
-    .lesson-actions,
-    .assignment-actions {
-        justify-content: center;
-    }
-    
-    .schedule-table {
-        font-size: 0.8rem;
-    }
-    
-    .schedule-table td {
-        height: 80px;
-        min-width: 120px;
-    }
-}
-
-@media (max-width: 480px) {
-    .student-tabs {
-        margin: 0 -10px;
-        border-radius: 0;
-    }
-    
-    .tab-pane {
-        padding: 15px;
-    }
-    
-    .schedule-actions {
-        flex-direction: column;
-    }
-    
-    .schedule-legend {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-}
 /* أنماط لجنة صعوبات التعلم */
 .committee-tabs {
     background: white;
@@ -1571,6 +1534,58 @@
 
 /* تحسينات للهواتف */
 @media (max-width: 768px) {
+    .student-basic-info {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .student-meta {
+        justify-content: center;
+    }
+    
+    .tabs-header {
+        flex-direction: column;
+    }
+    
+    .tab-btn {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .plan-summary {
+        grid-template-columns: 1fr;
+    }
+    
+    .plan-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .progress-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .tab-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    
+    .plan-actions-full,
+    .test-actions,
+    .lesson-actions,
+    .assignment-actions {
+        justify-content: center;
+    }
+    
+    .schedule-table {
+        font-size: 0.8rem;
+    }
+    
+    .schedule-table td {
+        height: 80px;
+        min-width: 120px;
+    }
+    
     .member-card {
         flex-direction: column;
         align-items: flex-start;
@@ -1610,6 +1625,24 @@
 }
 
 @media (max-width: 480px) {
+    .student-tabs {
+        margin: 0 -10px;
+        border-radius: 0;
+    }
+    
+    .tab-pane {
+        padding: 15px;
+    }
+    
+    .schedule-actions {
+        flex-direction: column;
+    }
+    
+    .schedule-legend {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
     .members-stats,
     .messages-stats {
         grid-template-columns: 1fr;

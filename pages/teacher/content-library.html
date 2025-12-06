@@ -1124,3 +1124,52 @@
         }
     }
 </style>
+// إصلاح مشكلة الشريط الجانبي المتداخل
+function fixSidebarOverlap() {
+    const sidebarWidth = document.querySelector('.sidebar').offsetWidth;
+    const mainContent = document.querySelector('.main-content-dashboard');
+    const libraryPage = document.querySelector('.content-library-page');
+    
+    if (sidebarWidth && mainContent) {
+        mainContent.style.marginRight = sidebarWidth + 'px';
+    }
+    
+    if (libraryPage) {
+        libraryPage.style.marginRight = sidebarWidth + 'px';
+    }
+    
+    // التأكد من أن الصفحة تبدأ من أعلى
+    window.scrollTo(0, 0);
+}
+
+// تشغيل الإصلاح عند تحميل الصفحة وعند تغيير الحجم
+window.addEventListener('load', fixSidebarOverlap);
+window.addEventListener('resize', fixSidebarOverlap);
+
+// إصلاح إضافي للشريط الجانبي المتحرك
+const sidebar = document.querySelector('.sidebar');
+const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+
+if (mobileMenuBtn && sidebar) {
+    mobileMenuBtn.addEventListener('click', function() {
+        sidebar.classList.toggle('active');
+        
+        // تحديث الهوامش عند فتح/إغلاق الشريط الجانبي
+        setTimeout(fixSidebarOverlap, 300);
+    });
+}
+
+// إزالة التفعيل من جميع روابط الشريط وإضافته للرابط النشط فقط
+document.addEventListener('DOMContentLoaded', function() {
+    const currentPage = window.location.pathname.split('/').pop();
+    const sidebarLinks = document.querySelectorAll('.sidebar-menu a');
+    
+    sidebarLinks.forEach(link => {
+        const href = link.getAttribute('href');
+        if (href === currentPage || (currentPage === '' && href === 'dashboard.html')) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
+    });
+});

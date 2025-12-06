@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لجنة صعوبات التعلم - ميسر التعلم</title>
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../assets/css/teacher.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- الشريط الجانبي -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
+                    <h2>ميسر التعلم</h2>
+                </div>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
+                <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
+                <li><a href="content-library.html"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
+                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
+                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
+                <li><a href="reports.html"><span class="menu-icon">📋</span>التقارير</a></li>
+                <li><a href="committee.html" class="active"><span class="menu-icon">👥</span>لجنة الصعوبات</a></li>
+                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
+            </ul>
+        </aside>
+
+        <!-- المحتوى الرئيسي -->
+        <main class="main-content-dashboard">
+            <!-- رأس اللوحة -->
+            <header class="dashboard-header">
+                <button class="mobile-menu-btn">☰</button>
+                <div class="user-info">
+                    <div class="user-welcome">
+                        <div class="welcome-text">مرحباً بعودتك</div>
+                        <div class="user-name" id="userName">أ/ اسم المعلم</div>
+                    </div>
+                    <div class="user-avatar" id="userAvatar">م</div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="showNotifications()">🔔 الإشعارات</button>
+                </div>
+            </header>
+
+            <!-- محتوى اللوحة -->
+            <div class="dashboard-content">
+                <div class="content-header">
+                    <h1>لجنة صعوبات التعلم</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-success" onclick="showAddMemberModal()">+ إضافة عضو جديد</button>
+                    </div>
+                </div>
+
+                <!-- تبويبات اللجنة -->
+                <div class="committee-tabs">
+                    <div class="tabs-header">
+                        <button class="tab-btn active" data-tab="members">أعضاء اللجنة</button>
+                        <button class="tab-btn" data-tab="notes">ملاحظات الأعضاء</button>
+                    </div>
+
+                    <div class="tabs-content">
+                        <!-- تبويب أعضاء اللجنة -->
+                        <div class="tab-pane active" id="members-tab">
+                            <div class="members-container">
+                                <div class="members-stats">
+                                    <div class="stat-card">
+                                        <div class="stat-value" id="totalMembers">0</div>
+                                        <div class="stat-label">إجمالي الأعضاء</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-value" id="activeMembers">0</div>
+                                        <div class="stat-label">أعضاء نشطين</div>
+                                    </div>
+                                </div>
+
+                                <div class="members-list" id="membersList">
+                                    <!-- سيتم تعبئته بواسطة JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- تبويب ملاحظات الأعضاء -->
+                        <div class="tab-pane" id="notes-tab">
+                            <div class="notes-container">
+                                <div class="notes-header">
+                                    <h3>الملاحظات الواردة من أعضاء اللجنة</h3>
+                                    <button class="btn btn-outline-primary" onclick="refreshNotes()">🔄 تحديث</button>
+                                </div>
+                                <div class="notes-list" id="notesList">
+                                    <!-- سيتم تعبئته بواسطة JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- نموذج إضافة عضو لجنة -->
+    <div id="addMemberModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إضافة عضو لجنة جديد</h3>
+                <button class="modal-close" onclick="closeAddMemberModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addMemberForm">
+                    <div class="form-group">
+                        <label for="memberName" class="form-label">اسم العضو</label>
+                        <input type="text" id="memberName" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="memberRole" class="form-label">الصفة</label>
+                        <select id="memberRole" class="form-control" required>
+                            <option value="">اختر الصفة</option>
+                            <option value="مدير">مدير</option>
+                            <option value="معلم">معلم</option>
+                            <option value="موجه طلابي">موجه طلابي</option>
+                            <option value="مشرف">مشرف</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="memberUsername" class="form-label">اسم المستخدم</label>
+                        <input type="text" id="memberUsername" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="memberPassword" class="form-label">كلمة المرور</label>
+                        <input type="password" id="memberPassword" class="form-control" required>
+                        <small class="form-text">سيتم استخدام هذه البيانات لتسجيل دخول العضو</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAddMemberModal()">إلغاء</button>
+                <button type="button" class="btn btn-success" onclick="saveCommitteeMember()">حفظ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نموذج تعديل عضو لجنة -->
+    <div id="editMemberModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>تعديل بيانات العضو</h3>
+                <button class="modal-close" onclick="closeEditMemberModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editMemberForm">
+                    <input type="hidden" id="editMemberId">
+                    <div class="form-group">
+                        <label for="editMemberName" class="form-label">اسم العضو</label>
+                        <input type="text" id="editMemberName" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editMemberRole" class="form-label">الصفة</label>
+                        <select id="editMemberRole" class="form-control" required>
+                            <option value="مدير">مدير</option>
+                            <option value="معلم">معلم</option>
+                            <option value="موجه طلابي">موجه طلابي</option>
+                            <option value="مشرف">مشرف</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editMemberUsername" class="form-label">اسم المستخدم</label>
+                        <input type="text" id="editMemberUsername" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editMemberPassword" class="form-label">كلمة المرور الجديدة (اختياري)</label>
+                        <input type="password" id="editMemberPassword" class="form-control">
+                        <small class="form-text">اتركه فارغاً إذا لم ترد تغيير كلمة المرور</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeEditMemberModal()">إلغاء</button>
+                <button type="button" class="btn btn-success" onclick="updateCommitteeMember()">تحديث</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../assets/js/dashboard.js"></script>
+    <script src="../../assets/js/teacher.js"></script>
+    <script src="../../assets/js/committee.js"></script>
+    <script src="../../assets/js/auth.js"></script>
+</body>
+</html>

@@ -21,6 +21,10 @@
         /* أنماط إضافية */
         .content-library-page {
             padding: 20px;
+            margin-top: 20px;
+            margin-right: 280px;
+            min-height: calc(100vh - 80px);
+            transition: all 0.3s ease;
         }
         
         .page-header {
@@ -29,6 +33,7 @@
             padding: 20px;
             box-shadow: var(--shadow);
             margin-bottom: 30px;
+            margin-top: 10px;
         }
         
         .page-header h1 {
@@ -46,6 +51,7 @@
             padding: 20px;
             box-shadow: var(--shadow);
             margin-bottom: 30px;
+            margin-top: 10px;
             border: 2px solid var(--light-color);
         }
         
@@ -68,6 +74,7 @@
             border-radius: 10px;
             padding: 25px;
             margin-bottom: 30px;
+            margin-top: 10px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -105,6 +112,71 @@
             opacity: 0.9;
         }
         
+        /* ============================================
+           إصلاحات z-index الحاسمة
+           ============================================ */
+        
+        /* زيادة z-index للنوافذ المنبثقة */
+        .modal {
+            z-index: 99999 !important;
+        }
+        
+        .modal.show {
+            display: flex !important;
+        }
+        
+        .modal-content {
+            z-index: 100000 !important;
+            position: relative;
+        }
+        
+        /* تقليل z-index للشريط الجانبي */
+        .sidebar {
+            z-index: 1000 !important;
+        }
+        
+        /* تقليل z-index لرأس لوحة التحكم */
+        .dashboard-header {
+            z-index: 2000 !important;
+        }
+        
+        /* عند فتح نافذة، إخفاء الشريط الجانبي على الهواتف */
+        @media (max-width: 768px) {
+            body.modal-open .sidebar {
+                display: none !important;
+            }
+            
+            body.modal-open .mobile-menu-btn {
+                display: none !important;
+            }
+            
+            .content-library-page {
+                margin-right: 0 !important;
+                padding: 15px !important;
+                margin-top: 15px !important;
+            }
+        }
+        
+        /* منع التمرير عند فتح النافذة */
+        body.modal-open {
+            overflow: hidden !important;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* تحسين ظهور النوافذ */
+        .modal {
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+        }
+        
+        /* تحسين الظلال للوضوح */
+        .modal-content {
+            box-shadow: 0 20px 50px rgba(0,0,0,0.4) !important;
+            border: 2px solid rgba(255,255,255,0.1);
+        }
+        
         /* تحسينات للهواتف */
         @media (max-width: 768px) {
             .test-summary {
@@ -123,6 +195,25 @@
             
             .import-export-buttons .btn {
                 width: 100%;
+            }
+            
+            .library-tabs-header {
+                top: 60px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .content-library-page {
+                padding: 10px !important;
+            }
+            
+            .page-header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .library-tab-btn {
+                padding: 12px 15px;
+                font-size: 0.9rem;
             }
         }
     </style>
@@ -658,7 +749,7 @@
     <!-- ملف مكتبة المحتوى التعليمي -->
     <script src="../../assets/js/committee.js"></script>
     
-    <!-- الشريط الجانبي المتحرك -->
+    <!-- الشريط الجانبي المتحرك والتحكم بالنوافذ -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // التحقق من المصادقة
@@ -681,6 +772,9 @@
             
             // إعداد الشريط الجانبي المتحرك
             setupMobileMenu();
+            
+            // تهيئة إدارة النوافذ
+            initializeModalManager();
         });
         
         function updateUserInterface(user) {
@@ -692,18 +786,20 @@
             const mobileMenuBtn = document.getElementById('mobileMenuBtn');
             const sidebar = document.getElementById('sidebar');
             
-            mobileMenuBtn.addEventListener('click', function() {
-                sidebar.classList.toggle('active');
-            });
-            
-            // إغلاق الشريط الجانبي عند النقر خارجها على الهواتف
-            document.addEventListener('click', function(event) {
-                if (window.innerWidth <= 768) {
-                    if (!sidebar.contains(event.target) && !mobileMenuBtn.contains(event.target)) {
-                        sidebar.classList.remove('active');
+            if (mobileMenuBtn && sidebar) {
+                mobileMenuBtn.addEventListener('click', function() {
+                    sidebar.classList.toggle('active');
+                });
+                
+                // إغلاق الشريط الجانبي عند النقر خارجها على الهواتف
+                document.addEventListener('click', function(event) {
+                    if (window.innerWidth <= 768) {
+                        if (!sidebar.contains(event.target) && !mobileMenuBtn.contains(event.target)) {
+                            sidebar.classList.remove('active');
+                        }
                     }
-                }
-            });
+                });
+            }
         }
         
         function initializeContentLibraryPage() {
@@ -742,8 +838,72 @@
             loadDiagnosticTests();
             
             // إعداد مستمعي الأحداث للأزرار
-            document.getElementById('addQuestionBtn').addEventListener('click', showQuestionTypeSelection);
-            document.getElementById('saveTestBtn').addEventListener('click', saveDiagnosticTest);
+            const addQuestionBtn = document.getElementById('addQuestionBtn');
+            const saveTestBtn = document.getElementById('saveTestBtn');
+            
+            if (addQuestionBtn) {
+                addQuestionBtn.addEventListener('click', showQuestionTypeSelection);
+            }
+            
+            if (saveTestBtn) {
+                saveTestBtn.addEventListener('click', saveDiagnosticTest);
+            }
+        }
+        
+        function initializeModalManager() {
+            // إضافة class للجسم عند فتح نافذة
+            document.addEventListener('modalShow', function() {
+                document.body.classList.add('modal-open');
+                
+                // إخفاء الشريط الجانبي على الهواتف
+                if (window.innerWidth <= 768) {
+                    const sidebar = document.querySelector('.sidebar');
+                    if (sidebar) {
+                        sidebar.style.display = 'none';
+                    }
+                    
+                    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+                    if (mobileMenuBtn) {
+                        mobileMenuBtn.style.display = 'none';
+                    }
+                }
+            });
+            
+            // إزالة class عند إغلاق نافذة
+            document.addEventListener('modalHide', function() {
+                document.body.classList.remove('modal-open');
+                
+                // إعادة عرض الشريط الجانبي على الهواتف
+                if (window.innerWidth <= 768) {
+                    const sidebar = document.querySelector('.sidebar');
+                    if (sidebar) {
+                        sidebar.style.display = 'block';
+                    }
+                    
+                    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+                    if (mobileMenuBtn) {
+                        mobileMenuBtn.style.display = 'block';
+                    }
+                }
+            });
+            
+            // إغلاق النافذة عند النقر خارجها
+            document.addEventListener('click', function(event) {
+                if (event.target.classList.contains('modal')) {
+                    event.target.classList.remove('show');
+                    document.body.classList.remove('modal-open');
+                }
+            });
+            
+            // إغلاق النافذة عند الضغط على زر ESC
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'Escape') {
+                    document.querySelectorAll('.modal.show').forEach(modal => {
+                        modal.classList.remove('show');
+                        document.body.classList.remove('modal-open');
+                    });
+                }
+            });
         }
         
         function updateTestStats() {
@@ -808,368 +968,5 @@
         }
         
         function showImportInstructions() {
-            document.getElementById('instructionsModal').classList.add('show');
-        }
-        
-        function closeInstructionsModal() {
-            document.getElementById('instructionsModal').classList.remove('show');
-        }
-        
-        function showAddObjectiveModal() {
-            document.getElementById('addObjectiveModal').classList.add('show');
-        }
-        
-        function closeAddObjectiveModal() {
-            document.getElementById('addObjectiveModal').classList.remove('show');
-            document.getElementById('addObjectiveForm').reset();
-        }
-        
-        function saveObjective() {
-            const text = document.getElementById('objectiveText').value.trim();
-            const subject = document.getElementById('objectiveSubject').value;
-            const grade = document.getElementById('objectiveGrade').value;
-            const category = document.getElementById('objectiveCategory').value.trim();
-            
-            if (!text || !subject) {
-                showAuthNotification('يرجى إدخال نص الهدف واختيار المادة', 'error');
-                return;
-            }
-            
-            const currentUser = getCurrentUser();
-            const objectives = JSON.parse(localStorage.getItem('shortTermObjectives') || '[]');
-            
-            const newObjective = {
-                id: generateId(),
-                teacherId: currentUser.id,
-                text: text,
-                subject: subject,
-                grade: grade || null,
-                category: category || null,
-                createdAt: new Date().toISOString()
-            };
-            
-            objectives.push(newObjective);
-            localStorage.setItem('shortTermObjectives', JSON.stringify(objectives));
-            
-            showAuthNotification('تم حفظ الهدف بنجاح', 'success');
-            closeAddObjectiveModal();
-            loadObjectives();
-        }
-        
-        function loadObjectives() {
-            const container = document.getElementById('objectivesContainer');
-            if (!container) return;
-            
-            const currentUser = getCurrentUser();
-            const objectives = JSON.parse(localStorage.getItem('shortTermObjectives') || '[]');
-            const teacherObjectives = objectives.filter(obj => obj.teacherId === currentUser.id);
-            
-            if (teacherObjectives.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">
-                            <i class="fas fa-bullseye fa-3x"></i>
-                        </div>
-                        <h3>لا توجد أهداف قصيرة المدى</h3>
-                        <p>قم بإضافة أهداف قصيرة المدى لربطها بالأسئلة</p>
-                        <button class="btn btn-success" onclick="showAddObjectiveModal()">
-                            <i class="fas fa-plus"></i> إضافة هدف جديد
-                        </button>
-                    </div>
-                `;
-                return;
-            }
-            
-            // تصنيف الأهداف حسب المادة
-            const arabicObjectives = teacherObjectives.filter(obj => obj.subject === 'لغتي');
-            const mathObjectives = teacherObjectives.filter(obj => obj.subject === 'رياضيات');
-            
-            let html = '';
-            
-            if (arabicObjectives.length > 0) {
-                html += `
-                    <div class="subject-section">
-                        <div class="subject-header">
-                            <div class="subject-icon arabic">ل</div>
-                            <h3>أهداف مادة لغتي</h3>
-                        </div>
-                        <div class="objectives-list">
-                            ${arabicObjectives.map(obj => renderObjectiveItem(obj)).join('')}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            if (mathObjectives.length > 0) {
-                html += `
-                    <div class="subject-section">
-                        <div class="subject-header">
-                            <div class="subject-icon math">ر</div>
-                            <h3>أهداف مادة الرياضيات</h3>
-                        </div>
-                        <div class="objectives-list">
-                            ${mathObjectives.map(obj => renderObjectiveItem(obj)).join('')}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            container.innerHTML = html;
-        }
-        
-        function renderObjectiveItem(objective) {
-            return `
-                <div class="objective-item">
-                    <div class="objective-text">${objective.text}</div>
-                    <div class="objective-meta">
-                        <span class="objective-badge ${objective.subject === 'لغتي' ? 'badge-arabic' : 'badge-math'}">
-                            ${objective.subject}
-                        </span>
-                        ${objective.grade ? `<span class="objective-grade">${objective.grade}</span>` : ''}
-                        ${objective.category ? `<span class="objective-category">${objective.category}</span>` : ''}
-                        <span class="objective-date">${formatDateShort(objective.createdAt)}</span>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // دوال مساعدة إضافية
-        function logout() {
-            window.logout();
-        }
-        
-        // تعويض الدوال غير المعرفة
-        if (typeof closeLinkObjectivesModal !== 'function') {
-            window.closeLinkObjectivesModal = function() {
-                document.getElementById('linkObjectivesModal').classList.remove('show');
-            };
-        }
-        
-        if (typeof closeViewTestModal !== 'function') {
-            window.closeViewTestModal = function() {
-                document.getElementById('viewTestModal').classList.remove('show');
-            };
-        }
-        
-        if (typeof printReport !== 'function') {
-            window.printReport = function() {
-                window.print();
-            };
-        }
-        
-        if (typeof downloadReport !== 'function') {
-            window.downloadReport = function() {
-                showAuthNotification('جاري تحميل التقرير...', 'info');
-                setTimeout(() => {
-                    showAuthNotification('تم تحميل التقرير بنجاح', 'success');
-                }, 1500);
-            };
-        }
-    </script>
-</body>
-</html>
-<style>
-    /* ============================================
-       تحسينات المسافات والتخطيط
-       ============================================ */
-    
-    .content-library-page {
-        padding: 20px;
-        margin-top: 20px;
-        margin-right: 280px; /* يعادل عرض الشريط الجانبي */
-        min-height: calc(100vh - 80px);
-        transition: all 0.3s ease;
-    }
-    
-    /* تحسين الرأس */
-    .page-header {
-        background: white;
-        border-radius: 10px;
-        padding: 20px;
-        box-shadow: var(--shadow);
-        margin-bottom: 30px;
-        margin-top: 10px;
-    }
-    
-    /* تحسين تبويبات المحتوى */
-    .content-library-tabs {
-        background: white;
-        border-radius: 10px;
-        overflow: hidden;
-        box-shadow: var(--shadow);
-        margin-bottom: 30px;
-        width: 100%;
-    }
-    
-    .library-tabs-header {
-        display: flex;
-        background: var(--light-color);
-        border-bottom: 1px solid var(--border-color);
-        flex-wrap: wrap;
-        position: sticky;
-        top: 80px;
-        z-index: 100;
-    }
-    
-    /* تحسين قسم الاستيراد */
-    .import-export-section {
-        background: white;
-        border-radius: 10px;
-        padding: 20px;
-        box-shadow: var(--shadow);
-        margin-bottom: 30px;
-        margin-top: 10px;
-    }
-    
-    /* تحسين ملخص الاختبارات */
-    .test-summary {
-        background: linear-gradient(135deg, #3498db, #2980b9);
-        color: white;
-        border-radius: 10px;
-        padding: 25px;
-        margin-bottom: 30px;
-        margin-top: 10px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-    }
-    
-    /* ============================================
-       تحسينات للهواتف والأجهزة الصغيرة
-       ============================================ */
-    
-    @media (max-width: 768px) {
-        .content-library-page {
-            margin-right: 0 !important;
-            padding: 15px !important;
-            margin-top: 15px !important;
-        }
-        
-        .library-tabs-header {
-            top: 60px;
-        }
-        
-        .page-header,
-        .import-export-section,
-        .test-summary {
-            margin-top: 5px;
-            margin-bottom: 20px;
-            padding: 15px;
-        }
-        
-        .test-summary {
-            flex-direction: column;
-            gap: 20px;
-            text-align: center;
-        }
-        
-        .summary-stats {
-            justify-content: center;
-        }
-        
-        .import-export-buttons {
-            flex-direction: column;
-        }
-        
-        .import-export-buttons .btn {
-            width: 100%;
-        }
-    }
-    
-    /* ============================================
-       تحسينات الشريط الجانبي
-       ============================================ */
-    
-    /* التأكد من أن المحتوى لا يختبئ خلف الشريط */
-    .main-content-dashboard {
-        flex: 1;
-        margin-right: 280px;
-        transition: all 0.3s ease;
-        overflow-x: hidden;
-    }
-    
-    /* تحسين الروابط النشطة */
-    .sidebar-menu li a.active {
-        background: rgba(255,255,255,0.15);
-        color: white;
-        border-right: 3px solid var(--primary-color);
-        font-weight: 500;
-    }
-    
-    /* تحسين الهوامش للشاشات الكبيرة */
-    @media (min-width: 1200px) {
-        .content-library-page {
-            margin-right: 300px;
-        }
-        
-        .main-content-dashboard {
-            margin-right: 300px;
-        }
-    }
-    
-    /* تحسين للمسافات على الشاشات الصغيرة */
-    @media (max-width: 480px) {
-        .content-library-page {
-            padding: 10px !important;
-        }
-        
-        .page-header h1 {
-            font-size: 1.5rem;
-        }
-        
-        .library-tab-btn {
-            padding: 12px 15px;
-            font-size: 0.9rem;
-        }
-    }
-</style>
-// إصلاح مشكلة الشريط الجانبي المتداخل
-function fixSidebarOverlap() {
-    const sidebarWidth = document.querySelector('.sidebar').offsetWidth;
-    const mainContent = document.querySelector('.main-content-dashboard');
-    const libraryPage = document.querySelector('.content-library-page');
-    
-    if (sidebarWidth && mainContent) {
-        mainContent.style.marginRight = sidebarWidth + 'px';
-    }
-    
-    if (libraryPage) {
-        libraryPage.style.marginRight = sidebarWidth + 'px';
-    }
-    
-    // التأكد من أن الصفحة تبدأ من أعلى
-    window.scrollTo(0, 0);
-}
-
-// تشغيل الإصلاح عند تحميل الصفحة وعند تغيير الحجم
-window.addEventListener('load', fixSidebarOverlap);
-window.addEventListener('resize', fixSidebarOverlap);
-
-// إصلاح إضافي للشريط الجانبي المتحرك
-const sidebar = document.querySelector('.sidebar');
-const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-
-if (mobileMenuBtn && sidebar) {
-    mobileMenuBtn.addEventListener('click', function() {
-        sidebar.classList.toggle('active');
-        
-        // تحديث الهوامش عند فتح/إغلاق الشريط الجانبي
-        setTimeout(fixSidebarOverlap, 300);
-    });
-}
-
-// إزالة التفعيل من جميع روابط الشريط وإضافته للرابط النشط فقط
-document.addEventListener('DOMContentLoaded', function() {
-    const currentPage = window.location.pathname.split('/').pop();
-    const sidebarLinks = document.querySelectorAll('.sidebar-menu a');
-    
-    sidebarLinks.forEach(link => {
-        const href = link.getAttribute('href');
-        if (href === currentPage || (currentPage === '' && href === 'dashboard.html')) {
-            link.classList.add('active');
-        } else {
-            link.classList.remove('active');
-        }
-    });
-});
+            const modal = document.getElementById('instructionsModal');
+            if (modal) {

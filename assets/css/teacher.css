@@ -1631,4 +1631,10 @@
         align-items: flex-start;
         gap: 8px;
     }
+
+}
+/* أيقونات إضافية */
+.menu-icon {
+    width: 20px;
+    text-align: center;
 }

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الاختبارات التشخيصية - ميسر التعلم</title>
+    
+    <!-- الخطوط -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- الأنماط -->
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../assets/css/teacher.css">
+    <link rel="stylesheet" href="../assets/css/tests.css">
+    
+    <!-- الأيقونة -->
+    <link rel="icon" href="../assets/images/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <!-- الشريط الجانبي -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <img src="../assets/images/logo.png" alt="شعار ميسر التعلم">
+                <h2>ميسر التعلم</h2>
+            </div>
+        </div>
+        
+        <ul class="sidebar-menu">
+            <li><a href="dashboard.html"><span class="menu-icon">🏠</span> لوحة التحكم</a></li>
+            <li><a href="students.html"><span class="menu-icon">👨‍🎓</span> الطلاب</a></li>
+            <li><a href="lessons.html"><span class="menu-icon">📚</span> الدروس</a></li>
+            <li><a href="assignments.html"><span class="menu-icon">📝</span> الواجبات</a></li>
+            <li><a href="tests.html" class="active"><span class="menu-icon">📊</span> الاختبارات التشخيصية</a></li>
+            <li><a href="library.html"><span class="menu-icon">📚</span> مكتبة المحتوى</a></li>
+            <li><a href="schedule.html"><span class="menu-icon">📅</span> الجدول الدراسي</a></li>
+            <li><a href="committee.html"><span class="menu-icon">👥</span> لجنة صعوبات التعلم</a></li>
+            <li><a href="messages.html"><span class="menu-icon">✉️</span> المراسلات</a></li>
+            <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span> تسجيل الخروج</a></li>
+        </ul>
+    </aside>
+
+    <!-- المحتوى الرئيسي -->
+    <main class="main-content-dashboard">
+        <!-- رأس لوحة التحكم -->
+        <header class="dashboard-header">
+            <div class="header-actions">
+                <button class="btn btn-primary" onclick="window.location.href='create-test.html'">
+                    <i class="fas fa-plus"></i> إنشاء اختبار جديد
+                </button>
+                <button class="btn btn-secondary" onclick="importTest()">
+                    <i class="fas fa-upload"></i> استيراد اختبار
+                </button>
+            </div>
+            
+            <div class="user-info">
+                <div class="user-welcome">
+                    <div class="welcome-text">مرحباً</div>
+                    <div class="user-name" id="userName"></div>
+                </div>
+                <div class="user-avatar" id="userAvatar"></div>
+            </div>
+        </header>
+
+        <!-- محتوى لوحة التحكم -->
+        <div class="dashboard-content">
+            <div class="content-header">
+                <h1><i class="fas fa-clipboard-check"></i> الاختبارات التشخيصية</h1>
+            </div>
+
+            <!-- إحصائيات سريعة -->
+            <div class="stats-cards">
+                <div class="stat-card">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="totalTests">0</div>
+                        <div class="stat-label">إجمالي الاختبارات</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">✅</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="linkedTests">0</div>
+                        <div class="stat-label">مربوطة بأهداف</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📚</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="arabicTests">0</div>
+                        <div class="stat-label">اختبارات لغتي</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🔢</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="mathTests">0</div>
+                        <div class="stat-label">اختبارات رياضيات</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- قائمة الاختبارات -->
+            <div class="tests-list-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-list"></i> قائمة الاختبارات التشخيصية</h2>
+                    <div class="search-box">
+                        <input type="text" id="testSearch" placeholder="ابحث في الاختبارات..." 
+                               class="form-control" onkeyup="filterTests()">
+                        <button class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="tests-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>عنوان الاختبار</th>
+                                <th>المادة</th>
+                                <th>الوصف</th>
+                                <th>عدد الأسئلة</th>
+                                <th>حالة الربط</th>
+                                <th>الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="testsList">
+                            <!-- سيتم ملؤها بواسطة JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- نافذة معاينة الاختبار -->
+    <div class="modal" id="testPreviewModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="previewTestTitle">معاينة الاختبار</h3>
+                <button class="modal-close" onclick="closeTestPreviewModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="test-info-card">
+                    <p><strong>المادة:</strong> <span id="previewTestSubject"></span></p>
+                    <p><strong>الوصف:</strong> <span id="previewTestDescription"></span></p>
+                    <p><strong>عدد الأسئلة:</strong> <span id="previewTestQuestionsCount"></span></p>
+                </div>
+                
+                <div class="questions-preview" id="previewQuestionsList">
+                    <!-- الأسئلة تظهر هنا -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="printTest()">
+                    <i class="fas fa-print"></i> طباعة
+                </button>
+                <button class="btn btn-secondary" onclick="closeTestPreviewModal()">
+                    إغلاق
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة ربط الأهداف -->
+    <div class="modal" id="linkingModal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>ربط الأهداف القصيرة بالأسئلة</h3>
+                <button class="modal-close" onclick="closeLinkingModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="objective-link-section">
+                    <div class="linking-progress">
+                        <div class="progress-step active">
+                            <div class="step-number">1</div>
+                            <div class="step-label">اختيار الأهداف</div>
+                        </div>
+                        <div class="progress-step">
+                            <div class="step-number">2</div>
+                            <div class="step-label">تأكيد الربط</div>
+                        </div>
+                        <div class="progress-step">
+                            <div class="step-number">3</div>
+                            <div class="step-label">الإنهاء</div>
+                        </div>
+                    </div>
+                    
+                    <div class="linking-content">
+                        <div class="question-preview">
+                            <h4>السؤال <span id="currentStep">1</span> من <span id="totalSteps">1</span></h4>
+                            <div class="question-text" id="currentQuestionText"></div>
+                        </div>
+                        
+                        <div class="objectives-list" id="objectivesList">
+                            <!-- الأهداف تظهر هنا -->
+                        </div>
+                    </div>
+                    
+                    <div class="linking-navigation">
+                        <button class="btn btn-secondary" id="prevStepBtn" onclick="prevLinkingStep()" style="display: none;">
+                            <i class="fas fa-arrow-right"></i> السابق
+                        </button>
+                        <button class="btn btn-primary" id="nextStepBtn" onclick="nextLinkingStep()">
+                            التالي <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <button class="btn btn-success" id="finishBtn" onclick="completeLinking()" style="display: none;">
+                            <i class="fas fa-check"></i> إنهاء الربط
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- النصوص المخفية للتخصيص -->
+    <div id="loadingIndicator" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p>جاري التحميل...</p>
+    </div>
+
+    <!-- السكريبتات -->
+    <script src="../assets/js/auth.js"></script>
+    <script src="../assets/js/tests.js"></script>
+    
+    <script>
+        // تحديث الإحصائيات عند تحميل الصفحة
+        function updateTestsStats() {
+            const tests = JSON.parse(localStorage.getItem('diagnosticTests') || '[]');
+            const currentUser = getCurrentUser();
+            const userTests = tests.filter(test => test.teacherId === currentUser.id);
+            
+            const totalTests = userTests.length;
+            const linkedTests = userTests.filter(test => test.objectivesLinked).length;
+            const arabicTests = userTests.filter(test => test.subject === 'لغتي').length;
+            const mathTests = userTests.filter(test => test.subject === 'رياضيات').length;
+            
+            document.getElementById('totalTests').textContent = totalTests;
+            document.getElementById('linkedTests').textContent = linkedTests;
+            document.getElementById('arabicTests').textContent = arabicTests;
+            document.getElementById('mathTests').textContent = mathTests;
+        }
+        
+        // فلترة الاختبارات
+        function filterTests() {
+            const searchTerm = document.getElementById('testSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#testsList tr');
+            
+            rows.forEach(row => {
+                if (row.cells.length < 7) return;
+                
+                const title = row.cells[1].textContent.toLowerCase();
+                const subject = row.cells[2].textContent.toLowerCase();
+                const description = row.cells[3].textContent.toLowerCase();
+                
+                if (title.includes(searchTerm) || subject.includes(searchTerm) || description.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        // طباعة الاختبار
+        function printTest() {
+            window.print();
+        }
+        
+        // تحديث الصفحة عند التحميل
+        document.addEventListener('DOMContentLoaded', function() {
+            updateTestsStats();
+        });
+    </script>
+</body>
+</html>

@@ -794,3 +794,75 @@ window.generateId = generateId;
 window.formatDate = formatDate;
 window.formatDateShort = formatDateShort;
 window.formatTimeAgo = formatTimeAgo;
+
+// ============================================
+// تأكيد تصدير الدوال الرئيسية
+// ============================================
+
+// تأكد من أن الدوال الأساسية متاحة عالمياً
+if (typeof window !== 'undefined') {
+    // دالة تسجيل الخروج
+    if (!window.logout) {
+        window.logout = logout;
+    }
+    
+    // دالة التحقق من المصادقة
+    if (!window.checkAuth) {
+        window.checkAuth = checkAuth;
+    }
+    
+    // دالة الحصول على المستخدم الحالي
+    if (!window.getCurrentUser) {
+        window.getCurrentUser = getCurrentUser;
+    }
+    
+    // دالة عرض الإشعارات
+    if (!window.showAuthNotification) {
+        window.showAuthNotification = showAuthNotification;
+    }
+    
+    // دوال المساعدة
+    if (!window.formatDate) {
+        window.formatDate = formatDate;
+    }
+    
+    if (!window.generateId) {
+        window.generateId = generateId;
+    }
+    
+    console.log('✅ تم تصدير دوال المصادقة بنجاح');
+}
+
+// ============================================
+// تهيئة النظام عند التحميل
+// ============================================
+
+// تهيئة المصادقة عندما يتم تحميل الصفحة
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeAuthSystem);
+} else {
+    initializeAuthSystem();
+}
+
+// تهيئة النظام
+function initializeAuthSystem() {
+    console.log('🚀 بدء تهيئة نظام المصادقة...');
+    
+    // التحقق من دعم التخزين المحلي
+    if (!isLocalStorageSupported()) {
+        console.error('❌ المتصفح لا يدعم التخزين المحلي');
+        showAuthNotification('المتصفح لا يدعم التخزين المحلي. بعض الميزات قد لا تعمل بشكل صحيح.', 'error', 10000);
+        return;
+    }
+    
+    // تهيئة البيانات
+    initializeAuthData();
+    
+    // مراقبة الجلسات
+    startSessionMonitor();
+    
+    // التحقق من المستخدم الحالي
+    checkExistingSession();
+    
+    console.log('✅ تم تهيئة نظام المصادقة بنجاح');
+}

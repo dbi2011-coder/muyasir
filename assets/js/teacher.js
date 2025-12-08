@@ -3,22 +3,17 @@
 // ============================================
 
 // إدارة لوحة تحكم المعلم
-let currentStudentId = null;
-let currentMemberId = null;
-let currentNoteId = null;
+let currentViewingStudentId = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeTeacherDashboard();
-    setupEventListeners();
+    setupTeacherTabs();
 });
 
 function initializeTeacherDashboard() {
     // التحقق من المصادقة والدور
     const user = checkAuth();
-    if (!user) {
-        console.log('No authenticated user found');
-        return;
-    }
+    if (!user) return;
     
     if (user.role !== 'teacher') {
         showAuthNotification('غير مصرح لك بالوصول إلى هذه الصفحة', 'error');
@@ -29,68 +24,71 @@ function initializeTeacherDashboard() {
     }
 
     // تحديث واجهة المستخدم
-    updateUserInterface(user);
+    updateTeacherInterface(user);
     
     // تحميل البيانات حسب الصفحة الحالية
-    const currentPage = window.location.pathname;
-    
-    if (currentPage.includes('dashboard.html')) {
-        loadTeacherDashboard();
-    } else if (currentPage.includes('students.html')) {
+    if (window.location.pathname.includes('dashboard.html')) {
+        loadTeacherDashboardStats();
+        loadFeaturedStudents();
+        loadImportantNotices();
+    } else if (window.location.pathname.includes('students.html')) {
         loadStudentsData();
-    } else if (currentPage.includes('lessons.html')) {
-        loadLessonsData();
-    } else if (currentPage.includes('assignments.html')) {
-        loadAssignmentsData();
-    } else if (currentPage.includes('library.html')) {
-        loadLibraryContent();
-    } else if (currentPage.includes('committee.html')) {
-        loadCommitteeData();
-    } else if (currentPage.includes('messages.html')) {
-        loadMessagesData();
+    } else if (window.location.pathname.includes('student-details.html')) {
+        initializeStudentDetailsPage();
+    } else if (window.location.pathname.includes('library.html')) {
+        initializeLibraryPage();
+    } else if (window.location.pathname.includes('messages.html')) {
+        initializeMessagesPage();
     }
 }
 
-function updateUserInterface(user) {
+function updateTeacherInterface(user) {
     const userNameElement = document.getElementById('userName');
     const userAvatarElement = document.getElementById('userAvatar');
     
     if (userNameElement) {
         userNameElement.textContent = user.name;
-    } else {
-        console.log('userName element not found');
     }
     
     if (userAvatarElement) {
         userAvatarElement.textContent = user.name.charAt(0);
-    } else {
-        console.log('userAvatar element not found');
     }
 }
 
-function setupEventListeners() {
-    // إعداد القائمة الجانبية
-    const sidebarLinks = document.querySelectorAll('.sidebar-menu a');
-    sidebarLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            if (this.getAttribute('href') === '#') {
-                e.preventDefault();
-                return;
-            }
-            
-            // تحديث النشاط في القائمة
-            sidebarLinks.forEach(l => l.classList.remove('active'));
-            this.classList.add('active');
+function setupTeacherTabs() {
+    // إعداد تبويبات لوحة الطالب
+    const studentTabBtns = document.querySelectorAll('.student-tabs .tab-btn');
+    const studentTabPanes = document.querySelectorAll('.student-tabs .tab-pane');
+    
+    if (studentTabBtns.length > 0) {
+        studentTabBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const tabId = this.getAttribute('data-tab');
+                
+                studentTabBtns.forEach(b => b.classList.remove('active'));
+                studentTabPanes.forEach(p => p.classList.remove('active'));
+                
+                this.classList.add('active');
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+            });
         });
-    });
+    }
     
-    // زر القائمة المتنقلة
-    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-    const sidebar = document.querySelector('.sidebar');
+    // إعداد تبويبات مكتبة المحتوى
+    const libraryTabBtns = document.querySelectorAll('.library-tabs .tab-btn');
+    const libraryTabPanes = document.querySelectorAll('.library-tabs .tab-pane');
     
-    if (mobileMenuBtn && sidebar) {
-        mobileMenuBtn.addEventListener('click', function() {
-            sidebar.classList.toggle('active');
+    if (libraryTabBtns.length > 0) {
+        libraryTabBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const tabId = this.getAttribute('data-tab');
+                
+                libraryTabBtns.forEach(b => b.classList.remove('active'));
+                libraryTabPanes.forEach(p => p.classList.remove('active'));
+                
+                this.classList.add('active');
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+            });
         });
     }
 }
@@ -99,11 +97,28 @@ function setupEventListeners() {
 // لوحة تحكم المعلم الرئيسية
 // ============================================
 
-function loadTeacherDashboard() {
-    loadFeaturedStudents();
-    loadImportantNotices();
-    loadTeacherStats();
-    loadRecentActivity();
+function loadTeacherDashboardStats() {
+    setTimeout(() => {
+        const currentUser = getCurrentUser();
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        
+        const students = users.filter(u => u.role === 'student' && u.teacherId === currentUser.id);
+        const activeStudents = students.filter(s => s.status === 'active');
+        const completedAssignments = Math.floor(Math.random() * 50) + 30;
+        const pendingEvaluations = Math.floor(Math.random() * 10) + 1;
+        
+        updateStatElement('studentsCount', students.length);
+        updateStatElement('activeStudents', activeStudents.length);
+        updateStatElement('completedAssignments', completedAssignments);
+        updateStatElement('pendingEvaluations', pendingEvaluations);
+    }, 1000);
+}
+
+function updateStatElement(elementId, value) {
+    const element = document.getElementById(elementId);
+    if (element) {
+        element.textContent = value;
+    }
 }
 
 function loadFeaturedStudents() {
@@ -111,44 +126,39 @@ function loadFeaturedStudents() {
     if (!studentsList) return;
     
     const currentUser = getCurrentUser();
-    const students = getStudentsByTeacher(currentUser.id);
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
     
-    if (students.length === 0) {
+    const teacherStudents = users.filter(u => 
+        u.role === 'student' && 
+        u.teacherId === currentUser.id
+    ).slice(0, 6); // عرض أول 6 طلاب فقط
+    
+    if (teacherStudents.length === 0) {
         studentsList.innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">👨‍🎓</div>
                 <h3>لا توجد طلاب</h3>
-                <p>لم يتم إضافة أي طلاب بعد</p>
-                <button class="btn btn-success" onclick="window.location.href='students.html'">
-                    إضافة طلاب
-                </button>
+                <p>قم بإضافة طلاب لمتابعتهم</p>
             </div>
         `;
         return;
     }
     
-    // عرض 4 طلاب فقط
-    const featuredStudents = students.slice(0, 4);
-    
-    studentsList.innerHTML = featuredStudents.map(student => {
-        const progress = student.progress || 0;
+    studentsList.innerHTML = teacherStudents.map(student => {
+        const progress = student.progress || Math.floor(Math.random() * 100);
         const progressClass = progress < 30 ? 'danger' : progress < 60 ? 'warning' : 'success';
         
         return `
-            <div class="student-card">
+            <div class="student-card" onclick="viewStudentDetails(${student.id})">
                 <div class="student-avatar">${student.name.charAt(0)}</div>
                 <div class="student-name">${student.name}</div>
-                <div class="student-progress">التقدم: ${progress}%</div>
+                <div class="student-progress">${progress}% إنجاز</div>
                 <div class="progress-bar">
                     <div class="progress-fill" style="width: ${progress}%; background-color: var(--${progressClass}-color);"></div>
                 </div>
-                <div class="student-actions">
-                    <button class="btn btn-sm btn-primary" onclick="viewStudent(${student.id})">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <button class="btn btn-sm btn-warning" onclick="editStudent(${student.id})">
-                        <i class="fas fa-edit"></i>
-                    </button>
+                <div class="student-meta">
+                    <span>${student.grade || 'غير محدد'}</span>
+                    <span>${student.subject || 'غير محدد'}</span>
                 </div>
             </div>
         `;
@@ -156,27 +166,27 @@ function loadFeaturedStudents() {
 }
 
 function loadImportantNotices() {
-    const noticesList = document.getElementById('noticesList');
+    const noticesList = document.getElementById('importantNoticesList');
     if (!noticesList) return;
     
     const notices = [
         {
             icon: '⚠️',
+            title: 'موعد تسليم التقارير',
+            description: 'ينتهي موعد تسليم تقارير التقدم الأسبوعية يوم الجمعة',
+            time: 'منذ يوم'
+        },
+        {
+            icon: '📢',
             title: 'اجتماع لجنة صعوبات التعلم',
-            description: 'اجتماع أسبوعي يوم الأحد الساعة 10 صباحاً',
-            time: 'غداً'
+            description: 'اجتماع لجنة صعوبات التعلم يوم الإثنين القادم الساعة 10 صباحاً',
+            time: 'منذ 3 أيام'
         },
         {
-            icon: '📝',
-            title: 'تقرير شهري',
-            description: 'موعد تسليم التقارير الشهرية نهاية الأسبوع',
-            time: '3 أيام'
-        },
-        {
-            icon: '🎯',
-            title: 'تحديث الأهداف',
-            description: 'يرجى تحديث الأهداف التعليمية للطلاب',
-            time: 'أسبوع'
+            icon: '🎓',
+            title: 'طالب جديد',
+            description: 'تم إضافة طالب جديد إلى قائمة متابعتك',
+            time: 'منذ أسبوع'
         }
     ];
     
@@ -186,63 +196,7 @@ function loadImportantNotices() {
             <div class="notice-content">
                 <div class="notice-title">${notice.title}</div>
                 <div class="notice-description">${notice.description}</div>
-                <div class="notice-time">موعد: ${notice.time}</div>
-            </div>
-        </div>
-    `).join('');
-}
-
-function loadTeacherStats() {
-    const currentUser = getCurrentUser();
-    const students = getStudentsByTeacher(currentUser.id);
-    const assignments = getAssignmentsByTeacher(currentUser.id);
-    const lessons = getLessonsByTeacher(currentUser.id);
-    
-    updateStatElement('totalStudents', students.length);
-    updateStatElement('activeAssignments', assignments.filter(a => a.status === 'active').length);
-    updateStatElement('completedLessons', lessons.filter(l => l.status === 'completed').length);
-    updateStatElement('averageProgress', calculateAverageProgress(students));
-}
-
-function loadRecentActivity() {
-    const activityList = document.getElementById('recentActivityList');
-    if (!activityList) return;
-    
-    const activities = [
-        {
-            icon: '👨‍🎓',
-            title: 'تم إضافة طالب جديد',
-            time: 'منذ ساعتين',
-            color: '#3498db'
-        },
-        {
-            icon: '📝',
-            title: 'تم تسليم واجب',
-            time: 'منذ 4 ساعات',
-            color: '#27ae60'
-        },
-        {
-            icon: '📊',
-            title: 'تم إنشاء اختبار تشخيصي',
-            time: 'منذ يوم',
-            color: '#f39c12'
-        },
-        {
-            icon: '👥',
-            title: 'رسالة جديدة من اللجنة',
-            time: 'منذ يومين',
-            color: '#9b59b6'
-        }
-    ];
-    
-    activityList.innerHTML = activities.map(activity => `
-        <div class="activity-item">
-            <div class="activity-icon" style="background: ${activity.color}20; color: ${activity.color}">
-                ${activity.icon}
-            </div>
-            <div class="activity-content">
-                <div class="activity-title">${activity.title}</div>
-                <div class="activity-time">${activity.time}</div>
+                <div class="notice-time">${notice.time}</div>
             </div>
         </div>
     `).join('');
@@ -257,61 +211,79 @@ function loadStudentsData() {
     const emptyState = document.getElementById('emptyState');
     const tableBody = document.getElementById('studentsTableBody');
     
+    // التحقق من وجود العناصر
     if (!loadingState || !emptyState || !tableBody) {
-        console.error('Missing elements in students page');
+        console.error('Missing required elements in students page');
         return;
     }
-    
+
+    // إظهار حالة التحميل
     loadingState.style.display = 'block';
     emptyState.style.display = 'none';
     tableBody.innerHTML = '';
-    
+
     setTimeout(() => {
         const currentUser = getCurrentUser();
-        const students = getStudentsByTeacher(currentUser.id);
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        
+        const teacherStudents = users.filter(u => 
+            u.role === 'student' && 
+            u.teacherId === currentUser.id
+        );
         
         loadingState.style.display = 'none';
         
-        if (students.length === 0) {
+        if (teacherStudents.length === 0) {
             emptyState.style.display = 'block';
             return;
         }
-        
-        tableBody.innerHTML = students.map((student, index) => {
-            const progress = student.progress || 0;
-            const progressClass = progress < 30 ? 'danger' : progress < 60 ? 'warning' : 'success';
-            const lastLogin = student.lastLogin ? formatDateShort(student.lastLogin) : 'لم يسجل دخول';
+
+        // تعبئة الجدول
+        tableBody.innerHTML = teacherStudents.map((student, index) => {
+            const progress = student.progress || Math.floor(Math.random() * 100);
+            const lastActive = student.lastLogin ? formatTimeAgo(student.lastLogin) : 'لم يسجل دخول';
             
             return `
                 <tr>
                     <td>${index + 1}</td>
-                    <td>${student.name}</td>
-                    <td>${student.grade || 'غير محدد'}</td>
-                    <td>${student.subject || 'غير محدد'}</td>
-                    <td>${lastLogin}</td>
                     <td>
-                        <div class="progress-cell">
-                            <div class="progress-text">${progress}%</div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: ${progress}%; background-color: var(--${progressClass}-color);"></div>
+                        <div class="student-info-cell">
+                            <div class="student-avatar-small">${student.name.charAt(0)}</div>
+                            <div class="student-details">
+                                <div class="student-name">${student.name}</div>
+                                <div class="student-meta-small">
+                                    ${student.grade || 'غير محدد'} | ${student.subject || 'غير محدد'}
+                                </div>
                             </div>
                         </div>
                     </td>
+                    <td>${student.username}</td>
+                    <td>
+                        <div class="progress-cell">
+                            <div class="progress-text">${progress}%</div>
+                            <div class="progress-bar-small">
+                                <div class="progress-fill" style="width: ${progress}%"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>${lastActive}</td>
+                    <td>
+                        <span class="status-badge status-${student.status || 'active'}">
+                            ${getStatusText(student.status || 'active')}
+                        </span>
+                    </td>
                     <td>
                         <div class="student-actions">
-                            <button class="btn btn-sm btn-primary" onclick="viewStudent(${student.id})" title="عرض">
+                            <button class="btn-icon btn-primary" onclick="viewStudentDetails(${student.id})" title="عرض">
                                 <i class="fas fa-eye"></i>
                             </button>
-                            <button class="btn btn-sm btn-info" onclick="viewStudentDetails(${student.id})" title="تفاصيل">
-                                <i class="fas fa-info-circle"></i>
+                            <button class="btn-icon btn-info" onclick="sendMessageToStudent(${student.id})" title="مراسلة">
+                                <i class="fas fa-comment"></i>
                             </button>
-                            <button class="btn btn-sm btn-warning" onclick="editStudent(${student.id})" title="تعديل">
+                            <button class="btn-icon btn-warning" onclick="editStudent(${student.id})" title="تعديل">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-sm btn-success" onclick="assignTest(${student.id})" title="تعيين اختبار">
-                                <i class="fas fa-clipboard-check"></i>
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})" title="حذف">
+                            <button class="btn-icon btn-danger" onclick="removeStudent(${student.id})" title="إزالة">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -319,732 +291,382 @@ function loadStudentsData() {
                 </tr>
             `;
         }).join('');
-    }, 1000);
+    }, 1500);
 }
 
-function showAddStudentModal() {
-    const modal = document.getElementById('addStudentModal');
-    if (modal) {
-        modal.classList.add('show');
-        document.getElementById('addStudentForm').reset();
-    }
-}
-
-function closeAddStudentModal() {
-    const modal = document.getElementById('addStudentModal');
-    if (modal) {
-        modal.classList.remove('show');
-    }
-}
-
-function addNewStudent() {
-    const form = document.getElementById('addStudentForm');
-    const name = document.getElementById('studentName').value.trim();
-    const grade = document.getElementById('studentGrade').value;
-    const subject = document.getElementById('studentSubject').value;
-    const username = document.getElementById('studentUsername').value.trim();
-    const password = document.getElementById('studentPassword').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
-    
-    // التحقق من صحة البيانات
-    if (!name || !grade || !subject || !username || !password) {
-        showAuthNotification('يرجى ملء جميع الحقول الإجبارية', 'error');
-        return;
-    }
-    
-    if (password !== confirmPassword) {
-        showAuthNotification('كلمات المرور غير متطابقة', 'error');
-        return;
-    }
-    
-    if (password.length < 6) {
-        showAuthNotification('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
-        return;
-    }
-    
-    // التحقق من عدم تكرار اسم المستخدم
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const existingUser = users.find(u => u.username === username);
-    if (existingUser) {
-        showAuthNotification('اسم المستخدم موجود مسبقاً', 'error');
-        return;
-    }
-    
-    const currentUser = getCurrentUser();
-    
-    // إنشاء الطالب الجديد
-    const newStudent = {
-        id: generateId(),
-        username: username,
-        password: password,
-        role: 'student',
-        name: name,
-        grade: grade,
-        subject: subject,
-        teacherId: currentUser.id,
-        teacherName: currentUser.name,
-        progress: 0,
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        lastLogin: null,
-        loginAttempts: 0
+function getStatusText(status) {
+    const statusMap = {
+        'active': 'نشط',
+        'inactive': 'غير نشط',
+        'suspended': 'موقوف'
     };
-    
-    users.push(newStudent);
-    localStorage.setItem('users', JSON.stringify(users));
-    
-    showAuthNotification('تم إضافة الطالب بنجاح', 'success');
-    closeAddStudentModal();
-    loadStudentsData();
-    
-    // إضافة سجل النظام
-    addSystemLog(`تم إضافة طالب جديد: ${name}`, 'user');
+    return statusMap[status] || 'غير معروف';
 }
 
-function viewStudent(studentId) {
-    window.location.href = `student-profile.html?id=${studentId}`;
+function viewStudentDetails(studentId) {
+    currentViewingStudentId = studentId;
+    window.location.href = `student-details.html?id=${studentId}`;
 }
 
-function editStudent(studentId) {
+function initializeStudentDetailsPage() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const studentId = parseInt(urlParams.get('id'));
+    
+    if (!studentId) {
+        showAuthNotification('لم يتم تحديد طالب', 'error');
+        setTimeout(() => {
+            window.location.href = 'students.html';
+        }, 2000);
+        return;
+    }
+    
+    loadStudentDetails(studentId);
+}
+
+function loadStudentDetails(studentId) {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const student = users.find(u => u.id === studentId && u.role === 'student');
     
     if (!student) {
         showAuthNotification('الطالب غير موجود', 'error');
+        setTimeout(() => {
+            window.location.href = 'students.html';
+        }, 2000);
         return;
     }
     
-    currentStudentId = studentId;
+    // تحديث معلومات الطالب
+    document.getElementById('studentName').textContent = student.name;
+    document.getElementById('studentGrade').textContent = student.grade || 'غير محدد';
+    document.getElementById('studentSubject').textContent = student.subject || 'غير محدد';
+    document.getElementById('studentUsername').textContent = student.username;
+    document.getElementById('studentStatus').textContent = getStatusText(student.status);
     
-    // تعبئة النموذج
-    document.getElementById('editStudentId').value = student.id;
-    document.getElementById('editStudentName').value = student.name;
-    document.getElementById('editStudentGrade').value = student.grade || '';
-    document.getElementById('editStudentSubject').value = student.subject || '';
-    document.getElementById('editStudentStatus').value = student.status || 'active';
-    
-    const modal = document.getElementById('editStudentModal');
-    if (modal) {
-        modal.classList.add('show');
+    // تحديث الصورة الرمزية
+    const avatar = document.getElementById('studentAvatar');
+    if (avatar) {
+        avatar.textContent = student.name.charAt(0);
     }
+    
+    // تحميل البيانات الأخرى
+    loadStudentProgress(studentId);
+    loadStudentTests(studentId);
+    loadStudentLessons(studentId);
+    loadStudentAssignments(studentId);
 }
 
-function closeEditStudentModal() {
-    const modal = document.getElementById('editStudentModal');
-    if (modal) {
-        modal.classList.remove('show');
-    }
-    currentStudentId = null;
+function loadStudentProgress(studentId) {
+    // محاكاة بيانات التقدم
+    setTimeout(() => {
+        const progress = Math.floor(Math.random() * 100);
+        document.getElementById('overallProgress').textContent = `${progress}%`;
+        
+        // تحديث مخطط التقدم
+        const progressBar = document.querySelector('.progress-fill-large');
+        if (progressBar) {
+            progressBar.style.width = `${progress}%`;
+        }
+    }, 1000);
 }
 
-function updateStudent() {
-    const studentId = parseInt(document.getElementById('editStudentId').value);
-    const name = document.getElementById('editStudentName').value.trim();
-    const grade = document.getElementById('editStudentGrade').value;
-    const subject = document.getElementById('editStudentSubject').value;
-    const status = document.getElementById('editStudentStatus').value;
+function loadStudentTests(studentId) {
+    // محاكاة بيانات الاختبارات
+    const testsContainer = document.getElementById('testsList');
+    if (!testsContainer) return;
     
-    if (!name || !grade || !subject) {
-        showAuthNotification('يرجى ملء جميع الحقول', 'error');
+    const tests = [
+        { title: 'اختبار تشخيصي - القراءة', status: 'مكتمل', score: 85, date: '2024-01-15' },
+        { title: 'اختبار تشخيصي - الإملاء', status: 'مكتمل', score: 72, date: '2024-01-10' },
+        { title: 'اختبار تشخيصي - الرياضيات', status: 'قيد التقدم', score: null, date: '2024-01-20' }
+    ];
+    
+    testsContainer.innerHTML = tests.map(test => `
+        <div class="test-info-card">
+            <div class="test-header">
+                <h4>${test.title}</h4>
+                <span class="test-status status-${test.status === 'مكتمل' ? 'completed' : 'in-progress'}">
+                    ${test.status}
+                </span>
+            </div>
+            <div class="test-details">
+                ${test.score ? `<p>الدرجة: ${test.score}/100</p>` : '<p>لم يتم التصحيح بعد</p>'}
+                <p>التاريخ: ${test.date}</p>
+            </div>
+            <div class="test-actions">
+                <button class="btn btn-sm btn-primary">عرض النتائج</button>
+                ${test.status !== 'مكتمل' ? '<button class="btn btn-sm btn-warning">متابعة الاختبار</button>' : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function loadStudentLessons(studentId) {
+    // محاكاة بيانات الدروس
+}
+
+function loadStudentAssignments(studentId) {
+    // محاكاة بيانات الواجبات
+}
+
+function sendMessageToStudent(studentId) {
+    showSendMessageModal(studentId);
+}
+
+function editStudent(studentId) {
+    showEditStudentModal(studentId);
+}
+
+function removeStudent(studentId) {
+    if (!confirm('هل أنت متأكد من إزالة هذا الطالب من قائمة متابعتك؟')) {
         return;
     }
     
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const studentIndex = users.findIndex(u => u.id === studentId && u.role === 'student');
     
-    if (studentIndex === -1) {
-        showAuthNotification('الطالب غير موجود', 'error');
-        return;
-    }
-    
-    // تحديث البيانات
-    users[studentIndex].name = name;
-    users[studentIndex].grade = grade;
-    users[studentIndex].subject = subject;
-    users[studentIndex].status = status;
-    
-    localStorage.setItem('users', JSON.stringify(users));
-    
-    showAuthNotification('تم تحديث بيانات الطالب بنجاح', 'success');
-    closeEditStudentModal();
-    loadStudentsData();
-    
-    // إضافة سجل النظام
-    addSystemLog(`تم تحديث بيانات الطالب: ${name}`, 'user');
-}
-
-function deleteStudent(studentId) {
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const student = users.find(u => u.id === studentId && u.role === 'student');
-    
-    if (!student) {
-        showAuthNotification('الطالب غير موجود', 'error');
-        return;
-    }
-    
-    if (confirm(`هل أنت متأكد من حذف الطالب ${student.name}؟ هذا الإجراء لا يمكن التراجع عنه.`)) {
-        const updatedUsers = users.filter(u => u.id !== studentId);
-        localStorage.setItem('users', JSON.stringify(updatedUsers));
+    if (studentIndex !== -1) {
+        users[studentIndex].teacherId = null;
+        localStorage.setItem('users', JSON.stringify(users));
         
-        showAuthNotification('تم حذف الطالب بنجاح', 'success');
+        showAuthNotification('تم إزالة الطالب من المتابعة', 'success');
         loadStudentsData();
-        
-        // إضافة سجل النظام
-        addSystemLog(`تم حذف الطالب: ${student.name}`, 'user');
     }
 }
 
-function viewStudentDetails(studentId) {
-    // عرض صفحة تفاصيل الطالب
-    window.location.href = `student-details.html?id=${studentId}`;
-}
-
-function assignTest(studentId) {
-    // توجيه إلى صفحة تعيين الاختبارات
-    window.location.href = `assign-test.html?studentId=${studentId}`;
-}
-
-function searchStudents() {
-    const searchTerm = document.getElementById('studentSearch').value.toLowerCase();
-    const rows = document.querySelectorAll('#studentsTableBody tr');
-    
-    rows.forEach(row => {
-        const cells = row.getElementsByTagName('td');
-        if (cells.length < 7) return;
-        
-        const name = cells[1].textContent.toLowerCase();
-        const grade = cells[2].textContent.toLowerCase();
-        const subject = cells[3].textContent.toLowerCase();
-        
-        if (name.includes(searchTerm) || grade.includes(searchTerm) || subject.includes(searchTerm)) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
-}
-
-function filterStudents() {
-    const filter = document.getElementById('studentFilter').value;
-    const rows = document.querySelectorAll('#studentsTableBody tr');
-    
-    rows.forEach(row => {
-        if (filter === 'all') {
-            row.style.display = '';
-        } else {
-            const subject = row.cells[3].textContent;
-            if (subject === filter) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        }
-    });
-}
-
 // ============================================
-// إدارة الدروس
+// مكتبة المحتوى التعليمي
 // ============================================
 
-function loadLessonsData() {
+function initializeLibraryPage() {
+    loadContentLibrary();
+}
+
+function loadContentLibrary() {
+    loadLessons();
+    loadExercises();
+    loadTeachingObjectives();
+}
+
+function loadLessons() {
     const lessonsList = document.getElementById('lessonsList');
     if (!lessonsList) return;
     
+    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
     const currentUser = getCurrentUser();
-    const lessons = getLessonsByTeacher(currentUser.id);
+    const userLessons = lessons.filter(lesson => lesson.teacherId === currentUser.id);
     
-    if (lessons.length === 0) {
+    if (userLessons.length === 0) {
         lessonsList.innerHTML = `
-            <div class="empty-state">
+            <div class="empty-content-state">
                 <div class="empty-icon">📚</div>
                 <h3>لا توجد دروس</h3>
-                <p>قم بإضافة أول درس</p>
-                <button class="btn btn-success" onclick="showAddLessonModal()">
-                    إضافة درس جديد
+                <p>قم بإضافة أول درس لمكتبة المحتوى</p>
+                <button class="btn btn-primary" onclick="showCreateLessonModal()">
+                    <i class="fas fa-plus"></i> إضافة درس جديد
                 </button>
             </div>
         `;
         return;
     }
     
-    lessonsList.innerHTML = lessons.map(lesson => {
-        const statusClass = lesson.status === 'completed' ? 'completed' : 
-                          lesson.status === 'in-progress' ? 'in-progress' : 'pending';
-        
-        return `
-            <div class="lesson-item ${statusClass}">
-                <div class="lesson-header">
-                    <h5>${lesson.title}</h5>
-                    <span class="lesson-status">${getLessonStatusText(lesson.status)}</span>
-                </div>
-                <div class="lesson-details">
-                    <p><strong>المادة:</strong> ${lesson.subject}</p>
-                    <p><strong>الوصف:</strong> ${lesson.description || 'لا يوجد'}</p>
-                    <p><strong>تاريخ الإنشاء:</strong> ${formatDateShort(lesson.createdAt)}</p>
-                </div>
-                <div class="lesson-actions">
-                    <button class="btn btn-sm btn-primary" onclick="viewLesson(${lesson.id})">
-                        عرض
-                    </button>
-                    <button class="btn btn-sm btn-warning" onclick="editLesson(${lesson.id})">
-                        تعديل
-                    </button>
-                    <button class="btn btn-sm btn-success" onclick="assignLesson(${lesson.id})">
-                        تعيين
-                    </button>
-                </div>
+    lessonsList.innerHTML = userLessons.map(lesson => `
+        <div class="content-card">
+            <div class="content-header">
+                <h4>${lesson.title}</h4>
+                <span class="content-badge subject-${lesson.subject}">
+                    ${lesson.subject}
+                </span>
             </div>
-        `;
-    }).join('');
-}
-
-function showAddLessonModal() {
-    const modal = document.getElementById('addLessonModal');
-    if (modal) {
-        modal.classList.add('show');
-    }
-}
-
-function closeAddLessonModal() {
-    const modal = document.getElementById('addLessonModal');
-    if (modal) {
-        modal.classList.remove('show');
-    }
-}
-
-// ============================================
-// إدارة الواجبات
-// ============================================
-
-function loadAssignmentsData() {
-    const assignmentsList = document.getElementById('assignmentsList');
-    if (!assignmentsList) return;
-    
-    const currentUser = getCurrentUser();
-    const assignments = getAssignmentsByTeacher(currentUser.id);
-    
-    if (assignments.length === 0) {
-        assignmentsList.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">📝</div>
-                <h3>لا توجد واجبات</h3>
-                <p>قم بإضافة أول واجب</p>
-                <button class="btn btn-success" onclick="showAddAssignmentModal()">
-                    إضافة واجب جديد
+            <div class="content-body">
+                <p>${lesson.description || 'لا يوجد وصف'}</p>
+            </div>
+            <div class="content-meta">
+                <span class="questions-count">${lesson.questions || 0} سؤال</span>
+                <span class="exercises-count">${lesson.exercises || 0} تمرين</span>
+                <span class="objectives-status ${lesson.objectivesLinked ? 'linked' : 'not-linked'}">
+                    ${lesson.objectivesLinked ? 'مربوط بأهداف' : 'غير مربوط'}
+                </span>
+            </div>
+            <div class="content-actions">
+                <button class="btn btn-sm btn-primary" onclick="viewLesson(${lesson.id})">
+                    <i class="fas fa-eye"></i> عرض
                 </button>
-            </div>
-        `;
-        return;
-    }
-    
-    assignmentsList.innerHTML = assignments.map(assignment => {
-        const statusClass = assignment.status === 'completed' ? 'completed' : 
-                          assignment.status === 'in-progress' ? 'in-progress' : 'pending';
-        
-        return `
-            <div class="assignment-item ${statusClass}">
-                <div class="assignment-header">
-                    <h5>${assignment.title}</h5>
-                    <span class="assignment-status">${getAssignmentStatusText(assignment.status)}</span>
-                </div>
-                <div class="assignment-details">
-                    <p><strong>الطلاب:</strong> ${assignment.studentsCount || 0} طالب</p>
-                    <p><strong>موعد التسليم:</strong> ${formatDateShort(assignment.dueDate)}</p>
-                    <p><strong>الوصف:</strong> ${assignment.description || 'لا يوجد'}</p>
-                </div>
-                <div class="assignment-actions">
-                    <button class="btn btn-sm btn-primary" onclick="viewAssignment(${assignment.id})">
-                        عرض
-                    </button>
-                    <button class="btn btn-sm btn-warning" onclick="editAssignment(${assignment.id})">
-                        تعديل
-                    </button>
-                    <button class="btn btn-sm btn-info" onclick="gradeAssignment(${assignment.id})">
-                        تقييم
-                    </button>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function showAddAssignmentModal() {
-    const modal = document.getElementById('addAssignmentModal');
-    if (modal) {
-        modal.classList.add('show');
-    }
-}
-
-function closeAddAssignmentModal() {
-    const modal = document.getElementById('addAssignmentModal');
-    if (modal) {
-        modal.classList.remove('show');
-    }
-}
-
-// ============================================
-// مكتبة المحتوى
-// ============================================
-
-function loadLibraryContent() {
-    // سيتم تنفيذها في ملف content-library.js المنفصل
-    console.log('Loading library content...');
-}
-
-// ============================================
-// لجنة صعوبات التعلم
-// ============================================
-
-function loadCommitteeData() {
-    const membersList = document.getElementById('membersList');
-    const notesList = document.getElementById('notesList');
-    
-    if (membersList) {
-        loadCommitteeMembers();
-    }
-    
-    if (notesList) {
-        loadCommitteeNotes();
-    }
-}
-
-function loadCommitteeMembers() {
-    const membersList = document.getElementById('membersList');
-    if (!membersList) return;
-    
-    const currentUser = getCurrentUser();
-    const committeeMembers = getCommitteeMembersByTeacher(currentUser.id);
-    
-    if (committeeMembers.length === 0) {
-        membersList.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">👥</div>
-                <h3>لا توجد أعضاء في اللجنة</h3>
-                <p>قم بإضافة أعضاء لجنة صعوبات التعلم</p>
-                <button class="btn btn-success" onclick="showAddMemberModal()">
-                    إضافة عضو جديد
+                <button class="btn btn-sm btn-warning" onclick="editLesson(${lesson.id})">
+                    <i class="fas fa-edit"></i> تعديل
                 </button>
-            </div>
-        `;
-        return;
-    }
-    
-    membersList.innerHTML = committeeMembers.map(member => `
-        <div class="member-card">
-            <div class="member-info">
-                <div class="member-avatar">${member.name.charAt(0)}</div>
-                <div class="member-details">
-                    <h4>${member.name}</h4>
-                    <div class="member-meta">
-                        <span class="member-role">${member.role}</span>
-                        <span class="member-username">${member.username}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="member-actions">
-                <button class="btn btn-sm btn-primary" onclick="editCommitteeMember(${member.id})">
-                    تعديل
+                <button class="btn btn-sm btn-info" onclick="linkLessonObjectives(${lesson.id})">
+                    <i class="fas fa-link"></i> ربط أهداف
                 </button>
-                <button class="btn btn-sm btn-danger" onclick="deleteCommitteeMember(${member.id})">
-                    حذف
-                </button>
-                <button class="btn btn-sm btn-info" onclick="sendMessageToMember(${member.id})">
-                    مراسلة
+                <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id})">
+                    <i class="fas fa-trash"></i> حذف
                 </button>
             </div>
         </div>
     `).join('');
 }
 
-function showAddMemberModal() {
-    const modal = document.getElementById('addMemberModal');
-    if (modal) {
-        modal.classList.add('show');
-    }
+function loadExercises() {
+    const exercisesList = document.getElementById('exercisesList');
+    if (!exercisesList) return;
+    
+    exercisesList.innerHTML = `
+        <div class="empty-content-state">
+            <div class="empty-icon">🏃‍♂️</div>
+            <h3>لا توجد تمارين</h3>
+            <p>سيتم تطوير نظام التمارين في المراحل القادمة</p>
+        </div>
+    `;
 }
 
-function closeAddMemberModal() {
-    const modal = document.getElementById('addMemberModal');
-    if (modal) {
-        modal.classList.remove('show');
-    }
-}
-
-function addNewMember() {
-    const name = document.getElementById('memberName').value.trim();
-    const role = document.getElementById('memberRole').value;
-    const username = document.getElementById('memberUsername').value.trim();
-    const password = document.getElementById('memberPassword').value;
+function loadTeachingObjectives() {
+    const objectivesList = document.getElementById('objectivesList');
+    if (!objectivesList) return;
     
-    if (!name || !role || !username || !password) {
-        showAuthNotification('يرجى ملء جميع الحقول', 'error');
-        return;
-    }
-    
-    if (password.length < 6) {
-        showAuthNotification('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'error');
-        return;
-    }
-    
+    const objectives = JSON.parse(localStorage.getItem('objectives') || '[]');
     const currentUser = getCurrentUser();
-    const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
+    const userObjectives = objectives.filter(obj => obj.teacherId === currentUser.id);
     
-    // التحقق من عدم تكرار اسم المستخدم
-    const existingMember = committeeMembers.find(m => 
-        m.username === username && m.teacherId === currentUser.id
-    );
-    
-    if (existingMember) {
-        showAuthNotification('اسم المستخدم موجود مسبقاً', 'error');
-        return;
-    }
-    
-    const newMember = {
-        id: generateId(),
-        teacherId: currentUser.id,
-        name: name,
-        role: role,
-        username: username,
-        password: password,
-        status: 'active',
-        createdAt: new Date().toISOString()
-    };
-    
-    committeeMembers.push(newMember);
-    localStorage.setItem('committeeMembers', JSON.stringify(committeeMembers));
-    
-    showAuthNotification('تم إضافة العضو بنجاح', 'success');
-    closeAddMemberModal();
-    loadCommitteeMembers();
-    
-    addSystemLog(`تم إضافة عضو لجنة: ${name}`, 'user');
-}
-
-function loadCommitteeNotes() {
-    const notesList = document.getElementById('notesList');
-    if (!notesList) return;
-    
-    const currentUser = getCurrentUser();
-    const committeeNotes = getCommitteeNotesByTeacher(currentUser.id);
-    
-    if (committeeNotes.length === 0) {
-        notesList.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">📝</div>
-                <h3>لا توجد ملاحظات</h3>
-                <p>لم يتم إرسال أي ملاحظات بعد</p>
+    if (userObjectives.length === 0) {
+        objectivesList.innerHTML = `
+            <div class="empty-content-state">
+                <div class="empty-icon">🎯</div>
+                <h3>لا توجد أهداف تعليمية</h3>
+                <p>قم بإضافة أهداف تعليمية لتوجيه عملية التعليم</p>
+                <button class="btn btn-primary" onclick="showCreateObjectiveModal()">
+                    <i class="fas fa-plus"></i> إضافة هدف جديد
+                </button>
             </div>
         `;
         return;
     }
     
-    // ترتيب الملاحظات من الأحدث إلى الأقدم
-    committeeNotes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    
-    notesList.innerHTML = committeeNotes.map(note => {
-        const isUnread = !note.isRead;
-        
-        return `
-            <div class="note-card ${isUnread ? 'unread' : 'read'}">
-                <div class="note-header">
-                    <div class="note-sender">
-                        <strong>${note.senderName || 'عضو لجنة'}</strong>
-                        <span class="sender-role">${note.senderRole || ''}</span>
-                    </div>
-                    <div class="note-date">${formatDateShort(note.createdAt)}</div>
-                </div>
-                <div class="note-content">
-                    <p>${note.content}</p>
-                </div>
-                <div class="note-actions">
-                    <button class="btn btn-sm btn-primary" onclick="viewNote(${note.id})">
-                        عرض
-                    </button>
-                    ${isUnread ? `
-                        <button class="btn btn-sm btn-success" onclick="markNoteAsRead(${note.id})">
-                            تعليم كمقروء
-                        </button>
-                    ` : ''}
-                    <button class="btn btn-sm btn-danger" onclick="deleteNote(${note.id})">
-                        حذف
-                    </button>
-                </div>
+    objectivesList.innerHTML = userObjectives.map(objective => `
+        <div class="objective-item">
+            <div class="objective-header">
+                <h4>${objective.title}</h4>
+                <span class="objective-badge subject-${objective.subject}">
+                    ${objective.subject}
+                </span>
             </div>
-        `;
-    }).join('');
+            <div class="objective-body">
+                <p>${objective.description}</p>
+            </div>
+            <div class="objective-meta">
+                <span>${objective.type || 'هدف عام'}</span>
+                <span>${objective.priority || 'متوسط'}</span>
+            </div>
+            <div class="objective-actions">
+                <button class="btn btn-sm btn-primary" onclick="viewObjective(${objective.id})">
+                    عرض
+                </button>
+                <button class="btn btn-sm btn-warning" onclick="editObjective(${objective.id})">
+                    تعديل
+                </button>
+            </div>
+        </div>
+    `).join('');
 }
 
-function showNewNoteModal() {
-    const modal = document.getElementById('newNoteModal');
+function showCreateLessonModal() {
+    const modal = document.getElementById('createLessonModal');
     if (modal) {
         modal.classList.add('show');
-        populateMembersForNote();
+    } else {
+        console.error('Modal not found');
+        alert('نافذة إنشاء الدرس غير متاحة حالياً');
     }
 }
 
-function closeNewNoteModal() {
-    const modal = document.getElementById('newNoteModal');
+function closeCreateLessonModal() {
+    const modal = document.getElementById('createLessonModal');
     if (modal) {
         modal.classList.remove('show');
     }
 }
 
-function populateMembersForNote() {
-    const memberSelect = document.getElementById('noteMember');
-    if (!memberSelect) return;
-    
-    const currentUser = getCurrentUser();
-    const committeeMembers = getCommitteeMembersByTeacher(currentUser.id);
-    
-    memberSelect.innerHTML = '<option value="">اختر العضو</option>';
-    
-    committeeMembers.forEach(member => {
-        const option = document.createElement('option');
-        option.value = member.id;
-        option.textContent = `${member.name} - ${member.role}`;
-        memberSelect.appendChild(option);
-    });
+function showCreateTestModal() {
+    const modal = document.getElementById('createTestModal');
+    if (modal) {
+        modal.classList.add('show');
+    } else {
+        console.error('Create test modal not found');
+        window.location.href = 'create-test.html';
+    }
 }
 
-function sendNewNote() {
-    const memberId = parseInt(document.getElementById('noteMember').value);
-    const subject = document.getElementById('noteSubject').value.trim();
-    const content = document.getElementById('noteContent').value.trim();
-    const priority = document.getElementById('notePriority').value;
-    
-    if (!memberId || !subject || !content) {
-        showAuthNotification('يرجى ملء جميع الحقول', 'error');
-        return;
+function closeCreateTestModal() {
+    const modal = document.getElementById('createTestModal');
+    if (modal) {
+        modal.classList.remove('show');
     }
-    
-    const currentUser = getCurrentUser();
-    const committeeNotes = JSON.parse(localStorage.getItem('committeeNotes') || '[]');
-    
-    const newNote = {
-        id: generateId(),
-        teacherId: currentUser.id,
-        memberId: memberId,
-        subject: subject,
-        content: content,
-        priority: priority,
-        isRead: false,
-        createdAt: new Date().toISOString(),
-        senderName: currentUser.name,
-        senderRole: 'معلم'
-    };
-    
-    committeeNotes.push(newNote);
-    localStorage.setItem('committeeNotes', JSON.stringify(committeeNotes));
-    
-    showAuthNotification('تم إرسال الملاحظة بنجاح', 'success');
-    closeNewNoteModal();
-    loadCommitteeNotes();
-    
-    addSystemLog(`تم إرسال ملاحظة لعضو اللجنة`, 'message');
 }
 
-function viewNote(noteId) {
-    const committeeNotes = JSON.parse(localStorage.getItem('committeeNotes') || '[]');
-    const note = committeeNotes.find(n => n.id === noteId);
-    
-    if (!note) {
-        showAuthNotification('الملاحظة غير موجودة', 'error');
-        return;
-    }
-    
-    currentNoteId = noteId;
-    
-    document.getElementById('viewNoteSubject').textContent = note.subject;
-    document.getElementById('viewNoteContent').textContent = note.content;
-    document.getElementById('viewNoteDate').textContent = formatDate(note.createdAt);
-    document.getElementById('viewNotePriority').textContent = getPriorityText(note.priority);
-    
-    // تعليم الملاحظة كمقروءة
-    if (!note.isRead) {
-        markNoteAsRead(noteId);
-    }
-    
-    const modal = document.getElementById('viewNoteModal');
+function showCreateObjectiveModal() {
+    const modal = document.getElementById('createObjectiveModal');
     if (modal) {
         modal.classList.add('show');
     }
 }
 
-function closeViewNoteModal() {
-    const modal = document.getElementById('viewNoteModal');
+function closeCreateObjectiveModal() {
+    const modal = document.getElementById('createObjectiveModal');
     if (modal) {
         modal.classList.remove('show');
     }
-    currentNoteId = null;
-}
-
-function markNoteAsRead(noteId) {
-    const committeeNotes = JSON.parse(localStorage.getItem('committeeNotes') || '[]');
-    const noteIndex = committeeNotes.findIndex(n => n.id === noteId);
-    
-    if (noteIndex !== -1) {
-        committeeNotes[noteIndex].isRead = true;
-        localStorage.setItem('committeeNotes', JSON.stringify(committeeNotes));
-        
-        // تحديث العرض إذا كانت الصفحة مفتوحة
-        if (window.location.pathname.includes('committee.html')) {
-            loadCommitteeNotes();
-        }
-    }
-}
-
-function replyToNote() {
-    if (!currentNoteId) return;
-    
-    const replyContent = prompt('أدخل ردك على الملاحظة:');
-    if (!replyContent || replyContent.trim() === '') return;
-    
-    showAuthNotification('تم إرسال الرد بنجاح', 'success');
-    closeViewNoteModal();
 }
 
 // ============================================
 // نظام المراسلات
 // ============================================
 
-function loadMessagesData() {
+function initializeMessagesPage() {
+    loadMessages();
+    loadCommitteeMessages();
+}
+
+function loadMessages() {
     const messagesList = document.getElementById('messagesList');
     if (!messagesList) return;
     
+    const messages = JSON.parse(localStorage.getItem('messages') || '[]');
     const currentUser = getCurrentUser();
-    const messages = getMessagesByTeacher(currentUser.id);
     
-    if (messages.length === 0) {
+    const userMessages = messages.filter(msg => 
+        msg.receiverId === currentUser.id || 
+        msg.senderId === currentUser.id
+    ).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    
+    if (userMessages.length === 0) {
         messagesList.innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">✉️</div>
                 <h3>لا توجد رسائل</h3>
-                <p>لم يتم إرسال أو استقبال أي رسائل بعد</p>
+                <p>لم تستلم أو ترسل أي رسائل بعد</p>
             </div>
         `;
         return;
     }
     
-    // ترتيب الرسائل من الأحدث إلى الأقدم
-    messages.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    
-    messagesList.innerHTML = messages.map(message => {
-        const isUnread = !message.isRead;
-        const isIncoming = message.type === 'incoming';
+    messagesList.innerHTML = userMessages.map(message => {
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        const sender = users.find(u => u.id === message.senderId);
+        const receiver = users.find(u => u.id === message.receiverId);
+        const isSent = message.senderId === currentUser.id;
+        const isRead = message.isRead || false;
         
         return `
-            <div class="message-item ${isUnread ? 'unread' : 'read'}">
+            <div class="message-item ${isRead ? 'read' : 'unread'} ${isSent ? 'sent' : 'received'}">
                 <div class="message-header">
                     <div class="message-sender">
-                        <div class="sender-avatar">${message.senderName?.charAt(0) || '?'}</div>
+                        <div class="sender-avatar">${isSent ? receiver?.name?.charAt(0) : sender?.name?.charAt(0)}</div>
                         <div class="sender-info">
-                            <strong>${message.senderName || 'مرسل غير معروف'}</strong>
-                            <div class="message-subject">${message.subject || 'بدون عنوان'}</div>
+                            <strong>${isSent ? `إلى: ${receiver?.name || 'مستلم'}` : `من: ${sender?.name || 'مرسل'}`}</strong>
+                            <div class="message-subject">${message.subject}</div>
                         </div>
                     </div>
                     <div class="message-meta">
-                        <div class="message-date">${formatDateShort(message.createdAt)}</div>
-                        <div class="message-type">${isIncoming ? 'وارد' : 'صادر'}</div>
+                        <span class="message-date">${formatDateShort(message.timestamp)}</span>
+                        <span class="message-status">${isSent ? 'مرسلة' : 'واردة'}</span>
                     </div>
                 </div>
                 <div class="message-preview">
@@ -1052,13 +674,12 @@ function loadMessagesData() {
                 </div>
                 <div class="message-actions">
                     <button class="btn btn-sm btn-primary" onclick="viewMessage(${message.id})">
-                        قراءة
+                        عرض
                     </button>
-                    ${isUnread ? `
-                        <button class="btn btn-sm btn-success" onclick="markMessageAsRead(${message.id})">
+                    ${!isSent && !isRead ? 
+                        `<button class="btn btn-sm btn-success" onclick="markAsRead(${message.id})">
                             تعليم كمقروء
-                        </button>
-                    ` : ''}
+                        </button>` : ''}
                     <button class="btn btn-sm btn-danger" onclick="deleteMessage(${message.id})">
                         حذف
                     </button>
@@ -1068,178 +689,208 @@ function loadMessagesData() {
     }).join('');
 }
 
-function showNewMessageModal() {
-    const modal = document.getElementById('newMessageModal');
-    if (modal) {
-        modal.classList.add('show');
-        populateMessageRecipients();
-    }
+function loadCommitteeMessages() {
+    // تحميل رسائل لجنة صعوبات التعلم
+    const committeeMessages = document.getElementById('committeeMessages');
+    if (!committeeMessages) return;
+    
+    // محتوى مماثل
 }
 
-function closeNewMessageModal() {
-    const modal = document.getElementById('newMessageModal');
+function showSendMessageModal(receiverId = null) {
+    const modal = document.getElementById('sendMessageModal');
+    if (!modal) return;
+    
+    if (receiverId) {
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        const receiver = users.find(u => u.id === receiverId);
+        
+        if (receiver) {
+            document.getElementById('messageReceiver').value = receiverId;
+            document.getElementById('receiverName').textContent = receiver.name;
+        }
+    }
+    
+    modal.classList.add('show');
+}
+
+function closeSendMessageModal() {
+    const modal = document.getElementById('sendMessageModal');
     if (modal) {
         modal.classList.remove('show');
     }
 }
 
-function populateMessageRecipients() {
-    const recipientSelect = document.getElementById('messageRecipient');
-    if (!recipientSelect) return;
+function sendMessage() {
+    const receiverId = parseInt(document.getElementById('messageReceiver').value);
+    const subject = document.getElementById('messageSubject').value.trim();
+    const content = document.getElementById('messageContent').value.trim();
+    
+    if (!receiverId || !subject || !content) {
+        showAuthNotification('يرجى ملء جميع الحقول', 'error');
+        return;
+    }
     
     const currentUser = getCurrentUser();
+    const messages = JSON.parse(localStorage.getItem('messages') || '[]');
     
-    // إضافة الطلاب
-    const students = getStudentsByTeacher(currentUser.id);
-    students.forEach(student => {
-        const option = document.createElement('option');
-        option.value = `student_${student.id}`;
-        option.textContent = `👨‍🎓 ${student.name} (طالب)`;
-        recipientSelect.appendChild(option);
-    });
+    const newMessage = {
+        id: generateId(),
+        senderId: currentUser.id,
+        receiverId: receiverId,
+        subject: subject,
+        content: content,
+        timestamp: new Date().toISOString(),
+        isRead: false
+    };
     
-    // إضافة أعضاء اللجنة
-    const committeeMembers = getCommitteeMembersByTeacher(currentUser.id);
-    committeeMembers.forEach(member => {
-        const option = document.createElement('option');
-        option.value = `member_${member.id}`;
-        option.textContent = `👥 ${member.name} (${member.role})`;
-        recipientSelect.appendChild(option);
-    });
+    messages.push(newMessage);
+    localStorage.setItem('messages', JSON.stringify(messages));
+    
+    showAuthNotification('تم إرسال الرسالة بنجاح', 'success');
+    closeSendMessageModal();
+    loadMessages();
+}
+
+function viewMessage(messageId) {
+    const messages = JSON.parse(localStorage.getItem('messages') || '[]');
+    const message = messages.find(m => m.id === messageId);
+    
+    if (!message) {
+        showAuthNotification('الرسالة غير موجودة', 'error');
+        return;
+    }
+    
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const sender = users.find(u => u.id === message.senderId);
+    const receiver = users.find(u => u.id === message.receiverId);
+    const currentUser = getCurrentUser();
+    
+    document.getElementById('viewMessageSubject').textContent = message.subject;
+    document.getElementById('viewMessageFrom').textContent = `من: ${sender?.name || 'مرسل غير معروف'}`;
+    document.getElementById('viewMessageTo').textContent = `إلى: ${receiver?.name || 'مستلم غير معروف'}`;
+    document.getElementById('viewMessageDate').textContent = `التاريخ: ${formatDate(message.timestamp)}`;
+    document.getElementById('viewMessageContent').textContent = message.content;
+    
+    // تعليم كمقروء إذا كان المستخدم هو المستقبل
+    if (message.receiverId === currentUser.id && !message.isRead) {
+        markAsRead(messageId);
+    }
+    
+    document.getElementById('viewMessageModal').classList.add('show');
+}
+
+function closeViewMessageModal() {
+    const modal = document.getElementById('viewMessageModal');
+    if (modal) {
+        modal.classList.remove('show');
+    }
+}
+
+function markAsRead(messageId) {
+    const messages = JSON.parse(localStorage.getItem('messages') || '[]');
+    const messageIndex = messages.findIndex(m => m.id === messageId);
+    
+    if (messageIndex !== -1) {
+        messages[messageIndex].isRead = true;
+        localStorage.setItem('messages', JSON.stringify(messages));
+        loadMessages();
+    }
+}
+
+function deleteMessage(messageId) {
+    if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) {
+        return;
+    }
+    
+    const messages = JSON.parse(localStorage.getItem('messages') || '[]');
+    const updatedMessages = messages.filter(m => m.id !== messageId);
+    
+    localStorage.setItem('messages', JSON.stringify(updatedMessages));
+    
+    showAuthNotification('تم حذف الرسالة', 'success');
+    loadMessages();
 }
 
 // ============================================
 // دوال مساعدة
 // ============================================
 
-function getStudentsByTeacher(teacherId) {
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    return users.filter(u => u.role === 'student' && u.teacherId === teacherId);
+function generateId() {
+    return Math.floor(Math.random() * 1000000) + 1;
 }
 
-function getLessonsByTeacher(teacherId) {
-    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    return lessons.filter(l => l.teacherId === teacherId);
+function formatDate(dateString) {
+    if (!dateString) return 'غير محدد';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ar-SA', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
 }
 
-function getAssignmentsByTeacher(teacherId) {
-    const assignments = JSON.parse(localStorage.getItem('assignments') || '[]');
-    return assignments.filter(a => a.teacherId === teacherId);
+function formatDateShort(dateString) {
+    if (!dateString) return 'غير محدد';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ar-SA');
 }
 
-function getCommitteeMembersByTeacher(teacherId) {
-    const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    return committeeMembers.filter(m => m.teacherId === teacherId);
-}
-
-function getCommitteeNotesByTeacher(teacherId) {
-    const committeeNotes = JSON.parse(localStorage.getItem('committeeNotes') || '[]');
-    return committeeNotes.filter(n => n.teacherId === teacherId);
-}
-
-function getMessagesByTeacher(teacherId) {
-    const messages = JSON.parse(localStorage.getItem('messages') || '[]');
-    return messages.filter(m => m.teacherId === teacherId);
-}
-
-function calculateAverageProgress(students) {
-    if (students.length === 0) return 0;
+function formatTimeAgo(dateString) {
+    if (!dateString) return 'منذ فترة';
     
-    const totalProgress = students.reduce((sum, student) => sum + (student.progress || 0), 0);
-    return Math.round(totalProgress / students.length);
-}
-
-function getLessonStatusText(status) {
-    const statusMap = {
-        'completed': 'مكتمل',
-        'in-progress': 'قيد التنفيذ',
-        'pending': 'معلق'
-    };
-    return statusMap[status] || status;
-}
-
-function getAssignmentStatusText(status) {
-    const statusMap = {
-        'completed': 'مكتمل',
-        'in-progress': 'قيد التصحيح',
-        'pending': 'معلق',
-        'overdue': 'متأخر'
-    };
-    return statusMap[status] || status;
-}
-
-function getPriorityText(priority) {
-    const priorityMap = {
-        'low': 'منخفضة',
-        'normal': 'عادية',
-        'high': 'عالية',
-        'urgent': 'عاجلة'
-    };
-    return priorityMap[priority] || priority;
-}
-
-function updateStatElement(elementId, value) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.textContent = value;
-    }
-}
-
-// دالة مساعدة لإضافة سجل النظام
-function addSystemLog(message, type = 'info') {
-    try {
-        const logs = JSON.parse(localStorage.getItem('systemLogs') || '[]');
-        const currentUser = getCurrentUser();
-        
-        logs.push({
-            timestamp: new Date().toISOString(),
-            type: type,
-            message: message,
-            user: currentUser ? currentUser.name : 'معلم'
-        });
-        
-        // الاحتفاظ فقط بآخر 1000 سجل
-        if (logs.length > 1000) {
-            logs.splice(0, logs.length - 1000);
-        }
-        
-        localStorage.setItem('systemLogs', JSON.stringify(logs));
-    } catch (error) {
-        console.error('خطأ في إضافة سجل النظام:', error);
-    }
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'الآن';
+    if (diffMins < 60) return `منذ ${diffMins} دقيقة`;
+    if (diffHours < 24) return `منذ ${diffHours} ساعة`;
+    if (diffDays < 7) return `منذ ${diffDays} يوم`;
+    return `منذ ${Math.floor(diffDays / 7)} أسبوع`;
 }
 
 // ============================================
 // تصدير الدوال للاستخدام العالمي
 // ============================================
 
-window.showAddStudentModal = showAddStudentModal;
-window.closeAddStudentModal = closeAddStudentModal;
-window.addNewStudent = addNewStudent;
+window.viewStudentDetails = viewStudentDetails;
+window.sendMessageToStudent = sendMessageToStudent;
 window.editStudent = editStudent;
-window.closeEditStudentModal = closeEditStudentModal;
-window.updateStudent = updateStudent;
-window.deleteStudent = deleteStudent;
-window.searchStudents = searchStudents;
-window.filterStudents = filterStudents;
+window.removeStudent = removeStudent;
 
-window.showAddLessonModal = showAddLessonModal;
-window.closeAddLessonModal = closeAddLessonModal;
+window.showCreateLessonModal = showCreateLessonModal;
+window.closeCreateLessonModal = closeCreateLessonModal;
+window.showCreateTestModal = showCreateTestModal;
+window.closeCreateTestModal = closeCreateTestModal;
+window.showCreateObjectiveModal = showCreateObjectiveModal;
+window.closeCreateObjectiveModal = closeCreateObjectiveModal;
 
-window.showAddAssignmentModal = showAddAssignmentModal;
-window.closeAddAssignmentModal = closeAddAssignmentModal;
+window.showSendMessageModal = showSendMessageModal;
+window.closeSendMessageModal = closeSendMessageModal;
+window.sendMessage = sendMessage;
+window.viewMessage = viewMessage;
+window.closeViewMessageModal = closeViewMessageModal;
+window.markAsRead = markAsRead;
+window.deleteMessage = deleteMessage;
 
-window.showAddMemberModal = showAddMemberModal;
-window.closeAddMemberModal = closeAddMemberModal;
-window.addNewMember = addNewMember;
-window.showNewNoteModal = showNewNoteModal;
-window.closeNewNoteModal = closeNewNoteModal;
-window.sendNewNote = sendNewNote;
-window.viewNote = viewNote;
-window.closeViewNoteModal = closeViewNoteModal;
-window.replyToNote = replyToNote;
+window.formatDate = formatDate;
+window.formatDateShort = formatDateShort;
+window.formatTimeAgo = formatTimeAgo;
+window.generateId = generateId;
 
-window.showNewMessageModal = showNewMessageModal;
-window.closeNewMessageModal = closeNewMessageModal;
+// ============================================
+// تهيئة النظام عند تحميل الصفحة
+// ============================================
 
-window.logout = logout;
+// التأكد من تهيئة لوحة التحكم
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeTeacherDashboard);
+} else {
+    initializeTeacherDashboard();
+}

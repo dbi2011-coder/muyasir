@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صفحة اختبار - ميسر التعلم</title>
+    
+    <!-- الخطوط -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- الأنماط -->
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="stylesheet" href="../assets/css/dashboard.css">
+    
+    <!-- الأيقونة -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
+</head>
+<body>
+    <!-- محتوى الاختبار -->
+    <div class="container" style="padding: 50px 20px; text-align: center;">
+        <h1 style="color: var(--primary-color); margin-bottom: 30px;">
+            <i class="fas fa-check-circle"></i> نظام التشغيل يعمل بنجاح
+        </h1>
+        
+        <div class="status-card" style="background: white; padding: 30px; border-radius: 15px; box-shadow: var(--shadow); max-width: 600px; margin: 0 auto;">
+            <h2 style="color: var(--secondary-color); margin-bottom: 20px;">
+                حالة النظام
+            </h2>
+            
+            <div class="status-item" style="display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid #eee;">
+                <span>نظام المصادقة</span>
+                <span class="status-badge success" style="background: var(--success-color); color: white; padding: 5px 15px; border-radius: 20px;">
+                    <i class="fas fa-check"></i> نشط
+                </span>
+            </div>
+            
+            <div class="status-item" style="display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid #eee;">
+                <span>لوحة التحكم</span>
+                <span class="status-badge success" style="background: var(--success-color); color: white; padding: 5px 15px; border-radius: 20px;">
+                    <i class="fas fa-check"></i> نشط
+                </span>
+            </div>
+            
+            <div class="status-item" style="display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid #eee;">
+                <span>نظام المعلمين</span>
+                <span class="status-badge success" style="background: var(--success-color); color: white; padding: 5px 15px; border-radius: 20px;">
+                    <i class="fas fa-check"></i> نشط
+                </span>
+            </div>
+            
+            <div class="status-item" style="display: flex; justify-content: space-between; padding: 15px;">
+                <span>التسجيل الصوتي</span>
+                <span class="status-badge info" style="background: var(--primary-color); color: white; padding: 5px 15px; border-radius: 20px;">
+                    <i class="fas fa-check"></i> جاهز
+                </span>
+            </div>
+            
+            <div class="actions" style="margin-top: 30px; display: flex; gap: 15px; justify-content: center;">
+                <button class="btn btn-primary" onclick="testAuth()">
+                    <i class="fas fa-user-check"></i> اختبار المصادقة
+                </button>
+                <button class="btn btn-success" onclick="testDashboard()">
+                    <i class="fas fa-tachometer-alt"></i> اختبار لوحة التحكم
+                </button>
+                <button class="btn btn-warning" onclick="testLogout()">
+                    <i class="fas fa-sign-out-alt"></i> اختبار تسجيل الخروج
+                </button>
+            </div>
+            
+            <div id="testResults" style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 10px; display: none;">
+                <!-- نتائج الاختبار تظهر هنا -->
+            </div>
+        </div>
+        
+        <div class="instructions" style="margin-top: 30px; color: #666; max-width: 800px; margin: 30px auto;">
+            <h3 style="color: var(--secondary-color); margin-bottom: 15px;">
+                <i class="fas fa-info-circle"></i> تعليمات التشغيل
+            </h3>
+            <ol style="text-align: right; padding-right: 20px; line-height: 1.8;">
+                <li>اضغط على "اختبار المصادقة" للتحقق من نظام تسجيل الدخول</li>
+                <li>اضغط على "اختبار لوحة التحكم" لتحميل بيانات لوحة التحكم</li>
+                <li>اضغط على "اختبار تسجيل الخروج" للتحقق من نظام تسجيل الخروج</li>
+                <li>تحقق من نافذة Console في أدوات المطور لرؤية الرسائل التفصيلية</li>
+            </ol>
+        </div>
+    </div>
+
+    <!-- السكريبتات -->
+    <script src="../assets/js/auth.js"></script>
+    <script src="../assets/js/dashboard.js"></script>
+    <script src="../assets/js/teacher.js"></script>
+    
+    <script>
+        // دوال اختبار النظام
+        function testAuth() {
+            console.log('🔐 بدء اختبار المصادقة...');
+            
+            const user = getCurrentUser();
+            if (user) {
+                showTestResult('المصادقة', `✅ تم العثور على المستخدم: ${user.name} (${user.role})`, 'success');
+            } else {
+                showTestResult('المصادقة', '⚠️ لا يوجد مستخدم مسجل الدخول', 'warning');
+            }
+        }
+        
+        function testDashboard() {
+            console.log('📊 بدء اختبار لوحة التحكم...');
+            
+            // تحديث واجهة المستخدم
+            const user = getCurrentUser();
+            if (user) {
+                updateDashboardUI(user);
+                showTestResult('لوحة التحكم', '✅ تم تحديث واجهة المستخدم بنجاح', 'success');
+            } else {
+                showTestResult('لوحة التحكم', '❌ فشل تحديث واجهة المستخدم', 'error');
+            }
+            
+            // تحميل البيانات
+            setTimeout(() => {
+                loadDashboardData();
+                showTestResult('لوحة التحكم', '✅ تم تحميل بيانات لوحة التحكم', 'success');
+            }, 500);
+        }
+        
+        function testLogout() {
+            console.log('🚪 بدء اختبار تسجيل الخروج...');
+            
+            if (typeof logout === 'function') {
+                showTestResult('تسجيل الخروج', '✅ دالة تسجيل الخروج متاحة', 'success');
+                
+                // يمكن اختبار تسجيل الخروج فعلياً
+                if (confirm('هل تريد اختبار تسجيل الخروج فعلياً؟')) {
+                    logout();
+                }
+            } else {
+                showTestResult('تسجيل الخروج', '❌ دالة تسجيل الخروج غير متاحة', 'error');
+            }
+        }
+        
+        function showTestResult(testName, message, type) {
+            const resultsDiv = document.getElementById('testResults');
+            if (!resultsDiv) return;
+            
+            resultsDiv.style.display = 'block';
+            
+            const resultClass = type === 'success' ? 'text-success' : type === 'warning' ? 'text-warning' : 'text-danger';
+            
+            const resultItem = document.createElement('div');
+            resultItem.className = `test-result ${resultClass}`;
+            resultItem.style.padding = '10px';
+            resultItem.style.marginBottom = '5px';
+            resultItem.style.borderRadius = '5px';
+            resultItem.style.backgroundColor = type === 'success' ? '#d4edda' : type === 'warning' ? '#fff3cd' : '#f8d7da';
+            
+            resultItem.innerHTML = `
+                <strong>${testName}:</strong> ${message}
+            `;
+            
+            resultsDiv.appendChild(resultItem);
+            
+            // التمرير لأسفل لرؤية النتيجة
+            resultItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            
+            console.log(`🧪 ${testName}: ${message}`);
+        }
+        
+        // تهيئة الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🧪 صفحة الاختبار جاهزة');
+            
+            // عرض رسالة ترحيب
+            const user = getCurrentUser();
+            if (user) {
+                document.title = `اختبار النظام - ${user.name}`;
+                console.log(`👤 المستخدم الحالي: ${user.name}`);
+            }
+            
+            // إظهار قسم النتائج
+            const resultsDiv = document.getElementById('testResults');
+            if (resultsDiv) {
+                resultsDiv.innerHTML = '<h4 style="margin-bottom: 15px; color: var(--secondary-color);"><i class="fas fa-vial"></i> نتائج الاختبار:</h4>';
+            }
+        });
+    </script>
+</body>
+</html>

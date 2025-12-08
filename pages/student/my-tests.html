@@ -1,109 +1,0 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>اختباراتي - ميسر التعلم</title>
-    <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/student.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-</head>
-<body>
-    <div class="dashboard-container">
-        <!-- الشريط الجانبي -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
-                    <h2>ميسر التعلم</h2>
-                </div>
-            </div>
-            
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="menu-icon">🏠</span>الرئيسية</a></li>
-                <li><a href="my-tests.html" class="active"><span class="menu-icon">📝</span>اختباراتي</a></li>
-                <li><a href="my-iep.html"><span class="menu-icon">📊</span>خطتي التربوية</a></li>
-                <li><a href="my-lessons.html"><span class="menu-icon">📚</span>دروسي</a></li>
-                <li><a href="my-assignments.html"><span class="menu-icon">📋</span>واجباتي</a></li>
-                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة المعلم</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
-            </ul>
-        </aside>
-
-        <!-- المحتوى الرئيسي -->
-        <main class="main-content-dashboard">
-            <!-- رأس اللوحة -->
-            <header class="dashboard-header">
-                <button class="mobile-menu-btn">☰</button>
-                <div class="user-info">
-                    <div class="user-welcome">
-                        <div class="welcome-text">مرحباً</div>
-                        <div class="user-name" id="userName">اسم الطالب</div>
-                    </div>
-                    <div class="user-avatar" id="userAvatar">ط</div>
-                </div>
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="showNotifications()">🔔 الإشعارات</button>
-                </div>
-            </header>
-
-            <!-- محتوى اللوحة -->
-            <div class="dashboard-content">
-                <div class="content-header">
-                    <h1>اختباراتي</h1>
-                    <p>عرض وحل الاختبارات التشخيصية المخصصة لك</p>
-                </div>
-
-                <!-- تبويبات الاختبارات -->
-                <div class="tests-tabs">
-                    <div class="tabs-header">
-                        <button class="tab-btn active" data-tab="pending">الاختبارات المعلقة</button>
-                        <button class="tab-btn" data-tab="completed">الاختبارات المكتملة</button>
-                    </div>
-
-                    <div class="tabs-content">
-                        <!-- تبويب الاختبارات المعلقة -->
-                        <div class="tab-pane active" id="pending-tab">
-                            <div class="tests-list" id="pendingTestsList">
-                                <!-- سيتم تعبئته بواسطة JavaScript -->
-                            </div>
-                        </div>
-
-                        <!-- تبويب الاختبارات المكتملة -->
-                        <div class="tab-pane" id="completed-tab">
-                            <div class="tests-list" id="completedTestsList">
-                                <!-- سيتم تعبئته بواسطة JavaScript -->
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- نموذج بدء الاختبار -->
-    <div id="startTestModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="testModalTitle">بدء الاختبار</h3>
-                <button class="modal-close" onclick="closeStartTestModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="test-instructions" id="testInstructions">
-                    <!-- سيتم تعبئته بواسطة JavaScript -->
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeStartTestModal()">إلغاء</button>
-                <button type="button" class="btn btn-success" onclick="startSelectedTest()">بدء الاختبار</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="../../assets/js/dashboard.js"></script>
-    <script src="../../assets/js/student.js"></script>
-    <script src="../../assets/js/student-tests.js"></script>
-    <script src="../../assets/js/auth.js"></script>
-</body>
-</html>

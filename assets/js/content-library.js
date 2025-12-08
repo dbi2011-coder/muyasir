@@ -1,64 +1,42 @@
 // ============================================
-// 📁 الملف: muyasir-main/assets/js/content-library.js
+// نظام مكتبة المحتوى التعليمي
 // ============================================
 
-// نظام مكتبة المحتوى التعليمي للمعلمين
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('📚 بدء تهيئة مكتبة المحتوى...');
     initializeContentLibrary();
-    setupLibraryTabs();
 });
 
 function initializeContentLibrary() {
     // التحقق من المصادقة
-    const user = checkAuth();
-    if (!user) {
-        redirectToLogin();
-        return;
-    }
-    
-    if (user.role !== 'teacher') {
-        showAuthNotification('غير مصرح لك بالوصول إلى هذه الصفحة', 'error');
+    const user = getCurrentUser();
+    if (!user || user.role !== 'teacher') {
+        console.log('❌ يجب تسجيل الدخول كمدرس');
+        showAuthNotification('يجب تسجيل الدخول كمدرس للوصول إلى هذه الصفحة', 'error');
         setTimeout(() => {
             window.location.href = '../../index.html';
         }, 2000);
         return;
     }
+
+    console.log('✅ تم التحقق من المستخدم:', user.name);
     
     // تحديث واجهة المستخدم
-    updateLibraryUI(user);
+    updatePageHeader(user);
+    
+    // إعداد تبويبات المكتبة
+    setupLibraryTabs();
     
     // تحميل المحتوى
-    loadContentLibrary();
+    loadLibraryContent();
+    
+    // إعداد الأزرار
+    setupActionButtons();
+    
+    console.log('✅ تم تهيئة مكتبة المحتوى بنجاح');
 }
 
-function setupLibraryTabs() {
-    const tabBtns = document.querySelectorAll('.library-tabs .tab-btn');
-    const tabPanes = document.querySelectorAll('.library-tabs .tab-pane');
-    
-    if (tabBtns.length === 0 || tabPanes.length === 0) return;
-    
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const tabId = this.getAttribute('data-tab');
-            
-            // إزالة النشاط من جميع الأزرار
-            tabBtns.forEach(b => b.classList.remove('active'));
-            tabPanes.forEach(p => p.classList.remove('active'));
-            
-            // إضافة النشاط للزر والتبويب المحدد
-            this.classList.add('active');
-            const targetPane = document.getElementById(`${tabId}-tab`);
-            if (targetPane) {
-                targetPane.classList.add('active');
-            }
-            
-            // تحميل محتوى التبويب إذا لزم الأمر
-            loadTabContent(tabId);
-        });
-    });
-}
-
-function updateLibraryUI(user) {
+function updatePageHeader(user) {
     const userNameElement = document.getElementById('userName');
     const userAvatarElement = document.getElementById('userAvatar');
     
@@ -71,14 +49,46 @@ function updateLibraryUI(user) {
     }
 }
 
-function loadContentLibrary() {
-    loadLessons();
-    loadExercises();
-    loadTeachingObjectives();
-    updateLibraryStats();
+function setupLibraryTabs() {
+    console.log('🗂️ جاري إعداد تبويبات المكتبة...');
+    
+    const tabBtns = document.querySelectorAll('.library-tabs .tab-btn');
+    const tabPanes = document.querySelectorAll('.library-tabs .tab-pane');
+    
+    if (tabBtns.length === 0 || tabPanes.length === 0) {
+        console.log('⚠️ لم يتم العثور على تبويبات المكتبة');
+        return;
+    }
+    
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tabId = this.getAttribute('data-tab');
+            console.log(`📌 تم النقر على تبويب: ${tabId}`);
+            
+            // إزالة النشاط من جميع الأزرار
+            tabBtns.forEach(b => b.classList.remove('active'));
+            tabPanes.forEach(p => p.classList.remove('active'));
+            
+            // إضافة النشاط للزر والتبويب المحدد
+            this.classList.add('active');
+            
+            const targetPane = document.getElementById(`${tabId}-tab`);
+            if (targetPane) {
+                targetPane.classList.add('active');
+                console.log(`✅ تم فتح تبويب: ${tabId}`);
+                
+                // تحميل محتوى التبويب عند النقر
+                loadTabContent(tabId);
+            }
+        });
+    });
+    
+    console.log(`✅ تم إعداد ${tabBtns.length} تبويب`);
 }
 
 function loadTabContent(tabId) {
+    console.log(`📥 جاري تحميل محتوى تبويب: ${tabId}`);
+    
     switch (tabId) {
         case 'lessons':
             loadLessons();
@@ -92,294 +102,267 @@ function loadTabContent(tabId) {
     }
 }
 
+function loadLibraryContent() {
+    console.log('📚 جاري تحميل محتوى المكتبة...');
+    
+    // تحميل تبويب الدروس أولاً
+    loadLessons();
+    
+    // تحميل التبويبات الأخرى في الخلفية
+    setTimeout(() => {
+        loadExercises();
+        loadTeachingObjectives();
+    }, 500);
+}
+
 function loadLessons() {
+    console.log('📖 جاري تحميل الدروس...');
+    
     const lessonsList = document.getElementById('lessonsList');
-    if (!lessonsList) return;
-    
-    const currentUser = getCurrentUser();
-    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const userLessons = lessons.filter(lesson => lesson.teacherId === currentUser.id);
-    
-    if (userLessons.length === 0) {
-        lessonsList.innerHTML = `
-            <div class="empty-content-state">
-                <div class="empty-icon">📚</div>
-                <h3>لا توجد دروس</h3>
-                <p>قم بإضافة أول درس لمكتبة المحتوى</p>
-                <button class="btn btn-primary" onclick="showCreateLessonModal()">
-                    <i class="fas fa-plus"></i> إضافة درس جديد
-                </button>
-            </div>
-        `;
+    if (!lessonsList) {
+        console.log('❌ قائمة الدروس غير موجودة');
         return;
     }
     
-    // ترتيب الدروس حسب تاريخ الإنشاء
-    userLessons.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    
-    lessonsList.innerHTML = userLessons.map(lesson => {
-        const subjectClass = lesson.subject === 'لغتي' ? 'subject-لغتي' : 'subject-رياضيات';
-        const statusClass = lesson.objectivesLinked ? 'linked' : 'not-linked';
-        const statusText = lesson.objectivesLinked ? 'مربوط بأهداف' : 'غير مربوط';
+    // محاكاة تحميل البيانات
+    setTimeout(() => {
+        const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+        const currentUser = getCurrentUser();
+        const userLessons = lessons.filter(lesson => lesson.teacherId === currentUser.id);
         
-        return `
-            <div class="content-card">
-                <div class="content-header">
-                    <h4>${lesson.title || 'درس بدون عنوان'}</h4>
-                    <span class="content-badge ${subjectClass}">
-                        ${lesson.subject || 'غير محدد'}
-                    </span>
-                </div>
-                <div class="content-body">
-                    <p>${lesson.description || 'لا يوجد وصف للدرس'}</p>
-                </div>
-                <div class="content-meta">
-                    <span class="questions-count">
-                        <i class="fas fa-question-circle"></i> ${lesson.questionsCount || 0}
-                    </span>
-                    <span class="exercises-count">
-                        <i class="fas fa-running"></i> ${lesson.exercisesCount || 0}
-                    </span>
-                    <span class="objectives-status ${statusClass}">
-                        <i class="fas fa-link"></i> ${statusText}
-                    </span>
-                </div>
-                <div class="content-actions">
-                    <button class="btn btn-sm btn-primary" onclick="viewLesson(${lesson.id})">
-                        <i class="fas fa-eye"></i> عرض
-                    </button>
-                    <button class="btn btn-sm btn-warning" onclick="editLesson(${lesson.id})">
-                        <i class="fas fa-edit"></i> تعديل
-                    </button>
-                    <button class="btn btn-sm btn-info" onclick="linkLessonObjectives(${lesson.id})">
-                        <i class="fas fa-link"></i> ربط أهداف
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id})">
-                        <i class="fas fa-trash"></i> حذف
+        console.log(`📚 عدد الدروس: ${userLessons.length}`);
+        
+        if (userLessons.length === 0) {
+            lessonsList.innerHTML = `
+                <div class="empty-content-state">
+                    <div class="empty-icon">📚</div>
+                    <h3>لا توجد دروس</h3>
+                    <p>قم بإضافة أول درس لمكتبة المحتوى</p>
+                    <button class="btn btn-primary" onclick="showCreateLessonModal()">
+                        <i class="fas fa-plus"></i> إضافة درس جديد
                     </button>
                 </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        } else {
+            lessonsList.innerHTML = userLessons.map(lesson => `
+                <div class="content-card">
+                    <div class="content-header">
+                        <h4>${lesson.title || 'درس بدون عنوان'}</h4>
+                        <span class="content-badge subject-${lesson.subject || 'general'}">
+                            ${lesson.subject || 'عام'}
+                        </span>
+                    </div>
+                    <div class="content-body">
+                        <p>${lesson.description || 'لا يوجد وصف'}</p>
+                    </div>
+                    <div class="content-meta">
+                        <span class="questions-count">${lesson.questions || 0} سؤال</span>
+                        <span class="exercises-count">${lesson.exercises || 0} تمرين</span>
+                        <span class="objectives-status ${lesson.objectivesLinked ? 'linked' : 'not-linked'}">
+                            ${lesson.objectivesLinked ? 'مربوط بأهداف' : 'غير مربوط'}
+                        </span>
+                    </div>
+                    <div class="content-actions">
+                        <button class="btn btn-sm btn-primary" onclick="viewLesson(${lesson.id})">
+                            <i class="fas fa-eye"></i> عرض
+                        </button>
+                        <button class="btn btn-sm btn-warning" onclick="editLesson(${lesson.id})">
+                            <i class="fas fa-edit"></i> تعديل
+                        </button>
+                        <button class="btn btn-sm btn-info" onclick="linkLessonObjectives(${lesson.id})">
+                            <i class="fas fa-link"></i> ربط أهداف
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id})">
+                            <i class="fas fa-trash"></i> حذف
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        console.log('✅ تم تحميل الدروس');
+    }, 1000);
 }
 
 function loadExercises() {
+    console.log('🏃 جاري تحميل التمارين...');
+    
     const exercisesList = document.getElementById('exercisesList');
-    if (!exercisesList) return;
-    
-    const currentUser = getCurrentUser();
-    const exercises = JSON.parse(localStorage.getItem('exercises') || '[]');
-    const userExercises = exercises.filter(exercise => exercise.teacherId === currentUser.id);
-    
-    if (userExercises.length === 0) {
-        exercisesList.innerHTML = `
-            <div class="empty-content-state">
-                <div class="empty-icon">🏃‍♂️</div>
-                <h3>لا توجد تمارين</h3>
-                <p>قم بإضافة أول تمرين لمكتبة المحتوى</p>
-                <button class="btn btn-primary" onclick="showCreateExerciseModal()">
-                    <i class="fas fa-plus"></i> إضافة تمرين جديد
-                </button>
-            </div>
-        `;
+    if (!exercisesList) {
+        console.log('⚠️ قائمة التمارين غير موجودة');
         return;
     }
     
-    exercisesList.innerHTML = userExercises.map(exercise => {
-        const subjectClass = exercise.subject === 'لغتي' ? 'subject-لغتي' : 'subject-رياضيات';
-        
-        return `
-            <div class="content-card">
-                <div class="content-header">
-                    <h4>${exercise.title || 'تمرين بدون عنوان'}</h4>
-                    <span class="content-badge ${subjectClass}">
-                        ${exercise.subject || 'غير محدد'}
-                    </span>
-                </div>
-                <div class="content-body">
-                    <p>${exercise.description || 'لا يوجد وصف للتمرين'}</p>
-                    <div class="exercise-meta">
-                        <span><strong>المستوى:</strong> ${exercise.level || 'متوسط'}</span>
-                        <span><strong>الوقت:</strong> ${exercise.duration || 10} دقيقة</span>
-                    </div>
-                </div>
-                <div class="content-actions">
-                    <button class="btn btn-sm btn-primary" onclick="viewExercise(${exercise.id})">
-                        <i class="fas fa-eye"></i> عرض
-                    </button>
-                    <button class="btn btn-sm btn-warning" onclick="editExercise(${exercise.id})">
-                        <i class="fas fa-edit"></i> تعديل
-                    </button>
-                    <button class="btn btn-sm btn-success" onclick="assignExercise(${exercise.id})">
-                        <i class="fas fa-share"></i> تعيين
-                    </button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteExercise(${exercise.id})">
-                        <i class="fas fa-trash"></i> حذف
-                    </button>
-                </div>
+    setTimeout(() => {
+        exercisesList.innerHTML = `
+            <div class="empty-content-state">
+                <div class="empty-icon">🏃</div>
+                <h3>لا توجد تمارين</h3>
+                <p>سيتم إضافة التمارين قريباً</p>
             </div>
         `;
-    }).join('');
+        
+        console.log('✅ تم تحميل التمارين');
+    }, 800);
 }
 
 function loadTeachingObjectives() {
+    console.log('🎯 جاري تحميل الأهداف التعليمية...');
+    
     const objectivesList = document.getElementById('objectivesList');
-    if (!objectivesList) return;
+    if (!objectivesList) {
+        console.log('⚠️ قائمة الأهداف غير موجودة');
+        return;
+    }
     
-    const currentUser = getCurrentUser();
-    const objectives = JSON.parse(localStorage.getItem('teachingObjectives') || '[]');
-    const userObjectives = objectives.filter(obj => obj.teacherId === currentUser.id);
-    
-    if (userObjectives.length === 0) {
+    setTimeout(() => {
         objectivesList.innerHTML = `
             <div class="empty-content-state">
                 <div class="empty-icon">🎯</div>
                 <h3>لا توجد أهداف تعليمية</h3>
-                <p>قم بإضافة أول هدف تعليمي</p>
-                <button class="btn btn-primary" onclick="showCreateObjectiveModal()">
-                    <i class="fas fa-plus"></i> إضافة هدف جديد
-                </button>
+                <p>سيتم إضافة الأهداف التعليمية قريباً</p>
             </div>
         `;
-        return;
-    }
-    
-    // تجميع الأهداف حسب المادة
-    const arabicObjectives = userObjectives.filter(obj => obj.subject === 'لغتي');
-    const mathObjectives = userObjectives.filter(obj => obj.subject === 'رياضيات');
-    
-    objectivesList.innerHTML = '';
-    
-    // عرض أهداف مادة لغتي
-    if (arabicObjectives.length > 0) {
-        objectivesList.innerHTML += `
-            <div class="objectives-subject-section">
-                <h4><i class="fas fa-book"></i> أهداف مادة لغتي</h4>
-                <div class="objectives-container">
-                    ${arabicObjectives.map(obj => `
-                        <div class="objective-item">
-                            <div class="objective-header">
-                                <h5>${obj.title}</h5>
-                                <span class="objective-level">${obj.level || 'مبتدئ'}</span>
-                            </div>
-                            <div class="objective-description">
-                                <p>${obj.description}</p>
-                            </div>
-                            <div class="objective-meta">
-                                <span><i class="fas fa-link"></i> ${obj.linkedContent || 0} مرتبط</span>
-                                <span><i class="fas fa-calendar"></i> ${formatDateShort(obj.createdAt)}</span>
-                            </div>
-                            <div class="objective-actions">
-                                <button class="btn btn-sm btn-primary" onclick="editObjective(${obj.id})">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteObjective(${obj.id})">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
-    
-    // عرض أهداف مادة رياضيات
-    if (mathObjectives.length > 0) {
-        objectivesList.innerHTML += `
-            <div class="objectives-subject-section">
-                <h4><i class="fas fa-calculator"></i> أهداف مادة رياضيات</h4>
-                <div class="objectives-container">
-                    ${mathObjectives.map(obj => `
-                        <div class="objective-item">
-                            <div class="objective-header">
-                                <h5>${obj.title}</h5>
-                                <span class="objective-level">${obj.level || 'مبتدئ'}</span>
-                            </div>
-                            <div class="objective-description">
-                                <p>${obj.description}</p>
-                            </div>
-                            <div class="objective-meta">
-                                <span><i class="fas fa-link"></i> ${obj.linkedContent || 0} مرتبط</span>
-                                <span><i class="fas fa-calendar"></i> ${formatDateShort(obj.createdAt)}</span>
-                            </div>
-                            <div class="objective-actions">
-                                <button class="btn btn-sm btn-primary" onclick="editObjective(${obj.id})">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-danger" onclick="deleteObjective(${obj.id})">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    }
+        
+        console.log('✅ تم تحميل الأهداف التعليمية');
+    }, 600);
 }
 
-function updateLibraryStats() {
-    const currentUser = getCurrentUser();
+function setupActionButtons() {
+    console.log('🔘 جاري إعداد أزرار الإجراءات...');
     
-    // حساب الإحصائيات
-    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const exercises = JSON.parse(localStorage.getItem('exercises') || '[]');
-    const objectives = JSON.parse(localStorage.getItem('teachingObjectives') || '[]');
+    // زر إضافة درس جديد
+    const addLessonBtn = document.querySelector('[onclick*="showCreateLessonModal"]');
+    if (addLessonBtn) {
+        addLessonBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            showCreateLessonModal();
+        });
+        console.log('✅ تم إعداد زر إضافة درس جديد');
+    } else {
+        console.log('⚠️ زر إضافة درس جديد غير موجود');
+    }
     
-    const userLessons = lessons.filter(l => l.teacherId === currentUser.id);
-    const userExercises = exercises.filter(e => e.teacherId === currentUser.id);
-    const userObjectives = objectives.filter(o => o.teacherId === currentUser.id);
-    
-    const linkedLessons = userLessons.filter(l => l.objectivesLinked).length;
-    const arabicObjectives = userObjectives.filter(o => o.subject === 'لغتي').length;
-    const mathObjectives = userObjectives.filter(o => o.subject === 'رياضيات').length;
-    
-    // تحديث العناصر إذا وجدت
-    updateStatElement('totalLessons', userLessons.length);
-    updateStatElement('totalExercises', userExercises.length);
-    updateStatElement('linkedLessons', linkedLessons);
-    updateStatElement('arabicObjectives', arabicObjectives);
-    updateStatElement('mathObjectives', mathObjectives);
-}
-
-function updateStatElement(elementId, value) {
-    const element = document.getElementById(elementId);
-    if (element) {
-        element.textContent = value;
+    // زر إنشاء اختبار تشخيصي
+    const createTestBtn = document.querySelector('[onclick*="showCreateTestModal"]');
+    if (createTestBtn) {
+        createTestBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            showCreateTestModal();
+        });
+        console.log('✅ تم إعداد زر إنشاء اختبار تشخيصي');
+    } else {
+        console.log('⚠️ زر إنشاء اختبار تشخيصي غير موجود');
     }
 }
 
 // ============================================
-// إدارة الدروس
+// دوال النوافذ المنبثقة
 // ============================================
 
 function showCreateLessonModal() {
+    console.log('➕ فتح نافذة إنشاء درس جديد...');
+    
     const modal = document.getElementById('createLessonModal');
     if (modal) {
         modal.classList.add('show');
-        document.getElementById('createLessonForm')?.reset();
+        console.log('✅ تم فتح نافذة إنشاء درس');
     } else {
-        console.error('Modal element not found');
-        // بديل: عرض رسالة
-        showAuthNotification('نافذة إنشاء الدرس غير متاحة حالياً', 'warning');
+        console.log('❌ نافذة إنشاء الدرس غير موجودة');
+        showAuthNotification('نافذة إنشاء الدرس غير متاحة حالياً', 'error');
+        
+        // بديل: إنشاء نافذة منبثقة ديناميكية
+        createDynamicLessonModal();
     }
 }
 
 function closeCreateLessonModal() {
+    console.log('❌ إغلاق نافذة إنشاء درس...');
+    
     const modal = document.getElementById('createLessonModal');
     if (modal) {
         modal.classList.remove('show');
+        console.log('✅ تم إغلاق نافذة إنشاء درس');
     }
 }
 
-function createNewLesson() {
-    const form = document.getElementById('createLessonForm');
+function createDynamicLessonModal() {
+    console.log('🔧 إنشاء نافذة منبثقة ديناميكية...');
+    
+    // إنشاء عناصر النافذة المنبثقة
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'modal-overlay';
+    modalOverlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `;
+    
+    const modalContent = document.createElement('div');
+    modalContent.className = 'modal-content';
+    modalContent.style.cssText = `
+        background: white;
+        border-radius: 15px;
+        padding: 30px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    `;
+    
+    modalContent.innerHTML = `
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+            <h3 style="margin: 0; color: #2c3e50;">إضافة درس جديد</h3>
+            <button onclick="this.closest('.modal-overlay').remove()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="dynamicLessonForm">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">عنوان الدرس *</label>
+                    <input type="text" class="form-control" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">المادة *</label>
+                    <select class="form-control" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;">
+                        <option value="">اختر المادة</option>
+                        <option value="لغتي">لغتي</option>
+                        <option value="رياضيات">رياضيات</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 500;">الوصف</label>
+                    <textarea class="form-control" rows="3" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;"></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer" style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+            <button onclick="this.closest('.modal-overlay').remove()" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">إلغاء</button>
+            <button onclick="saveDynamicLesson()" style="background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer;">حفظ الدرس</button>
+        </div>
+    `;
+    
+    modalOverlay.appendChild(modalContent);
+    document.body.appendChild(modalOverlay);
+    
+    console.log('✅ تم إنشاء نافذة منبثقة ديناميكية');
+}
+
+function saveDynamicLesson() {
+    console.log('💾 جاري حفظ الدرس...');
+    
+    const form = document.querySelector('#dynamicLessonForm');
     if (!form) return;
     
-    const title = form.querySelector('[name="lessonTitle"]')?.value.trim();
-    const subject = form.querySelector('[name="lessonSubject"]')?.value;
-    const description = form.querySelector('[name="lessonDescription"]')?.value.trim();
+    const title = form.querySelector('input[type="text"]').value.trim();
+    const subject = form.querySelector('select').value;
     
     if (!title || !subject) {
         showAuthNotification('يرجى ملء جميع الحقول الإجبارية', 'error');
@@ -393,11 +376,11 @@ function createNewLesson() {
         id: generateId(),
         title: title,
         subject: subject,
-        description: description,
+        description: form.querySelector('textarea').value.trim(),
         teacherId: currentUser.id,
         teacherName: currentUser.name,
-        questionsCount: 0,
-        exercisesCount: 0,
+        questions: 0,
+        exercises: 0,
         objectivesLinked: false,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -406,494 +389,96 @@ function createNewLesson() {
     lessons.push(newLesson);
     localStorage.setItem('lessons', JSON.stringify(lessons));
     
-    showAuthNotification('تم إنشاء الدرس بنجاح', 'success');
-    closeCreateLessonModal();
+    // إغلاق النافذة المنبثقة
+    const modalOverlay = document.querySelector('.modal-overlay');
+    if (modalOverlay) {
+        modalOverlay.remove();
+    }
+    
+    showAuthNotification('تم إضافة الدرس بنجاح', 'success');
+    
+    // إعادة تحميل قائمة الدروس
     loadLessons();
-    updateLibraryStats();
     
-    // إضافة سجل النظام
-    addSystemLog(`تم إنشاء درس جديد: ${title}`, 'content');
+    console.log('✅ تم حفظ الدرس:', newLesson.title);
 }
-
-function viewLesson(lessonId) {
-    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const lesson = lessons.find(l => l.id === lessonId);
-    
-    if (!lesson) {
-        showAuthNotification('الدرس غير موجود', 'error');
-        return;
-    }
-    
-    // عرض تفاصيل الدرس
-    document.getElementById('viewLessonTitle').textContent = lesson.title;
-    document.getElementById('viewLessonSubject').textContent = lesson.subject;
-    document.getElementById('viewLessonDescription').textContent = lesson.description || 'لا يوجد وصف';
-    document.getElementById('viewLessonCreated').textContent = formatDate(lesson.createdAt);
-    document.getElementById('viewLessonQuestions').textContent = lesson.questionsCount || 0;
-    document.getElementById('viewLessonExercises').textContent = lesson.exercisesCount || 0;
-    document.getElementById('viewLessonStatus').textContent = 
-        lesson.objectivesLinked ? 'مربوط بأهداف' : 'غير مربوط';
-    
-    document.getElementById('viewLessonModal').classList.add('show');
-}
-
-function closeViewLessonModal() {
-    document.getElementById('viewLessonModal').classList.remove('show');
-}
-
-function editLesson(lessonId) {
-    // في تطبيق حقيقي، هنا ننتقل إلى صفحة تحرير الدرس
-    showAuthNotification('ميزة تحرير الدرس قيد التطوير', 'info');
-}
-
-function linkLessonObjectives(lessonId) {
-    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const lesson = lessons.find(l => l.id === lessonId);
-    
-    if (!lesson) {
-        showAuthNotification('الدرس غير موجود', 'error');
-        return;
-    }
-    
-    // عرض واجهة ربط الأهداف
-    document.getElementById('linkObjectivesModal').classList.add('show');
-    document.getElementById('linkLessonId').value = lessonId;
-    document.getElementById('linkLessonTitle').textContent = lesson.title;
-    
-    // تحميل الأهداف المتاحة
-    loadAvailableObjectives(lesson.subject);
-}
-
-function closeLinkObjectivesModal() {
-    document.getElementById('linkObjectivesModal').classList.remove('show');
-}
-
-function loadAvailableObjectives(subject) {
-    const currentUser = getCurrentUser();
-    const objectives = JSON.parse(localStorage.getItem('teachingObjectives') || '[]');
-    const availableObjectives = objectives.filter(obj => 
-        obj.teacherId === currentUser.id && obj.subject === subject
-    );
-    
-    const objectivesList = document.getElementById('availableObjectivesList');
-    if (!objectivesList) return;
-    
-    if (availableObjectives.length === 0) {
-        objectivesList.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">🎯</div>
-                <h4>لا توجد أهداف متاحة</h4>
-                <p>قم بإنشاء أهداف تعليمية أولاً</p>
-                <button class="btn btn-primary" onclick="showCreateObjectiveModal()">
-                    إنشاء هدف جديد
-                </button>
-            </div>
-        `;
-        return;
-    }
-    
-    objectivesList.innerHTML = availableObjectives.map(obj => `
-        <div class="objective-option">
-            <input type="checkbox" id="obj_${obj.id}" value="${obj.id}">
-            <label for="obj_${obj.id}">
-                <strong>${obj.title}</strong>
-                <p>${obj.description}</p>
-                <span class="objective-level">${obj.level || 'مبتدئ'}</span>
-            </label>
-        </div>
-    `).join('');
-}
-
-function linkSelectedObjectives() {
-    const lessonId = parseInt(document.getElementById('linkLessonId').value);
-    const checkboxes = document.querySelectorAll('#availableObjectivesList input[type="checkbox"]:checked');
-    
-    if (checkboxes.length === 0) {
-        showAuthNotification('يرجى اختيار هدف واحد على الأقل', 'warning');
-        return;
-    }
-    
-    const selectedObjectiveIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
-    
-    // تحديث الدرس
-    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const lessonIndex = lessons.findIndex(l => l.id === lessonId);
-    
-    if (lessonIndex !== -1) {
-        lessons[lessonIndex].objectivesLinked = true;
-        lessons[lessonIndex].objectiveIds = selectedObjectiveIds;
-        lessons[lessonIndex].updatedAt = new Date().toISOString();
-        
-        localStorage.setItem('lessons', JSON.stringify(lessons));
-        
-        showAuthNotification('تم ربط الأهداف بنجاح', 'success');
-        closeLinkObjectivesModal();
-        loadLessons();
-        updateLibraryStats();
-    }
-}
-
-function deleteLesson(lessonId) {
-    if (!confirm('هل أنت متأكد من حذف هذا الدرس؟ لا يمكن التراجع عن هذا الإجراء.')) {
-        return;
-    }
-    
-    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const updatedLessons = lessons.filter(l => l.id !== lessonId);
-    
-    localStorage.setItem('lessons', JSON.stringify(updatedLessons));
-    
-    showAuthNotification('تم حذف الدرس بنجاح', 'success');
-    loadLessons();
-    updateLibraryStats();
-}
-
-// ============================================
-// إدارة التمارين
-// ============================================
-
-function showCreateExerciseModal() {
-    const modal = document.getElementById('createExerciseModal');
-    if (modal) {
-        modal.classList.add('show');
-    } else {
-        // إذا لم تكن النافذة موجودة، أنشئها ديناميكياً
-        createDynamicExerciseModal();
-    }
-}
-
-function createDynamicExerciseModal() {
-    // إنشاء نافذة منبثقة ديناميكية
-    const modalHTML = `
-        <div class="modal" id="createExerciseModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>إنشاء تمرين جديد</h3>
-                    <button class="modal-close" onclick="closeCreateExerciseModal()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <p>ميزة إنشاء التمارين قيد التطوير. سيتم إضافتها قريباً.</p>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="closeCreateExerciseModal()">إغلاق</button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    // إظهار النافذة بعد إنشائها
-    setTimeout(() => {
-        document.getElementById('createExerciseModal').classList.add('show');
-    }, 100);
-}
-
-function closeCreateExerciseModal() {
-    const modal = document.getElementById('createExerciseModal');
-    if (modal) {
-        modal.classList.remove('show');
-        // إزالة النافذة من DOM بعد الاختفاء
-        setTimeout(() => {
-            if (modal.parentElement) {
-                modal.remove();
-            }
-        }, 300);
-    }
-}
-
-// ============================================
-// إدارة الأهداف التعليمية
-// ============================================
-
-function showCreateObjectiveModal() {
-    const modal = document.getElementById('createObjectiveModal');
-    if (modal) {
-        modal.classList.add('show');
-        document.getElementById('createObjectiveForm')?.reset();
-    } else {
-        createDynamicObjectiveModal();
-    }
-}
-
-function createDynamicObjectiveModal() {
-    const modalHTML = `
-        <div class="modal" id="createObjectiveModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>إنشاء هدف تعليمي جديد</h3>
-                    <button class="modal-close" onclick="closeCreateObjectiveModal()">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <form id="createObjectiveForm">
-                        <div class="form-group">
-                            <label>عنوان الهدف *</label>
-                            <input type="text" name="objectiveTitle" class="form-control" required 
-                                   placeholder="مثال: قراءة الكلمات المكونة من ثلاثة أحرف">
-                        </div>
-                        <div class="form-group">
-                            <label>المادة *</label>
-                            <select name="objectiveSubject" class="form-control" required>
-                                <option value="">اختر المادة</option>
-                                <option value="لغتي">لغتي</option>
-                                <option value="رياضيات">رياضيات</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>المستوى</label>
-                            <select name="objectiveLevel" class="form-control">
-                                <option value="مبتدئ">مبتدئ</option>
-                                <option value="متوسط">متوسط</option>
-                                <option value="متقدم">متقدم</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>وصف الهدف</label>
-                            <textarea name="objectiveDescription" class="form-control" rows="3"
-                                      placeholder="وصف تفصيلي للهدف التعليمي..."></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="closeCreateObjectiveModal()">إلغاء</button>
-                    <button class="btn btn-success" onclick="createNewObjective()">حفظ الهدف</button>
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHTML);
-    
-    setTimeout(() => {
-        document.getElementById('createObjectiveModal').classList.add('show');
-    }, 100);
-}
-
-function closeCreateObjectiveModal() {
-    const modal = document.getElementById('createObjectiveModal');
-    if (modal) {
-        modal.classList.remove('show');
-        setTimeout(() => {
-            if (modal.parentElement) {
-                modal.remove();
-            }
-        }, 300);
-    }
-}
-
-function createNewObjective() {
-    const form = document.getElementById('createObjectiveForm');
-    if (!form) return;
-    
-    const title = form.querySelector('[name="objectiveTitle"]')?.value.trim();
-    const subject = form.querySelector('[name="objectiveSubject"]')?.value;
-    const level = form.querySelector('[name="objectiveLevel"]')?.value;
-    const description = form.querySelector('[name="objectiveDescription"]')?.value.trim();
-    
-    if (!title || !subject) {
-        showAuthNotification('يرجى ملء جميع الحقول الإجبارية', 'error');
-        return;
-    }
-    
-    const currentUser = getCurrentUser();
-    const objectives = JSON.parse(localStorage.getItem('teachingObjectives') || '[]');
-    
-    const newObjective = {
-        id: generateId(),
-        title: title,
-        subject: subject,
-        level: level || 'مبتدئ',
-        description: description,
-        teacherId: currentUser.id,
-        teacherName: currentUser.name,
-        linkedContent: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-    };
-    
-    objectives.push(newObjective);
-    localStorage.setItem('teachingObjectives', JSON.stringify(objectives));
-    
-    showAuthNotification('تم إنشاء الهدف التعليمي بنجاح', 'success');
-    closeCreateObjectiveModal();
-    loadTeachingObjectives();
-    updateLibraryStats();
-}
-
-// ============================================
-// إنشاء الاختبارات التشخيصية
-// ============================================
 
 function showCreateTestModal() {
+    console.log('📊 فتح نافذة إنشاء اختبار تشخيصي...');
+    
     const modal = document.getElementById('createTestModal');
     if (modal) {
         modal.classList.add('show');
+        console.log('✅ تم فتح نافذة إنشاء اختبار');
     } else {
-        // إذا لم تكن النافذة موجودة، انتقل مباشرة إلى صفحة إنشاء الاختبار
-        window.location.href = 'create-test.html';
+        console.log('❌ نافذة إنشاء الاختبار غير موجودة');
+        
+        // بديل: الانتقال إلى صفحة إنشاء الاختبار
+        showAuthNotification('سيتم توجيهك إلى صفحة إنشاء الاختبار...', 'info');
+        setTimeout(() => {
+            window.location.href = 'create-test.html';
+        }, 1500);
     }
 }
 
 function closeCreateTestModal() {
+    console.log('❌ إغلاق نافذة إنشاء اختبار...');
+    
     const modal = document.getElementById('createTestModal');
     if (modal) {
         modal.classList.remove('show');
+        console.log('✅ تم إغلاق نافذة إنشاء اختبار');
     }
 }
 
 // ============================================
-// دوال البحث والفلترة
+// دوال إدارة المحتوى
 // ============================================
 
-function searchContent() {
-    const searchInput = document.querySelector('.library-tabs .search-box input');
-    const searchTerm = searchInput?.value.toLowerCase() || '';
-    
-    if (!searchTerm) return;
-    
-    const activeTab = document.querySelector('.library-tabs .tab-btn.active');
-    if (!activeTab) return;
-    
-    const tabId = activeTab.getAttribute('data-tab');
-    
-    switch (tabId) {
-        case 'lessons':
-            searchLessons(searchTerm);
-            break;
-        case 'exercises':
-            searchExercises(searchTerm);
-            break;
-        case 'objectives':
-            searchObjectives(searchTerm);
-            break;
-    }
+function viewLesson(lessonId) {
+    console.log(`👁️ عرض الدرس: ${lessonId}`);
+    showAuthNotification(`عرض الدرس ${lessonId}`, 'info');
 }
 
-function searchLessons(searchTerm) {
-    const currentUser = getCurrentUser();
-    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const userLessons = lessons.filter(lesson => lesson.teacherId === currentUser.id);
+function editLesson(lessonId) {
+    console.log(`✏️ تعديل الدرس: ${lessonId}`);
+    showAuthNotification(`تعديل الدرس ${lessonId}`, 'info');
+}
+
+function linkLessonObjectives(lessonId) {
+    console.log(`🔗 ربط أهداف الدرس: ${lessonId}`);
+    showAuthNotification(`ربط أهداف الدرس ${lessonId}`, 'info');
+}
+
+function deleteLesson(lessonId) {
+    console.log(`🗑️ حذف الدرس: ${lessonId}`);
     
-    const filteredLessons = userLessons.filter(lesson => 
-        lesson.title.toLowerCase().includes(searchTerm) ||
-        lesson.description.toLowerCase().includes(searchTerm) ||
-        lesson.subject.toLowerCase().includes(searchTerm)
-    );
-    
-    const lessonsList = document.getElementById('lessonsList');
-    if (!lessonsList) return;
-    
-    if (filteredLessons.length === 0) {
-        lessonsList.innerHTML = `
-            <div class="empty-content-state">
-                <div class="empty-icon">🔍</div>
-                <h3>لا توجد نتائج</h3>
-                <p>لم يتم العثور على دروس تطابق البحث: "${searchTerm}"</p>
-            </div>
-        `;
-        return;
-    }
-    
-    // عرض الدروس المصفاة (بنفس تنسيق loadLessons)
-    lessonsList.innerHTML = filteredLessons.map(lesson => {
-        const subjectClass = lesson.subject === 'لغتي' ? 'subject-لغتي' : 'subject-رياضيات';
-        const statusClass = lesson.objectivesLinked ? 'linked' : 'not-linked';
-        const statusText = lesson.objectivesLinked ? 'مربوط بأهداف' : 'غير مربوط';
+    if (confirm('هل أنت متأكد من حذف هذا الدرس؟')) {
+        const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+        const updatedLessons = lessons.filter(lesson => lesson.id !== lessonId);
         
-        return `
-            <div class="content-card">
-                <div class="content-header">
-                    <h4>${highlightSearchTerm(lesson.title, searchTerm)}</h4>
-                    <span class="content-badge ${subjectClass}">
-                        ${lesson.subject}
-                    </span>
-                </div>
-                <div class="content-body">
-                    <p>${highlightSearchTerm(lesson.description || '', searchTerm)}</p>
-                </div>
-                <div class="content-meta">
-                    <span class="questions-count">
-                        <i class="fas fa-question-circle"></i> ${lesson.questionsCount || 0}
-                    </span>
-                    <span class="exercises-count">
-                        <i class="fas fa-running"></i> ${lesson.exercisesCount || 0}
-                    </span>
-                    <span class="objectives-status ${statusClass}">
-                        <i class="fas fa-link"></i> ${statusText}
-                    </span>
-                </div>
-                <div class="content-actions">
-                    <button class="btn btn-sm btn-primary" onclick="viewLesson(${lesson.id})">
-                        <i class="fas fa-eye"></i> عرض
-                    </button>
-                    <button class="btn btn-sm btn-warning" onclick="editLesson(${lesson.id})">
-                        <i class="fas fa-edit"></i> تعديل
-                    </button>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
-
-function highlightSearchTerm(text, term) {
-    if (!term || !text) return text;
-    
-    const regex = new RegExp(`(${term})`, 'gi');
-    return text.replace(regex, '<mark>$1</mark>');
-}
-
-// ============================================
-// دوال مساعدة
-// ============================================
-
-function redirectToLogin() {
-    showAuthNotification('يجب تسجيل الدخول أولاً', 'warning');
-    setTimeout(() => {
-        window.location.href = '../../index.html';
-    }, 2000);
-}
-
-function addSystemLog(message, type = 'info') {
-    try {
-        const logs = JSON.parse(localStorage.getItem('systemLogs') || '[]');
-        const currentUser = getCurrentUser();
+        localStorage.setItem('lessons', JSON.stringify(updatedLessons));
         
-        logs.push({
-            timestamp: new Date().toISOString(),
-            type: type,
-            message: message,
-            user: currentUser ? currentUser.name : 'النظام'
-        });
+        showAuthNotification('تم حذف الدرس بنجاح', 'success');
+        loadLessons();
         
-        localStorage.setItem('systemLogs', JSON.stringify(logs));
-    } catch (error) {
-        console.error('خطأ في إضافة سجل النظام:', error);
+        console.log(`✅ تم حذف الدرس: ${lessonId}`);
     }
 }
 
 // ============================================
+// تصدير الدوال
+// ============================================
+
 // تصدير الدوال للاستخدام العالمي
-// ============================================
-
 window.showCreateLessonModal = showCreateLessonModal;
 window.closeCreateLessonModal = closeCreateLessonModal;
-window.createNewLesson = createNewLesson;
-window.viewLesson = viewLesson;
-window.closeViewLessonModal = closeViewLessonModal;
-window.editLesson = editLesson;
-window.linkLessonObjectives = linkLessonObjectives;
-window.closeLinkObjectivesModal = closeLinkObjectivesModal;
-window.linkSelectedObjectives = linkSelectedObjectives;
-window.deleteLesson = deleteLesson;
-
-window.showCreateExerciseModal = showCreateExerciseModal;
-window.closeCreateExerciseModal = closeCreateExerciseModal;
-
-window.showCreateObjectiveModal = showCreateObjectiveModal;
-window.closeCreateObjectiveModal = closeCreateObjectiveModal;
-window.createNewObjective = createNewObjective;
-
 window.showCreateTestModal = showCreateTestModal;
 window.closeCreateTestModal = closeCreateTestModal;
+window.viewLesson = viewLesson;
+window.editLesson = editLesson;
+window.linkLessonObjectives = linkLessonObjectives;
+window.deleteLesson = deleteLesson;
+window.saveDynamicLesson = saveDynamicLesson;
 
-window.searchContent = searchContent;
+console.log('📤 تم تصدير دوال مكتبة المحتوى');

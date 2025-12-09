@@ -1,330 +1,0 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إنشاء اختبار تشخيصي - ميسر التعلم</title>
-    
-    <!-- الخطوط -->
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- الأنماط -->
-    <link rel="stylesheet" href="../assets/css/main.css">
-    <link rel="stylesheet" href="../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../assets/css/teacher.css">
-    <link rel="stylesheet" href="../assets/css/tests.css">
-    
-    <!-- الأيقونة -->
-    <link rel="icon" href="../assets/images/favicon.ico" type="image/x-icon">
-</head>
-<body>
-    <!-- الشريط الجانبي -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <div class="logo">
-                <img src="../assets/images/logo.png" alt="شعار ميسر التعلم">
-                <h2>ميسر التعلم</h2>
-            </div>
-        </div>
-        
-        <ul class="sidebar-menu">
-            <li><a href="dashboard.html"><span class="menu-icon">🏠</span> لوحة التحكم</a></li>
-            <li><a href="students.html"><span class="menu-icon">👨‍🎓</span> الطلاب</a></li>
-            <li><a href="lessons.html"><span class="menu-icon">📚</span> الدروس</a></li>
-            <li><a href="assignments.html"><span class="menu-icon">📝</span> الواجبات</a></li>
-            <li><a href="tests.html" class="active"><span class="menu-icon">📊</span> الاختبارات التشخيصية</a></li>
-            <li><a href="library.html"><span class="menu-icon">📚</span> مكتبة المحتوى</a></li>
-            <li><a href="schedule.html"><span class="menu-icon">📅</span> الجدول الدراسي</a></li>
-            <li><a href="committee.html"><span class="menu-icon">👥</span> لجنة صعوبات التعلم</a></li>
-            <li><a href="messages.html"><span class="menu-icon">✉️</span> المراسلات</a></li>
-            <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span> تسجيل الخروج</a></li>
-        </ul>
-    </aside>
-
-    <!-- المحتوى الرئيسي -->
-    <main class="main-content-dashboard">
-        <!-- رأس لوحة التحكم -->
-        <header class="dashboard-header">
-            <div class="header-actions">
-                <button class="btn btn-secondary" onclick="window.location.href='tests.html'">
-                    <i class="fas fa-arrow-right"></i> العودة للقائمة
-                </button>
-                <button class="btn btn-success" onclick="saveTest()">
-                    <i class="fas fa-save"></i> حفظ الاختبار
-                </button>
-            </div>
-            
-            <div class="user-info">
-                <div class="user-welcome">
-                    <div class="welcome-text">مرحباً</div>
-                    <div class="user-name" id="userName"></div>
-                </div>
-                <div class="user-avatar" id="userAvatar"></div>
-            </div>
-        </header>
-
-        <!-- محتوى لوحة التحكم -->
-        <div class="dashboard-content">
-            <div class="content-header">
-                <h1><i class="fas fa-plus-circle"></i> إنشاء اختبار تشخيصي جديد</h1>
-            </div>
-
-            <!-- معلومات الاختبار الأساسية -->
-            <div class="test-creation-container">
-                <div class="test-basic-info">
-                    <h2><i class="fas fa-info-circle"></i> معلومات الاختبار</h2>
-                    
-                    <div class="form-group-row">
-                        <div class="form-group">
-                            <label for="testTitle">عنوان الاختبار *</label>
-                            <input type="text" id="testTitle" class="form-control" 
-                                   placeholder="أدخل عنوان الاختبار التشخيصي" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="testSubject">المادة *</label>
-                            <select id="testSubject" class="form-control" required>
-                                <option value="">اختر المادة</option>
-                                <option value="لغتي">لغتي</option>
-                                <option value="رياضيات">رياضيات</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="testDescription">وصف الاختبار (اختياري)</label>
-                        <textarea id="testDescription" class="form-control" rows="3"
-                                  placeholder="أدخل وصفاً موجزاً للاختبار..."></textarea>
-                    </div>
-                    
-                    <div class="passing-criteria">
-                        <label>محك الاجتياز (نسبة النجاح)</label>
-                        <div class="criteria-input">
-                            <input type="number" id="passingCriteria" value="60" min="0" max="100">
-                            <span>%</span>
-                            <small>يجب على الطالب تحقيق هذه النسبة لاجتياز الاختبار</small>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- أنواع الأسئلة -->
-                <div class="question-types-section">
-                    <h2><i class="fas fa-question-circle"></i> أنواع الأسئلة المتاحة</h2>
-                    
-                    <div class="question-types-grid">
-                        <div class="question-type-card" data-type="multiple-choice">
-                            <div class="question-type-icon">🔘</div>
-                            <div class="question-type-title">اختيار من متعدد</div>
-                            <div class="question-type-desc">أسئلة متعددة الخيارات</div>
-                        </div>
-                        
-                        <div class="question-type-card" data-type="drag-drop">
-                            <div class="question-type-icon">↔️</div>
-                            <div class="question-type-title">سحب وإفلات</div>
-                            <div class="question-type-desc">سحب العناصر إلى أماكنها</div>
-                        </div>
-                        
-                        <div class="question-type-card" data-type="multiple-choice-attachment">
-                            <div class="question-type-icon">📎</div>
-                            <div class="question-type-title">اختيار مع مرفق</div>
-                            <div class="question-type-desc">صورة/فيديو/صوت مع خيارات</div>
-                        </div>
-                        
-                        <div class="question-type-card" data-type="open-ended">
-                            <div class="question-type-icon">✍️</div>
-                            <div class="question-type-title">سؤال مفتوح</div>
-                            <div class="question-type-desc">إجابة نصية حرة</div>
-                        </div>
-                        
-                        <div class="question-type-card" data-type="auto-reading">
-                            <div class="question-type-icon">📖</div>
-                            <div class="question-type-title">تقييم القراءة الآلي</div>
-                            <div class="question-type-desc">تسجيل صوتي وتحليل آلي</div>
-                        </div>
-                        
-                        <div class="question-type-card" data-type="auto-spelling">
-                            <div class="question-type-icon">✏️</div>
-                            <div class="question-type-title">تقييم الإملاء الآلي</div>
-                            <div class="question-type-desc">كتابة يدوية وتحليل آلي</div>
-                        </div>
-                        
-                        <div class="question-type-card" data-type="manual-reading">
-                            <div class="question-type-icon">👂</div>
-                            <div class="question-type-title">تقييم القراءة اليدوي</div>
-                            <div class="question-type-desc">تصحيح يدوي للقراءة</div>
-                        </div>
-                        
-                        <div class="question-type-card" data-type="manual-spelling">
-                            <div class="question-type-icon">✍️</div>
-                            <div class="question-type-title">تقييم الإملاء اليدوي</div>
-                            <div class="question-type-desc">تصحيح يدوي للإملاء</div>
-                        </div>
-                        
-                        <div class="question-type-card" data-type="missing-letter">
-                            <div class="question-type-icon">🔤</div>
-                            <div class="question-type-title">أكمل الحرف الناقص</div>
-                            <div class="question-type-desc">إكمال الكلمات الناقصة</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- محرر الأسئلة -->
-                <div class="question-editor-section">
-                    <h2><i class="fas fa-edit"></i> إضافة سؤال جديد</h2>
-                    
-                    <div class="form-group">
-                        <label for="questionTitle">عنوان السؤال *</label>
-                        <input type="text" id="questionTitle" class="form-control" 
-                               placeholder="أدخل نص السؤال...">
-                    </div>
-                    
-                    <div id="questionEditor">
-                        <!-- واجهة نوع السؤال تظهر هنا ديناميكياً -->
-                    </div>
-                    
-                    <div class="text-center mt-3">
-                        <button class="btn btn-primary btn-lg" onclick="addNewQuestion()">
-                            <i class="fas fa-plus"></i> إضافة السؤال إلى الاختبار
-                        </button>
-                    </div>
-                </div>
-
-                <!-- قائمة الأسئلة المضافة -->
-                <div class="questions-list-section">
-                    <h2><i class="fas fa-list-ol"></i> الأسئلة المضافة (<span id="questionsCount">0</span>)</h2>
-                    
-                    <div id="questionsList">
-                        <!-- الأسئلة المضافة تظهر هنا -->
-                    </div>
-                    
-                    <div class="test-actions text-center">
-                        <button class="btn btn-success btn-lg" onclick="saveTest()">
-                            <i class="fas fa-save"></i> حفظ الاختبار
-                        </button>
-                        <button class="btn btn-secondary" onclick="window.location.href='tests.html'">
-                            <i class="fas fa-times"></i> إلغاء
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- السكريبتات -->
-    <script src="../assets/js/auth.js"></script>
-    <script src="../assets/js/tests.js"></script>
-    
-    <script>
-        // تحديث عدد الأسئلة
-        function updateQuestionsCount() {
-            const count = currentTestQuestions.length;
-            document.getElementById('questionsCount').textContent = count;
-        }
-        
-        // تحديث قائمة الأسئلة
-        function updateQuestionsList() {
-            const questionsList = document.getElementById('questionsList');
-            
-            if (currentTestQuestions.length === 0) {
-                questionsList.innerHTML = `
-                    <div class="empty-state">
-                        <div class="empty-icon">❓</div>
-                        <h3>لا توجد أسئلة</h3>
-                        <p>قم بإضافة أسئلة لاختبارك</p>
-                    </div>
-                `;
-            } else {
-                questionsList.innerHTML = currentTestQuestions.map((q, index) => `
-                    <div class="question-item">
-                        <div class="question-header">
-                            <div class="question-number">${index + 1}</div>
-                            <div class="question-title-input">${q.question}</div>
-                            <div class="question-actions">
-                                <button class="btn btn-sm btn-primary" onclick="editQuestion(${index})">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-danger" onclick="removeQuestion(${index})">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="question-info">
-                            <span class="badge">${getQuestionTypeName(q.type)}</span>
-                            <span class="badge">${q.points} نقطة</span>
-                            ${q.objectiveId ? '<span class="badge badge-success">مربوط بهدف</span>' : ''}
-                        </div>
-                    </div>
-                `).join('');
-            }
-            
-            updateQuestionsCount();
-        }
-        
-        // دالة مساعدة للحصول على اسم نوع السؤال
-        function getQuestionTypeName(type) {
-            const types = {
-                'multiple-choice': 'اختيار من متعدد',
-                'drag-drop': 'سحب وإفلات',
-                'multiple-choice-attachment': 'اختيار من متعدد مع مرفق',
-                'open-ended': 'سؤال مفتوح',
-                'auto-reading': 'تقييم القراءة الآلي',
-                'auto-spelling': 'تقييم الإملاء الآلي',
-                'manual-reading': 'تقييم القراءة اليدوي',
-                'manual-spelling': 'تقييم الإملاء اليدوي',
-                'missing-letter': 'أكمل الحرف الناقص'
-            };
-            return types[type] || type;
-        }
-        
-        // تعيين تحديث قائمة الأسئلة عند إضافة سؤال
-        window.addNewQuestion = function() {
-            const questionTitle = document.getElementById('questionTitle').value.trim();
-            const questionPoints = parseInt(document.getElementById('questionPoints')?.value) || 1;
-            
-            if (!questionTitle) {
-                showAuthNotification('يرجى إدخال عنوان للسؤال', 'warning');
-                return;
-            }
-            
-            // بناء كائن السؤال (هذا مثال مبسط)
-            const newQuestion = {
-                id: generateId(),
-                type: currentQuestionType,
-                question: questionTitle,
-                points: questionPoints,
-                createdAt: new Date().toISOString()
-            };
-            
-            currentTestQuestions.push(newQuestion);
-            updateQuestionsList();
-            
-            // إعادة تعيين النموذج
-            document.getElementById('questionTitle').value = '';
-            showAuthNotification('تم إضافة السؤال بنجاح', 'success');
-        };
-        
-        // تحميل الصفحة
-        document.addEventListener('DOMContentLoaded', function() {
-            // تحديث واجهة المستخدم
-            const user = getCurrentUser();
-            if (user) {
-                document.getElementById('userName').textContent = user.name;
-                document.getElementById('userAvatar').textContent = user.name.charAt(0);
-            }
-            
-            // تحميل الاختبار للتعديل إذا كان هناك معرّف في URL
-            const urlParams = new URLSearchParams(window.location.search);
-            const editId = urlParams.get('edit');
-            
-            if (editId) {
-                loadTestForEdit(parseInt(editId));
-            }
-            
-            updateQuestionsList();
-        });
-    </script>
-</body>
-</html>

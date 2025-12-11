@@ -1,0 +1,43 @@
+{
+  "tests": [
+    {
+      "id": 1,
+      "teacherId": 2,
+      "title": "اختبار القراءة الأساسية",
+      "subject": "لغتي",
+      "description": "اختبار تشخيصي لمهارات القراءة الأساسية",
+      "createdDate": "2024-01-15",
+      "questionCount": 10,
+      "objectivesLinked": true,
+      "status": "active",
+      "questions": [
+        {
+          "id": 1,
+          "type": "mcq",
+          "text": "ما هو الحرف الأول في كلمة 'قلم'؟",
+          "passingCriteria": 70,
+          "options": [
+            {"id": 0, "text": "ق"},
+            {"id": 1, "text": "ل"},
+            {"id": 2, "text": "م"},
+            {"id": 3, "text": "أ"}
+          ],
+          "correctAnswer": 0,
+          "linkedObjectiveId": 1
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "teacherId": 2,
+      "title": "اختبار العمليات الحسابية",
+      "subject": "رياضيات",
+      "description": "اختبار تشخيصي للعمليات الحسابية الأساسية",
+      "createdDate": "2024-01-18",
+      "questionCount": 8,
+      "objectivesLinked": false,
+      "status": "active",
+      "questions": []
+    }
+  ]
+}

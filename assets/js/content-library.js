@@ -1,512 +1,957 @@
-// إدارة مكتبة المحتوى التعليمي
-document.addEventListener('DOMContentLoaded', function() {
-    if (window.location.pathname.includes('content-library.html')) {
-        loadContentLibrary();
-    }
+/* 
+    content-library.js
+    منطق مكتبة المحتوى التعليمي (للمعلم)
+
+    التخزين حالياً يتم في localStorage على مستوى المتصفح؛
+    ويمكن لاحقاً استبداله بربط مع ملفات JSON أو API حسب ما هو مخطط في مجلد data (tests.json, lessons.json, assignments.json). 
+*/
+
+let tests = [];
+let lessons = [];
+let objectives = [];
+let assignments = [];
+let currentImportType = null;
+
+/* مفاتيح التخزين */
+const STORAGE_KEYS = {
+    tests: 'muyasir_teacher_tests',
+    lessons: 'muyasir_teacher_lessons',
+    objectives: 'muyasir_teacher_objectives',
+    assignments: 'muyasir_teacher_assignments'
+};
+
+/* تشغيل عند تحميل الصفحة */
+document.addEventListener('DOMContentLoaded', () => {
+    loadAllData();
+    renderAll();
 });
 
-function loadContentLibrary() {
-    loadTests();
-    loadLessons();
-    loadObjectives();
-    loadAssignments();
+/* -----------------------------
+   تحميل / حفظ البيانات
+----------------------------- */
+
+function loadAllData() {
+    tests = loadFromStorage(STORAGE_KEYS.tests);
+    lessons = loadFromStorage(STORAGE_KEYS.lessons);
+    objectives = loadFromStorage(STORAGE_KEYS.objectives);
+    assignments = loadFromStorage(STORAGE_KEYS.assignments);
 }
 
-function loadTests() {
-    const testsGrid = document.getElementById('testsGrid');
-    if (!testsGrid) return;
+function loadFromStorage(key) {
+    try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+        console.error('خطأ في قراءة البيانات من التخزين:', key, e);
+        return [];
+    }
+}
 
-    const tests = JSON.parse(localStorage.getItem('tests') || '[]');
-    const currentTeacher = getCurrentUser();
-    const teacherTests = tests.filter(test => test.teacherId === currentTeacher.id);
+function saveToStorage(key, value) {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+    } catch (e) {
+        console.error('خطأ في حفظ البيانات في التخزين:', key, e);
+    }
+}
 
-    if (teacherTests.length === 0) {
-        testsGrid.innerHTML = `
-            <div class="empty-content-state">
-                <div class="empty-icon">📝</div>
-                <h3>لا توجد اختبارات تشخيصية</h3>
-                <p>ابدأ بإنشاء أول اختبار تشخيصي</p>
-                <button class="btn btn-success" onclick="showCreateTestModal()">إنشاء اختبار</button>
-            </div>
-        `;
+function renderAll() {
+    renderTests();
+    renderLessons();
+    renderObjectives();
+    renderAssignments();
+}
+
+/* -----------------------------
+   التبويبات
+----------------------------- */
+
+function switchContentTab(tabName) {
+    const tabs = document.querySelectorAll('.content-tab');
+    const tabButtons = document.querySelectorAll('.content-tabs .settings-tab');
+
+    tabs.forEach(tab => tab.classList.remove('active'));
+    tabButtons.forEach(btn => btn.classList.remove('active'));
+
+    const activeTab = document.getElementById(`tab-${tabName}`);
+    const activeBtn = document.querySelector(`.content-tabs .settings-tab[data-tab="${tabName}"]`);
+
+    if (activeTab) activeTab.classList.add('active');
+    if (activeBtn) activeBtn.classList.add('active');
+}
+
+/* -----------------------------
+   أدوات مساعدة عامة
+----------------------------- */
+
+function formatDate(dateStr) {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d)) return '-';
+    // يوم/شهر/سنة
+    return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1)
+        .toString()
+        .padStart(2, '0')}/${d.getFullYear()}`;
+}
+
+function getSubjectLabel(subject) {
+    if (subject === 'arabic') return 'لغتي';
+    if (subject === 'math') return 'رياضيات';
+    return '-';
+}
+
+function getSubjectBadgeClass(subject) {
+    if (subject === 'arabic') return 'badge badge-pill badge-subject-ar';
+    if (subject === 'math') return 'badge badge-pill badge-subject-ma';
+    return 'badge badge-pill badge-secondary';
+}
+
+function openModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.add('show');
+    }
+}
+
+function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.classList.remove('show');
+    }
+}
+
+/* حذف عنصر مع تأكيد بسيط */
+function confirmDelete(callback) {
+    if (confirm('هل أنت متأكد من الحذف؟ لا يمكن التراجع عن هذه العملية.')) {
+        callback();
+    }
+}
+
+/* -----------------------------
+   الاختبارات التشخيصية
+----------------------------- */
+
+function renderTests() {
+    const tbody = document.querySelector('#testsTable tbody');
+    const emptyState = document.getElementById('testsEmptyState');
+    const searchValue = (document.getElementById('testsSearchInput')?.value || '').trim().toLowerCase();
+
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    let filtered = tests;
+    if (searchValue) {
+        filtered = tests.filter(t =>
+            t.title.toLowerCase().includes(searchValue) ||
+            (getSubjectLabel(t.subject) || '').toLowerCase().includes(searchValue)
+        );
+    }
+
+    if (!filtered.length) {
+        emptyState && (emptyState.style.display = 'block');
         return;
+    } else {
+        emptyState && (emptyState.style.display = 'none');
     }
 
-    testsGrid.innerHTML = teacherTests.map(test => `
-        <div class="content-card">
-            <div class="content-header">
-                <h4>${test.title}</h4>
-                <span class="content-badge subject-${test.subject}">${test.subject}</span>
-            </div>
-            <div class="content-body">
-                <p>${test.description || 'لا يوجد وصف'}</p>
-                <div class="content-meta">
-                    <span class="questions-count">${test.questions?.length || 0} سؤال</span>
-                    <span class="objectives-status ${test.objectivesLinked ? 'linked' : 'not-linked'}">
-                        ${test.objectivesLinked ? 'تم الربط' : 'لم يتم الربط'}
-                    </span>
+    filtered.forEach(test => {
+        const tr = document.createElement('tr');
+
+        const subjectLabel = getSubjectLabel(test.subject);
+        const linkedStatus = test.linkedObjectives && test.linkedObjectives.length
+            ? '<span class="badge badge-success">تم الربط</span>'
+            : '<span class="badge badge-warning">لم يتم الربط</span>';
+
+        tr.innerHTML = `
+            <td>
+                ${test.title}
+                ${test.description ? `<small>${test.description}</small>` : ''}
+            </td>
+            <td>
+                <span class="${getSubjectBadgeClass(test.subject)}">${subjectLabel}</span>
+            </td>
+            <td>${(test.questions || []).length}</td>
+            <td>${linkedStatus}</td>
+            <td>${formatDate(test.createdAt)}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn btn-sm btn-info" onclick="viewTest('${test.id}')">عرض</button>
+                    <button class="btn btn-sm btn-secondary" onclick="editTest('${test.id}')">تعديل</button>
+                    <button class="btn btn-sm btn-primary" onclick="exportSingle('tests','${test.id}')">تصدير</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteTest('${test.id}')">حذف</button>
                 </div>
-            </div>
-            <div class="content-actions">
-                <button class="btn btn-sm btn-primary" onclick="viewTest(${test.id})" title="عرض">👁️</button>
-                <button class="btn btn-sm btn-warning" onclick="editTest(${test.id})" title="تعديل">✏️</button>
-                <button class="btn btn-sm btn-info" onclick="exportContent('test', ${test.id})" title="تصدير">📤</button>
-                <button class="btn btn-sm btn-secondary" onclick="linkObjectives(${test.id})" title="ربط الأهداف">🎯</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteTest(${test.id})" title="حذف">🗑️</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-function loadLessons() {
-    const lessonsGrid = document.getElementById('lessonsGrid');
-    if (!lessonsGrid) return;
-
-    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const currentTeacher = getCurrentUser();
-    const teacherLessons = lessons.filter(lesson => lesson.teacherId === currentTeacher.id);
-
-    if (teacherLessons.length === 0) {
-        lessonsGrid.innerHTML = `
-            <div class="empty-content-state">
-                <div class="empty-icon">📚</div>
-                <h3>لا توجد دروس</h3>
-                <p>ابدأ بإنشاء أول درس</p>
-                <button class="btn btn-success" onclick="showCreateLessonModal()">إنشاء درس</button>
-            </div>
+            </td>
         `;
-        return;
-    }
 
-    lessonsGrid.innerHTML = teacherLessons.map(lesson => `
-        <div class="content-card">
-            <div class="content-header">
-                <h4>${lesson.title}</h4>
-                <span class="content-badge subject-${lesson.subject}">${lesson.subject}</span>
-            </div>
-            <div class="content-body">
-                <p>${lesson.description || 'لا يوجد وصف'}</p>
-                <div class="content-meta">
-                    <span class="strategy">${lesson.strategy}</span>
-                    <span class="priority">الأولوية: ${lesson.priority || 'غير محدد'}</span>
-                    <span class="objectives-status ${lesson.objectivesLinked ? 'linked' : 'not-linked'}">
-                        ${lesson.objectivesLinked ? 'تم الربط' : 'لم يتم الربط'}
-                    </span>
-                </div>
-            </div>
-            <div class="content-actions">
-                <button class="btn btn-sm btn-primary" onclick="viewLesson(${lesson.id})" title="عرض">👁️</button>
-                <button class="btn btn-sm btn-warning" onclick="editLesson(${lesson.id})" title="تعديل">✏️</button>
-                <button class="btn btn-sm btn-info" onclick="exportContent('lesson', ${lesson.id})" title="تصدير">📤</button>
-                <button class="btn btn-sm btn-secondary" onclick="linkTeachingObjectives(${lesson.id})" title="ربط الأهداف">🎯</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id})" title="حذف">🗑️</button>
-            </div>
-        </div>
-    `).join('');
+        tbody.appendChild(tr);
+    });
 }
 
-function loadObjectives() {
-    const objectivesList = document.getElementById('objectivesList');
-    if (!objectivesList) return;
+function openTestModal() {
+    document.getElementById('testId').value = '';
+    document.getElementById('testTitle').value = '';
+    document.getElementById('testSubject').value = '';
+    document.getElementById('testDescription').value = '';
+    clearQuestions('test');
 
-    const objectives = JSON.parse(localStorage.getItem('objectives') || '[]');
-    const currentTeacher = getCurrentUser();
-    const teacherObjectives = objectives.filter(obj => obj.teacherId === currentTeacher.id);
-
-    if (teacherObjectives.length === 0) {
-        objectivesList.innerHTML = `
-            <div class="empty-content-state">
-                <div class="empty-icon">🎯</div>
-                <h3>لا توجد أهداف قصيرة المدى</h3>
-                <p>ابدأ بإضافة أول هدف قصير المدى</p>
-                <button class="btn btn-success" onclick="showCreateObjectiveModal()">إضافة هدف</button>
-            </div>
-        `;
-        return;
-    }
-
-    objectivesList.innerHTML = teacherObjectives.map(obj => `
-        <div class="objective-item">
-            <div class="objective-header">
-                <h4>${obj.shortTerm}</h4>
-                <div class="objective-actions">
-                    <button class="btn btn-sm btn-warning" onclick="editObjective(${obj.id})">✏️</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteObjective(${obj.id})">🗑️</button>
-                </div>
-            </div>
-            <div class="teaching-objectives">
-                ${obj.teachingObjectives?.map(to => `
-                    <div class="teaching-objective">${to}</div>
-                `).join('') || '<div class="no-objectives">لا توجد أهداف تدريسية</div>'}
-            </div>
-        </div>
-    `).join('');
+    document.getElementById('testModalTitle').textContent = 'إنشاء اختبار تشخيصي جديد';
+    openModal('testModal');
 }
 
-function loadAssignments() {
-    const assignmentsGrid = document.getElementById('assignmentsGrid');
-    if (!assignmentsGrid) return;
+function editTest(id) {
+    const test = tests.find(t => t.id === id);
+    if (!test) return;
 
-    const assignments = JSON.parse(localStorage.getItem('assignments') || '[]');
-    const currentTeacher = getCurrentUser();
-    const teacherAssignments = assignments.filter(assignment => assignment.teacherId === currentTeacher.id);
+    document.getElementById('testId').value = test.id;
+    document.getElementById('testTitle').value = test.title || '';
+    document.getElementById('testSubject').value = test.subject || '';
+    document.getElementById('testDescription').value = test.description || '';
 
-    if (teacherAssignments.length === 0) {
-        assignmentsGrid.innerHTML = `
-            <div class="empty-content-state">
-                <div class="empty-icon">📝</div>
-                <h3>لا توجد واجبات</h3>
-                <p>ابدأ بإنشاء أول واجب</p>
-                <button class="btn btn-success" onclick="showCreateAssignmentModal()">إنشاء واجب</button>
-            </div>
-        `;
-        return;
-    }
+    clearQuestions('test');
+    (test.questions || []).forEach(q => addQuestion('test', q));
 
-    assignmentsGrid.innerHTML = teacherAssignments.map(assignment => `
-        <div class="content-card">
-            <div class="content-header">
-                <h4>${assignment.title}</h4>
-                <span class="content-badge subject-${assignment.subject}">${assignment.subject}</span>
-            </div>
-            <div class="content-body">
-                <p>${assignment.description || 'لا يوجد وصف'}</p>
-                <div class="content-meta">
-                    <span class="exercises-count">${assignment.exercises?.length || 0} تمرين</span>
-                    <span class="total-grade">الدرجة: ${assignment.totalGrade || 0}</span>
-                </div>
-            </div>
-            <div class="content-actions">
-                <button class="btn btn-sm btn-primary" onclick="viewAssignment(${assignment.id})" title="عرض">👁️</button>
-                <button class="btn btn-sm btn-warning" onclick="editAssignment(${assignment.id})" title="تعديل">✏️</button>
-                <button class="btn btn-sm btn-info" onclick="exportContent('assignment', ${assignment.id})" title="تصدير">📤</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteAssignment(${assignment.id})" title="حذف">🗑️</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-// دوال إدارة الاختبارات
-function showCreateTestModal() {
-    document.getElementById('createTestModal').classList.add('show');
-}
-
-function closeCreateTestModal() {
-    document.getElementById('createTestModal').classList.remove('show');
-    document.getElementById('createTestForm').reset();
-    document.getElementById('questionsContainer').innerHTML = '';
-}
-
-function addQuestion() {
-    const questionsContainer = document.getElementById('questionsContainer');
-    const questionIndex = questionsContainer.children.length;
-    
-    const questionHTML = `
-        <div class="question-item" data-index="${questionIndex}">
-            <div class="question-header">
-                <h5>السؤال ${questionIndex + 1}</h5>
-                <button type="button" class="btn btn-sm btn-danger" onclick="removeQuestion(${questionIndex})">🗑️</button>
-            </div>
-            <div class="form-group">
-                <label class="form-label">نوع السؤال</label>
-                <select class="form-control question-type" onchange="changeQuestionType(${questionIndex})">
-                    <option value="multiple-choice">اختيار من متعدد</option>
-                    <option value="drag-drop">سحب وإفلات</option>
-                    <option value="open-ended">سؤال مفتوح</option>
-                    <option value="reading-auto">تقييم القراءة الآلي</option>
-                    <option value="spelling-auto">تقييم الإملاء الآلي</option>
-                </select>
-            </div>
-            <div class="question-content">
-                <!-- سيتم تعبئته بناءً على نوع السؤال -->
-            </div>
-        </div>
-    `;
-    
-    questionsContainer.insertAdjacentHTML('beforeend', questionHTML);
-    changeQuestionType(questionIndex);
-}
-
-function changeQuestionType(questionIndex) {
-    const questionItem = document.querySelector(`.question-item[data-index="${questionIndex}"]`);
-    const questionType = questionItem.querySelector('.question-type').value;
-    const questionContent = questionItem.querySelector('.question-content');
-    
-    let contentHTML = '';
-    
-    switch(questionType) {
-        case 'multiple-choice':
-            contentHTML = `
-                <div class="form-group">
-                    <label class="form-label">نص السؤال</label>
-                    <textarea class="form-control question-text" rows="3"></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">الخيارات</label>
-                    <div class="choices-container">
-                        <div class="choice-item">
-                            <input type="text" class="form-control choice-text" placeholder="النص">
-                            <input type="checkbox" class="choice-correct"> صحيح
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addChoice(${questionIndex})">+ إضافة خيار</button>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">محك الاجتياز (%)</label>
-                    <input type="number" class="form-control passing-criteria" min="0" max="100" value="80">
-                </div>
-            `;
-            break;
-            
-        case 'open-ended':
-            contentHTML = `
-                <div class="form-group">
-                    <label class="form-label">نص السؤال</label>
-                    <textarea class="form-control question-text" rows="3"></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">الإجابة النموذجية (اختياري)</label>
-                    <textarea class="form-control model-answer" rows="2"></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">محك الاجتياز (%)</label>
-                    <input type="number" class="form-control passing-criteria" min="0" max="100" value="80">
-                </div>
-            `;
-            break;
-            
-        // يمكن إضافة الأنواع الأخرى هنا
-        default:
-            contentHTML = `<p>نوع السؤال: ${questionType} - سيتم تطويره لاحقاً</p>`;
-    }
-    
-    questionContent.innerHTML = contentHTML;
-}
-
-function removeQuestion(questionIndex) {
-    const questionItem = document.querySelector(`.question-item[data-index="${questionIndex}"]`);
-    if (questionItem) {
-        questionItem.remove();
-        // إعادة ترقيم الأسئلة المتبقية
-        const remainingQuestions = document.querySelectorAll('.question-item');
-        remainingQuestions.forEach((item, index) => {
-            item.setAttribute('data-index', index);
-            item.querySelector('h5').textContent = `السؤال ${index + 1}`;
-        });
-    }
-}
-
-function addChoice(questionIndex) {
-    const choicesContainer = document.querySelector(`.question-item[data-index="${questionIndex}"] .choices-container`);
-    const choiceHTML = `
-        <div class="choice-item">
-            <input type="text" class="form-control choice-text" placeholder="النص">
-            <input type="checkbox" class="choice-correct"> صحيح
-            <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">🗑️</button>
-        </div>
-    `;
-    choicesContainer.insertAdjacentHTML('beforeend', choiceHTML);
+    document.getElementById('testModalTitle').textContent = 'تعديل اختبار تشخيصي';
+    openModal('testModal');
 }
 
 function saveTest() {
-    const form = document.getElementById('createTestForm');
+    const id = document.getElementById('testId').value || generateId();
     const title = document.getElementById('testTitle').value.trim();
     const subject = document.getElementById('testSubject').value;
     const description = document.getElementById('testDescription').value.trim();
+    const questions = collectQuestions('test');
 
-    if (!title || !subject) {
-        showAuthNotification('يرجى ملء جميع الحقول الإجبارية', 'error');
+    if (!title) {
+        alert('يرجى إدخال عنوان الاختبار.');
+        return;
+    }
+    if (!subject) {
+        alert('يرجى اختيار المادة.');
         return;
     }
 
-    const questions = [];
-    const questionItems = document.querySelectorAll('.question-item');
-    
-    questionItems.forEach(item => {
-        const questionType = item.querySelector('.question-type').value;
-        const questionText = item.querySelector('.question-text')?.value.trim();
-        const passingCriteria = item.querySelector('.passing-criteria')?.value || 80;
-        
-        if (questionText) {
-            questions.push({
-                type: questionType,
-                text: questionText,
-                passingCriteria: parseInt(passingCriteria)
-            });
-        }
-    });
-
-    const tests = JSON.parse(localStorage.getItem('tests') || '[]');
-    const currentTeacher = getCurrentUser();
-
-    const newTest = {
-        id: generateId(),
-        teacherId: currentTeacher.id,
-        title: title,
-        subject: subject,
-        description: description,
-        questions: questions,
-        objectivesLinked: false,
-        createdAt: new Date().toISOString()
-    };
-
-    tests.push(newTest);
-    localStorage.setItem('tests', JSON.stringify(tests));
-
-    showAuthNotification('تم حفظ الاختبار بنجاح', 'success');
-    closeCreateTestModal();
-    loadTests();
-}
-
-// دوال إدارة الدروس
-function showCreateLessonModal() {
-    document.getElementById('createLessonModal').classList.add('show');
-}
-
-function closeCreateLessonModal() {
-    document.getElementById('createLessonModal').classList.remove('show');
-    document.getElementById('createLessonForm').reset();
-    document.getElementById('exercisesContainer').innerHTML = '';
-}
-
-function addExercise() {
-    const exercisesContainer = document.getElementById('exercisesContainer');
-    const exerciseIndex = exercisesContainer.children.length;
-    
-    const exerciseHTML = `
-        <div class="exercise-item" data-index="${exerciseIndex}">
-            <div class="exercise-header">
-                <h5>التمرين ${exerciseIndex + 1}</h5>
-                <button type="button" class="btn btn-sm btn-danger" onclick="removeExercise(${exerciseIndex})">🗑️</button>
-            </div>
-            <div class="form-group">
-                <label class="form-label">نوع التمرين</label>
-                <select class="form-control exercise-type">
-                    <option value="multiple-choice">اختيار من متعدد</option>
-                    <option value="drag-drop">سحب وإفلات</option>
-                    <option value="open-ended">سؤال مفتوح</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label class="form-label">نص التمرين</label>
-                <textarea class="form-control exercise-text" rows="3"></textarea>
-            </div>
-        </div>
-    `;
-    
-    exercisesContainer.insertAdjacentHTML('beforeend', exerciseHTML);
-}
-
-function removeExercise(exerciseIndex) {
-    const exerciseItem = document.querySelector(`.exercise-item[data-index="${exerciseIndex}"]`);
-    if (exerciseItem) {
-        exerciseItem.remove();
-        // إعادة ترقيم التمارين المتبقية
-        const remainingExercises = document.querySelectorAll('.exercise-item');
-        remainingExercises.forEach((item, index) => {
-            item.setAttribute('data-index', index);
-            item.querySelector('h5').textContent = `التمرين ${index + 1}`;
+    let existing = tests.find(t => t.id === id);
+    if (existing) {
+        existing.title = title;
+        existing.subject = subject;
+        existing.description = description;
+        existing.questions = questions;
+        existing.updatedAt = new Date().toISOString();
+    } else {
+        tests.push({
+            id,
+            title,
+            subject,
+            description,
+            questions,
+            linkedObjectives: [],
+            createdAt: new Date().toISOString()
         });
     }
+
+    saveToStorage(STORAGE_KEYS.tests, tests);
+    renderTests();
+    closeModal('testModal');
+}
+
+function deleteTest(id) {
+    confirmDelete(() => {
+        tests = tests.filter(t => t.id !== id);
+        saveToStorage(STORAGE_KEYS.tests, tests);
+        renderTests();
+    });
+}
+
+function viewTest(id) {
+    const test = tests.find(t => t.id === id);
+    if (!test) return;
+    alert(`عنوان الاختبار: ${test.title}\nالمادة: ${getSubjectLabel(test.subject)}\nعدد الأسئلة: ${(test.questions || []).length}`);
+}
+
+/* -----------------------------
+   الدروس
+----------------------------- */
+
+function renderLessons() {
+    const tbody = document.querySelector('#lessonsTable tbody');
+    const emptyState = document.getElementById('lessonsEmptyState');
+    const searchValue = (document.getElementById('lessonsSearchInput')?.value || '').trim().toLowerCase();
+
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    let filtered = lessons;
+    if (searchValue) {
+        filtered = lessons.filter(l =>
+            l.title.toLowerCase().includes(searchValue) ||
+            (getSubjectLabel(l.subject) || '').toLowerCase().includes(searchValue)
+        );
+    }
+
+    if (!filtered.length) {
+        emptyState && (emptyState.style.display = 'block');
+        return;
+    } else {
+        emptyState && (emptyState.style.display = 'none');
+    }
+
+    filtered.forEach(lesson => {
+        const tr = document.createElement('tr');
+
+        const subjectLabel = getSubjectLabel(lesson.subject);
+        const linkedStatus = lesson.teachingGoalLinked
+            ? '<span class="badge badge-success">تم الربط</span>'
+            : '<span class="badge badge-warning">لم يتم الربط</span>';
+
+        tr.innerHTML = `
+            <td>
+                ${lesson.title}
+                ${lesson.description ? `<small>${lesson.description}</small>` : ''}
+            </td>
+            <td>
+                <span class="${getSubjectBadgeClass(lesson.subject)}">${subjectLabel}</span>
+            </td>
+            <td>${lesson.teachingGoal || '-'}</td>
+            <td>${lesson.priority || '-'}</td>
+            <td>${lesson.mastery || '-'}</td>
+            <td>${linkedStatus}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn btn-sm btn-info" onclick="viewLesson('${lesson.id}')">عرض</button>
+                    <button class="btn btn-sm btn-secondary" onclick="editLesson('${lesson.id}')">تعديل</button>
+                    <button class="btn btn-sm btn-primary" onclick="exportSingle('lessons','${lesson.id}')">تصدير</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteLesson('${lesson.id}')">حذف</button>
+                </div>
+            </td>
+        `;
+
+        tbody.appendChild(tr);
+    });
+}
+
+function openLessonModal() {
+    document.getElementById('lessonId').value = '';
+    document.getElementById('lessonTitle').value = '';
+    document.getElementById('lessonSubject').value = '';
+    document.getElementById('lessonStrategy').value = '';
+    document.getElementById('lessonMastery').value = 80;
+    document.getElementById('lessonPriority').value = 1;
+    document.getElementById('lessonDescription').value = '';
+    clearQuestions('lesson');
+
+    document.getElementById('lessonModalTitle').textContent = 'إنشاء درس جديد';
+    openModal('lessonModal');
+}
+
+function editLesson(id) {
+    const lesson = lessons.find(l => l.id === id);
+    if (!lesson) return;
+
+    document.getElementById('lessonId').value = lesson.id;
+    document.getElementById('lessonTitle').value = lesson.title || '';
+    document.getElementById('lessonSubject').value = lesson.subject || '';
+    document.getElementById('lessonStrategy').value = lesson.strategy || '';
+    document.getElementById('lessonMastery').value = lesson.mastery || 80;
+    document.getElementById('lessonPriority').value = lesson.priority || 1;
+    document.getElementById('lessonDescription').value = lesson.description || '';
+
+    clearQuestions('lesson');
+    (lesson.questions || []).forEach(q => addQuestion('lesson', q));
+
+    document.getElementById('lessonModalTitle').textContent = 'تعديل درس';
+    openModal('lessonModal');
 }
 
 function saveLesson() {
-    const form = document.getElementById('createLessonForm');
+    const id = document.getElementById('lessonId').value || generateId();
     const title = document.getElementById('lessonTitle').value.trim();
-    const strategy = document.getElementById('lessonStrategy').value.trim();
     const subject = document.getElementById('lessonSubject').value;
+    const strategy = document.getElementById('lessonStrategy').value.trim();
+    const mastery = parseInt(document.getElementById('lessonMastery').value, 10) || 0;
+    const priority = parseInt(document.getElementById('lessonPriority').value, 10) || 0;
     const description = document.getElementById('lessonDescription').value.trim();
+    const questions = collectQuestions('lesson');
 
-    if (!title || !strategy || !subject) {
-        showAuthNotification('يرجى ملء جميع الحقول الإجبارية', 'error');
+    if (!title) {
+        alert('يرجى إدخال عنوان الدرس.');
+        return;
+    }
+    if (!subject) {
+        alert('يرجى اختيار المادة.');
+        return;
+    }
+    if (!mastery || mastery < 1 || mastery > 100) {
+        alert('يرجى إدخال محك اجتياز صحيح من 1 إلى 100.');
+        return;
+    }
+    if (!priority || priority < 1 || priority > 100) {
+        alert('يرجى إدخال أولوية صحيحة من 1 إلى 100.');
         return;
     }
 
-    const exercises = [];
-    const exerciseItems = document.querySelectorAll('.exercise-item');
-    
-    exerciseItems.forEach(item => {
-        const exerciseType = item.querySelector('.exercise-type').value;
-        const exerciseText = item.querySelector('.exercise-text')?.value.trim();
-        
-        if (exerciseText) {
-            exercises.push({
-                type: exerciseType,
-                text: exerciseText
-            });
+    let existing = lessons.find(l => l.id === id);
+    if (existing) {
+        existing.title = title;
+        existing.subject = subject;
+        existing.strategy = strategy;
+        existing.mastery = mastery;
+        existing.priority = priority;
+        existing.description = description;
+        existing.questions = questions;
+        existing.updatedAt = new Date().toISOString();
+    } else {
+        lessons.push({
+            id,
+            title,
+            subject,
+            strategy,
+            mastery,
+            priority,
+            description,
+            questions,
+            teachingGoal: '',
+            teachingGoalLinked: false,
+            createdAt: new Date().toISOString()
+        });
+    }
+
+    saveToStorage(STORAGE_KEYS.lessons, lessons);
+    renderLessons();
+    closeModal('lessonModal');
+}
+
+function deleteLesson(id) {
+    confirmDelete(() => {
+        lessons = lessons.filter(l => l.id !== id);
+        saveToStorage(STORAGE_KEYS.lessons, lessons);
+        renderLessons();
+    });
+}
+
+function viewLesson(id) {
+    const lesson = lessons.find(l => l.id === id);
+    if (!lesson) return;
+    alert(`عنوان الدرس: ${lesson.title}\nالمادة: ${getSubjectLabel(lesson.subject)}\nالأولوية: ${lesson.priority}\nمحك الاجتياز: ${lesson.mastery}%`);
+}
+
+/* -----------------------------
+   الأهداف قصيرة المدى
+----------------------------- */
+
+function renderObjectives() {
+    const tbody = document.querySelector('#objectivesTable tbody');
+    const emptyState = document.getElementById('objectivesEmptyState');
+    const searchValue = (document.getElementById('objectivesSearchInput')?.value || '').trim().toLowerCase();
+
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    let filtered = objectives;
+    if (searchValue) {
+        filtered = objectives.filter(o =>
+            o.text.toLowerCase().includes(searchValue)
+        );
+    }
+
+    if (!filtered.length) {
+        emptyState && (emptyState.style.display = 'block');
+        return;
+    } else {
+        emptyState && (emptyState.style.display = 'none');
+    }
+
+    filtered.forEach(obj => {
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+            <td>${obj.text}</td>
+            <td>${(obj.teachingGoals || []).length}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn btn-sm btn-secondary" onclick="editObjective('${obj.id}')">تعديل</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteObjective('${obj.id}')">حذف</button>
+                </div>
+            </td>
+        `;
+
+        tbody.appendChild(tr);
+    });
+}
+
+function openObjectiveModal() {
+    document.getElementById('objectiveId').value = '';
+    document.getElementById('objectiveText').value = '';
+    document.getElementById('objectiveTeachingGoals').value = '';
+
+    document.getElementById('objectiveModalTitle').textContent = 'إضافة هدف قصير المدى';
+    openModal('objectiveModal');
+}
+
+function editObjective(id) {
+    const obj = objectives.find(o => o.id === id);
+    if (!obj) return;
+
+    document.getElementById('objectiveId').value = obj.id;
+    document.getElementById('objectiveText').value = obj.text || '';
+    document.getElementById('objectiveTeachingGoals').value = (obj.teachingGoals || []).join('\n');
+
+    document.getElementById('objectiveModalTitle').textContent = 'تعديل هدف قصير المدى';
+    openModal('objectiveModal');
+}
+
+function saveObjective() {
+    const id = document.getElementById('objectiveId').value || generateId();
+    const text = document.getElementById('objectiveText').value.trim();
+    const teachingGoalsRaw = document.getElementById('objectiveTeachingGoals').value.trim();
+
+    if (!text) {
+        alert('يرجى إدخال نص الهدف قصير المدى.');
+        return;
+    }
+
+    const duplicate = objectives.find(o => o.text === text && o.id !== id);
+    if (duplicate) {
+        alert('هذا الهدف القصير مضاف مسبقاً. لا يُسمح بالتكرار.');
+        return;
+    }
+
+    const teachingGoals = teachingGoalsRaw
+        ? teachingGoalsRaw.split('\n').map(s => s.trim()).filter(Boolean)
+        : [];
+
+    if (!teachingGoals.length) {
+        alert('يجب إضافة هدف تدريسي واحد على الأقل.');
+        return;
+    }
+
+    let existing = objectives.find(o => o.id === id);
+    if (existing) {
+        existing.text = text;
+        existing.teachingGoals = teachingGoals;
+        existing.updatedAt = new Date().toISOString();
+    } else {
+        objectives.push({
+            id,
+            text,
+            teachingGoals,
+            createdAt: new Date().toISOString()
+        });
+    }
+
+    saveToStorage(STORAGE_KEYS.objectives, objectives);
+    renderObjectives();
+    closeModal('objectiveModal');
+}
+
+function deleteObjective(id) {
+    confirmDelete(() => {
+        objectives = objectives.filter(o => o.id !== id);
+        saveToStorage(STORAGE_KEYS.objectives, objectives);
+        renderObjectives();
+    });
+}
+
+/* -----------------------------
+   الواجبات
+----------------------------- */
+
+function renderAssignments() {
+    const tbody = document.querySelector('#assignmentsTable tbody');
+    const emptyState = document.getElementById('assignmentsEmptyState');
+    const searchValue = (document.getElementById('assignmentsSearchInput')?.value || '').trim().toLowerCase();
+
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+
+    let filtered = assignments;
+    if (searchValue) {
+        filtered = assignments.filter(a =>
+            a.title.toLowerCase().includes(searchValue) ||
+            (getSubjectLabel(a.subject) || '').toLowerCase().includes(searchValue)
+        );
+    }
+
+    if (!filtered.length) {
+        emptyState && (emptyState.style.display = 'block');
+        return;
+    } else {
+        emptyState && (emptyState.style.display = 'none');
+    }
+
+    filtered.forEach(a => {
+        const tr = document.createElement('tr');
+
+        tr.innerHTML = `
+            <td>
+                ${a.title}
+                ${a.description ? `<small>${a.description}</small>` : ''}
+            </td>
+            <td><span class="${getSubjectBadgeClass(a.subject)}">${getSubjectLabel(a.subject)}</span></td>
+            <td>${(a.questions || []).length}</td>
+            <td>${a.grade || '-'}</td>
+            <td>${formatDate(a.createdAt)}</td>
+            <td>
+                <div class="action-buttons">
+                    <button class="btn btn-sm btn-info" onclick="viewAssignment('${a.id}')">عرض</button>
+                    <button class="btn btn-sm btn-secondary" onclick="editAssignment('${a.id}')">تعديل</button>
+                    <button class="btn btn-sm btn-primary" onclick="exportSingle('assignments','${a.id}')">تصدير</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteAssignment('${a.id}')">حذف</button>
+                </div>
+            </td>
+        `;
+
+        tbody.appendChild(tr);
+    });
+}
+
+function openAssignmentModal() {
+    document.getElementById('assignmentId').value = '';
+    document.getElementById('assignmentTitle').value = '';
+    document.getElementById('assignmentSubject').value = '';
+    document.getElementById('assignmentGrade').value = 10;
+    document.getElementById('assignmentDescription').value = '';
+    clearQuestions('assignment');
+
+    document.getElementById('assignmentModalTitle').textContent = 'إنشاء واجب جديد';
+    openModal('assignmentModal');
+}
+
+function editAssignment(id) {
+    const a = assignments.find(x => x.id === id);
+    if (!a) return;
+
+    document.getElementById('assignmentId').value = a.id;
+    document.getElementById('assignmentTitle').value = a.title || '';
+    document.getElementById('assignmentSubject').value = a.subject || '';
+    document.getElementById('assignmentGrade').value = a.grade || 10;
+    document.getElementById('assignmentDescription').value = a.description || '';
+
+    clearQuestions('assignment');
+    (a.questions || []).forEach(q => addQuestion('assignment', q));
+
+    document.getElementById('assignmentModalTitle').textContent = 'تعديل واجب';
+    openModal('assignmentModal');
+}
+
+function saveAssignment() {
+    const id = document.getElementById('assignmentId').value || generateId();
+    const title = document.getElementById('assignmentTitle').value.trim();
+    const subject = document.getElementById('assignmentSubject').value;
+    const grade = parseInt(document.getElementById('assignmentGrade').value, 10) || 0;
+    const description = document.getElementById('assignmentDescription').value.trim();
+    const questions = collectQuestions('assignment');
+
+    if (!title) {
+        alert('يرجى إدخال عنوان الواجب.');
+        return;
+    }
+    if (!subject) {
+        alert('يرجى اختيار المادة.');
+        return;
+    }
+    if (!grade || grade < 1) {
+        alert('يرجى إدخال درجة الواجب.');
+        return;
+    }
+
+    let existing = assignments.find(a => a.id === id);
+    if (existing) {
+        existing.title = title;
+        existing.subject = subject;
+        existing.grade = grade;
+        existing.description = description;
+        existing.questions = questions;
+        existing.updatedAt = new Date().toISOString();
+    } else {
+        assignments.push({
+            id,
+            title,
+            subject,
+            grade,
+            description,
+            questions,
+            createdAt: new Date().toISOString()
+        });
+    }
+
+    saveToStorage(STORAGE_KEYS.assignments, assignments);
+    renderAssignments();
+    closeModal('assignmentModal');
+}
+
+function deleteAssignment(id) {
+    confirmDelete(() => {
+        assignments = assignments.filter(a => a.id !== id);
+        saveToStorage(STORAGE_KEYS.assignments, assignments);
+        renderAssignments();
+    });
+}
+
+function viewAssignment(id) {
+    const a = assignments.find(x => x.id === id);
+    if (!a) return;
+    alert(`عنوان الواجب: ${a.title}\nالمادة: ${getSubjectLabel(a.subject)}\nالدرجة: ${a.grade}\nعدد الأسئلة: ${(a.questions || []).length}`);
+}
+
+/* -----------------------------
+   إدارة الأسئلة المشتركة
+----------------------------- */
+
+const QUESTION_TYPES = [
+    { value: 'mcq', label: 'اختيار من متعدد' },
+    { value: 'drag_drop', label: 'سحب وإفلات' },
+    { value: 'mcq_media', label: 'اختيار من متعدد مع مرفق' },
+    { value: 'open', label: 'سؤال مفتوح' },
+    { value: 'read_auto', label: 'تقييم القراءة الآلي' },
+    { value: 'spell_auto', label: 'تقييم الإملاء الآلي' },
+    { value: 'read_manual', label: 'تقييم القراءة اليدوي' },
+    { value: 'spell_manual', label: 'تقييم الإملاء اليدوي' },
+    { value: 'missing_letter', label: 'أكمل الحرف الناقص' }
+];
+
+function clearQuestions(scope) {
+    const container = document.getElementById(`${scope}QuestionsContainer`);
+    if (!container) return;
+    container.innerHTML = '<div class="no-questions-msg">لم تتم إضافة أي سؤال بعد.</div>';
+}
+
+function addQuestion(scope, data) {
+    const container = document.getElementById(`${scope}QuestionsContainer`);
+    if (!container) return;
+
+    const noMsg = container.querySelector('.no-questions-msg');
+    if (noMsg) noMsg.remove();
+
+    const questionId = generateId();
+    const qType = data?.type || QUESTION_TYPES[0].value;
+    const qText = data?.text || '';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'question-item';
+    wrapper.dataset.id = questionId;
+    wrapper.innerHTML = `
+        <div class="question-item-header">
+            <div>
+                <span class="question-type-label">نوع السؤال:</span>
+                <select class="form-control question-type-select" style="display:inline-block;width:auto;min-width:180px;">
+                    ${QUESTION_TYPES.map(q => `
+                        <option value="${q.value}" ${q.value === qType ? 'selected' : ''}>${q.label}</option>
+                    `).join('')}
+                </select>
+            </div>
+            <button class="btn btn-sm btn-danger" type="button" onclick="removeQuestion('${scope}','${questionId}')">حذف</button>
+        </div>
+        <div class="question-item-body">
+            <textarea placeholder="نص السؤال أو التوجيه للطالب"></textarea>
+        </div>
+    `;
+
+    wrapper.querySelector('textarea').value = qText;
+    container.appendChild(wrapper);
+}
+
+function removeQuestion(scope, qId) {
+    const container = document.getElementById(`${scope}QuestionsContainer`);
+    if (!container) return;
+
+    const item = container.querySelector(`.question-item[data-id="${qId}"]`);
+    if (item) item.remove();
+
+    if (!container.querySelector('.question-item')) {
+        clearQuestions(scope);
+    }
+}
+
+function collectQuestions(scope) {
+    const container = document.getElementById(`${scope}QuestionsContainer`);
+    if (!container) return [];
+
+    const items = container.querySelectorAll('.question-item');
+    const result = [];
+
+    items.forEach(item => {
+        const select = item.querySelector('.question-type-select');
+        const textarea = item.querySelector('textarea');
+        const type = select ? select.value : '';
+        const text = textarea ? textarea.value.trim() : '';
+
+        if (text) {
+            result.push({ type, text });
         }
     });
 
-    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const currentTeacher = getCurrentUser();
+    return result;
+}
 
-    const newLesson = {
-        id: generateId(),
-        teacherId: currentTeacher.id,
-        title: title,
-        strategy: strategy,
-        subject: subject,
-        description: description,
-        exercises: exercises,
-        objectivesLinked: false,
-        priority: 1,
-        createdAt: new Date().toISOString()
+/* -----------------------------
+   التصدير / الاستيراد
+----------------------------- */
+
+function exportSingle(type, id) {
+    let list = [];
+    let filenamePrefix = '';
+
+    switch (type) {
+        case 'tests':
+            list = tests;
+            filenamePrefix = 'test';
+            break;
+        case 'lessons':
+            list = lessons;
+            filenamePrefix = 'lesson';
+            break;
+        case 'assignments':
+            list = assignments;
+            filenamePrefix = 'assignment';
+            break;
+        default:
+            return;
+    }
+
+    const item = list.find(x => x.id === id);
+    if (!item) return;
+
+    const blob = new Blob([JSON.stringify(item, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filenamePrefix}-${item.id}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function exportAll(type) {
+    let list = [];
+    let filenamePrefix = '';
+
+    switch (type) {
+        case 'tests':
+            list = tests;
+            filenamePrefix = 'tests';
+            break;
+        case 'lessons':
+            list = lessons;
+            filenamePrefix = 'lessons';
+            break;
+        case 'assignments':
+            list = assignments;
+            filenamePrefix = 'assignments';
+            break;
+        default:
+            return;
+    }
+
+    if (!list.length) {
+        alert('لا توجد بيانات لتصديرها في هذا القسم.');
+        return;
+    }
+
+    const blob = new Blob([JSON.stringify(list, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filenamePrefix}-export.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function triggerImport(type) {
+    currentImportType = type;
+    const input = document.getElementById('importInput');
+    if (input) {
+        input.value = '';
+        input.click();
+    }
+}
+
+function handleImportFile(event) {
+    const file = event.target.files[0];
+    if (!file || !currentImportType) return;
+
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const content = JSON.parse(e.target.result);
+
+            if (Array.isArray(content)) {
+                importList(currentImportType, content);
+            } else {
+                importList(currentImportType, [content]);
+            }
+
+            currentImportType = null;
+            event.target.value = '';
+        } catch (err) {
+            console.error('خطأ في قراءة ملف الاستيراد:', err);
+            alert('ملف غير صالح. تأكد أنه بصيغة JSON تم تصديره من النظام.');
+        }
     };
 
-    lessons.push(newLesson);
-    localStorage.setItem('lessons', JSON.stringify(lessons));
-
-    showAuthNotification('تم حفظ الدرس بنجاح', 'success');
-    closeCreateLessonModal();
-    loadLessons();
+    reader.readAsText(file, 'utf-8');
 }
 
-// دوال عامة
-function showCreateObjectiveModal() {
-    showAuthNotification('سيتم تطوير هذه الوظيفة في المرحلة القادمة', 'info');
+function importList(type, list) {
+    switch (type) {
+        case 'tests':
+            list.forEach(item => {
+                item.id = item.id || generateId();
+                tests.push(item);
+            });
+            saveToStorage(STORAGE_KEYS.tests, tests);
+            renderTests();
+            break;
+
+        case 'lessons':
+            list.forEach(item => {
+                item.id = item.id || generateId();
+                lessons.push(item);
+            });
+            saveToStorage(STORAGE_KEYS.lessons, lessons);
+            renderLessons();
+            break;
+
+        case 'assignments':
+            list.forEach(item => {
+                item.id = item.id || generateId();
+                assignments.push(item);
+            });
+            saveToStorage(STORAGE_KEYS.assignments, assignments);
+            renderAssignments();
+            break;
+    }
+
+    alert('تم الاستيراد بنجاح.');
 }
 
-function showCreateAssignmentModal() {
-    showAuthNotification('سيتم تطوير هذه الوظيفة في المرحلة القادمة', 'info');
+/* -----------------------------
+   بحث في الجداول
+----------------------------- */
+
+function filterTable(type) {
+    switch (type) {
+        case 'tests':
+            renderTests();
+            break;
+        case 'lessons':
+            renderLessons();
+            break;
+        case 'objectives':
+            renderObjectives();
+            break;
+        case 'assignments':
+            renderAssignments();
+            break;
+    }
 }
 
-function showImportModal(type) {
-    showAuthNotification(`سيتم تطوير استيراد ${type} في المرحلة القادمة`, 'info');
-}
+/* -----------------------------
+   أدوات عامة
+----------------------------- */
 
-function exportContent(type, id) {
-    showAuthNotification(`جاري تصدير ${type}...`, 'info');
-    setTimeout(() => {
-        showAuthNotification(`تم تصدير ${type} بنجاح`, 'success');
-    }, 1500);
+function generateId() {
+    return 'id-' + Math.random().toString(36).substr(2, 9) + '-' + Date.now().toString(36);
 }
-
-function linkObjectives(testId) {
-    showAuthNotification('جاري فتح نافذة ربط الأهداف...', 'info');
-    // سيتم تطوير هذه الوظيفة بالكامل لاحقاً
-}
-
-function linkTeachingObjectives(lessonId) {
-    showAuthNotification('جاري فتح نافذة ربط الأهداف التدريسية...', 'info');
-    // سيتم تطوير هذه الوظيفة بالكامل لاحقاً
-}
-
-// تصدير الدوال للاستخدام العالمي
-window.showCreateTestModal = showCreateTestModal;
-window.closeCreateTestModal = closeCreateTestModal;
-window.showCreateLessonModal = showCreateLessonModal;
-window.closeCreateLessonModal = closeCreateLessonModal;
-window.addQuestion = addQuestion;
-window.addExercise = addExercise;
-window.removeQuestion = removeQuestion;
-window.removeExercise = removeExercise;
-window.changeQuestionType = changeQuestionType;
-window.addChoice = addChoice;
-window.saveTest = saveTest;
-window.saveLesson = saveLesson;
-window.showCreateObjectiveModal = showCreateObjectiveModal;
-window.showCreateAssignmentModal = showCreateAssignmentModal;
-window.showImportModal = showImportModal;
-window.exportContent = exportContent;
-window.linkObjectives = linkObjectives;
-window.linkTeachingObjectives = linkTeachingObjectives;

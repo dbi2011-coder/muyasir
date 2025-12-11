@@ -509,4 +509,99 @@ window.showCreateAssignmentModal = showCreateAssignmentModal;
 window.showImportModal = showImportModal;
 window.exportContent = exportContent;
 window.linkObjectives = linkObjectives;
+
 window.linkTeachingObjectives = linkTeachingObjectives;
+<!-- نافذة إنشاء اختبار -->
+<div id="createTestModal" class="modal">
+    <div class="modal-content large">
+        <div class="modal-header">
+            <h3>إنشاء اختبار تشخيصي جديد</h3>
+            <button class="modal-close" onclick="closeCreateTestModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="createTestForm">
+                <div class="form-group">
+                    <label class="form-label">عنوان الاختبار *</label>
+                    <input type="text" id="testTitle" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">المادة *</label>
+                    <select id="testSubject" class="form-control" required>
+                        <option value="لغتي">لغتي</option>
+                        <option value="رياضيات">رياضيات</option>
+                        <option value="علوم">علوم</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">وصف الاختبار (اختياري)</label>
+                    <textarea id="testDescription" class="form-control" rows="3"></textarea>
+                </div>
+                
+                <h4>الأسئلة</h4>
+                <div id="questionsContainer">
+                    <!-- الأسئلة ستضاف هنا -->
+                </div>
+                
+                <button type="button" class="btn btn-outline-primary" onclick="addQuestion()">
+                    + إضافة سؤال
+                </button>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-success" onclick="saveTest()">حفظ الاختبار</button>
+            <button class="btn btn-secondary" onclick="closeCreateTestModal()">إلغاء</button>
+        </div>
+    </div>
+</div>
+
+<!-- نافذة إنشاء درس -->
+<div id="createLessonModal" class="modal">
+    <div class="modal-content large">
+        <div class="modal-header">
+            <h3>إنشاء درس جديد</h3>
+            <button class="modal-close" onclick="closeCreateLessonModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="createLessonForm">
+                <div class="form-group">
+                    <label class="form-label">عنوان الدرس *</label>
+                    <input type="text" id="lessonTitle" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">الاستراتيجية التدريسية *</label>
+                    <input type="text" id="lessonStrategy" class="form-control" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">المادة *</label>
+                    <select id="lessonSubject" class="form-control" required>
+                        <option value="لغتي">لغتي</option>
+                        <option value="رياضيات">رياضيات</option>
+                        <option value="علوم">علوم</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">وصف الدرس (اختياري)</label>
+                    <textarea id="lessonDescription" class="form-control" rows="3"></textarea>
+                </div>
+                
+                <h4>التمارين</h4>
+                <div id="exercisesContainer">
+                    <!-- التمارين ستضاف هنا -->
+                </div>
+                
+                <button type="button" class="btn btn-outline-primary" onclick="addExercise()">
+                    + إضافة تمرين
+                </button>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-success" onclick="saveLesson()">حفظ الدرس</button>
+            <button class="btn btn-secondary" onclick="closeCreateLessonModal()">إلغاء</button>
+        </div>
+    </div>
+</div>

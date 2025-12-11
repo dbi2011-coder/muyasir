@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ربط الأهداف القصيرة - ميسر التعلم</title>
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../assets/css/teacher.css">
+    <link rel="stylesheet" href="../../assets/css/linking.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- الشريط الجانبي -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
+                    <h2>ميسر التعلم</h2>
+                </div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><i class="fas fa-home menu-icon"></i><span>الرئيسية</span></a></li>
+                <li><a href="students.html"><i class="fas fa-users menu-icon"></i><span>الطلاب</span></a></li>
+                <li><a href="content-library.html"><i class="fas fa-book menu-icon"></i><span>مكتبة المحتوى</span></a></li>
+                <li><a href="tests.html"><i class="fas fa-clipboard-list menu-icon"></i><span>الاختبارات التشخيصية</span></a></li>
+                <li><a href="objectives.html"><i class="fas fa-bullseye menu-icon"></i><span>الأهداف قصيرة المدى</span></a></li>
+                <li><a href="linking-objectives.html" class="active"><i class="fas fa-link menu-icon"></i><span>ربط الأهداف</span></a></li>
+                <li><a href="lessons.html"><i class="fas fa-chalkboard-teacher menu-icon"></i><span>الدروس</span></a></li>
+                <li><a href="assignments.html"><i class="fas fa-tasks menu-icon"></i><span>الواجبات</span></a></li>
+                <li><a href="reports.html"><i class="fas fa-chart-bar menu-icon"></i><span>التقارير</span></a></li>
+                <li><a href="committee.html"><i class="fas fa-user-friends menu-icon"></i><span>لجنة التعلم</span></a></li>
+                <li><a href="settings.html"><i class="fas fa-cog menu-icon"></i><span>الإعدادات</span></a></li>
+                <li><a href="javascript:void(0)" onclick="logout()"><i class="fas fa-sign-out-alt menu-icon"></i><span>تسجيل الخروج</span></a></li>
+            </ul>
+        </nav>
+
+        <!-- المحتوى الرئيسي -->
+        <main class="main-content-dashboard">
+            <!-- رأس الصفحة -->
+            <header class="dashboard-header">
+                <div class="header-actions">
+                    <button class="mobile-menu-btn" onclick="toggleSidebar()">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1><i class="fas fa-link"></i> ربط الأهداف القصيرة</h1>
+                </div>
+                <div class="user-info">
+                    <div class="user-welcome">
+                        <div class="welcome-text">مرحباً</div>
+                        <div class="user-name" id="userName">المعلم</div>
+                    </div>
+                    <div class="user-avatar" id="userAvatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
+            </header>
+
+            <!-- محتوى الصفحة -->
+            <div class="dashboard-content">
+                <!-- معلومات الاختبار -->
+                <div class="test-info-card" id="testInfoCard">
+                    <div class="test-info-header">
+                        <h3><i class="fas fa-clipboard-list"></i> معلومات الاختبار</h3>
+                        <button class="btn btn-secondary btn-sm" onclick="selectDifferentTest()">
+                            <i class="fas fa-exchange-alt"></i> تغيير الاختبار
+                        </button>
+                    </div>
+                    <div class="test-info-content" id="testInfoContent">
+                        <!-- سيتم تعبئته بواسطة JavaScript -->
+                    </div>
+                </div>
+
+                <!-- منطقة الربط الرئيسية -->
+                <div class="linking-main-area">
+                    <!-- شريط التقدم -->
+                    <div class="linking-progress-section">
+                        <div class="progress-info">
+                            <span class="progress-text">
+                                <span id="currentQuestionNum">0</span> / <span id="totalQuestions">0</span>
+                            </span>
+                            <div class="progress-percentage">
+                                <span id="progressPercentage">0%</span>
+                            </div>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="linkingProgressBar">
+                                <div class="progress-fill" id="progressFill"></div>
+                            </div>
+                            <div class="progress-steps" id="progressSteps">
+                                <!-- سيتم تعبئته بواسطة JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- السؤال الحالي -->
+                    <div class="current-question-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-question-circle"></i> السؤال الحالي</h3>
+                            <div class="question-number">
+                                سؤال رقم: <span id="questionNumberDisplay">1</span>
+                            </div>
+                        </div>
+                        <div class="question-content-card" id="currentQuestionCard">
+                            <!-- سيتم تعبئته بواسطة JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- اختيار الأهداف -->
+                    <div class="objectives-selection-section">
+                        <div class="section-header">
+                            <h3><i class="fas fa-bullseye"></i> اختر الهدف القصير المناسب</h3>
+                            <div class="filter-controls">
+                                <div class="search-box">
+                                    <input type="text" id="objectiveSearch" placeholder="بحث في الأهداف..." 
+                                           onkeyup="filterObjectives()">
+                                    <i class="fas fa-search"></i>
+                                </div>
+                                <select id="objectiveCategory" onchange="filterObjectives()">
+                                    <option value="all">جميع الفئات</option>
+                                    <option value="reading">القراءة</option>
+                                    <option value="writing">الكتابة</option>
+                                    <option value="math">الرياضيات</option>
+                                    <option value="listening">الاستماع</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="objectives-container">
+                            <!-- قائمة الأهداف -->
+                            <div class="objectives-list-container" id="objectivesListContainer">
+                                <div class="objectives-grid" id="objectivesGrid">
+                                    <!-- سيتم تعبئته بواسطة JavaScript -->
+                                </div>
+                                <div class="no-objectives" id="noObjectivesMessage" style="display: none;">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    <p>لا توجد أهداف قصيرة لهذه المادة. يرجى إضافة أهداف أولاً.</p>
+                                    <button class="btn btn-primary" onclick="goToObjectivesPage()">
+                                        <i class="fas fa-plus"></i> إضافة أهداف جديدة
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- الهدف المختار -->
+                            <div class="selected-objective-container" id="selectedObjectiveContainer">
+                                <div class="selected-objective-header">
+                                    <h4><i class="fas fa-check-circle"></i> الهدف المختار</h4>
+                                    <button class="btn btn-sm btn-outline" onclick="clearSelection()">
+                                        <i class="fas fa-times"></i> إلغاء
+                                    </button>
+                                </div>
+                                <div class="selected-objective-card" id="selectedObjectiveCard">
+                                    <!-- سيتم تعبئته عند اختيار هدف -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- الأهداف التدريسية المرتبطة -->
+                    <div class="teaching-objectives-section" id="teachingObjectivesSection" style="display: none;">
+                        <div class="section-header">
+                            <h3><i class="fas fa-graduation-cap"></i> الأهداف التدريسية المرتبطة</h3>
+                        </div>
+                        <div class="teaching-objectives-list" id="teachingObjectivesList">
+                            <!-- سيتم تعبئته بواسطة JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- أزرار التنقل -->
+                    <div class="linking-navigation">
+                        <div class="navigation-buttons">
+                            <button class="btn btn-secondary btn-lg" id="prevBtn" onclick="previousQuestion()" disabled>
+                                <i class="fas fa-arrow-right"></i> السابق
+                            </button>
+                            
+                            <div class="center-buttons">
+                                <button class="btn btn-warning btn-lg" onclick="skipQuestion()">
+                                    <i class="fas fa-forward"></i> تخطي
+                                </button>
+                                <button class="btn btn-outline btn-lg" onclick="markForReview()">
+                                    <i class="fas fa-flag"></i> وضع علامة
+                                </button>
+                            </div>
+                            
+                            <button class="btn btn-primary btn-lg" id="nextBtn" onclick="nextQuestion()">
+                                التالي <i class="fas fa-arrow-left"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="finish-section">
+                            <button class="btn btn-success btn-lg" id="finishBtn" onclick="finishLinking()" style="display: none;">
+                                <i class="fas fa-check"></i> إنهاء الربط
+                            </button>
+                            <div class="completion-stats" id="completionStats">
+                                <div class="stat-item">
+                                    <span class="stat-label">مرتبطة:</span>
+                                    <span class="stat-value" id="linkedCount">0</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">متبقية:</span>
+                                    <span class="stat-value" id="remainingCount">0</span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">مخطئة:</span>
+                                    <span class="stat-value" id="skippedCount">0</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ملخص الربط -->
+                    <div class="linking-summary" id="linkingSummary">
+                        <div class="summary-header" onclick="toggleSummary()">
+                            <h4><i class="fas fa-list"></i> ملخص الربط</h4>
+                            <i class="fas fa-chevron-down" id="summaryToggleIcon"></i>
+                        </div>
+                        <div class="summary-content" id="summaryContent">
+                            <div class="summary-grid" id="summaryGrid">
+                                <!-- سيتم تعبئته بواسطة JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- النماذج المنبثقة -->
+    <div id="modalsContainer"></div>
+
+    <!-- مكتبات JavaScript -->
+    <script src="../../assets/js/dashboard.js"></script>
+    <script src="../../assets/js/teachers.js"></script>
+    <script src="../../assets/js/linking.js"></script>
+    <script src="../../assets/js/utils.js"></script>
+    
+    <script>
+        // تهيئة الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeLinkingPage();
+        });
+    </script>
+</body>
+</html>

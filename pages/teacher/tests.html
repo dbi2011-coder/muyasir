@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الاختبارات التشخيصية - ميسر التعلم</title>
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../assets/css/teacher.css">
+    <link rel="stylesheet" href="../../assets/css/tests.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- الشريط الجانبي -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
+                    <h2>ميسر التعلم</h2>
+                </div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html" class="menu-icon">🏠</a><span>الرئيسية</span></li>
+                <li><a href="students.html" class="menu-icon">👨‍🎓</a><span>الطلاب</span></li>
+                <li><a href="content-library.html" class="menu-icon">📚</a><span>مكتبة المحتوى</span></li>
+                <li><a href="tests.html" class="menu-icon active">📝</a><span>الاختبارات التشخيصية</span></li>
+                <li><a href="lessons.html" class="menu-icon">📖</a><span>الدروس</span></li>
+                <li><a href="assignments.html" class="menu-icon">📋</a><span>الواجبات</span></li>
+                <li><a href="reports.html" class="menu-icon">📊</a><span>التقارير</span></li>
+                <li><a href="committee.html" class="menu-icon">👥</a><span>لجنة صعوبات التعلم</span></li>
+                <li><a href="settings.html" class="menu-icon">⚙️</a><span>الإعدادات</span></li>
+                <li><a href="javascript:void(0)" onclick="logout()" class="menu-icon">🚪</a><span>تسجيل الخروج</span></li>
+            </ul>
+        </nav>
+
+        <!-- المحتوى الرئيسي -->
+        <main class="main-content-dashboard">
+            <!-- رأس الصفحة -->
+            <header class="dashboard-header">
+                <div class="header-actions">
+                    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
+                    <h1>الاختبارات التشخيصية</h1>
+                </div>
+                <div class="user-info">
+                    <div class="user-welcome">
+                        <div class="welcome-text">مرحباً</div>
+                        <div class="user-name" id="userName">المعلم</div>
+                    </div>
+                    <div class="user-avatar" id="userAvatar">م</div>
+                </div>
+            </header>
+
+            <!-- محتوى الصفحة -->
+            <div class="dashboard-content">
+                <!-- رأس القسم مع الأزرار -->
+                <div class="content-header">
+                    <h2>📝 إدارة الاختبارات التشخيصية</h2>
+                    <div class="header-buttons">
+                        <button class="btn btn-success" onclick="createNewTest()">
+                            <span class="btn-icon">➕</span> اختبار جديد
+                        </button>
+                        <button class="btn btn-primary" onclick="importTest()">
+                            <span class="btn-icon">📥</span> استيراد
+                        </button>
+                    </div>
+                </div>
+
+                <!-- إحصائيات الاختبارات -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-info">
+                                <div class="stat-number" id="totalTests">0</div>
+                                <div class="stat-label">إجمالي الاختبارات</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="stat-header">
+                            <div class="stat-icon">✅</div>
+                            <div class="stat-info">
+                                <div class="stat-number" id="activeTests">0</div>
+                                <div class="stat-label">نشطة</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="stat-header">
+                            <div class="stat-icon">⏳</div>
+                            <div class="stat-info">
+                                <div class="stat-number" id="pendingTests">0</div>
+                                <div class="stat-label">في انتظار الربط</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- فلترة وترتيب -->
+                <div class="filter-section">
+                    <div class="filter-controls">
+                        <select id="subjectFilter" class="form-control" onchange="filterTests()">
+                            <option value="all">جميع المواد</option>
+                            <option value="لغتي">لغتي</option>
+                            <option value="رياضيات">رياضيات</option>
+                        </select>
+                        <select id="sortFilter" class="form-control" onchange="sortTests()">
+                            <option value="date">ترتيب حسب التاريخ</option>
+                            <option value="subject">ترتيب حسب المادة</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- قائمة الاختبارات -->
+                <div class="tests-list-section">
+                    <h3 class="section-title">الاختبارات المضافة</h3>
+                    <div class="tests-container" id="testsContainer">
+                        <!-- سيتم تعبئته بواسطة JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- النماذج المنبثقة -->
+    <div id="modalsContainer"></div>
+
+    <!-- مكتبات JavaScript -->
+    <script src="../../assets/js/dashboard.js"></script>
+    <script src="../../assets/js/teachers.js"></script>
+    <script src="../../assets/js/tests.js"></script>
+</body>
+</html>

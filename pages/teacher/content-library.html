@@ -4,12 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>مكتبة المحتوى التعليمي - نظام ميسر التعلم</title>
+    <!-- الخطوط والأيقونات -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- أنماط النظام -->
     <link rel="stylesheet" href="../../../assets/css/main.css">
     <link rel="stylesheet" href="../../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../../assets/css/teacher.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        /* أنماط إضافية للمكتبة */
+        /* ============================================
+           أنماط خاصة بمكتبة المحتوى التعليمي
+           ============================================ */
+        
+        /* هيكل المكتبة */
         .library-filters {
             display: flex;
             gap: 15px;
@@ -133,7 +142,11 @@
             border-top: 1px solid var(--border-color);
         }
 
-        /* أنماط البطاقات القابلة للنقر */
+        /* ============================================
+           أنماط التفاعلية للاختبارات التشخيصية
+           ============================================ */
+        
+        /* البطاقات القابلة للنقر */
         .clickable-card {
             cursor: pointer;
             transition: all 0.3s ease;
@@ -240,7 +253,9 @@
             color: #e67e22;
         }
 
-        /* تحسينات للهواتف */
+        /* ============================================
+           تحسينات للهواتف والأجهزة الصغيرة
+           ============================================ */
         @media (max-width: 768px) {
             .library-filters {
                 flex-direction: column;
@@ -293,6 +308,58 @@
                 width: 25px;
                 height: 25px;
                 font-size: 0.8rem;
+            }
+            
+            .clickable-title {
+                font-size: 1.2rem;
+            }
+        }
+
+        /* ============================================
+           أنماط التنبيهات والإشعارات
+           ============================================ */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            z-index: 10000;
+            border-right: 4px solid #3498db;
+            animation: slideIn 0.3s ease;
+        }
+        
+        .notification-success {
+            border-right-color: #27ae60;
+            background: #d5f4e6;
+        }
+        
+        .notification-error {
+            border-right-color: #e74c3c;
+            background: #fadbd8;
+        }
+        
+        .notification-warning {
+            border-right-color: #f39c12;
+            background: #fdebd0;
+        }
+        
+        .notification-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
             }
         }
     </style>
@@ -516,7 +583,7 @@
                             </div>
                         </div>
                         
-                        <!-- رسالة دعوية -->
+                        <!-- رسالة توضيحية -->
                         <div class="alert alert-info" style="margin-bottom: 20px;">
                             <i class="fas fa-info-circle"></i>
                             <strong>انقر على أي اختبار للدخول إلى صفحة إدارة الاختبارات التشخيصية</strong>
@@ -528,7 +595,7 @@
                         <div class="content-grid">
                             <!-- اختبار 1 -->
                             <div class="content-card clickable-card" 
-                                 onclick="window.location.href='diagnostic-tests.html?test=1'"
+                                 onclick="navigateToTest(1)"
                                  title="انقر للدخول إلى صفحة إدارة الاختبارات">
                                 <div class="navigation-arrow">
                                     <i class="fas fa-arrow-left"></i>
@@ -545,11 +612,19 @@
                                         <span><i class="fas fa-link"></i> مرتبط</span>
                                     </div>
                                 </div>
+                                <div class="content-actions">
+                                    <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); previewTest(1)">
+                                        <i class="fas fa-eye"></i> معاينة
+                                    </button>
+                                    <button class="btn btn-sm btn-success" onclick="event.stopPropagation(); assignTestToStudents(1)">
+                                        <i class="fas fa-share"></i> تعيين
+                                    </button>
+                                </div>
                             </div>
                             
                             <!-- اختبار 2 -->
                             <div class="content-card clickable-card" 
-                                 onclick="window.location.href='diagnostic-tests.html?test=2'"
+                                 onclick="navigateToTest(2)"
                                  title="انقر للدخول إلى صفحة إدارة الاختبارات">
                                 <div class="navigation-arrow">
                                     <i class="fas fa-arrow-left"></i>
@@ -566,11 +641,19 @@
                                         <span><i class="fas fa-link"></i> مرتبط</span>
                                     </div>
                                 </div>
+                                <div class="content-actions">
+                                    <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); previewTest(2)">
+                                        <i class="fas fa-eye"></i> معاينة
+                                    </button>
+                                    <button class="btn btn-sm btn-info" onclick="event.stopPropagation(); exportTest(2)">
+                                        <i class="fas fa-download"></i> تصدير
+                                    </button>
+                                </div>
                             </div>
                             
                             <!-- اختبار 3 -->
                             <div class="content-card clickable-card" 
-                                 onclick="window.location.href='diagnostic-tests.html?test=3'"
+                                 onclick="navigateToTest(3)"
                                  title="انقر للدخول إلى صفحة إدارة الاختبارات">
                                 <div class="navigation-arrow">
                                     <i class="fas fa-arrow-left"></i>
@@ -586,6 +669,14 @@
                                         <span><i class="fas fa-chart-line"></i> 92% نجاح</span>
                                         <span><i class="fas fa-unlink"></i> غير مرتبط</span>
                                     </div>
+                                </div>
+                                <div class="content-actions">
+                                    <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); previewTest(3)">
+                                        <i class="fas fa-eye"></i> معاينة
+                                    </button>
+                                    <button class="btn btn-sm btn-warning" onclick="event.stopPropagation(); linkTestObjectives(3)">
+                                        <i class="fas fa-link"></i> ربط أهداف
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -684,7 +775,13 @@
     <!-- Scripts -->
     <script src="../../../assets/js/auth.js"></script>
     <script src="../../../assets/js/teacher.js"></script>
+    <script src="../../../assets/js/library-interactive.js"></script>
+    
     <script>
+        // ============================================
+        // نظام مكتبة المحتوى التعليمي - JavaScript
+        // ============================================
+
         // التحقق من المصادقة
         document.addEventListener('DOMContentLoaded', function() {
             const user = checkAuth();
@@ -693,13 +790,19 @@
                 return;
             }
             
+            // تهيئة الصفحة
+            initializeLibraryPage(user);
+        });
+
+        // تهيئة صفحة المكتبة
+        function initializeLibraryPage(user) {
             updateUserInterface(user);
             loadSidebar();
             loadLibraryStats();
             loadRecentContent();
             setupLibraryFilters();
-            makeTestCardsClickable();
-        });
+            initializeInteractiveFeatures();
+        }
 
         // تحميل الشريط الجانبي
         function loadSidebar() {
@@ -710,7 +813,7 @@
                     activateSidebarLinks();
                 })
                 .catch(error => {
-                    console.error('Error loading sidebar:', error);
+                    console.error('خطأ في تحميل الشريط الجانبي:', error);
                 });
         }
 
@@ -746,6 +849,7 @@
         function loadRecentContent() {
             const recentContent = [
                 {
+                    id: 1,
                     type: 'lesson',
                     title: 'درس الكتابة للصف الأول',
                     subject: 'لغتي',
@@ -753,6 +857,7 @@
                     icon: 'fas fa-book'
                 },
                 {
+                    id: 2,
                     type: 'test',
                     title: 'اختبار القراءة التشخيصي',
                     subject: 'لغتي',
@@ -760,6 +865,7 @@
                     icon: 'fas fa-clipboard-check'
                 },
                 {
+                    id: 3,
                     type: 'objective',
                     title: 'هدف التمييز بين الأصوات',
                     subject: 'لغتي',
@@ -767,6 +873,7 @@
                     icon: 'fas fa-bullseye'
                 },
                 {
+                    id: 4,
                     type: 'lesson',
                     title: 'درس الأشكال الهندسية',
                     subject: 'الرياضيات',
@@ -777,7 +884,7 @@
 
             const grid = document.getElementById('recentContentGrid');
             grid.innerHTML = recentContent.map(item => `
-                <div class="content-card">
+                <div class="content-card" onclick="viewRecentItem(${item.id}, '${item.type}')">
                     <div class="content-header">
                         <h4>${item.title}</h4>
                         <span class="content-badge subject-${item.subject.replace(' ', '-')}">${item.subject}</span>
@@ -793,42 +900,15 @@
                         </div>
                     </div>
                     <div class="content-actions">
-                        <button class="btn btn-sm btn-primary">
+                        <button class="btn btn-sm btn-primary" onclick="event.stopPropagation(); viewRecentItem(${item.id}, '${item.type}')">
                             <i class="fas fa-eye"></i> عرض
                         </button>
-                        <button class="btn btn-sm btn-secondary">
+                        <button class="btn btn-sm btn-secondary" onclick="event.stopPropagation(); editRecentItem(${item.id}, '${item.type}')">
                             <i class="fas fa-edit"></i> تعديل
                         </button>
                     </div>
                 </div>
             `).join('');
-        }
-
-        // جعل بطاقات الاختبار قابلة للنقر
-        function makeTestCardsClickable() {
-            const testCards = document.querySelectorAll('#testsSection .content-card');
-            testCards.forEach(card => {
-                if (!card.classList.contains('clickable-card')) {
-                    card.classList.add('clickable-card');
-                    
-                    // إضافة سهم التنقل
-                    const arrow = document.createElement('div');
-                    arrow.className = 'navigation-arrow';
-                    arrow.innerHTML = '<i class="fas fa-arrow-left"></i>';
-                    card.style.position = 'relative';
-                    card.appendChild(arrow);
-                    
-                    // إضافة تأثيرات التفاعل
-                    card.addEventListener('mouseenter', function() {
-                        this.style.cursor = 'pointer';
-                        this.querySelector('.content-header h4').style.color = 'var(--primary-color)';
-                    });
-                    
-                    card.addEventListener('mouseleave', function() {
-                        this.querySelector('.content-header h4').style.color = '';
-                    });
-                }
-            });
         }
 
         // الفلترة والبحث
@@ -909,55 +989,63 @@
         }
 
         function showRecentContent(period) {
-            alert(`عرض المحتوى المضافة ${period === 'week' ? 'هذا الأسبوع' : period === 'month' ? 'هذا الشهر' : 'جميع'}`);
+            showNotification(`عرض المحتوى المضافة ${period === 'week' ? 'هذا الأسبوع' : period === 'month' ? 'هذا الشهر' : 'جميع'}`, 'info');
             // هنا يمكنك إضافة منطق لتصفية المحتوى حسب الفترة
         }
 
         // دوال إنشاء المحتوى
         function createNewLesson() {
-            alert('فتح نافذة إنشاء درس جديد');
+            showNotification('فتح نافذة إنشاء درس جديد', 'info');
             // window.location.href = 'create-lesson.html';
         }
 
         function createNewObjective() {
-            alert('فتح نافذة إنشاء هدف جديد');
+            showNotification('فتح نافذة إنشاء هدف جديد', 'info');
             // window.location.href = 'create-objective.html';
         }
 
         function importContent() {
-            alert('فتح نافذة استيراد المحتوى');
+            showNotification('فتح نافذة استيراد المحتوى', 'info');
         }
 
         function exportLibrary() {
             if (confirm('هل تريد تصدير جميع محتويات المكتبة؟')) {
-                alert('جاري تصدير المكتبة...');
+                showNotification('جاري تصدير المكتبة...', 'info');
                 // هنا يمكنك إضافة منطق التصدير
             }
         }
 
         // دوال العرض والتعديل
         function viewLesson(id) {
-            alert(`عرض الدرس ${id}`);
+            showNotification(`عرض الدرس ${id}`, 'info');
         }
 
         function editLesson(id) {
-            alert(`تعديل الدرس ${id}`);
+            showNotification(`تعديل الدرس ${id}`, 'info');
         }
 
         function assignLesson(id) {
-            alert(`تعيين الدرس ${id} للطلاب`);
+            showNotification(`تعيين الدرس ${id} للطلاب`, 'info');
         }
 
         function linkLessonObjectives(id) {
-            alert(`ربط أهداف الدرس ${id}`);
+            showNotification(`ربط أهداف الدرس ${id}`, 'info');
         }
 
         function viewObjective(id) {
-            alert(`عرض الهدف ${id}`);
+            showNotification(`عرض الهدف ${id}`, 'info');
         }
 
         function editObjective(id) {
-            alert(`تعديل الهدف ${id}`);
+            showNotification(`تعديل الهدف ${id}`, 'info');
+        }
+
+        function viewRecentItem(id, type) {
+            showNotification(`عرض ${type === 'lesson' ? 'الدرس' : type === 'test' ? 'الاختبار' : 'الهدف'} ${id}`, 'info');
+        }
+
+        function editRecentItem(id, type) {
+            showNotification(`تعديل ${type === 'lesson' ? 'الدرس' : type === 'test' ? 'الاختبار' : 'الهدف'} ${id}`, 'info');
         }
 
         // دوال خاصة بالاختبارات التشخيصية
@@ -965,8 +1053,33 @@
             window.location.href = `diagnostic-tests.html?test=${testId}`;
         }
 
-        // التنبيهات والإشعارات
+        function previewTest(testId) {
+            showNotification(`معاينة الاختبار ${testId}`, 'info');
+        }
+
+        function assignTestToStudents(testId) {
+            showNotification(`تعيين الاختبار ${testId} للطلاب`, 'info');
+        }
+
+        function exportTest(testId) {
+            if (confirm(`هل تريد تصدير الاختبار ${testId}؟`)) {
+                showNotification(`جاري تصدير الاختبار ${testId}...`, 'info');
+            }
+        }
+
+        function linkTestObjectives(testId) {
+            showNotification(`ربط أهداف الاختبار ${testId}`, 'info');
+        }
+
+        // دوال المساعدة
         function showNotification(message, type = 'info') {
+            // إزالة أي إشعارات سابقة
+            const existingNotifications = document.querySelectorAll('.notification');
+            existingNotifications.forEach(notification => {
+                notification.remove();
+            });
+            
+            // إنشاء الإشعار الجديد
             const notification = document.createElement('div');
             notification.className = `notification notification-${type}`;
             notification.innerHTML = `
@@ -975,65 +1088,73 @@
                                        type === 'error' ? 'exclamation-circle' : 
                                        type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
                     <span>${message}</span>
+                    <button class="notification-close" onclick="this.parentElement.parentElement.remove()">&times;</button>
                 </div>
             `;
             
             document.body.appendChild(notification);
             
+            // إضافة أنماط زر الإغلاق إذا لم تكن موجودة
+            if (!document.querySelector('#notification-close-styles')) {
+                const styles = document.createElement('style');
+                styles.id = 'notification-close-styles';
+                styles.textContent = `
+                    .notification-close {
+                        background: none;
+                        border: none;
+                        font-size: 1.2rem;
+                        cursor: pointer;
+                        color: #666;
+                        margin-right: auto;
+                        padding: 0;
+                        width: 25px;
+                        height: 25px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        border-radius: 50%;
+                        transition: background-color 0.3s ease;
+                    }
+                    .notification-close:hover {
+                        background-color: rgba(0,0,0,0.1);
+                    }
+                `;
+                document.head.appendChild(styles);
+            }
+            
+            // إزالة الإشعار تلقائياً بعد 5 ثواني
             setTimeout(() => {
-                notification.remove();
-            }, 3000);
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 5000);
         }
 
-        // إضافة بعض الأنماط للتنبيهات
-        const style = document.createElement('style');
-        style.textContent = `
-            .notification {
-                position: fixed;
-                top: 20px;
-                right: 20px;
-                background: white;
-                padding: 15px 20px;
-                border-radius: 8px;
-                box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-                z-index: 10000;
-                border-right: 4px solid #3498db;
-                animation: slideIn 0.3s ease;
-            }
+        // تهيئة الميزات التفاعلية
+        function initializeInteractiveFeatures() {
+            // إضافة تلميحات للبطاقات القابلة للنقر
+            document.querySelectorAll('.clickable-card').forEach(card => {
+                // إضافة تأثير عند النقر
+                card.addEventListener('click', function() {
+                    this.style.transform = 'scale(0.98)';
+                    setTimeout(() => {
+                        this.style.transform = '';
+                    }, 150);
+                });
+                
+                // إضافة تأثيرات التفاعل
+                card.addEventListener('mouseenter', function() {
+                    this.style.cursor = 'pointer';
+                });
+            });
             
-            .notification-success {
-                border-right-color: #27ae60;
-                background: #d5f4e6;
-            }
-            
-            .notification-error {
-                border-right-color: #e74c3c;
-                background: #fadbd8;
-            }
-            
-            .notification-warning {
-                border-right-color: #f39c12;
-                background: #fdebd0;
-            }
-            
-            .notification-content {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-            
-            @keyframes slideIn {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-        `;
-        document.head.appendChild(style);
+            // إضافة تأثيرات للعناوين القابلة للنقر
+            document.querySelectorAll('.clickable-title').forEach(title => {
+                title.addEventListener('mouseenter', function() {
+                    this.style.cursor = 'pointer';
+                });
+            });
+        }
     </script>
 </body>
 </html>

@@ -976,4 +976,103 @@ window.markMessageAsRead = markMessageAsRead;
 window.deleteMessage = deleteMessage;
 window.filterMessages = filterMessages;
 window.searchMessages = searchMessages;
+// ===== تحديث مكتبة المحتوى التعليمي =====
+// جعل عنوان الاختبارات التشخيصية قابل للنقر
 
+// تحديث دالة loadContentLibrary
+function loadContentLibrary() {
+    loadTests();
+    loadLessons();
+    loadObjectives();
+    loadAssignments();
+    
+    // جعل عنوان الاختبارات التشخيصية قابل للنقر
+    makeTestsTitleClickable();
+}
+
+// دالة لجعل عنوان الاختبارات التشخيصية قابل للنقل إلى صفحة منفصلة
+function makeTestsTitleClickable() {
+    const testsSection = document.querySelector('.content-section:first-child');
+    if (!testsSection) return;
+    
+    const testsTitle = testsSection.querySelector('.section-title');
+    if (!testsTitle) return;
+    
+    // إضافة زر النقل إلى صفحة الاختبارات التشخيصية
+    const goToTestsBtn = document.createElement('button');
+    goToTestsBtn.className = 'btn btn-sm btn-outline-primary';
+    goToTestsBtn.innerHTML = 'الانتقال إلى صفحة الاختبارات التشخيصية <i class="fas fa-external-link-alt"></i>';
+    goToTestsBtn.style.marginRight = '10px';
+    goToTestsBtn.onclick = goToDiagnosticTestsPage;
+    
+    testsTitle.insertAdjacentElement('afterend', goToTestsBtn);
+    
+    // يمكنك أيضاً جعل العنوان نفسه قابل للنقر
+    testsTitle.style.cursor = 'pointer';
+    testsTitle.style.color = 'var(--primary-color)';
+    testsTitle.style.display = 'flex';
+    testsTitle.style.alignItems = 'center';
+    testsTitle.style.gap = '10px';
+    testsTitle.innerHTML = `<i class="fas fa-clipboard-check"></i> ${testsTitle.textContent}`;
+    testsTitle.onclick = goToDiagnosticTestsPage;
+}
+
+// دالة للانتقال إلى صفحة الاختبارات التشخيصية
+function goToDiagnosticTestsPage() {
+    // حفظ الصفحة الحالية للرجوع إليها
+    sessionStorage.setItem('previousPage', window.location.pathname);
+    
+    // الانتقال إلى صفحة الاختبارات التشخيصية
+    window.location.href = 'diagnostic-tests.html';
+}
+
+// تحديث دالة loadTests لتتوافق مع الصفحة الجديدة
+function loadTests() {
+    const testsGrid = document.getElementById('testsGrid');
+    if (!testsGrid) return;
+
+    // استخدام بيانات الاختبارات التشخيصية الجديدة
+    const tests = JSON.parse(localStorage.getItem('diagnosticTests') || '[]');
+    const currentTeacher = getCurrentUser();
+    const teacherTests = tests.filter(test => test.teacherId === currentTeacher.id);
+
+    if (teacherTests.length === 0) {
+        testsGrid.innerHTML = `
+            <div class="empty-content-state">
+                <div class="empty-icon">📝</div>
+                <h3>لا توجد اختبارات تشخيصية</h3>
+                <p>ابدأ بإنشاء أول اختبار تشخيصي</p>
+                <button class="btn btn-success" onclick="goToDiagnosticTestsPage()">الانتقال إلى صفحة الاختبارات</button>
+            </div>
+        `;
+        return;
+    }
+
+    testsGrid.innerHTML = teacherTests.map(test => `
+        <div class="content-card">
+            <div class="content-header">
+                <h4>${test.title}</h4>
+                <span class="content-badge subject-${test.subject}">${test.subject}</span>
+            </div>
+            <div class="content-body">
+                <p>${test.description || 'لا يوجد وصف'}</p>
+                <div class="content-meta">
+                    <span class="questions-count">محك الاجتياز: ${test.passingCriteria || 100}%</span>
+                    <span class="objectives-status ${test.objectivesLinked ? 'linked' : 'not-linked'}">
+                        ${test.objectivesLinked ? 'تم الربط' : 'لم يتم الربط'}
+                    </span>
+                </div>
+            </div>
+            <div class="content-actions">
+                <button class="btn btn-sm btn-primary" onclick="viewDiagnosticTest(${test.id})" title="عرض">👁️</button>
+                <button class="btn btn-sm btn-warning" onclick="editDiagnosticTest(${test.id})" title="تعديل">✏️</button>
+                <button class="btn btn-sm btn-info" onclick="exportDiagnosticTest(${test.id})" title="تصدير">📤</button>
+                <button class="btn btn-sm btn-secondary" onclick="linkObjectives(${test.id})" title="ربط الأهداف">🎯</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteDiagnosticTest(${test.id})" title="حذف">🗑️</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// تصدير الدوال الجديدة للاستخدام العالمي
+window.goToDiagnosticTestsPage = goToDiagnosticTestsPage;

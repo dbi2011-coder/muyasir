@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>الجدول الدراسي - ميسر التعلم</title>
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../assets/css/teacher.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- الشريط الجانبي -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
+                    <h2>ميسر التعلم</h2>
+                </div>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
+                <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
+                <li><a href="content-library.html"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
+                <li><a href="study-schedule.html" class="active"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
+                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
+                <li><a href="reports.html"><span class="menu-icon">📋</span>التقارير</a></li>
+                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة الصعوبات</a></li>
+                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
+            </ul>
+        </aside>
+
+        <!-- المحتوى الرئيسي -->
+        <main class="main-content-dashboard">
+            <!-- رأس اللوحة -->
+            <header class="dashboard-header">
+                <button class="mobile-menu-btn">☰</button>
+                <div class="user-info">
+                    <div class="user-welcome">
+                        <div class="welcome-text">مرحباً بعودتك</div>
+                        <div class="user-name" id="userName">أ/ اسم المعلم</div>
+                    </div>
+                    <div class="user-avatar" id="userAvatar">م</div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="showNotifications()">🔔 الإشعارات</button>
+                </div>
+            </header>
+
+            <!-- محتوى اللوحة -->
+            <div class="dashboard-content">
+                <div class="content-header">
+                    <h1>الجدول الدراسي</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-danger" onclick="clearSchedule()">تفريغ الجدول</button>
+                        <button class="btn btn-success" onclick="saveSchedule()">حفظ الجدول</button>
+                    </div>
+                </div>
+
+                <!-- الجدول الدراسي -->
+                <div class="schedule-container">
+                    <div class="schedule-actions">
+                        <button class="btn btn-outline-primary" onclick="showAddSessionModal()">+ إضافة حصة</button>
+                        <button class="btn btn-outline-secondary" onclick="printSchedule()">🖨️ طباعة</button>
+                    </div>
+
+                    <div class="schedule-table-container">
+                        <table class="schedule-table">
+                            <thead>
+                                <tr>
+                                    <th class="time-header">الحصص/الأيام</th>
+                                    <th>الأحد</th>
+                                    <th>الاثنين</th>
+                                    <th>الثلاثاء</th>
+                                    <th>الأربعاء</th>
+                                    <th>الخميس</th>
+                                </tr>
+                            </thead>
+                            <tbody id="scheduleBody">
+                                <!-- سيتم تعبئته بواسطة JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="schedule-legend">
+                        <div class="legend-item">
+                            <div class="legend-color available"></div>
+                            <span>متاح</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color booked"></div>
+                            <span>محجوز</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-color break"></div>
+                            <span>فسحة</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- نموذج إضافة حصة -->
+    <div id="addSessionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إضافة حصة دراسية</h3>
+                <button class="modal-close" onclick="closeAddSessionModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addSessionForm">
+                    <div class="form-group">
+                        <label for="sessionDay" class="form-label">اليوم</label>
+                        <select id="sessionDay" class="form-control" required>
+                            <option value="">اختر اليوم</option>
+                            <option value="sunday">الأحد</option>
+                            <option value="monday">الاثنين</option>
+                            <option value="tuesday">الثلاثاء</option>
+                            <option value="wednesday">الأربعاء</option>
+                            <option value="thursday">الخميس</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sessionPeriod" class="form-label">الحصة</label>
+                        <select id="sessionPeriod" class="form-control" required>
+                            <option value="">اختر الحصة</option>
+                            <option value="1">الحصة الأولى</option>
+                            <option value="2">الحصة الثانية</option>
+                            <option value="3">الحصة الثالثة</option>
+                            <option value="4">الحصة الرابعة</option>
+                            <option value="5">الحصة الخامسة</option>
+                            <option value="6">الحصة السادسة</option>
+                            <option value="7">الحصة السابعة</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sessionStudents" class="form-label">الطلاب</label>
+                        <div id="studentsList" class="students-checklist">
+                            <!-- سيتم تعبئته بواسطة JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="sessionSubject" class="form-label">المادة</label>
+                        <select id="sessionSubject" class="form-control" required>
+                            <option value="">اختر المادة</option>
+                            <option value="لغتي">لغتي</option>
+                            <option value="رياضيات">رياضيات</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAddSessionModal()">إلغاء</button>
+                <button type="button" class="btn btn-success" onclick="addSessionToSchedule()">إضافة</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../assets/js/dashboard.js"></script>
+    <script src="../../assets/js/teacher.js"></script>
+    <script src="../../assets/js/study-schedule.js"></script>
+    <script src="../../assets/js/auth.js"></script>
+</body>
+</html>

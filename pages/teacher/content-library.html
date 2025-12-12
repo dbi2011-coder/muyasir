@@ -1,169 +1,0 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مكتبة المحتوى التعليمي - ميسر التعلم</title>
-    <link rel="stylesheet" href="../assets/css/teacher.css">
-    <link rel="stylesheet" href="../assets/css/main.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-</head>
-<body>
-    <div class="dashboard-container">
-        <!-- الشريط الجانبي -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src="../assets/images/logo.png" alt="شعار ميسر التعلم">
-                    <h2>ميسر التعلم</h2>
-                </div>
-            </div>
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="menu-icon">🏠</span>لوحة التحكم</a></li>
-                <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
-                <li><a href="educational-library.html" class="active"><span class="menu-icon">📚</span>مكتبة المحتوى التعليمي</a></li>
-                <li><a href="tests.html"><span class="menu-icon">📝</span>الاختبارات</a></li>
-                <li><a href="reports.html"><span class="menu-icon">📊</span>التقارير</a></li>
-                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة صعوبات التعلم</a></li>
-                <li><a href="messages.html"><span class="menu-icon">💬</span>المراسلات</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
-            </ul>
-        </aside>
-
-        <!-- المحتوى الرئيسي -->
-        <main class="main-content-dashboard">
-            <header class="dashboard-header">
-                <div class="user-info">
-                    <div class="user-welcome">
-                        <div class="welcome-text">مرحباً بعودتك</div>
-                        <div class="user-name" id="userName">المعلم</div>
-                    </div>
-                    <div class="user-avatar" id="userAvatar">م</div>
-                </div>
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="showNotifications()">
-                        <span class="btn-icon">🔔</span>
-                        <span class="notification-badge" id="notificationCount">0</span>
-                    </button>
-                    <button class="btn btn-secondary" onclick="logout()">تسجيل الخروج</button>
-                </div>
-            </header>
-
-            <div class="dashboard-content">
-                <div class="content-header">
-                    <h1>📚 مكتبة المحتوى التعليمي</h1>
-                    <div class="stats-grid">
-                        <div class="stat-card">
-                            <div class="stat-header">
-                                <div class="stat-icon">📊</div>
-                            </div>
-                            <div class="stat-number" id="totalAssessments">0</div>
-                            <div class="stat-label">اختبار تشخيصي</div>
-                        </div>
-                        <div class="stat-card success">
-                            <div class="stat-header">
-                                <div class="stat-icon">📖</div>
-                            </div>
-                            <div class="stat-number" id="totalLessons">0</div>
-                            <div class="stat-label">درس</div>
-                        </div>
-                        <div class="stat-card warning">
-                            <div class="stat-header">
-                                <div class="stat-icon">🎯</div>
-                            </div>
-                            <div class="stat-number" id="totalObjectives">0</div>
-                            <div class="stat-label">هدف قصير المدى</div>
-                        </div>
-                        <div class="stat-card danger">
-                            <div class="stat-header">
-                                <div class="stat-icon">📝</div>
-                            </div>
-                            <div class="stat-number" id="totalAssignments">0</div>
-                            <div class="stat-label">واجب</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- قسم الاختبارات التشخيصية -->
-                <div class="library-section">
-                    <div class="section-header">
-                        <h2>📊 الاختبارات التشخيصية</h2>
-                        <div class="section-actions">
-                            <button class="btn btn-secondary" id="importAssessmentBtn">
-                                <span class="btn-icon">📥</span> استيراد
-                            </button>
-                            <button class="btn btn-success" id="addAssessmentBtn">
-                                <span class="btn-icon">➕</span> إضافة اختبار تشخيصي جديد
-                            </button>
-                        </div>
-                    </div>
-                    <div class="content-grid" id="assessmentsList">
-                        <!-- سيتم تحميل الاختبارات التشخيصية هنا -->
-                    </div>
-                </div>
-
-                <!-- قسم الدروس -->
-                <div class="library-section">
-                    <div class="section-header">
-                        <h2>📖 الدروس</h2>
-                        <div class="section-actions">
-                            <button class="btn btn-secondary">
-                                <span class="btn-icon">📥</span> استيراد
-                            </button>
-                            <button class="btn btn-success">
-                                <span class="btn-icon">➕</span> إضافة درس جديد
-                            </button>
-                        </div>
-                    </div>
-                    <div class="content-grid" id="lessonsList">
-                        <!-- سيتم تحميل الدروس هنا -->
-                    </div>
-                </div>
-
-                <!-- قسم الأهداف القصيرة المدى -->
-                <div class="library-section">
-                    <div class="section-header">
-                        <h2>🎯 الأهداف القصيرة المدى</h2>
-                        <div class="section-actions">
-                            <button class="btn btn-secondary">
-                                <span class="btn-icon">📥</span> استيراد
-                            </button>
-                            <button class="btn btn-success">
-                                <span class="btn-icon">➕</span> إضافة هدف قصير المدى جديد
-                            </button>
-                        </div>
-                    </div>
-                    <div id="objectivesList">
-                        <!-- سيتم تحميل الأهداف القصيرة المدى هنا -->
-                    </div>
-                </div>
-
-                <!-- قسم الواجبات -->
-                <div class="library-section">
-                    <div class="section-header">
-                        <h2>📝 الواجبات</h2>
-                        <div class="section-actions">
-                            <button class="btn btn-secondary">
-                                <span class="btn-icon">📥</span> استيراد
-                            </button>
-                            <button class="btn btn-success">
-                                <span class="btn-icon">➕</span> إضافة واجب جديد
-                            </button>
-                        </div>
-                    </div>
-                    <div class="content-grid" id="assignmentsList">
-                        <!-- سيتم تحميل الواجبات هنا -->
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- النوافذ المنبثقة -->
-    <script src="../assets/js/auth.js"></script>
-    <script src="../assets/js/teacher.js"></script>
-    <script src="../assets/js/educational-library.js"></script>
-</body>
-</html>

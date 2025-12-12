@@ -1,173 +1,0 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>التقارير - ميسر التعلم</title>
-    <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/admin.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-</head>
-<body>
-    <div class="dashboard-container">
-        <!-- الشريط الجانبي -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
-                    <h2>ميسر التعلم</h2>
-                </div>
-            </div>
-            
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
-                <li><a href="teachers.html"><span class="menu-icon">👨‍🏫</span>إدارة المعلمين</a></li>
-                <li><a href="reports.html" class="active"><span class="menu-icon">📋</span>التقارير</a></li>
-                <li><a href="settings.html"><span class="menu-icon">⚙️</span>الإعدادات</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
-            </ul>
-        </aside>
-
-        <!-- المحتوى الرئيسي -->
-        <main class="main-content-dashboard">
-            <!-- رأس اللوحة -->
-            <header class="dashboard-header">
-                <button class="mobile-menu-btn">☰</button>
-                <div class="user-info">
-                    <div class="user-welcome">
-                        <div class="welcome-text">مرحباً بعودتك</div>
-                        <div class="user-name" id="userName">مدير النظام</div>
-                    </div>
-                    <div class="user-avatar" id="userAvatar">م</div>
-                </div>
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="showNotifications()">🔔 الإشعارات</button>
-                </div>
-            </header>
-
-            <!-- محتوى اللوحة -->
-            <div class="dashboard-content">
-                <div class="content-header">
-                    <h1>التقارير والإحصائيات</h1>
-                    <div class="header-actions">
-                        <button class="btn btn-success" onclick="generateSystemReport()">
-                            <span>📊 إنشاء تقرير شامل</span>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- بطاقات التقارير السريعة -->
-                <div class="stats-grid">
-                    <div class="stat-card" onclick="showTeacherReports()" style="cursor: pointer;">
-                        <div class="stat-header">
-                            <div class="stat-icon">👨‍🏫</div>
-                        </div>
-                        <div class="stat-number" id="teacherReportsCount">0</div>
-                        <div class="stat-label">تقارير المعلمين</div>
-                    </div>
-                    
-                    <div class="stat-card success" onclick="showStudentReports()" style="cursor: pointer;">
-                        <div class="stat-header">
-                            <div class="stat-icon">🎓</div>
-                        </div>
-                        <div class="stat-number" id="studentReportsCount">0</div>
-                        <div class="stat-label">تقارير الطلاب</div>
-                    </div>
-                    
-                    <div class="stat-card warning" onclick="showSystemReports()" style="cursor: pointer;">
-                        <div class="stat-header">
-                            <div class="stat-icon">📈</div>
-                        </div>
-                        <div class="stat-number" id="systemReportsCount">0</div>
-                        <div class="stat-label">تقارير النظام</div>
-                    </div>
-                    
-                    <div class="stat-card danger" onclick="showActivityReports()" style="cursor: pointer;">
-                        <div class="stat-header">
-                            <div class="stat-icon">📝</div>
-                        </div>
-                        <div class="stat-number" id="activityReportsCount">0</div>
-                        <div class="stat-label">تقارير النشاط</div>
-                    </div>
-                </div>
-
-                <!-- محتوى التقارير -->
-                <div class="reports-content">
-                    <div class="card">
-                        <h3>التقارير المتاحة</h3>
-                        <p>يمكنك إنشاء وعرض مختلف أنواع التقارير من خلال الخيارات أدناه:</p>
-                        
-                        <div class="reports-grid">
-                            <div class="report-card" onclick="generateTeacherPerformanceReport()">
-                                <div class="report-icon">📊</div>
-                                <h4>أداء المعلمين</h4>
-                                <p>تقرير مفصل عن أداء المعلمين وإنجازاتهم</p>
-                            </div>
-                            
-                            <div class="report-card" onclick="generateStudentProgressReport()">
-                                <div class="report-icon">📈</div>
-                                <h4>تقدم الطلاب</h4>
-                                <p>متابعة تقدم الطلاب في النظام</p>
-                            </div>
-                            
-                            <div class="report-card" onclick="generateSystemUsageReport()">
-                                <div class="report-icon">🖥️</div>
-                                <h4>استخدام النظام</h4>
-                                <p>إحصائيات استخدام النظام والجلسات النشطة</p>
-                            </div>
-                            
-                            <div class="report-card" onclick="generateLoginActivityReport()">
-                                <div class="report-icon">🔐</div>
-                                <h4>نشاط الدخول</h4>
-                                <p>تقرير محاولات الدخول والنشاط الأمني</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <script src="../../assets/js/dashboard.js"></script>
-    <script src="../../assets/js/admin.js"></script>
-    <script src="../../assets/js/auth.js"></script>
-    <script>
-        function generateSystemReport() {
-            alert('سيتم تطوير نظام التقارير المتقدم في المراحل القادمة');
-        }
-        
-        function showTeacherReports() {
-            alert('تقارير المعلمين - قيد التطوير');
-        }
-        
-        function showStudentReports() {
-            alert('تقارير الطلاب - قيد التطوير');
-        }
-        
-        function showSystemReports() {
-            alert('تقارير النظام - قيد التطوير');
-        }
-        
-        function showActivityReports() {
-            alert('تقارير النشاط - قيد التطوير');
-        }
-        
-        function generateTeacherPerformanceReport() {
-            alert('تقرير أداء المعلمين - قيد التطوير');
-        }
-        
-        function generateStudentProgressReport() {
-            alert('تقرير تقدم الطلاب - قيد التطوير');
-        }
-        
-        function generateSystemUsageReport() {
-            alert('تقرير استخدام النظام - قيد التطوير');
-        }
-        
-        function generateLoginActivityReport() {
-            alert('تقرير نشاط الدخول - قيد التطوير');
-        }
-    </script>
-</body>
-</html>

@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مكتبة المحتوى - ميسر التعلم</title>
-    <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/teacher.css">
+    <title>مكتبة المحتوى التعليمي - ميسر التعلم</title>
+    <link rel="stylesheet" href="../assets/css/teacher.css">
+    <link rel="stylesheet" href="../assets/css/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -15,117 +16,154 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
+                    <img src="../assets/images/logo.png" alt="شعار ميسر التعلم">
                     <h2>ميسر التعلم</h2>
                 </div>
             </div>
-            
             <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
+                <li><a href="dashboard.html"><span class="menu-icon">🏠</span>لوحة التحكم</a></li>
                 <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
-                <li><a href="content-library.html" class="active"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
-                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
-                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
-                <li><a href="reports.html"><span class="menu-icon">📋</span>التقارير</a></li>
-                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة الصعوبات</a></li>
+                <li><a href="educational-library.html" class="active"><span class="menu-icon">📚</span>مكتبة المحتوى التعليمي</a></li>
+                <li><a href="tests.html"><span class="menu-icon">📝</span>الاختبارات</a></li>
+                <li><a href="reports.html"><span class="menu-icon">📊</span>التقارير</a></li>
+                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة صعوبات التعلم</a></li>
+                <li><a href="messages.html"><span class="menu-icon">💬</span>المراسلات</a></li>
                 <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
             </ul>
         </aside>
 
         <!-- المحتوى الرئيسي -->
         <main class="main-content-dashboard">
-            <!-- رأس اللوحة -->
             <header class="dashboard-header">
-                <button class="mobile-menu-btn">☰</button>
                 <div class="user-info">
                     <div class="user-welcome">
                         <div class="welcome-text">مرحباً بعودتك</div>
-                        <div class="user-name" id="userName">أ/ اسم المعلم</div>
+                        <div class="user-name" id="userName">المعلم</div>
                     </div>
                     <div class="user-avatar" id="userAvatar">م</div>
                 </div>
                 <div class="header-actions">
-                    <button class="btn btn-primary" onclick="showNotifications()">🔔 الإشعارات</button>
+                    <button class="btn btn-primary" onclick="showNotifications()">
+                        <span class="btn-icon">🔔</span>
+                        <span class="notification-badge" id="notificationCount">0</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="logout()">تسجيل الخروج</button>
                 </div>
             </header>
 
-            <!-- محتوى اللوحة -->
             <div class="dashboard-content">
                 <div class="content-header">
-                    <h1>مكتبة المحتوى التعليمي</h1>
-                    <div class="header-actions">
-                        <div class="dropdown">
-                            <button class="btn btn-success dropdown-toggle" type="button" id="addContentDropdown" data-toggle="dropdown">
-                                + إضافة محتوى جديد
-                            </button>
-                            <div class="dropdown-menu">
-                                <a class="dropdown-item" href="#" onclick="showCreateTestModal()">اختبار تشخيصي</a>
-                                <a class="dropdown-item" href="#" onclick="showCreateLessonModal()">درس جديد</a>
-                                <a class="dropdown-item" href="#" onclick="showCreateObjectiveModal()">هدف قصير المدى</a>
-                                <a class="dropdown-item" href="#" onclick="showCreateAssignmentModal()">واجب جديد</a>
+                    <h1>📚 مكتبة المحتوى التعليمي</h1>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-header">
+                                <div class="stat-icon">📊</div>
                             </div>
+                            <div class="stat-number" id="totalAssessments">0</div>
+                            <div class="stat-label">اختبار تشخيصي</div>
+                        </div>
+                        <div class="stat-card success">
+                            <div class="stat-header">
+                                <div class="stat-icon">📖</div>
+                            </div>
+                            <div class="stat-number" id="totalLessons">0</div>
+                            <div class="stat-label">درس</div>
+                        </div>
+                        <div class="stat-card warning">
+                            <div class="stat-header">
+                                <div class="stat-icon">🎯</div>
+                            </div>
+                            <div class="stat-number" id="totalObjectives">0</div>
+                            <div class="stat-label">هدف قصير المدى</div>
+                        </div>
+                        <div class="stat-card danger">
+                            <div class="stat-header">
+                                <div class="stat-icon">📝</div>
+                            </div>
+                            <div class="stat-number" id="totalAssignments">0</div>
+                            <div class="stat-label">واجب</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- أقسام المكتبة -->
-                <div class="library-sections">
-                    <!-- الاختبارات التشخيصية -->
-                    <div class="library-section">
-                        <div class="section-header">
-                            <h2>الاختبارات التشخيصية</h2>
-                            <div class="section-actions">
-                                <button class="btn btn-outline-primary" onclick="showImportModal('test')">📁 استيراد</button>
-                            </div>
-                        </div>
-                        <div class="content-grid" id="testsGrid">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </div>
-                    </div>
-
-                    <!-- الدروس -->
-                    <div class="library-section">
-                        <div class="section-header">
-                            <h2>الدروس</h2>
-                            <div class="section-actions">
-                                <button class="btn btn-outline-primary" onclick="showImportModal('lesson')">📁 استيراد</button>
-                            </div>
-                        </div>
-                        <div class="content-grid" id="lessonsGrid">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
+                <!-- قسم الاختبارات التشخيصية -->
+                <div class="library-section">
+                    <div class="section-header">
+                        <h2>📊 الاختبارات التشخيصية</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-secondary" id="importAssessmentBtn">
+                                <span class="btn-icon">📥</span> استيراد
+                            </button>
+                            <button class="btn btn-success" id="addAssessmentBtn">
+                                <span class="btn-icon">➕</span> إضافة اختبار تشخيصي جديد
+                            </button>
                         </div>
                     </div>
+                    <div class="content-grid" id="assessmentsList">
+                        <!-- سيتم تحميل الاختبارات التشخيصية هنا -->
+                    </div>
+                </div>
 
-                    <!-- الأهداف قصيرة المدى -->
-                    <div class="library-section">
-                        <div class="section-header">
-                            <h2>الأهداف قصيرة المدى</h2>
-                        </div>
-                        <div class="objectives-list" id="objectivesList">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
+                <!-- قسم الدروس -->
+                <div class="library-section">
+                    <div class="section-header">
+                        <h2>📖 الدروس</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-secondary">
+                                <span class="btn-icon">📥</span> استيراد
+                            </button>
+                            <button class="btn btn-success">
+                                <span class="btn-icon">➕</span> إضافة درس جديد
+                            </button>
                         </div>
                     </div>
+                    <div class="content-grid" id="lessonsList">
+                        <!-- سيتم تحميل الدروس هنا -->
+                    </div>
+                </div>
 
-                    <!-- الواجبات -->
-                    <div class="library-section">
-                        <div class="section-header">
-                            <h2>الواجبات</h2>
-                            <div class="section-actions">
-                                <button class="btn btn-outline-primary" onclick="showImportModal('assignment')">📁 استيراد</button>
-                            </div>
+                <!-- قسم الأهداف القصيرة المدى -->
+                <div class="library-section">
+                    <div class="section-header">
+                        <h2>🎯 الأهداف القصيرة المدى</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-secondary">
+                                <span class="btn-icon">📥</span> استيراد
+                            </button>
+                            <button class="btn btn-success">
+                                <span class="btn-icon">➕</span> إضافة هدف قصير المدى جديد
+                            </button>
                         </div>
-                        <div class="content-grid" id="assignmentsGrid">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
+                    </div>
+                    <div id="objectivesList">
+                        <!-- سيتم تحميل الأهداف القصيرة المدى هنا -->
+                    </div>
+                </div>
+
+                <!-- قسم الواجبات -->
+                <div class="library-section">
+                    <div class="section-header">
+                        <h2>📝 الواجبات</h2>
+                        <div class="section-actions">
+                            <button class="btn btn-secondary">
+                                <span class="btn-icon">📥</span> استيراد
+                            </button>
+                            <button class="btn btn-success">
+                                <span class="btn-icon">➕</span> إضافة واجب جديد
+                            </button>
                         </div>
+                    </div>
+                    <div class="content-grid" id="assignmentsList">
+                        <!-- سيتم تحميل الواجبات هنا -->
                     </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <script src="../../assets/js/dashboard.js"></script>
-    <script src="../../assets/js/teacher.js"></script>
-    <script src="../../assets/js/content-library.js"></script>
-    <script src="../../assets/js/auth.js"></script>
+    <!-- النوافذ المنبثقة -->
+    <script src="../assets/js/auth.js"></script>
+    <script src="../assets/js/teacher.js"></script>
+    <script src="../assets/js/educational-library.js"></script>
 </body>
 </html>

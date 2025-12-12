@@ -133,6 +133,92 @@
             border-top: 1px solid var(--border-color);
         }
 
+        /* أنماط البطاقات القابلة للنقر */
+        .clickable-card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .clickable-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 4px;
+            height: 0;
+            background: var(--primary-color);
+            transition: height 0.3s ease;
+        }
+
+        .clickable-card:hover::after {
+            height: 100%;
+        }
+
+        .clickable-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(52, 152, 219, 0.2);
+        }
+
+        .clickable-card .content-header h4 {
+            transition: color 0.3s ease;
+        }
+
+        .clickable-card:hover .content-header h4 {
+            color: var(--primary-color);
+        }
+
+        /* زر الانتقال في البطاقات */
+        .navigation-arrow {
+            position: absolute;
+            left: 15px;
+            top: 15px;
+            background: var(--primary-color);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transform: translateX(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .clickable-card:hover .navigation-arrow {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* العنوان القابل للنقر */
+        .clickable-title {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .clickable-title:hover {
+            color: var(--primary-color);
+            transform: translateX(-5px);
+            background: rgba(52, 152, 219, 0.1);
+        }
+
+        .clickable-title i.fa-external-link-alt {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            font-size: 0.8em;
+        }
+
+        .clickable-title:hover i.fa-external-link-alt {
+            opacity: 1;
+        }
+
         /* ألوان المواد */
         .subject-لغتي {
             background: rgba(52, 152, 219, 0.15);
@@ -201,6 +287,12 @@
             .content-tab.active {
                 border-right-color: var(--primary-color);
                 border-bottom: none;
+            }
+            
+            .navigation-arrow {
+                width: 25px;
+                height: 25px;
+                font-size: 0.8rem;
             }
         }
     </style>
@@ -405,90 +497,105 @@
                         </div>
                     </div>
 
-                    <!-- قسم الاختبارات التشخيصية -->
+                    <!-- قسم الاختبارات التشخيصية - قابل للنقر -->
                     <div class="library-section" id="testsSection">
                         <div class="section-header">
-                            <h2>
+                            <!-- العنوان القابل للنقر -->
+                            <h2 class="clickable-title" onclick="window.location.href='diagnostic-tests.html'">
                                 <i class="fas fa-clipboard-check"></i>
                                 الاختبارات التشخيصية
+                                <i class="fas fa-external-link-alt"></i>
                             </h2>
-                            <button class="btn btn-success" onclick="window.location.href='diagnostic-tests.html'">
-                                <i class="fas fa-plus"></i> اختبار جديد
-                            </button>
+                            <div>
+                                <button class="btn btn-success" onclick="window.location.href='diagnostic-tests.html?action=create'">
+                                    <i class="fas fa-plus"></i> جديد
+                                </button>
+                                <button class="btn btn-secondary" onclick="window.location.href='diagnostic-tests.html?action=import'">
+                                    <i class="fas fa-file-import"></i> استيراد
+                                </button>
+                            </div>
                         </div>
+                        
+                        <!-- رسالة دعوية -->
+                        <div class="alert alert-info" style="margin-bottom: 20px;">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>انقر على أي اختبار للدخول إلى صفحة إدارة الاختبارات التشخيصية</strong>
+                            <br>
+                            أو انقر على العنوان أعلاه للانتقال إلى الصفحة الرئيسية للاختبارات
+                        </div>
+                        
+                        <!-- قائمة الاختبارات القابلة للنقر -->
                         <div class="content-grid">
-                            <div class="content-card">
+                            <!-- اختبار 1 -->
+                            <div class="content-card clickable-card" 
+                                 onclick="window.location.href='diagnostic-tests.html?test=1'"
+                                 title="انقر للدخول إلى صفحة إدارة الاختبارات">
+                                <div class="navigation-arrow">
+                                    <i class="fas fa-arrow-left"></i>
+                                </div>
                                 <div class="content-header">
                                     <h4>اختبار القراءة التشخيصي</h4>
                                     <span class="content-badge subject-لغتي">لغتي</span>
                                 </div>
                                 <div class="content-body">
-                                    <p>اختبار تشخيصي شامل لتقييم مهارات القراءة الأساسية</p>
+                                    <p>اختبار تشخيصي شامل لتقييم مهارات القراءة الأساسية للصفوف الأولية</p>
                                     <div class="content-meta">
-                                        <span class="questions-count">15 سؤال</span>
-                                        <span class="priority">عالية</span>
-                                        <span class="objectives-status linked">مرتبط</span>
+                                        <span><i class="fas fa-question-circle"></i> 15 سؤال</span>
+                                        <span><i class="fas fa-chart-line"></i> 85% نجاح</span>
+                                        <span><i class="fas fa-link"></i> مرتبط</span>
                                     </div>
                                 </div>
-                                <div class="content-actions">
-                                    <!-- الرابط الرئيسي لإدارة الاختبارات -->
-                                    <button class="btn btn-sm btn-primary" onclick="window.location.href='diagnostic-tests.html'">
-                                        <i class="fas fa-clipboard-check"></i> إدارة
-                                    </button>
-                                    <button class="btn btn-sm btn-warning" onclick="previewTest(1)">
-                                        <i class="fas fa-eye"></i> معاينة
-                                    </button>
-                                    <button class="btn btn-sm btn-success" onclick="assignTest(1)">
-                                        <i class="fas fa-share"></i> تعيين
-                                    </button>
-                                </div>
                             </div>
-
-                            <div class="content-card">
+                            
+                            <!-- اختبار 2 -->
+                            <div class="content-card clickable-card" 
+                                 onclick="window.location.href='diagnostic-tests.html?test=2'"
+                                 title="انقر للدخول إلى صفحة إدارة الاختبارات">
+                                <div class="navigation-arrow">
+                                    <i class="fas fa-arrow-left"></i>
+                                </div>
                                 <div class="content-header">
                                     <h4>اختبار الإملاء التشخيصي</h4>
                                     <span class="content-badge subject-لغتي">لغتي</span>
                                 </div>
                                 <div class="content-body">
-                                    <p>اختبار تشخيصي لمهارات الإملاء والكتابة الصحيحة</p>
+                                    <p>اختبار تشخيصي لمهارات الإملاء والكتابة الصحيحة للمرحلة الابتدائية</p>
                                     <div class="content-meta">
-                                        <span class="questions-count">10 أسئلة</span>
-                                        <span class="priority">متوسطة</span>
-                                        <span class="objectives-status linked">مرتبط</span>
+                                        <span><i class="fas fa-question-circle"></i> 10 أسئلة</span>
+                                        <span><i class="fas fa-chart-line"></i> 78% نجاح</span>
+                                        <span><i class="fas fa-link"></i> مرتبط</span>
                                     </div>
                                 </div>
-                                <div class="content-actions">
-                                    <button class="btn btn-sm btn-primary" onclick="window.location.href='diagnostic-tests.html'">
-                                        <i class="fas fa-edit"></i> تعديل
-                                    </button>
-                                    <button class="btn btn-sm btn-info" onclick="exportTest(2)">
-                                        <i class="fas fa-download"></i> تصدير
-                                    </button>
-                                </div>
                             </div>
-
-                            <div class="content-card">
+                            
+                            <!-- اختبار 3 -->
+                            <div class="content-card clickable-card" 
+                                 onclick="window.location.href='diagnostic-tests.html?test=3'"
+                                 title="انقر للدخول إلى صفحة إدارة الاختبارات">
+                                <div class="navigation-arrow">
+                                    <i class="fas fa-arrow-left"></i>
+                                </div>
                                 <div class="content-header">
                                     <h4>اختبار العمليات الحسابية</h4>
                                     <span class="content-badge subject-رياضيات">الرياضيات</span>
                                 </div>
                                 <div class="content-body">
-                                    <p>اختبار تشخيصي لمهارات الجمع والطرح والضرب والقسمة</p>
+                                    <p>اختبار تشخيصي لمهارات الجمع والطرح والضرب والقسمة الأساسية</p>
                                     <div class="content-meta">
-                                        <span class="questions-count">20 سؤال</span>
-                                        <span class="priority">عالية</span>
-                                        <span class="objectives-status not-linked">يحتاج ربط</span>
+                                        <span><i class="fas fa-question-circle"></i> 20 سؤال</span>
+                                        <span><i class="fas fa-chart-line"></i> 92% نجاح</span>
+                                        <span><i class="fas fa-unlink"></i> غير مرتبط</span>
                                     </div>
                                 </div>
-                                <div class="content-actions">
-                                    <button class="btn btn-sm btn-primary" onclick="window.location.href='diagnostic-tests.html'">
-                                        <i class="fas fa-clipboard-check"></i> إدارة
-                                    </button>
-                                    <button class="btn btn-sm btn-warning" onclick="linkTestObjectives(3)">
-                                        <i class="fas fa-link"></i> ربط أهداف
-                                    </button>
-                                </div>
                             </div>
+                        </div>
+                        
+                        <!-- رابط إضافي في الأسفل -->
+                        <div style="text-align: center; margin-top: 20px;">
+                            <button class="btn btn-primary" onclick="window.location.href='diagnostic-tests.html'">
+                                <i class="fas fa-external-link-alt"></i>
+                                الانتقال إلى صفحة الاختبارات التشخيصية الكاملة
+                            </button>
                         </div>
                     </div>
 
@@ -591,6 +698,7 @@
             loadLibraryStats();
             loadRecentContent();
             setupLibraryFilters();
+            makeTestCardsClickable();
         });
 
         // تحميل الشريط الجانبي
@@ -694,6 +802,33 @@
                     </div>
                 </div>
             `).join('');
+        }
+
+        // جعل بطاقات الاختبار قابلة للنقر
+        function makeTestCardsClickable() {
+            const testCards = document.querySelectorAll('#testsSection .content-card');
+            testCards.forEach(card => {
+                if (!card.classList.contains('clickable-card')) {
+                    card.classList.add('clickable-card');
+                    
+                    // إضافة سهم التنقل
+                    const arrow = document.createElement('div');
+                    arrow.className = 'navigation-arrow';
+                    arrow.innerHTML = '<i class="fas fa-arrow-left"></i>';
+                    card.style.position = 'relative';
+                    card.appendChild(arrow);
+                    
+                    // إضافة تأثيرات التفاعل
+                    card.addEventListener('mouseenter', function() {
+                        this.style.cursor = 'pointer';
+                        this.querySelector('.content-header h4').style.color = 'var(--primary-color)';
+                    });
+                    
+                    card.addEventListener('mouseleave', function() {
+                        this.querySelector('.content-header h4').style.color = '';
+                    });
+                }
+            });
         }
 
         // الفلترة والبحث
@@ -817,28 +952,17 @@
             alert(`ربط أهداف الدرس ${id}`);
         }
 
-        function previewTest(id) {
-            alert(`معاينة الاختبار ${id}`);
-        }
-
-        function assignTest(id) {
-            alert(`تعيين الاختبار ${id} للطلاب`);
-        }
-
-        function exportTest(id) {
-            alert(`تصدير الاختبار ${id}`);
-        }
-
-        function linkTestObjectives(id) {
-            alert(`ربط أهداف الاختبار ${id}`);
-        }
-
         function viewObjective(id) {
             alert(`عرض الهدف ${id}`);
         }
 
         function editObjective(id) {
             alert(`تعديل الهدف ${id}`);
+        }
+
+        // دوال خاصة بالاختبارات التشخيصية
+        function navigateToTest(testId) {
+            window.location.href = `diagnostic-tests.html?test=${testId}`;
         }
 
         // التنبيهات والإشعارات

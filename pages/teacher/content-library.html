@@ -3,129 +3,989 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مكتبة المحتوى - ميسر التعلم</title>
-    <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/teacher.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <title>مكتبة المحتوى التعليمي - نظام ميسر التعلم</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --light-color: #ecf0f1;
+            --dark-color: #34495e;
+            --text-color: #2c3e50;
+            --border-color: #bdc3c7;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Tajawal', sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* عنوان الصفحة */
+        .page-title {
+            margin-bottom: 30px;
+            color: var(--secondary-color);
+            border-bottom: 2px solid var(--light-color);
+            padding-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .page-title i {
+            color: var(--primary-color);
+            font-size: 28px;
+        }
+
+        /* أقسام المكتبة */
+        .library-sections {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .content-section {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            padding: 25px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .content-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        }
+
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--light-color);
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .section-title:hover {
+            color: var(--primary-color);
+        }
+
+        .section-title i {
+            font-size: 24px;
+        }
+
+        /* الشبكات */
+        .content-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .content-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 1px solid var(--light-color);
+        }
+
+        .content-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.12);
+        }
+
+        .content-header {
+            background: linear-gradient(135deg, var(--primary-color), #2980b9);
+            color: white;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .content-header h4 {
+            margin: 0;
+            font-size: 18px;
+            flex: 1;
+        }
+
+        .content-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .subject-لغتي {
+            background: rgba(52, 152, 219, 0.9);
+        }
+
+        .subject-رياضيات {
+            background: rgba(231, 76, 60, 0.9);
+        }
+
+        .subject-علوم {
+            background: rgba(46, 204, 113, 0.9);
+        }
+
+        .content-body {
+            padding: 15px;
+        }
+
+        .content-body p {
+            color: #666;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .content-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: #777;
+            margin-top: 10px;
+        }
+
+        .questions-count, .exercises-count, .total-grade {
+            background: var(--light-color);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+        }
+
+        .objectives-status {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .objectives-status.linked {
+            background: rgba(39, 174, 96, 0.15);
+            color: var(--success-color);
+        }
+
+        .objectives-status.not-linked {
+            background: rgba(231, 76, 60, 0.15);
+            color: var(--danger-color);
+        }
+
+        .content-actions {
+            padding: 15px;
+            background: #f9f9f9;
+            border-top: 1px solid var(--light-color);
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-success {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background-color: #219653;
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c0392b;
+        }
+
+        .btn-warning {
+            background-color: var(--warning-color);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background-color: #e67e22;
+        }
+
+        .btn-secondary {
+            background-color: var(--light-color);
+            color: var(--text-color);
+        }
+
+        .btn-secondary:hover {
+            background-color: #d5dbdb;
+        }
+
+        .btn-info {
+            background-color: #17a2b8;
+            color: white;
+        }
+
+        .btn-info:hover {
+            background-color: #138496;
+        }
+
+        .btn-outline-primary {
+            background-color: transparent;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+
+        .btn-outline-primary:hover {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        /* الحالة الفارغة */
+        .empty-content-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #666;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-content-state h3 {
+            color: var(--secondary-color);
+            margin-bottom: 10px;
+        }
+
+        .empty-content-state p {
+            color: #777;
+            margin-bottom: 20px;
+        }
+
+        /* قائمة الأهداف */
+        .objectives-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .objective-item {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid var(--light-color);
+            padding: 15px;
+        }
+
+        .objective-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .objective-header h4 {
+            margin: 0;
+            color: var(--secondary-color);
+            flex: 1;
+        }
+
+        .objective-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .teaching-objectives {
+            margin-top: 10px;
+            padding-right: 15px;
+        }
+
+        .teaching-objective {
+            background: var(--light-color);
+            padding: 8px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border-right: 3px solid var(--primary-color);
+        }
+
+        .no-objectives {
+            color: #999;
+            font-style: italic;
+            text-align: center;
+            padding: 10px;
+        }
+
+        /* الأزرار العلوية */
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        /* تصميم متجاوب */
+        @media (max-width: 768px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .content-actions {
+                flex-wrap: wrap;
+            }
+            
+            .btn {
+                flex: 1;
+                min-width: 70px;
+                justify-content: center;
+            }
+            
+            .section-title {
+                flex-direction: column;
+                text-align: center;
+                gap: 10px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            
+            .content-section {
+                padding: 15px;
+            }
+            
+            .page-title {
+                font-size: 24px;
+            }
+        }
+
+        /* تحسينات للعناوين القابلة للنقر */
+        .clickable-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .section-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+    </style>
 </head>
 <body>
-    <div class="dashboard-container">
-        <!-- الشريط الجانبي -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
-                    <h2>ميسر التعلم</h2>
-                </div>
-            </div>
-            
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
-                <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
-                <li><a href="content-library.html" class="active"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
-                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
-                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
-                <li><a href="reports.html"><span class="menu-icon">📋</span>التقارير</a></li>
-                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة الصعوبات</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
-            </ul>
-        </aside>
+    <!-- عنوان الصفحة -->
+    <h1 class="page-title">
+        <i class="fas fa-book-open"></i>
+        مكتبة المحتوى التعليمي
+    </h1>
 
-        <!-- المحتوى الرئيسي -->
-        <main class="main-content-dashboard">
-            <!-- رأس اللوحة -->
-            <header class="dashboard-header">
-                <button class="mobile-menu-btn">☰</button>
-                <div class="user-info">
-                    <div class="user-welcome">
-                        <div class="welcome-text">مرحباً بعودتك</div>
-                        <div class="user-name" id="userName">أ/ اسم المعلم</div>
-                    </div>
-                    <div class="user-avatar" id="userAvatar">م</div>
-                </div>
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="showNotifications()">🔔 الإشعارات</button>
-                </div>
-            </header>
-
-            <!-- محتوى اللوحة -->
-            <div class="dashboard-content">
-                <div class="content-header">
-                    <h1>مكتبة المحتوى التعليمي</h1>
-                    <div class="header-actions">
-                        <div class="dropdown">
-                            <button class="btn btn-success dropdown-toggle" type="button" id="addContentDropdown" data-toggle="dropdown">
-                                + إضافة محتوى جديد
-                            </button>
-                            <div class="dropdown-menu">
-                                <a class="dropdown-item" href="#" onclick="showCreateTestModal()">اختبار تشخيصي</a>
-                                <a class="dropdown-item" href="#" onclick="showCreateLessonModal()">درس جديد</a>
-                                <a class="dropdown-item" href="#" onclick="showCreateObjectiveModal()">هدف قصير المدى</a>
-                                <a class="dropdown-item" href="#" onclick="showCreateAssignmentModal()">واجب جديد</a>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- أقسام المكتبة -->
-                <div class="library-sections">
-                    <!-- الاختبارات التشخيصية -->
-                    <div class="library-section">
-                        <div class="section-header">
-                            <h2>الاختبارات التشخيصية</h2>
-                            <div class="section-actions">
-                                <button class="btn btn-outline-primary" onclick="showImportModal('test')">📁 استيراد</button>
-                            </div>
-                        </div>
-                        <div class="content-grid" id="testsGrid">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </div>
-                    </div>
-
-                    <!-- الدروس -->
-                    <div class="library-section">
-                        <div class="section-header">
-                            <h2>الدروس</h2>
-                            <div class="section-actions">
-                                <button class="btn btn-outline-primary" onclick="showImportModal('lesson')">📁 استيراد</button>
-                            </div>
-                        </div>
-                        <div class="content-grid" id="lessonsGrid">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </div>
-                    </div>
-
-                    <!-- الأهداف قصيرة المدى -->
-                    <div class="library-section">
-                        <div class="section-header">
-                            <h2>الأهداف قصيرة المدى</h2>
-                        </div>
-                        <div class="objectives-list" id="objectivesList">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </div>
-                    </div>
-
-                    <!-- الواجبات -->
-                    <div class="library-section">
-                        <div class="section-header">
-                            <h2>الواجبات</h2>
-                            <div class="section-actions">
-                                <button class="btn btn-outline-primary" onclick="showImportModal('assignment')">📁 استيراد</button>
-                            </div>
-                        </div>
-                        <div class="content-grid" id="assignmentsGrid">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
+    <!-- أزرار إجراءات سريعة -->
+    <div class="action-buttons">
+        <button class="btn btn-success" onclick="showCreateTestModal()">
+            <i class="fas fa-plus-circle"></i> إنشاء اختبار تشخيصي
+        </button>
+        <button class="btn btn-primary" onclick="showCreateLessonModal()">
+            <i class="fas fa-plus-circle"></i> إنشاء درس جديد
+        </button>
+        <button class="btn btn-info" onclick="showCreateObjectiveModal()">
+            <i class="fas fa-plus-circle"></i> إضافة هدف قصير المدى
+        </button>
+        <button class="btn btn-warning" onclick="showCreateAssignmentModal()">
+            <i class="fas fa-plus-circle"></i> إنشاء واجب
+        </button>
+        <button class="btn btn-secondary" onclick="importAllContent()">
+            <i class="fas fa-file-import"></i> استيراد جميع المحتويات
+        </button>
     </div>
 
-    <script src="../../assets/js/dashboard.js"></script>
-    <script src="../../assets/js/teacher.js"></script>
-    <script src="../../assets/js/content-library.js"></script>
-    <script src="../../assets/js/auth.js"></script>
+    <!-- أقسام المكتبة -->
+    <div class="library-sections">
+        <!-- قسم الاختبارات التشخيصية -->
+        <section class="content-section">
+            <div class="clickable-title">
+                <h3 class="section-title" onclick="goToDiagnosticTestsPage()">
+                    <i class="fas fa-clipboard-check"></i>
+                    الاختبارات التشخيصية
+                </h3>
+                <div class="section-actions">
+                    <button class="btn btn-outline-primary btn-sm" onclick="goToDiagnosticTestsPage()">
+                        الانتقال إلى صفحة الاختبارات التشخيصية <i class="fas fa-external-link-alt"></i>
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="showCreateTestModal()">
+                        <i class="fas fa-plus"></i> إنشاء اختبار
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="showImportModal('test')">
+                        <i class="fas fa-file-import"></i> استيراد
+                    </button>
+                </div>
+            </div>
+            <div id="testsGrid" class="content-grid">
+                <!-- سيتم تعبئة الاختبارات التشخيصية تلقائياً -->
+            </div>
+        </section>
+
+        <!-- قسم الدروس -->
+        <section class="content-section">
+            <h3 class="section-title">
+                <i class="fas fa-book"></i>
+                الدروس
+            </h3>
+            <div id="lessonsGrid" class="content-grid">
+                <!-- سيتم تعبئة الدروس تلقائياً -->
+            </div>
+        </section>
+
+        <!-- قسم الأهداف القصيرة المدى -->
+        <section class="content-section">
+            <h3 class="section-title">
+                <i class="fas fa-bullseye"></i>
+                الأهداف القصيرة المدى
+            </h3>
+            <div id="objectivesList" class="objectives-list">
+                <!-- سيتم تعبئة الأهداف تلقائياً -->
+            </div>
+        </section>
+
+        <!-- قسم الواجبات -->
+        <section class="content-section">
+            <h3 class="section-title">
+                <i class="fas fa-tasks"></i>
+                الواجبات
+            </h3>
+            <div id="assignmentsGrid" class="content-grid">
+                <!-- سيتم تعبئة الواجبات تلقائياً -->
+            </div>
+        </section>
+    </div>
+
+    <!-- نافذة إنشاء اختبار تشخيصي -->
+    <div id="createTestModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>إنشاء اختبار تشخيصي جديد</h3>
+                <button class="modal-close" onclick="closeCreateTestModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createTestForm">
+                    <div class="form-group">
+                        <label class="form-label">عنوان الاختبار *</label>
+                        <input type="text" id="testTitle" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">المادة *</label>
+                        <select id="testSubject" class="form-control" required>
+                            <option value="لغتي">لغتي</option>
+                            <option value="رياضيات">رياضيات</option>
+                            <option value="علوم">علوم</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">وصف الاختبار (اختياري)</label>
+                        <textarea id="testDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                    
+                    <h4>الأسئلة</h4>
+                    <div id="questionsContainer">
+                        <!-- الأسئلة ستضاف هنا -->
+                    </div>
+                    
+                    <button type="button" class="btn btn-outline-primary" onclick="addQuestion()">
+                        <i class="fas fa-plus"></i> إضافة سؤال
+                    </button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-success" onclick="saveTest()">
+                    <i class="fas fa-save"></i> حفظ الاختبار
+                </button>
+                <button class="btn btn-secondary" onclick="closeCreateTestModal()">
+                    <i class="fas fa-times"></i> إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة إنشاء درس -->
+    <div id="createLessonModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>إنشاء درس جديد</h3>
+                <button class="modal-close" onclick="closeCreateLessonModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createLessonForm">
+                    <div class="form-group">
+                        <label class="form-label">عنوان الدرس *</label>
+                        <input type="text" id="lessonTitle" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">الاستراتيجية التدريسية *</label>
+                        <input type="text" id="lessonStrategy" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">المادة *</label>
+                        <select id="lessonSubject" class="form-control" required>
+                            <option value="لغتي">لغتي</option>
+                            <option value="رياضيات">رياضيات</option>
+                            <option value="علوم">علوم</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">وصف الدرس (اختياري)</label>
+                        <textarea id="lessonDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                    
+                    <h4>التمارين</h4>
+                    <div id="exercisesContainer">
+                        <!-- التمارين ستضاف هنا -->
+                    </div>
+                    
+                    <button type="button" class="btn btn-outline-primary" onclick="addExercise()">
+                        <i class="fas fa-plus"></i> إضافة تمرين
+                    </button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-success" onclick="saveLesson()">
+                    <i class="fas fa-save"></i> حفظ الدرس
+                </button>
+                <button class="btn btn-secondary" onclick="closeCreateLessonModal()">
+                    <i class="fas fa-times"></i> إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة إنشاء هدف قصير المدى -->
+    <div id="createObjectiveModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إضافة هدف قصير المدى</h3>
+                <button class="modal-close" onclick="closeCreateObjectiveModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createObjectiveForm">
+                    <div class="form-group">
+                        <label class="form-label">الهدف القصير المدى *</label>
+                        <textarea id="shortTermObjective" class="form-control" rows="3" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">الأهداف التدريسية</label>
+                        <div id="teachingObjectivesContainer">
+                            <!-- الأهداف التدريسية ستضاف هنا -->
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="addTeachingObjective()">
+                            <i class="fas fa-plus"></i> إضافة هدف تدريسي
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-success" onclick="saveObjective()">
+                    <i class="fas fa-save"></i> حفظ الهدف
+                </button>
+                <button class="btn btn-secondary" onclick="closeCreateObjectiveModal()">
+                    <i class="fas fa-times"></i> إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة إنشاء واجب -->
+    <div id="createAssignmentModal" class="modal">
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h3>إنشاء واجب جديد</h3>
+                <button class="modal-close" onclick="closeCreateAssignmentModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createAssignmentForm">
+                    <div class="form-group">
+                        <label class="form-label">عنوان الواجب *</label>
+                        <input type="text" id="assignmentTitle" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">المادة *</label>
+                        <select id="assignmentSubject" class="form-control" required>
+                            <option value="لغتي">لغتي</option>
+                            <option value="رياضيات">رياضيات</option>
+                            <option value="علوم">علوم</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">وصف الواجب (اختياري)</label>
+                        <textarea id="assignmentDescription" class="form-control" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">الدرجة الكلية</label>
+                        <input type="number" id="assignmentTotalGrade" class="form-control" min="0" value="100">
+                    </div>
+                    
+                    <h4>التمارين</h4>
+                    <div id="assignmentExercisesContainer">
+                        <!-- تمارين الواجب ستضاف هنا -->
+                    </div>
+                    
+                    <button type="button" class="btn btn-outline-primary" onclick="addAssignmentExercise()">
+                        <i class="fas fa-plus"></i> إضافة تمرين
+                    </button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-success" onclick="saveAssignment()">
+                    <i class="fas fa-save"></i> حفظ الواجب
+                </button>
+                <button class="btn btn-secondary" onclick="closeCreateAssignmentModal()">
+                    <i class="fas fa-times"></i> إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- نافذة استيراد المحتوى -->
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>استيراد محتوى</h3>
+                <button class="modal-close" onclick="closeImportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">نوع المحتوى</label>
+                    <select id="importType" class="form-control">
+                        <option value="test">اختبار تشخيصي</option>
+                        <option value="lesson">درس</option>
+                        <option value="objective">هدف قصير المدى</option>
+                        <option value="assignment">واجب</option>
+                        <option value="all">جميع المحتويات</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">اختر الملف</label>
+                    <input type="file" id="importFile" class="form-control" accept=".json,.txt">
+                    <small>الملف يجب أن يكون بصيغة JSON أو TXT</small>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>ملاحظة:</strong> عند استيراد الاختبارات التشخيصية، يجب إعادة ربطها بالأهداف القصيرة المدى.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-success" onclick="confirmImport()">
+                    <i class="fas fa-file-import"></i> استيراد
+                </button>
+                <button class="btn btn-secondary" onclick="closeImportModal()">
+                    <i class="fas fa-times"></i> إلغاء
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- تضمين ملف teacher.js -->
+    <script src="teacher.js"></script>
+    
+    <script>
+        // تهيئة الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            // تحميل المحتوى
+            loadContentLibrary();
+            
+            // إضافة فئات CSS للنماذج
+            addModalStyles();
+        });
+        
+        // دالة لإضافة أنماط CSS للنماذج
+        function addModalStyles() {
+            const style = document.createElement('style');
+            style.textContent = `
+                /* أنماط النماذج */
+                .modal {
+                    display: none;
+                    position: fixed;
+                    z-index: 1000;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-color: rgba(0,0,0,0.5);
+                    overflow-y: auto;
+                }
+                
+                .modal.show {
+                    display: block;
+                }
+                
+                .modal-content {
+                    background-color: white;
+                    margin: 5% auto;
+                    border-radius: 10px;
+                    width: 90%;
+                    max-width: 800px;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+                }
+                
+                .modal-content.large {
+                    max-width: 900px;
+                }
+                
+                .modal-header {
+                    padding: 20px;
+                    border-bottom: 1px solid #eee;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    background: linear-gradient(135deg, var(--primary-color), #2980b9);
+                    color: white;
+                    border-radius: 10px 10px 0 0;
+                }
+                
+                .modal-header h3 {
+                    margin: 0;
+                    color: white;
+                }
+                
+                .modal-close {
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 28px;
+                    cursor: pointer;
+                    line-height: 1;
+                    padding: 0;
+                    width: 30px;
+                    height: 30px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                
+                .modal-body {
+                    padding: 25px;
+                    max-height: 70vh;
+                    overflow-y: auto;
+                }
+                
+                .modal-footer {
+                    padding: 20px;
+                    border-top: 1px solid #eee;
+                    text-align: left;
+                    display: flex;
+                    gap: 10px;
+                    justify-content: flex-start;
+                }
+                
+                .form-group {
+                    margin-bottom: 20px;
+                }
+                
+                .form-label {
+                    display: block;
+                    margin-bottom: 8px;
+                    font-weight: 500;
+                    color: var(--secondary-color);
+                }
+                
+                .form-control {
+                    width: 100%;
+                    padding: 12px 15px;
+                    border: 1px solid #ddd;
+                    border-radius: 5px;
+                    font-family: 'Tajawal', sans-serif;
+                    font-size: 14px;
+                }
+                
+                .form-control:focus {
+                    outline: none;
+                    border-color: var(--primary-color);
+                }
+                
+                textarea.form-control {
+                    resize: vertical;
+                    min-height: 80px;
+                }
+                
+                .alert {
+                    padding: 15px;
+                    border-radius: 5px;
+                    margin: 15px 0;
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 10px;
+                }
+                
+                .alert-info {
+                    background-color: rgba(52, 152, 219, 0.1);
+                    border: 1px solid rgba(52, 152, 219, 0.2);
+                    color: var(--primary-color);
+                }
+                
+                .question-item, .exercise-item {
+                    border: 1px solid #eee;
+                    border-radius: 5px;
+                    padding: 15px;
+                    margin-bottom: 15px;
+                    background: #f9f9f9;
+                }
+                
+                .question-header, .exercise-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 10px;
+                }
+                
+                .choices-container {
+                    margin: 10px 0;
+                }
+                
+                .choice-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    margin-bottom: 8px;
+                    padding: 8px;
+                    background: white;
+                    border-radius: 5px;
+                    border: 1px solid #eee;
+                }
+                
+                /* ألوان الأزرار في مكتبة المحتوى */
+                .btn-success {
+                    background-color: var(--success-color);
+                    border-color: var(--success-color);
+                }
+                
+                .btn-primary {
+                    background-color: var(--primary-color);
+                    border-color: var(--primary-color);
+                }
+                
+                .btn-info {
+                    background-color: #17a2b8;
+                    border-color: #17a2b8;
+                }
+                
+                .btn-warning {
+                    background-color: var(--warning-color);
+                    border-color: var(--warning-color);
+                }
+                
+                .btn-secondary {
+                    background-color: #6c757d;
+                    border-color: #6c757d;
+                }
+                
+                .btn-danger {
+                    background-color: var(--danger-color);
+                    border-color: var(--danger-color);
+                }
+                
+                /* تلميحات الأزرار */
+                button[title]:hover::after {
+                    content: attr(title);
+                    position: absolute;
+                    background: rgba(0,0,0,0.8);
+                    color: white;
+                    padding: 5px 10px;
+                    border-radius: 4px;
+                    font-size: 12px;
+                    z-index: 1000;
+                    bottom: 100%;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    white-space: nowrap;
+                }
+                
+                .content-actions button {
+                    position: relative;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // دالة استيراد جميع المحتويات
+        function importAllContent() {
+            showImportModal('all');
+        }
+        
+        // دالة الانتقال إلى صفحة الاختبارات التشخيصية
+        function goToDiagnosticTestsPage() {
+            window.location.href = 'diagnostic-tests.html';
+        }
+        
+        // دالة لإظهار إشعار
+        function showNotification(message, type = 'info') {
+            alert(message); // يمكن استبدال هذا بنظام إشعارات أفضل
+        }
+        
+        // دالة لتحميل المحتوى
+        function loadContentLibrary() {
+            // سيتم تنفيذ هذه الدالة من خلال teacher.js
+            if (typeof loadTests === 'function') {
+                loadTests();
+                loadLessons();
+                loadObjectives();
+                loadAssignments();
+            }
+        }
+    </script>
 </body>
 </html>

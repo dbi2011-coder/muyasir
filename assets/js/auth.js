@@ -785,7 +785,250 @@ function formatDateShort(dateString) {
     return date.toLocaleDateString('ar-SA');
 }
 
+// ============================================
+// دالة إضافة سجل النظام (محدثة)
+// ============================================
+
+/**
+ * إضافة سجل جديد في نظام السجلات
+ * @param {string} message - نص الرسالة
+ * @param {string} type - نوع السجل (info, warning, error, success, settings, backup, user, security, test)
+ * @param {string} user - اسم المستخدم (اختياري، إذا لم يتم توفيره يتم استخدام المستخدم الحالي)
+ */
+function addSystemLog(message, type = 'info', user = null) {
+    try {
+        // جلب السجلات الحالية أو إنشاء مصفوفة فارغة
+        const logs = JSON.parse(localStorage.getItem('systemLogs') || '[]');
+        
+        // الحصول على معلومات المستخدم الحالي إذا لم يتم توفير اسم مستخدم
+        const currentUser = getCurrentUser();
+        const userName = user || (currentUser ? currentUser.name : 'النظام');
+        
+        // إنشاء كائن السجل الجديد
+        const newLog = {
+            id: generateId(), // توليد معرف فريد للسجل
+            timestamp: new Date().toISOString(), // تاريخ ووقت إضافة السجل
+            type: type, // نوع السجل
+            message: message, // نص الرسالة
+            user: userName, // المستخدم المسؤول عن السجل
+            ip: '127.0.0.1', // عنوان IP (في تطبيق حقيقي سيتم جلب العنوان الفعلي)
+            userAgent: navigator.userAgent // معلومات متصفح المستخدم
+        };
+        
+        // إضافة السجل الجديد إلى المصفوفة
+        logs.push(newLog);
+        
+        // الاحتفاظ فقط بآخر 1000 سجل للحفاظ على أداء النظام
+        if (logs.length > 1000) {
+            logs.splice(0, logs.length - 1000);
+        }
+        
+        // حفظ السجلات المحدثة في localStorage
+        localStorage.setItem('systemLogs', JSON.stringify(logs));
+        
+        // تسجيل في وحدة التحكم للمطورين
+        console.log(`📝 سجل النظام [${type.toUpperCase()}]: ${message} - بواسطة: ${userName}`);
+        
+        // تحديث واجهة سجلات النظام إذا كانت الصفحة مفتوحة
+        if (window.location.pathname.includes('settings.html') && typeof window.filterLogs === 'function') {
+            window.filterLogs();
+        }
+        
+        // إرسال إشعار للواجهة إذا كان نوع السجل مهم
+        if (type === 'error' || type === 'warning') {
+            showAuthNotification(`سجل نظام: ${message}`, type, 3000);
+        }
+        
+        return newLog.id; // إرجاع معرف السجل الجديد
+        
+    } catch (error) {
+        console.error('❌ خطأ في إضافة سجل النظام:', error);
+        
+        // محاولة بديلة في حالة فشل حفظ السجل
+        try {
+            // إنشاء سجل بسيط في حالة الطوارئ
+            const emergencyLog = {
+                timestamp: new Date().toISOString(),
+                type: 'error',
+                message: 'فشل في إضافة سجل النظام: ' + error.message,
+                user: 'النظام'
+            };
+            
+            // محاولة الحفظ في sessionStorage كبديل مؤقت
+            const emergencyLogs = JSON.parse(sessionStorage.getItem('emergencySystemLogs') || '[]');
+            emergencyLogs.push(emergencyLog);
+            
+            if (emergencyLogs.length > 50) {
+                emergencyLogs.splice(0, emergencyLogs.length - 50);
+            }
+            
+            sessionStorage.setItem('emergencySystemLogs', JSON.stringify(emergencyLogs));
+            
+        } catch (emergencyError) {
+            console.error('❌ فشل حتى في تسجيل سجل الطوارئ:', emergencyError);
+        }
+        
+        return null;
+    }
+}
+
+// ============================================
+// دالة مساعدة للحصول على نص نوع السجل
+// ============================================
+
+/**
+ * تحويل نوع السجل من الإنجليزية إلى العربية
+ * @param {string} type - نوع السجل بالإنجليزية
+ * @returns {string} نوع السجل بالعربية
+ */
+function getLogTypeText(type) {
+    const typeMap = {
+        'info': 'معلومات',
+        'warning': 'تحذير',
+        'error': 'خطأ',
+        'success': 'نجاح',
+        'settings': 'إعدادات',
+        'backup': 'نسخ احتياطي',
+        'user': 'مستخدم',
+        'security': 'أمان',
+        'test': 'اختبار',
+        'login': 'دخول',
+        'logout': 'خروج',
+        'create': 'إنشاء',
+        'update': 'تحديث',
+        'delete': 'حذف'
+    };
+    
+    return typeMap[type] || type;
+}
+
+// ============================================
+// دالة لتصدير سجلات النظام
+// ============================================
+
+/**
+ * تصدير سجلات النظام إلى ملف نصي
+ */
+function exportSystemLogs() {
+    try {
+        const logs = JSON.parse(localStorage.getItem('systemLogs') || '[]');
+        
+        if (logs.length === 0) {
+            showAuthNotification('لا توجد سجلات نظام للتصدير', 'warning');
+            return;
+        }
+        
+        // تنسيق السجلات كنص
+        const logText = logs.map(log => {
+            const date = formatDate(log.timestamp);
+            const type = getLogTypeText(log.type);
+            return `[${date}] [${type}] ${log.user}: ${log.message}`;
+        }).join('\n');
+        
+        // إضافة رأس الملف
+        const header = `سجلات نظام ميسر التعلم\nتم التصدير في: ${formatDate(new Date().toISOString())}\nعدد السجلات: ${logs.length}\n\n`;
+        const fullText = header + logText;
+        
+        // إنشاء ملف للتحميل
+        const blob = new Blob([fullText], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `system-logs-${new Date().toISOString().split('T')[0]}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        // إضافة سجل للتصدير نفسه
+        addSystemLog('تم تصدير سجلات النظام', 'backup');
+        
+        showAuthNotification(`تم تصدير ${logs.length} سجل بنجاح`, 'success');
+        
+    } catch (error) {
+        console.error('❌ خطأ في تصدير سجلات النظام:', error);
+        showAuthNotification('فشل تصدير سجلات النظام', 'error');
+    }
+}
+
+// ============================================
+// دالة لتصفية سجلات النظام
+// ============================================
+
+/**
+ * تصفية سجلات النظام حسب النوع والتاريخ
+ * @param {string} type - نوع السجل المراد تصفيته
+ * @param {Date} startDate - تاريخ البدء
+ * @param {Date} endDate - تاريخ الانتهاء
+ * @returns {Array} السجلات المصفاة
+ */
+function filterSystemLogs(type = 'all', startDate = null, endDate = null) {
+    try {
+        const logs = JSON.parse(localStorage.getItem('systemLogs') || '[]');
+        
+        return logs.filter(log => {
+            // التصفية حسب النوع
+            if (type !== 'all' && log.type !== type) {
+                return false;
+            }
+            
+            // التصفية حسب التاريخ
+            const logDate = new Date(log.timestamp);
+            
+            if (startDate && logDate < startDate) {
+                return false;
+            }
+            
+            if (endDate && logDate > endDate) {
+                return false;
+            }
+            
+            return true;
+        });
+        
+    } catch (error) {
+        console.error('❌ خطأ في تصفية سجلات النظام:', error);
+        return [];
+    }
+}
+
+// ============================================
+// دالة لمسح سجلات النظام القديمة
+// ============================================
+
+/**
+ * مسح سجلات النظام الأقدم من عدد معين من الأيام
+ * @param {number} days - عدد الأيام (الافتراضي: 30 يوم)
+ */
+function clearOldSystemLogs(days = 30) {
+    try {
+        const logs = JSON.parse(localStorage.getItem('systemLogs') || '[]');
+        const cutoffDate = new Date();
+        cutoffDate.setDate(cutoffDate.getDate() - days);
+        
+        const newLogs = logs.filter(log => new Date(log.timestamp) > cutoffDate);
+        const deletedCount = logs.length - newLogs.length;
+        
+        localStorage.setItem('systemLogs', JSON.stringify(newLogs));
+        
+        // إضافة سجل للمسح
+        addSystemLog(`تم مسح ${deletedCount} سجل أقدم من ${days} يوم`, 'maintenance');
+        
+        showAuthNotification(`تم مسح ${deletedCount} سجل قديم`, 'success');
+        
+        return deletedCount;
+        
+    } catch (error) {
+        console.error('❌ خطأ في مسح السجلات القديمة:', error);
+        showAuthNotification('فشل مسح السجلات القديمة', 'error');
+        return 0;
+    }
+}
+
+// ============================================
 // تصدير الدوال للاستخدام العالمي
+// ============================================
+
 window.logout = logout;
 window.getCurrentUser = getCurrentUser;
 window.getSessionData = getSessionData;
@@ -794,3 +1037,8 @@ window.generateId = generateId;
 window.formatDate = formatDate;
 window.formatDateShort = formatDateShort;
 window.formatTimeAgo = formatTimeAgo;
+window.addSystemLog = addSystemLog;
+window.getLogTypeText = getLogTypeText;
+window.exportSystemLogs = exportSystemLogs;
+window.filterSystemLogs = filterSystemLogs;
+window.clearOldSystemLogs = clearOldSystemLogs;

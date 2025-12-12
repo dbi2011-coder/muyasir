@@ -766,4 +766,120 @@ function createSampleMessages() {
 window.openCommittee = openCommittee;
 window.openMessages = openMessages;
 window.createSampleCommitteeData = createSampleCommitteeData;
+
 window.createSampleMessages = createSampleMessages;
+// تحديث ملف teacher.js لإضافة دعم مكتبة المحتوى التعليمي
+
+document.addEventListener('DOMContentLoaded', function() {
+    // ... الكود الحالي ...
+    
+    // إضافة رابط مكتبة المحتوى التعليمي في القائمة الجانبية
+    updateSidebarMenu();
+});
+
+function updateSidebarMenu() {
+    // التأكد من وجود رابط مكتبة المحتوى التعليمي في القائمة الجانبية
+    const sidebarMenu = document.querySelector('.sidebar-menu');
+    if (sidebarMenu && !sidebarMenu.querySelector('a[href*="educational-library"]')) {
+        const libraryItem = `
+            <li><a href="educational-library.html"><span class="menu-icon">📚</span>مكتبة المحتوى التعليمي</a></li>
+        `;
+        
+        // إدراج الرابط بعد رابط الطلاب
+        const studentsLink = sidebarMenu.querySelector('a[href*="students"]');
+        if (studentsLink) {
+            studentsLink.closest('li').insertAdjacentHTML('afterend', libraryItem);
+        }
+    }
+}
+
+// دوال إضافية لدعم الأنواع المختلفة للأسئلة
+function createWritingArea(questionId) {
+    return `
+        <div class="writing-area" id="writingArea_${questionId}">
+            <div class="writing-tools">
+                <button class="btn btn-sm btn-secondary" onclick="clearWritingArea(${questionId})">
+                    <span class="btn-icon">🗑️</span> مسح كامل
+                </button>
+                <div class="color-picker">
+                    <span>لون القلم:</span>
+                    <input type="color" id="penColor_${questionId}" value="#000000" 
+                           onchange="changePenColor(${questionId}, this.value)">
+                </div>
+                <button class="btn btn-sm btn-secondary" onclick="toggleEraser(${questionId})">
+                    <span class="btn-icon">🧽</span> ممحاة
+                </button>
+            </div>
+            <canvas id="writingCanvas_${questionId}" width="600" height="300" 
+                    style="border: 1px solid #ddd; background: white; cursor: crosshair;"></canvas>
+        </div>
+    `;
+}
+
+function setupCanvas(questionId) {
+    const canvas = document.getElementById(`writingCanvas_${questionId}`);
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let isErasing = false;
+    let lastX = 0;
+    let lastY = 0;
+    
+    canvas.addEventListener('mousedown', (e) => {
+        isDrawing = true;
+        [lastX, lastY] = getMousePos(canvas, e);
+    });
+    
+    canvas.addEventListener('mousemove', (e) => {
+        if (!isDrawing) return;
+        
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        
+        const [x, y] = getMousePos(canvas, e);
+        ctx.lineTo(x, y);
+        
+        if (isErasing) {
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 20;
+        } else {
+            ctx.strokeStyle = document.getElementById(`penColor_${questionId}`).value;
+            ctx.lineWidth = 3;
+        }
+        
+        ctx.stroke();
+        [lastX, lastY] = [x, y];
+    });
+    
+    canvas.addEventListener('mouseup', () => isDrawing = false);
+    canvas.addEventListener('mouseout', () => isDrawing = false);
+}
+
+function getMousePos(canvas, evt) {
+    const rect = canvas.getBoundingClientRect();
+    return [
+        evt.clientX - rect.left,
+        evt.clientY - rect.top
+    ];
+}
+
+function clearWritingArea(questionId) {
+    const canvas = document.getElementById(`writingCanvas_${questionId}`);
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function changePenColor(questionId, color) {
+    // لون القلم يتم تطبيقه عند الرسم
+}
+
+function toggleEraser(questionId) {
+    window[`isErasing_${questionId}`] = !window[`isErasing_${questionId}`];
+    const btn = document.querySelector(`button[onclick="toggleEraser(${questionId})"]`);
+    if (window[`isErasing_${questionId}`]) {
+        btn.classList.add('active');
+        btn.innerHTML = '<span class="btn-icon">✏️</span> قلم';
+    } else {
+        btn.classList.remove('active');
+        btn.innerHTML = '<span class="btn-icon">🧽</span> ممحاة';
+    }
+}

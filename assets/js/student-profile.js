@@ -1,78 +1,160 @@
-// إدارة ملف الطالب - المعلم
-let currentStudentId = null;
-document.addEventListener('DOMContentLoaded', function() {
-    if (window.location.pathname.includes('student-profile.html')) {
-        const urlParams = new URLSearchParams(window.location.search);
-        currentStudentId = parseInt(urlParams.get('id')) || parseInt(sessionStorage.getItem('currentStudentId'));
-        if (!currentStudentId) { alert('لم يتم تحديد طالب'); window.location.href = 'students.html'; return; }
-        loadStudentProfile(); setupTabs();
-    }
-});
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ملف الطالب - ميسر التعلم</title>
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../assets/css/teacher.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* أنماط خاصة لجداول الخطة */
+        .iep-page { background: white; padding: 30px; margin-bottom: 20px; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .iep-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .iep-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        .iep-table th, .iep-table td { border: 1px solid #000; padding: 10px; text-align: center; }
+        .iep-table th { background-color: #f0f0f0; }
+        .shaded-day { background-color: #3498db !important; color: white; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="../../assets/images/logo.png" alt="شعار">
+                    <h2>ميسر التعلم</h2>
+                </div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><i class="fas fa-chart-line"></i> لوحة التحكم</a></li>
+                <li><a href="students.html" class="active"><i class="fas fa-user-graduate"></i> الطلاب</a></li>
+                <li><a href="content-library.html"><i class="fas fa-book"></i> مكتبة المحتوى</a></li>
+                <li><a href="#" onclick="window.history.back()"><i class="fas fa-arrow-right"></i> عودة</a></li>
+            </ul>
+        </aside>
 
-function loadStudentProfile() {
-    const student = JSON.parse(localStorage.getItem('students') || '[]').find(s => s.id === currentStudentId);
-    if (!student) return;
-    document.getElementById('studentName').textContent = student.name;
-    document.getElementById('studentGrade').textContent = `الصف: ${student.grade}`;
-    loadDiagnosticTest(); loadEducationalPlan();
-}
+        <main class="main-content-dashboard">
+            <header class="dashboard-header">
+                <div class="user-info">
+                    <div class="user-name">ملف الطالب</div>
+                </div>
+            </header>
 
-function loadDiagnosticTest() {
-    const content = document.getElementById('diagnosticTestContent');
-    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    const currentTest = studentTests.find(t => t.studentId === currentStudentId);
-    
-    if (!currentTest) {
-        content.innerHTML = `<div class="empty-state"><h3>لا يوجد اختبار</h3><button class="btn btn-success" onclick="assignDiagnosticTest()">تعيين اختبار</button></div>`;
-        return;
-    }
-    const test = JSON.parse(localStorage.getItem('tests') || '[]').find(t => t.id === currentTest.testId);
-    
-    let html = `<div class="test-info-card"><h4>${test?.title}</h4><p>الحالة: ${currentTest.status}</p>`;
-    if(currentTest.status === 'completed') {
-        html += `<p>النتيجة: ${currentTest.score}%</p>`;
-        if(!currentTest.graded) html += `<button class="btn btn-warning" onclick="gradeManual(${currentTest.id})">📝 تصحيح يدوي</button>`;
-    }
-    content.innerHTML = html + `</div>`;
-}
+            <div class="dashboard-content">
+                <div class="content-header">
+                    <h1 id="pageStudentName">جاري التحميل...</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-outline-secondary" onclick="window.location.href='students.html'">عودة للقائمة</button>
+                    </div>
+                </div>
 
-function gradeManual(id) {
-    const score = prompt('أدخل الدرجة النهائية (0-100):');
-    if(score) {
-        const tests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-        const idx = tests.findIndex(t => t.id === id);
-        if(idx !== -1) {
-            tests[idx].score = parseInt(score); tests[idx].graded = true;
-            localStorage.setItem('studentTests', JSON.stringify(tests));
-            loadDiagnosticTest();
-        }
-    }
-}
+                <div class="student-tabs">
+                    <div class="tabs-header">
+                        <button class="tab-btn active" data-tab="diagnostic" onclick="switchTab('diagnostic')">الاختبار التشخيصي</button>
+                        <button class="tab-btn" data-tab="iep" onclick="switchTab('iep')">الخطة التربوية الفردية</button>
+                        <button class="tab-btn" data-tab="lessons" onclick="switchTab('lessons')">الدروس</button>
+                        <button class="tab-btn" data-tab="assignments" onclick="switchTab('assignments')">الواجبات</button>
+                        <button class="tab-btn" data-tab="progress" onclick="switchTab('progress')">تقدم الطالب</button>
+                    </div>
 
-function assignDiagnosticTest() { document.getElementById('assignTestModal').classList.add('show'); populateTestsDropdown(); }
-function closeAssignTestModal() { document.getElementById('assignTestModal').classList.remove('show'); }
-function populateTestsDropdown() {
-    const select = document.getElementById('testSelection'); select.innerHTML = '<option value="">اختر اختبار</option>';
-    JSON.parse(localStorage.getItem('tests')||'[]').filter(t => t.teacherId === getCurrentUser().id).forEach(t => {
-        select.innerHTML += `<option value="${t.id}">${t.title}</option>`;
-    });
-}
-function saveAssignedTest() {
-    const tid = document.getElementById('testSelection').value;
-    if(!tid) return;
-    const st = JSON.parse(localStorage.getItem('studentTests')||'[]');
-    st.push({id: generateId(), studentId: currentStudentId, testId: parseInt(tid), status: 'pending', assignedAt: new Date().toISOString()});
-    localStorage.setItem('studentTests', JSON.stringify(st));
-    closeAssignTestModal(); loadDiagnosticTest();
-}
-function setupTabs() {
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.tab-btn, .tab-pane').forEach(el => el.classList.remove('active'));
-            this.classList.add('active');
-            document.getElementById(`${this.dataset.tab}-tab`).classList.add('active');
-        });
-    });
-}
-// دوال وهمية لباقي التبويبات لتجنب الأخطاء
-function loadEducationalPlan() {} function loadStudentLessons() {} function loadStudentAssignments() {} function loadStudentProgress() {}
+                    <div class="tabs-content">
+                        
+                        <div class="tab-pane active" id="diagnostic-tab">
+                            <div class="empty-state" id="noDiagnosticTest">
+                                <div class="empty-icon">📝</div>
+                                <h3>لم يتم تعيين اختبار تشخيصي</h3>
+                                <button class="btn btn-primary" onclick="showAssignTestModal()">تعيين اختبار تشخيصي</button>
+                            </div>
+                            <div id="diagnosticTestDetails" style="display: none;">
+                                </div>
+                        </div>
+
+                        <div class="tab-pane" id="iep-tab">
+                            <div id="iepContent">
+                                </div>
+                            <div style="margin-top: 20px; text-align: left;">
+                                <button class="btn btn-success" onclick="printIEP()"><i class="fas fa-print"></i> طباعة الخطة</button>
+                            </div>
+                        </div>
+
+                        <div class="tab-pane" id="lessons-tab">
+                            <div class="section-header">
+                                <h3>الدروس المخصصة (بناءً على الخطة)</h3>
+                                <button class="btn btn-sm btn-outline-primary" onclick="regenerateLessons()">تحديث الدروس</button>
+                            </div>
+                            <div class="content-grid" id="studentLessonsGrid"></div>
+                        </div>
+
+                        <div class="tab-pane" id="assignments-tab">
+                            <div class="section-header">
+                                <h3>الواجبات المسندة</h3>
+                                <button class="btn btn-primary" onclick="showAssignHomeworkModal()">+ إسناد واجب</button>
+                            </div>
+                            <div class="content-grid" id="studentAssignmentsGrid"></div>
+                        </div>
+
+                        <div class="tab-pane" id="progress-tab">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>الهدف التدريسي</th>
+                                        <th>الاستراتيجية</th>
+                                        <th>حالة الدرس</th>
+                                        <th>التواريخ والملاحظات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="progressTableBody"></tbody>
+                            </table>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="assignTestModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>تعيين اختبار تشخيصي</h3></div>
+            <div class="modal-body">
+                <select id="testSelect" class="form-control"></select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('assignTestModal')">إلغاء</button>
+                <button class="btn btn-success" onclick="assignTest()">حفظ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="assignHomeworkModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3>إسناد واجب</h3></div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>الدرس</label>
+                    <select id="homeworkLessonSelect" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <label>الواجب</label>
+                    <select id="homeworkSelect" class="form-control"></select>
+                </div>
+                <div class="form-group">
+                    <label>تاريخ التسليم (اختياري)</label>
+                    <input type="date" id="homeworkDueDate" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('assignHomeworkModal')">إلغاء</button>
+                <button class="btn btn-success" onclick="assignHomework()">إسناد</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../assets/js/dashboard.js"></script>
+    <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/student-profile.js"></script>
+</body>
+</html>

@@ -32,7 +32,7 @@ function loadStudentTests() {
     loadCompletedTests();
 }
 
-// 1. تحميل الاختبارات المعلقة (والتي قيد التنفيذ)
+// 1. تحميل الاختبارات المعلقة
 function loadPendingTests() {
     const container = document.getElementById('pendingTestsList');
     const currentStudent = getCurrentUser();
@@ -40,7 +40,6 @@ function loadPendingTests() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
 
-    // (pending أو in-progress)
     const myTests = studentTests.filter(t => t.studentId === currentStudent.id && (t.status === 'pending' || t.status === 'in-progress'));
 
     if (myTests.length === 0) {
@@ -48,7 +47,6 @@ function loadPendingTests() {
             <div class="empty-state">
                 <div class="empty-icon">🎉</div>
                 <h3>رائع! لا توجد اختبارات جديدة</h3>
-                <p>لقد أنجزت كل المهام المطلوبة.</p>
             </div>`;
         return;
     }
@@ -57,7 +55,6 @@ function loadPendingTests() {
         const testDetails = allTests.find(t => t.id === assignment.testId);
         if (!testDetails) return '';
 
-        // نص الزر وحالة الاختبار
         const btnText = assignment.status === 'in-progress' ? '🔄 استكمال الاختبار' : '🚀 ابدأ الاختبار';
         const badgeClass = assignment.status === 'in-progress' ? 'status-accelerated' : 'status-pending';
         const badgeText = assignment.status === 'in-progress' ? 'قيد التنفيذ' : 'جديد';
@@ -69,17 +66,11 @@ function loadPendingTests() {
                     <span class="card-status ${badgeClass}">${badgeText}</span>
                 </div>
                 <div class="card-meta">
-                    <div class="meta-item">
-                        <span>📚 المادة:</span>
-                        <strong>${testDetails.subject}</strong>
-                    </div>
-                    <div class="meta-item">
-                        <span>❓ الأسئلة:</span>
-                        <strong>${testDetails.questions ? testDetails.questions.length : 0} سؤال</strong>
-                    </div>
+                    <div class="meta-item"><span>📚 المادة:</span><strong>${testDetails.subject}</strong></div>
+                    <div class="meta-item"><span>❓ الأسئلة:</span><strong>${testDetails.questions ? testDetails.questions.length : 0}</strong></div>
                 </div>
                 <div class="card-actions">
-                    <button class="btn btn-success btn-block" onclick="prepareTest(${assignment.id})">
+                    <button class="btn btn-success btn-block" onclick="openTestFocusMode(${assignment.id})">
                         ${btnText}
                     </button>
                 </div>
@@ -97,12 +88,7 @@ function loadCompletedTests() {
     const myCompletedTests = studentTests.filter(t => t.studentId === currentStudent.id && t.status === 'completed');
 
     if (myCompletedTests.length === 0) {
-        container.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">📝</div>
-                <h3>لم تنجز أي اختبار بعد</h3>
-                <p>الاختبارات التي تنتهي منها ستظهر هنا.</p>
-            </div>`;
+        container.innerHTML = `<div class="empty-state"><h3>لم تنجز أي اختبار بعد</h3></div>`;
         return;
     }
 
@@ -124,7 +110,7 @@ function loadCompletedTests() {
                         <strong style="color: ${scoreColor}; font-size: 1.1rem;">${assignment.score || 0}%</strong>
                     </div>
                     <div class="meta-item">
-                        <span>📅 تاريخ الحل:</span>
+                        <span>📅 التاريخ:</span>
                         <strong>${formatDateShort(assignment.completedAt)}</strong>
                     </div>
                 </div>
@@ -133,8 +119,8 @@ function loadCompletedTests() {
     }).join('');
 }
 
-// 3. تحضير الاختبار
-function prepareTest(assignmentId) {
+// 3. فتح واجهة التركيز الكامل (Full Focus Mode)
+function openTestFocusMode(assignmentId) {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     
@@ -143,28 +129,38 @@ function prepareTest(assignmentId) {
 
     const testDetails = allTests.find(t => t.id === assignment.testId);
     if (!testDetails) {
-        alert('عذراً، يبدو أن المعلم قد حذف هذا الاختبار.');
+        alert('عذراً، هذا الاختبار غير متوفر.');
         return;
     }
 
     currentTestId = assignmentId;
     currentOriginalTest = testDetails;
 
-    document.getElementById('testModalTitle').textContent = testDetails.title;
-    document.getElementById('testInstructions').style.display = 'block';
-    document.getElementById('testQuestionsArea').style.display = 'none';
-    document.getElementById('testFooter').style.display = 'none';
+    // إعداد الواجهة
+    document.getElementById('focusTestTitle').textContent = testDetails.title;
     
-    document.getElementById('startTestModal').classList.add('show');
+    // إظهار شاشة البدء وإخفاء الأسئلة
+    document.getElementById('testStartScreen').style.display = 'block';
+    document.getElementById('testQuestionsContainer').style.display = 'none';
+    document.getElementById('testFooterControls').style.display = 'none';
+    
+    // تفعيل وضع التركيز (إظهار الطبقة البيضاء الكاملة)
+    document.getElementById('testFocusMode').style.display = 'flex';
+    document.body.style.overflow = 'hidden'; // منع التمرير في الصفحة الخلفية
 }
 
-// 4. بدء عرض الأسئلة (واسترجاع الإجابات المحفوظة)
-function beginTestQuestions() {
-    document.getElementById('testInstructions').style.display = 'none';
-    document.getElementById('testQuestionsArea').style.display = 'block';
-    document.getElementById('testFooter').style.display = 'flex';
+// 4. الانتقال من شاشة التعليمات إلى الأسئلة
+function startActualTest() {
+    document.getElementById('testStartScreen').style.display = 'none';
+    document.getElementById('testQuestionsContainer').style.display = 'block';
+    document.getElementById('testFooterControls').style.display = 'flex';
 
-    const container = document.getElementById('questionsWrapper');
+    renderQuestions();
+}
+
+// عرض الأسئلة واستعادة الإجابات
+function renderQuestions() {
+    const container = document.getElementById('testQuestionsContainer');
     container.innerHTML = '';
 
     if (!currentOriginalTest.questions || currentOriginalTest.questions.length === 0) {
@@ -172,7 +168,7 @@ function beginTestQuestions() {
         return;
     }
 
-    // البحث عن إجابات محفوظة مسبقاً
+    // البحث عن إجابات محفوظة
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const currentAssignment = studentTests.find(t => t.id === currentTestId);
     const savedAnswers = currentAssignment.savedAnswers || [];
@@ -181,7 +177,7 @@ function beginTestQuestions() {
         const questionHTML = createQuestionHTML(q, index);
         container.insertAdjacentHTML('beforeend', questionHTML);
 
-        // استعادة الإجابة المحفوظة إن وجدت
+        // استعادة الإجابة
         const savedAnswer = savedAnswers.find(a => a.questionId === q.id);
         if (savedAnswer) {
             if (q.type === 'multiple-choice') {
@@ -191,7 +187,7 @@ function beginTestQuestions() {
                     radio.closest('.answer-option').classList.add('selected');
                 }
             } else if (q.type === 'true-false') {
-                const btn = document.querySelector(`.tf-btn.${savedAnswer.answer}`); // true or false class
+                const btn = document.querySelector(`#card_q_${index} .tf-btn.${savedAnswer.answer}`);
                 if (btn) {
                     selectTF(btn, index, savedAnswer.answer);
                 }
@@ -204,11 +200,7 @@ function createQuestionHTML(question, index) {
     let inputsHTML = '';
 
     if (question.type === 'multiple-choice') {
-        let choices = question.choices;
-        if (!choices || !Array.isArray(choices) || choices.length === 0) {
-            choices = ['الخيار الأول', 'الخيار الثاني', 'الخيار الثالث']; 
-        }
-
+        let choices = question.choices || ['الخيار الأول', 'الخيار الثاني', 'الخيار الثالث'];
         inputsHTML = `
             <div class="answers-grid">
                 ${choices.map((choice, i) => `
@@ -222,28 +214,27 @@ function createQuestionHTML(question, index) {
     } else if (question.type === 'true-false') {
         inputsHTML = `
             <div class="tf-buttons">
-                <button type="button" class="tf-btn true" onclick="selectTF(this, ${index}, 'true')">
-                    <span style="font-size: 2rem;">✅</span> <span>صواب</span>
-                </button>
-                <button type="button" class="tf-btn false" onclick="selectTF(this, ${index}, 'false')">
-                    <span style="font-size: 2rem;">❌</span> <span>خطأ</span>
-                </button>
+                <div class="tf-btn true" onclick="selectTF(this, ${index}, 'true')">
+                    <span class="tf-icon">✅</span> <span>صواب</span>
+                </div>
+                <div class="tf-btn false" onclick="selectTF(this, ${index}, 'false')">
+                    <span class="tf-icon">❌</span> <span>خطأ</span>
+                </div>
                 <input type="hidden" name="q_${index}">
             </div>
         `;
-    } else {
-        inputsHTML = `<p class="text-muted">نوع السؤال غير مدعوم في العرض السريع.</p>`;
     }
 
     return `
         <div class="question-card" id="card_q_${index}">
-            <div class="question-number">السؤال رقم ${index + 1}</div>
+            <div class="question-number">السؤال ${index + 1}</div>
             <div class="question-text">${question.text}</div>
             ${inputsHTML}
         </div>
     `;
 }
 
+// تفاعل واجهة المستخدم
 function selectOption(label) {
     const parent = label.parentElement;
     parent.querySelectorAll('.answer-option').forEach(l => l.classList.remove('selected'));
@@ -259,37 +250,33 @@ function selectTF(btn, index, value) {
     if(input) input.value = value;
 }
 
-// === 5. وظيفة حفظ التقدم ===
+// === 5. حفظ واستكمال لاحقاً ===
 function saveTestProgress() {
     const savedAnswers = collectAnswers();
-    
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const index = studentTests.findIndex(t => t.id === currentTestId);
     
     if (index !== -1) {
-        studentTests[index].status = 'in-progress'; // تغيير الحالة لقيد التنفيذ
-        studentTests[index].savedAnswers = savedAnswers; // حفظ الإجابات
+        studentTests[index].status = 'in-progress';
+        studentTests[index].savedAnswers = savedAnswers;
         localStorage.setItem('studentTests', JSON.stringify(studentTests));
         
-        alert('✅ تم حفظ تقدمك بنجاح. يمكنك العودة لإكماله في أي وقت.');
-        closeStartTestModal();
-        loadStudentTests();
+        closeTestFocusMode();
+        loadStudentTests(); // تحديث الواجهة الرئيسية
+        // لا نعرض رسالة تنبيه ليكون الخروج سلساً وسريعاً
     }
 }
 
 // === 6. تسليم الإجابات النهائية ===
 function submitTestAnswers() {
-    if (!confirm('هل أنت متأكد من تسليم الإجابات وإنهاء الاختبار؟ لا يمكن التراجع بعد ذلك.')) return;
+    if (!confirm('هل أنت متأكد من تسليم الإجابات؟')) return;
 
     const answers = collectAnswers();
     let correctCount = 0;
     const totalQuestions = currentOriginalTest.questions.length;
 
-    // تصحيح الإجابات (محاكاة)
-    answers.forEach(ans => {
-        if(ans.answer !== null) correctCount++; 
-    });
-
+    // تصحيح (محاكاة)
+    answers.forEach(ans => { if(ans.answer !== null) correctCount++; });
     const score = Math.round((correctCount / totalQuestions) * 100); 
 
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
@@ -300,18 +287,12 @@ function submitTestAnswers() {
         studentTests[index].completedAt = new Date().toISOString();
         studentTests[index].score = score;
         studentTests[index].answers = answers;
-        delete studentTests[index].savedAnswers; // حذف الإجابات المؤقتة
+        delete studentTests[index].savedAnswers;
         
         localStorage.setItem('studentTests', JSON.stringify(studentTests));
         
-        addStudentActivity({
-            type: 'test',
-            title: 'أنجزت اختباراً',
-            description: `اختبار: ${currentOriginalTest.title} - الدرجة: ${score}%`
-        });
-
-        alert(`أحسنت يا بطل! 🎉\nلقد أكملت الاختبار.\nدرجتك هي: ${score}%`);
-        closeStartTestModal();
+        alert(`أحسنت! درجتك: ${score}%`);
+        closeTestFocusMode();
         loadStudentTests();
     }
 }
@@ -320,7 +301,6 @@ function collectAnswers() {
     const answers = [];
     currentOriginalTest.questions.forEach((q, index) => {
         let studentAnswer = null;
-        
         if (q.type === 'multiple-choice') {
             const selected = document.querySelector(`input[name="q_${index}"]:checked`);
             studentAnswer = selected ? selected.value : null;
@@ -328,20 +308,19 @@ function collectAnswers() {
             const input = document.querySelector(`input[name="q_${index}"]`);
             studentAnswer = input ? input.value : null;
         }
-        
-        if (studentAnswer) {
-            answers.push({ questionId: q.id, answer: studentAnswer });
-        }
+        if (studentAnswer) answers.push({ questionId: q.id, answer: studentAnswer });
     });
     return answers;
 }
 
-function closeStartTestModal() {
-    document.getElementById('startTestModal').classList.remove('show');
+function closeTestFocusMode() {
+    document.getElementById('testFocusMode').style.display = 'none';
+    document.body.style.overflow = 'auto'; // إعادة التمرير للصفحة
     currentTestId = null;
     currentOriginalTest = null;
 }
 
+// أدوات مساعدة
 function formatDateShort(dateString) {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('ar-SA');
@@ -349,15 +328,4 @@ function formatDateShort(dateString) {
 
 function getCurrentUser() {
     return JSON.parse(sessionStorage.getItem('currentUser')).user;
-}
-
-function addStudentActivity(activity) {
-    const activities = JSON.parse(localStorage.getItem('studentActivities') || '[]');
-    activities.push({
-        id: Date.now(),
-        studentId: getCurrentUser().id,
-        ...activity,
-        timestamp: new Date().toISOString()
-    });
-    localStorage.setItem('studentActivities', JSON.stringify(activities));
 }

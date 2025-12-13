@@ -10,8 +10,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         /* ============================================ */
-        /* أنماط خاصة بواجهة حل الاختبار (تصميم طفولي ومحفز) */
+        /* إصلاح مشكلة التداخل (Z-Index عالي جداً) */
         /* ============================================ */
+        .modal { 
+            z-index: 99999 !important; /* يضمن ظهور النافذة فوق الشريط الجانبي */
+        }
+
+        /* أنماط خاصة بواجهة حل الاختبار */
         .test-taking-container { padding: 10px; max-width: 800px; margin: 0 auto; }
         
         .question-card { 
@@ -31,16 +36,6 @@
             border-color: var(--primary-color); 
         }
         
-        .question-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100%;
-            height: 5px;
-            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-        }
-
         .question-number { 
             background: #e3f2fd; 
             color: var(--primary-color); 
@@ -50,7 +45,6 @@
             font-size: 0.9rem;
             display: inline-block; 
             margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
         
         .question-text { 
@@ -65,85 +59,79 @@
         .answers-grid { display: grid; gap: 15px; }
         
         .answer-option { 
-            display: flex; 
-            align-items: center; 
-            padding: 15px 20px; 
-            border: 2px solid #e9ecef; 
-            border-radius: 12px; 
-            cursor: pointer; 
-            transition: all 0.2s; 
-            font-size: 1.1rem;
-            background: #f8f9fa;
+            display: flex; align-items: center; padding: 15px 20px; 
+            border: 2px solid #e9ecef; border-radius: 12px; cursor: pointer; 
+            transition: all 0.2s; font-size: 1.1rem; background: #f8f9fa;
         }
         
         .answer-option:hover { 
-            background-color: #fff; 
-            border-color: var(--primary-color); 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            background-color: #fff; border-color: var(--primary-color); 
         }
         
         .answer-option input { 
-            margin-left: 15px; 
-            width: 22px; 
-            height: 22px; 
+            margin-left: 15px; width: 22px; height: 22px; 
             accent-color: var(--primary-color);
         }
         
         .answer-option.selected { 
-            border-color: var(--success-color); 
-            background-color: #e8f5e9; 
-            color: #1b5e20;
-            font-weight: bold;
+            border-color: var(--success-color); background-color: #e8f5e9; 
+            color: #1b5e20; font-weight: bold;
         }
         
         /* أزرار الصواب والخطأ */
         .tf-buttons { display: flex; gap: 20px; justify-content: center; margin-top: 10px; }
         
         .tf-btn { 
-            flex: 1; 
-            padding: 20px; 
-            border: none; 
-            border-radius: 15px; 
-            font-size: 1.4rem; 
-            cursor: pointer; 
-            transition: all 0.3s;
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            gap: 10px;
-            font-family: 'Tajawal', sans-serif;
-            font-weight: bold;
+            flex: 1; padding: 20px; border: none; border-radius: 15px; 
+            font-size: 1.4rem; cursor: pointer; transition: all 0.3s;
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            font-family: 'Tajawal', sans-serif; font-weight: bold;
         }
         
         .tf-btn.true { background-color: #e8f5e9; color: #2e7d32; border: 2px solid #c8e6c9; }
         .tf-btn.false { background-color: #ffebee; color: #c62828; border: 2px solid #ffcdd2; }
         
-        .tf-btn:hover { transform: scale(1.05); }
-        
-        .tf-btn.true.active { background-color: #4caf50; color: white; border-color: #4caf50; box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3); }
-        .tf-btn.false.active { background-color: #f44336; color: white; border-color: #f44336; box-shadow: 0 5px 15px rgba(244, 67, 54, 0.3); }
+        .tf-btn.true.active { background-color: #4caf50; color: white; border-color: #4caf50; }
+        .tf-btn.false.active { background-color: #f44336; color: white; border-color: #f44336; }
 
         /* نافذة كاملة الشاشة */
         .modal-content.full-screen { 
             width: 98%; 
-            max-width: 1000px; 
-            height: 95vh; 
+            height: 98vh; 
+            max-width: 100%;
+            border-radius: 10px;
             display: flex; 
             flex-direction: column; 
-            border-radius: 20px;
-            overflow: hidden;
+            margin: 1vh auto;
         }
         
         .modal-body { 
-            flex: 1; 
-            overflow-y: auto; 
+            flex: 1; overflow-y: auto; 
             background-color: #fcfcfc;
-            background-image: radial-gradient(#e0e0e0 1px, transparent 1px);
-            background-size: 20px 20px;
+            padding: 40px 20px;
         }
 
         .welcome-emoji { font-size: 5rem; margin-bottom: 20px; animation: bounce 2s infinite; }
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
+        
+        /* تنسيق أزرار الفوتر */
+        .test-footer-buttons {
+            display: flex;
+            gap: 15px;
+            width: 100%;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn-save-later {
+            background-color: #f39c12;
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-save-later:hover { background-color: #e67e22; }
     </style>
 </head>
 <body>
@@ -208,7 +196,7 @@
 
     <div id="startTestModal" class="modal">
         <div class="modal-content full-screen">
-            <div class="modal-header" style="background: white; border-bottom: 2px solid #f0f0f0; padding: 20px;">
+            <div class="modal-header" style="background: white; border-bottom: 2px solid #f0f0f0; padding: 15px 30px;">
                 <div style="display: flex; align-items: center; gap: 15px;">
                     <span style="font-size: 2rem;">📝</span>
                     <div>
@@ -216,7 +204,7 @@
                         <span style="color: #666; font-size: 0.9rem;">ركز جيداً يا بطل!</span>
                     </div>
                 </div>
-                <div id="testTimer" style="font-weight:bold; color: var(--primary-color); font-size:1.2rem; background: #e3f2fd; padding: 5px 15px; border-radius: 20px;"></div>
+                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="saveTestProgress()">💾 حفظ وخروج</button>
             </div>
 
             <div class="modal-body">
@@ -228,7 +216,7 @@
                             <ul style="list-style: none; padding: 0; font-size: 1.1rem; line-height: 2.5; margin: 0;">
                                 <li>✨ اقرأ السؤال بهدوء وتركيز.</li>
                                 <li>✨ اختر الإجابة التي تراها صحيحة.</li>
-                                <li>✨ لا تستعجل، لديك الوقت الكافي.</li>
+                                <li>✨ يمكنك حفظ إجاباتك وإكمالها لاحقاً.</li>
                                 <li>✨ ثق بنفسك، أنت ذكي!</li>
                             </ul>
                         </div>
@@ -250,11 +238,16 @@
                 </div>
             </div>
 
-            <div class="modal-footer" id="testFooter" style="display: none; background: white; border-top: 2px solid #f0f0f0; padding: 20px; justify-content: space-between;">
-                <button type="button" class="btn btn-secondary" onclick="if(confirm('هل تريد الخروج؟ لن يتم حفظ إجاباتك.')) closeStartTestModal()">خروج</button>
-                <button type="button" class="btn btn-success btn-large" style="padding: 10px 40px; font-size: 1.1rem;" onclick="submitTestAnswers()">
-                    تسليم الإجابات وإنهاء الاختبار ✅
-                </button>
+            <div class="modal-footer" id="testFooter" style="display: none; background: white; border-top: 2px solid #f0f0f0; padding: 20px;">
+                <div class="test-footer-buttons">
+                    <button type="button" class="btn btn-save-later btn-large" style="padding: 12px 30px;" onclick="saveTestProgress()">
+                        <span>💾</span> حفظ واستكمال لاحقاً
+                    </button>
+                    
+                    <button type="button" class="btn btn-success btn-large" style="padding: 12px 40px;" onclick="submitTestAnswers()">
+                        تسليم الإجابات وإنهاء الاختبار ✅
+                    </button>
+                </div>
             </div>
         </div>
     </div>

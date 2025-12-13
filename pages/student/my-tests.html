@@ -10,128 +10,178 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         /* ============================================ */
-        /* إصلاح مشكلة التداخل (Z-Index عالي جداً) */
+        /* نمط وضع التركيز الكامل (Full Focus Mode) */
         /* ============================================ */
-        .modal { 
-            z-index: 99999 !important; /* يضمن ظهور النافذة فوق الشريط الجانبي */
-        }
-
-        /* أنماط خاصة بواجهة حل الاختبار */
-        .test-taking-container { padding: 10px; max-width: 800px; margin: 0 auto; }
-        
-        .question-card { 
-            background: #fff; 
-            border: 2px solid #f0f0f0; 
-            border-radius: 20px; 
-            padding: 25px; 
-            margin-bottom: 30px; 
-            box-shadow: 0 8px 20px rgba(0,0,0,0.03);
-            transition: transform 0.3s ease, border-color 0.3s ease;
-            position: relative;
+        #testFocusMode {
+            display: none; /* مخفي افتراضياً */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff; /* واجهة بيضاء بالكامل */
+            z-index: 999999; /* فوق كل شيء بما في ذلك الشريط الجانبي */
+            flex-direction: column;
             overflow: hidden;
         }
-        
-        .question-card:hover { 
-            transform: translateY(-5px); 
-            border-color: var(--primary-color); 
-        }
-        
-        .question-number { 
-            background: #e3f2fd; 
-            color: var(--primary-color); 
-            padding: 8px 20px; 
-            border-radius: 50px; 
-            font-weight: 800; 
-            font-size: 0.9rem;
-            display: inline-block; 
-            margin-bottom: 20px;
-        }
-        
-        .question-text { 
-            font-size: 1.3rem; 
-            font-weight: 700; 
-            margin-bottom: 25px; 
-            color: #2c3e50; 
-            line-height: 1.6;
-        }
-        
-        /* خيارات الإجابة */
-        .answers-grid { display: grid; gap: 15px; }
-        
-        .answer-option { 
-            display: flex; align-items: center; padding: 15px 20px; 
-            border: 2px solid #e9ecef; border-radius: 12px; cursor: pointer; 
-            transition: all 0.2s; font-size: 1.1rem; background: #f8f9fa;
-        }
-        
-        .answer-option:hover { 
-            background-color: #fff; border-color: var(--primary-color); 
-        }
-        
-        .answer-option input { 
-            margin-left: 15px; width: 22px; height: 22px; 
-            accent-color: var(--primary-color);
-        }
-        
-        .answer-option.selected { 
-            border-color: var(--success-color); background-color: #e8f5e9; 
-            color: #1b5e20; font-weight: bold;
-        }
-        
-        /* أزرار الصواب والخطأ */
-        .tf-buttons { display: flex; gap: 20px; justify-content: center; margin-top: 10px; }
-        
-        .tf-btn { 
-            flex: 1; padding: 20px; border: none; border-radius: 15px; 
-            font-size: 1.4rem; cursor: pointer; transition: all 0.3s;
-            display: flex; flex-direction: column; align-items: center; gap: 10px;
-            font-family: 'Tajawal', sans-serif; font-weight: bold;
-        }
-        
-        .tf-btn.true { background-color: #e8f5e9; color: #2e7d32; border: 2px solid #c8e6c9; }
-        .tf-btn.false { background-color: #ffebee; color: #c62828; border: 2px solid #ffcdd2; }
-        
-        .tf-btn.true.active { background-color: #4caf50; color: white; border-color: #4caf50; }
-        .tf-btn.false.active { background-color: #f44336; color: white; border-color: #f44336; }
 
-        /* نافذة كاملة الشاشة */
-        .modal-content.full-screen { 
-            width: 98%; 
-            height: 98vh; 
-            max-width: 100%;
-            border-radius: 10px;
-            display: flex; 
-            flex-direction: column; 
-            margin: 1vh auto;
-        }
-        
-        .modal-body { 
-            flex: 1; overflow-y: auto; 
-            background-color: #fcfcfc;
-            padding: 40px 20px;
-        }
-
-        .welcome-emoji { font-size: 5rem; margin-bottom: 20px; animation: bounce 2s infinite; }
-        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-20px); } }
-        
-        /* تنسيق أزرار الفوتر */
-        .test-footer-buttons {
+        /* تنسيق رأس الاختبار في وضع التركيز */
+        .focus-header {
+            background: #ffffff;
+            border-bottom: 2px solid #f0f0f0;
+            padding: 15px 40px;
             display: flex;
-            gap: 15px;
-            width: 100%;
-            justify-content: center;
-            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+            height: 70px;
         }
-        
-        .btn-save-later {
-            background-color: #f39c12;
+
+        /* جسم الاختبار */
+        .focus-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 40px;
+            background-color: #ffffff;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        /* تذييل الاختبار (الأزرار) */
+        .focus-footer {
+            background: #ffffff;
+            border-top: 2px solid #f0f0f0;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            height: 80px;
+        }
+
+        /* تنسيق الأسئلة */
+        .question-card {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 40px;
+            /* إزالة الظل الثقيل ليكون المظهر أنظف */
+        }
+
+        .question-number {
+            background: var(--primary-color);
             color: white;
+            padding: 5px 15px;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+
+        .question-text {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 25px;
+        }
+
+        /* خيارات الإجابة */
+        .answer-option {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 1.1rem;
+        }
+
+        .answer-option:hover {
+            border-color: #bbb;
+            background-color: #fafafa;
+        }
+
+        .answer-option.selected {
+            border-color: var(--primary-color);
+            background-color: #e3f2fd;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
+        .answer-option input {
+            margin-left: 15px;
+            width: 20px;
+            height: 20px;
+        }
+
+        /* أزرار صح وخطأ */
+        .tf-buttons {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .tf-btn {
+            width: 120px;
+            height: 120px;
+            border-radius: 15px;
+            border: 2px solid #eee;
+            background: white;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s;
+        }
+
+        .tf-btn.true:hover, .tf-btn.true.active {
+            border-color: #2ecc71;
+            background-color: #eafaf1;
+            color: #27ae60;
+        }
+
+        .tf-btn.false:hover, .tf-btn.false.active {
+            border-color: #e74c3c;
+            background-color: #fdedec;
+            color: #c0392b;
+        }
+
+        .tf-icon { font-size: 2.5rem; }
+
+        /* أزرار التحكم */
+        .btn-action {
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
             border: none;
+            cursor: pointer;
             display: flex;
             align-items: center;
             gap: 8px;
+            transition: transform 0.2s;
         }
-        .btn-save-later:hover { background-color: #e67e22; }
+        .btn-action:hover { transform: translateY(-2px); }
+        
+        .btn-save { background-color: #f1c40f; color: #fff; }
+        .btn-submit { background-color: #2ecc71; color: #fff; }
+        .btn-exit { background-color: #95a5a6; color: #fff; }
+
+        /* شاشة الترحيب */
+        .start-screen {
+            text-align: center;
+            padding-top: 50px;
+        }
+        .start-icon { font-size: 6rem; margin-bottom: 20px; animation: float 3s infinite ease-in-out; }
+        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-20px); } 100% { transform: translateY(0px); } }
     </style>
 </head>
 <body>
@@ -159,7 +209,7 @@
                 <button class="mobile-menu-btn">☰</button>
                 <div class="user-info">
                     <div class="user-welcome">
-                        <div class="welcome-text">أهلاً بك يا بطل</div>
+                        <div class="welcome-text">مرحباً يا بطل</div>
                         <div class="user-name" id="userName">الطالب</div>
                     </div>
                     <div class="user-avatar" id="userAvatar">ط</div>
@@ -169,24 +219,21 @@
             <div class="dashboard-content">
                 <div class="content-header">
                     <h1>📝 اختباراتي</h1>
-                    <p>هيا نختبر معلوماتنا ونحقق النجوم!</p>
+                    <p>قائمة الاختبارات المخصصة لك</p>
                 </div>
 
                 <div class="tests-tabs">
                     <div class="tabs-header">
-                        <button class="tab-btn active" data-tab="pending">اختبارات تنتظرك ⏳</button>
-                        <button class="tab-btn" data-tab="completed">اختبارات أنجزتها ✅</button>
+                        <button class="tab-btn active" data-tab="pending">الاختبارات الجديدة ⏳</button>
+                        <button class="tab-btn" data-tab="completed">الاختبارات المنجزة ✅</button>
                     </div>
 
                     <div class="tabs-content">
                         <div class="tab-pane active" id="pending-tab">
-                            <div class="tests-list" id="pendingTestsList">
-                                </div>
+                            <div class="tests-list" id="pendingTestsList"></div>
                         </div>
-
                         <div class="tab-pane" id="completed-tab">
-                            <div class="tests-list" id="completedTestsList">
-                                </div>
+                            <div class="tests-list" id="completedTestsList"></div>
                         </div>
                     </div>
                 </div>
@@ -194,61 +241,47 @@
         </main>
     </div>
 
-    <div id="startTestModal" class="modal">
-        <div class="modal-content full-screen">
-            <div class="modal-header" style="background: white; border-bottom: 2px solid #f0f0f0; padding: 15px 30px;">
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <span style="font-size: 2rem;">📝</span>
-                    <div>
-                        <h3 id="testModalTitle" style="color: var(--secondary-color); margin: 0; font-size: 1.4rem;">عنوان الاختبار</h3>
-                        <span style="color: #666; font-size: 0.9rem;">ركز جيداً يا بطل!</span>
-                    </div>
-                </div>
-                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="saveTestProgress()">💾 حفظ وخروج</button>
+    <div id="testFocusMode">
+        <div class="focus-header">
+            <div>
+                <h2 id="focusTestTitle" style="margin:0; color:var(--secondary-color);">عنوان الاختبار</h2>
+                <small style="color:#777;">ركز جيداً واختر الإجابة الصحيحة</small>
             </div>
+            <button class="btn-action btn-exit" onclick="saveTestProgress()" style="font-size:0.9rem; padding: 8px 15px;">
+                <span>💾</span> حفظ وخروج
+            </button>
+        </div>
 
-            <div class="modal-body">
-                <div id="testInstructions">
-                    <div style="text-align: center; padding: 60px 20px;">
-                        <div class="welcome-emoji">🚀</div>
-                        <h2 style="color: var(--secondary-color); margin-bottom: 20px;">هل أنت مستعد للتحدي؟</h2>
-                        <div style="background: white; display: inline-block; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); max-width: 500px; width: 100%; text-align: right;">
-                            <ul style="list-style: none; padding: 0; font-size: 1.1rem; line-height: 2.5; margin: 0;">
-                                <li>✨ اقرأ السؤال بهدوء وتركيز.</li>
-                                <li>✨ اختر الإجابة التي تراها صحيحة.</li>
-                                <li>✨ يمكنك حفظ إجاباتك وإكمالها لاحقاً.</li>
-                                <li>✨ ثق بنفسك، أنت ذكي!</li>
-                            </ul>
-                        </div>
-                        <div style="margin-top: 40px;">
-                            <button class="btn btn-success btn-large" style="padding: 15px 50px; font-size: 1.3rem; border-radius: 50px; box-shadow: 0 10px 20px rgba(39, 174, 96, 0.3);" onclick="beginTestQuestions()">
-                                ابدأ الاختبار الآن 🏁
-                            </button>
-                            <br>
-                            <button class="btn btn-outline-secondary" style="margin-top: 20px; border: none; background: none;" onclick="closeStartTestModal()">
-                                لست مستعداً الآن
-                            </button>
-                        </div>
-                    </div>
+        <div class="focus-body">
+            <div id="testStartScreen" class="start-screen">
+                <div class="start-icon">🚀</div>
+                <h1 style="color: var(--primary-color); margin-bottom: 20px;">جاهز للانطلاق؟</h1>
+                <div style="background: #f9f9f9; padding: 30px; border-radius: 15px; display: inline-block; text-align: right; max-width: 500px;">
+                    <h3 style="margin-top: 0;">تذكر يا بطل:</h3>
+                    <ul style="padding-right: 20px; line-height: 2;">
+                        <li>اقرأ كل سؤال بعناية.</li>
+                        <li>لا تستعجل، الوقت كافي.</li>
+                        <li>يمكنك الضغط على "حفظ واستكمال لاحقاً" إذا تعبت.</li>
+                    </ul>
                 </div>
-
-                <div id="testQuestionsArea" style="display: none;">
-                    <div class="test-taking-container" id="questionsWrapper">
-                        </div>
-                </div>
-            </div>
-
-            <div class="modal-footer" id="testFooter" style="display: none; background: white; border-top: 2px solid #f0f0f0; padding: 20px;">
-                <div class="test-footer-buttons">
-                    <button type="button" class="btn btn-save-later btn-large" style="padding: 12px 30px;" onclick="saveTestProgress()">
-                        <span>💾</span> حفظ واستكمال لاحقاً
-                    </button>
-                    
-                    <button type="button" class="btn btn-success btn-large" style="padding: 12px 40px;" onclick="submitTestAnswers()">
-                        تسليم الإجابات وإنهاء الاختبار ✅
+                <div style="margin-top: 40px;">
+                    <button class="btn-action btn-submit" style="font-size: 1.5rem; padding: 15px 50px; display: inline-flex;" onclick="startActualTest()">
+                        ابدأ الآن 🏁
                     </button>
                 </div>
             </div>
+
+            <div id="testQuestionsContainer" style="display: none;">
+                </div>
+        </div>
+
+        <div class="focus-footer" id="testFooterControls" style="display: none;">
+            <button class="btn-action btn-save" onclick="saveTestProgress()">
+                <span>💾</span> حفظ واستكمال لاحقاً
+            </button>
+            <button class="btn-action btn-submit" onclick="submitTestAnswers()">
+                <span>✅</span> تسليم الإجابات وإنهاء
+            </button>
         </div>
     </div>
 

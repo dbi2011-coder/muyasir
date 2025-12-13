@@ -2,8 +2,8 @@
 // 📁 المسار: assets/js/student-tests.js
 // ============================================
 
-let currentTestId = null;       // معرف السجل في جدول اختبارات الطالب
-let currentOriginalTest = null; // بيانات الاختبار الأصلي من المكتبة
+let currentTestId = null;       
+let currentOriginalTest = null; 
 
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('my-tests.html')) {
@@ -36,7 +36,6 @@ function loadStudentTests() {
 function loadPendingTests() {
     const container = document.getElementById('pendingTestsList');
     const currentStudent = getCurrentUser();
-    
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
 
@@ -79,6 +78,7 @@ function loadPendingTests() {
     }).join('');
 }
 
+// 2. تحميل الاختبارات المكتملة (تم التحديث لإضافة أزرار العرض والطباعة)
 function loadCompletedTests() {
     const container = document.getElementById('completedTestsList');
     const currentStudent = getCurrentUser();
@@ -114,12 +114,19 @@ function loadCompletedTests() {
                         <strong>${formatDateShort(assignment.completedAt)}</strong>
                     </div>
                 </div>
+                <div class="card-actions" style="display:flex; gap:10px; margin-top:15px;">
+                    <button class="btn btn-primary" style="flex:1" onclick="viewCompletedTest(${assignment.id})">👁️ عرض الإجابات</button>
+                    <button class="btn btn-outline-secondary" onclick="printTestResult(${assignment.id})">🖨️ طباعة</button>
+                </div>
             </div>
         `;
     }).join('');
 }
 
-// 3. فتح واجهة التركيز الكامل (Full Focus Mode)
+// ==========================================
+// دوال إدارة الاختبار (الوضع النشط)
+// ==========================================
+
 function openTestFocusMode(assignmentId) {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
@@ -128,38 +135,82 @@ function openTestFocusMode(assignmentId) {
     if (!assignment) return;
 
     const testDetails = allTests.find(t => t.id === assignment.testId);
-    if (!testDetails) {
-        alert('عذراً، هذا الاختبار غير متوفر.');
-        return;
-    }
+    if (!testDetails) return;
 
     currentTestId = assignmentId;
     currentOriginalTest = testDetails;
 
-    // إعداد الواجهة
+    // إعداد الواجهة للاختبار النشط
     document.getElementById('focusTestTitle').textContent = testDetails.title;
-    
-    // إظهار شاشة البدء وإخفاء الأسئلة
     document.getElementById('testStartScreen').style.display = 'block';
     document.getElementById('testQuestionsContainer').style.display = 'none';
-    document.getElementById('testFooterControls').style.display = 'none';
     
-    // تفعيل وضع التركيز (إظهار الطبقة البيضاء الكاملة)
+    // إظهار أزرار التحكم بالاختبار (حفظ وتسليم)
+    document.getElementById('testFooterControls').innerHTML = `
+        <button class="btn-action btn-save" onclick="saveTestProgress()">
+            <span>💾</span> حفظ واستكمال لاحقاً
+        </button>
+        <button class="btn-action btn-submit" onclick="submitTestAnswers()">
+            <span>✅</span> تسليم الإجابات وإنهاء
+        </button>
+    `;
+    document.getElementById('testFooterControls').style.display = 'none'; // مخفي حتى يبدأ
+    
     document.getElementById('testFocusMode').style.display = 'flex';
-    document.body.style.overflow = 'hidden'; // منع التمرير في الصفحة الخلفية
+    document.body.style.overflow = 'hidden';
 }
 
-// 4. الانتقال من شاشة التعليمات إلى الأسئلة
 function startActualTest() {
     document.getElementById('testStartScreen').style.display = 'none';
     document.getElementById('testQuestionsContainer').style.display = 'block';
     document.getElementById('testFooterControls').style.display = 'flex';
-
-    renderQuestions();
+    renderQuestions(false); // false تعني وضع التحرير (ليس للعرض فقط)
 }
 
-// عرض الأسئلة واستعادة الإجابات
-function renderQuestions() {
+// ==========================================
+// دوال عرض الاختبار المكتمل (للمراجعة فقط)
+// ==========================================
+
+function viewCompletedTest(assignmentId) {
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    
+    const assignment = studentTests.find(t => t.id === assignmentId);
+    const testDetails = allTests.find(t => t.id === assignment.testId);
+
+    if (!assignment || !testDetails) return;
+
+    currentTestId = assignmentId;
+    currentOriginalTest = testDetails;
+
+    // إعداد الواجهة للعرض فقط
+    document.getElementById('focusTestTitle').textContent = `${testDetails.title} (مراجعة)`;
+    document.getElementById('testStartScreen').style.display = 'none';
+    document.getElementById('testQuestionsContainer').style.display = 'block';
+    
+    // تغيير أزرار الفوتر لتكون زر "إغلاق" فقط
+    document.getElementById('testFooterControls').innerHTML = `
+        <button class="btn-action btn-exit" onclick="closeTestFocusMode()">
+            <span>🚪</span> إغلاق ومغادرة
+        </button>
+        <button class="btn-action btn-save" onclick="printTestResult(${assignmentId})">
+            <span>🖨️</span> طباعة النتيجة
+        </button>
+    `;
+    document.getElementById('testFooterControls').style.display = 'flex';
+
+    document.getElementById('testFocusMode').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    // عرض الأسئلة في وضع القراءة فقط
+    renderQuestions(true); 
+}
+
+// ==========================================
+// دالة عرض الأسئلة (مشتركة)
+// ==========================================
+
+function renderQuestions(isReadOnly = false) {
     const container = document.getElementById('testQuestionsContainer');
     container.innerHTML = '';
 
@@ -168,17 +219,17 @@ function renderQuestions() {
         return;
     }
 
-    // البحث عن إجابات محفوظة
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const currentAssignment = studentTests.find(t => t.id === currentTestId);
-    const savedAnswers = currentAssignment.savedAnswers || [];
+    // نستخدم answers إذا كان مكتملاً، أو savedAnswers إذا كان قيد التنفيذ
+    const userAnswers = currentAssignment.status === 'completed' ? currentAssignment.answers : (currentAssignment.savedAnswers || []);
 
     currentOriginalTest.questions.forEach((q, index) => {
-        const questionHTML = createQuestionHTML(q, index);
+        const questionHTML = createQuestionHTML(q, index, isReadOnly);
         container.insertAdjacentHTML('beforeend', questionHTML);
 
         // استعادة الإجابة
-        const savedAnswer = savedAnswers.find(a => a.questionId === q.id);
+        const savedAnswer = userAnswers.find(a => a.questionId === q.id);
         if (savedAnswer) {
             if (q.type === 'multiple-choice') {
                 const radio = document.querySelector(`input[name="q_${index}"][value="${savedAnswer.answer}"]`);
@@ -189,14 +240,26 @@ function renderQuestions() {
             } else if (q.type === 'true-false') {
                 const btn = document.querySelector(`#card_q_${index} .tf-btn.${savedAnswer.answer}`);
                 if (btn) {
-                    selectTF(btn, index, savedAnswer.answer);
+                    // محاكاة التحديد بصرياً فقط
+                    btn.classList.add('active');
+                    const input = btn.parentElement.querySelector('input');
+                    if(input) input.value = savedAnswer.answer;
                 }
             }
+        }
+
+        // إذا كان وضع القراءة فقط، نقوم بتعطيل كل المدخلات
+        if (isReadOnly) {
+            const inputs = document.querySelectorAll(`#card_q_${index} input`);
+            inputs.forEach(inp => inp.disabled = true);
+            const card = document.getElementById(`card_q_${index}`);
+            card.style.pointerEvents = 'none'; // منع النقر
+            card.style.opacity = '0.9';
         }
     });
 }
 
-function createQuestionHTML(question, index) {
+function createQuestionHTML(question, index, isReadOnly) {
     let inputsHTML = '';
 
     if (question.type === 'multiple-choice') {
@@ -204,7 +267,7 @@ function createQuestionHTML(question, index) {
         inputsHTML = `
             <div class="answers-grid">
                 ${choices.map((choice, i) => `
-                    <label class="answer-option" onclick="selectOption(this)">
+                    <label class="answer-option" ${!isReadOnly ? `onclick="selectOption(this)"` : ''}>
                         <input type="radio" name="q_${index}" value="${i}">
                         <span>${choice}</span>
                     </label>
@@ -214,10 +277,10 @@ function createQuestionHTML(question, index) {
     } else if (question.type === 'true-false') {
         inputsHTML = `
             <div class="tf-buttons">
-                <div class="tf-btn true" onclick="selectTF(this, ${index}, 'true')">
+                <div class="tf-btn true" ${!isReadOnly ? `onclick="selectTF(this, ${index}, 'true')"` : ''}>
                     <span class="tf-icon">✅</span> <span>صواب</span>
                 </div>
-                <div class="tf-btn false" onclick="selectTF(this, ${index}, 'false')">
+                <div class="tf-btn false" ${!isReadOnly ? `onclick="selectTF(this, ${index}, 'false')"` : ''}>
                     <span class="tf-icon">❌</span> <span>خطأ</span>
                 </div>
                 <input type="hidden" name="q_${index}">
@@ -227,14 +290,14 @@ function createQuestionHTML(question, index) {
 
     return `
         <div class="question-card" id="card_q_${index}">
-            <div class="question-number">السؤال ${index + 1}</div>
+            <div class="question-number">السؤال رقم ${index + 1}</div>
             <div class="question-text">${question.text}</div>
             ${inputsHTML}
         </div>
     `;
 }
 
-// تفاعل واجهة المستخدم
+// دوال التفاعل البصري
 function selectOption(label) {
     const parent = label.parentElement;
     parent.querySelectorAll('.answer-option').forEach(l => l.classList.remove('selected'));
@@ -250,7 +313,8 @@ function selectTF(btn, index, value) {
     if(input) input.value = value;
 }
 
-// === 5. حفظ واستكمال لاحقاً ===
+// === وظائف الحفظ والتسليم ===
+
 function saveTestProgress() {
     const savedAnswers = collectAnswers();
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
@@ -262,12 +326,10 @@ function saveTestProgress() {
         localStorage.setItem('studentTests', JSON.stringify(studentTests));
         
         closeTestFocusMode();
-        loadStudentTests(); // تحديث الواجهة الرئيسية
-        // لا نعرض رسالة تنبيه ليكون الخروج سلساً وسريعاً
+        loadStudentTests(); 
     }
 }
 
-// === 6. تسليم الإجابات النهائية ===
 function submitTestAnswers() {
     if (!confirm('هل أنت متأكد من تسليم الإجابات؟')) return;
 
@@ -275,7 +337,6 @@ function submitTestAnswers() {
     let correctCount = 0;
     const totalQuestions = currentOriginalTest.questions.length;
 
-    // تصحيح (محاكاة)
     answers.forEach(ans => { if(ans.answer !== null) correctCount++; });
     const score = Math.round((correctCount / totalQuestions) * 100); 
 
@@ -313,14 +374,90 @@ function collectAnswers() {
     return answers;
 }
 
+// ==========================================
+// وظيفة الطباعة
+// ==========================================
+
+function printTestResult(assignmentId) {
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    
+    const assignment = studentTests.find(t => t.id === assignmentId);
+    const testDetails = allTests.find(t => t.id === assignment.testId);
+    
+    if (!assignment || !testDetails) return;
+
+    // فتح نافذة جديدة للطباعة
+    const printWindow = window.open('', '_blank');
+    
+    let questionsHtml = testDetails.questions.map((q, index) => {
+        // البحث عن إجابة الطالب
+        const userAnswerObj = assignment.answers.find(a => a.questionId === q.id);
+        const userAnswer = userAnswerObj ? userAnswerObj.answer : 'لم يجب';
+        
+        let answerText = userAnswer;
+        // تحويل رموز الإجابة إلى نص مقروء
+        if(q.type === 'true-false') {
+            answerText = userAnswer === 'true' ? 'صواب' : (userAnswer === 'false' ? 'خطأ' : 'لم يجب');
+        } else if (q.type === 'multiple-choice' && q.choices) {
+            answerText = q.choices[userAnswer] || 'لم يجب';
+        }
+
+        return `
+            <div class="print-question">
+                <div class="q-title">س${index + 1}: ${q.text}</div>
+                <div class="q-answer">إجابتك: ${answerText}</div>
+            </div>
+        `;
+    }).join('');
+
+    const content = `
+        <!DOCTYPE html>
+        <html dir="rtl">
+        <head>
+            <title>طباعة نتيجة الاختبار</title>
+            <style>
+                body { font-family: 'Tajawal', sans-serif; padding: 20px; }
+                .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 20px; }
+                .meta { margin-bottom: 30px; font-size: 1.1rem; }
+                .print-question { margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+                .q-title { font-weight: bold; margin-bottom: 5px; }
+                .q-answer { color: #555; }
+                .score-box { text-align: center; font-size: 1.5rem; font-weight: bold; margin-top: 30px; border: 2px solid #333; padding: 10px; display: inline-block; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>تقرير نتيجة اختبار</h1>
+                <h2>${testDetails.title}</h2>
+            </div>
+            <div class="meta">
+                <p><strong>الطالب:</strong> ${getCurrentUser().name}</p>
+                <p><strong>المادة:</strong> ${testDetails.subject}</p>
+                <p><strong>تاريخ الإنجاز:</strong> ${formatDateShort(assignment.completedAt)}</p>
+            </div>
+            <div class="questions-list">
+                ${questionsHtml}
+            </div>
+            <div style="text-align:center;">
+                <div class="score-box">الدرجة النهائية: ${assignment.score}%</div>
+            </div>
+            <script>window.onload = function() { window.print(); }</script>
+        </body>
+        </html>
+    `;
+
+    printWindow.document.write(content);
+    printWindow.document.close();
+}
+
 function closeTestFocusMode() {
     document.getElementById('testFocusMode').style.display = 'none';
-    document.body.style.overflow = 'auto'; // إعادة التمرير للصفحة
+    document.body.style.overflow = 'auto';
     currentTestId = null;
     currentOriginalTest = null;
 }
 
-// أدوات مساعدة
 function formatDateShort(dateString) {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('ar-SA');

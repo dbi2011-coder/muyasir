@@ -3,7 +3,7 @@
 // ============================================
 
 let currentTestId = null;       // معرف السجل في جدول اختبارات الطالب
-let currentOriginalTest = null; // بيانات الاختبار الأصلي من المكتبة (الأسئلة، العنوان..)
+let currentOriginalTest = null; // بيانات الاختبار الأصلي من المكتبة
 
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('my-tests.html')) {
@@ -18,11 +18,8 @@ function setupTestsTabs() {
     
     tabBtns.forEach(btn => {
         btn.addEventListener('click', function() {
-            // إزالة النشاط
             tabBtns.forEach(b => b.classList.remove('active'));
             tabPanes.forEach(p => p.classList.remove('active'));
-            
-            // تفعيل التبويب المختار
             this.classList.add('active');
             const tabId = this.getAttribute('data-tab');
             document.getElementById(`${tabId}-tab`).classList.add('active');
@@ -35,40 +32,41 @@ function loadStudentTests() {
     loadCompletedTests();
 }
 
-// 1. تحميل الاختبارات المعلقة (مع إصلاح مشكلة البيانات المفقودة)
+// 1. تحميل الاختبارات المعلقة (والتي قيد التنفيذ)
 function loadPendingTests() {
     const container = document.getElementById('pendingTestsList');
     const currentStudent = getCurrentUser();
     
-    // جلب البيانات من LocalStorage
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
 
-    // تصفية اختبارات الطالب الحالية وغير المكتملة
-    const myTests = studentTests.filter(t => t.studentId === currentStudent.id && t.status === 'pending');
+    // (pending أو in-progress)
+    const myTests = studentTests.filter(t => t.studentId === currentStudent.id && (t.status === 'pending' || t.status === 'in-progress'));
 
     if (myTests.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">🎉</div>
                 <h3>رائع! لا توجد اختبارات جديدة</h3>
-                <p>استمتع بوقتك، لقد أنجزت كل المهام.</p>
+                <p>لقد أنجزت كل المهام المطلوبة.</p>
             </div>`;
         return;
     }
 
     container.innerHTML = myTests.map(assignment => {
-        // [هام] الربط بين جدول التعيين وجدول الاختبارات لجلب التفاصيل
         const testDetails = allTests.find(t => t.id === assignment.testId);
-        
-        // إذا كان الاختبار الأصلي محذوفاً، لا نعرضه
         if (!testDetails) return '';
+
+        // نص الزر وحالة الاختبار
+        const btnText = assignment.status === 'in-progress' ? '🔄 استكمال الاختبار' : '🚀 ابدأ الاختبار';
+        const badgeClass = assignment.status === 'in-progress' ? 'status-accelerated' : 'status-pending';
+        const badgeText = assignment.status === 'in-progress' ? 'قيد التنفيذ' : 'جديد';
 
         return `
             <div class="test-card pending">
                 <div class="card-header">
                     <h3 class="card-title">${testDetails.title}</h3>
-                    <span class="card-status status-pending">جديد</span>
+                    <span class="card-status ${badgeClass}">${badgeText}</span>
                 </div>
                 <div class="card-meta">
                     <div class="meta-item">
@@ -79,14 +77,10 @@ function loadPendingTests() {
                         <span>❓ الأسئلة:</span>
                         <strong>${testDetails.questions ? testDetails.questions.length : 0} سؤال</strong>
                     </div>
-                    <div class="meta-item">
-                        <span>📅 التاريخ:</span>
-                        <strong>${formatDateShort(assignment.assignedDate)}</strong>
-                    </div>
                 </div>
                 <div class="card-actions">
                     <button class="btn btn-success btn-block" onclick="prepareTest(${assignment.id})">
-                        🚀 ابدأ الاختبار الآن
+                        ${btnText}
                     </button>
                 </div>
             </div>
@@ -94,11 +88,9 @@ function loadPendingTests() {
     }).join('');
 }
 
-// 2. تحميل الاختبارات المكتملة
 function loadCompletedTests() {
     const container = document.getElementById('completedTestsList');
     const currentStudent = getCurrentUser();
-    
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
 
@@ -116,12 +108,9 @@ function loadCompletedTests() {
 
     container.innerHTML = myCompletedTests.map(assignment => {
         const testDetails = allTests.find(t => t.id === assignment.testId);
-        if (!testDetails) return ''; // تخطي إذا حذف المعلم الاختبار
+        if (!testDetails) return '';
 
-        // تحديد لون الدرجة
-        let scoreColor = 'green';
-        if(assignment.score < 50) scoreColor = 'red';
-        else if(assignment.score < 80) scoreColor = 'orange';
+        let scoreColor = assignment.score >= 80 ? 'green' : (assignment.score >= 50 ? 'orange' : 'red');
 
         return `
             <div class="test-card completed">
@@ -144,7 +133,7 @@ function loadCompletedTests() {
     }).join('');
 }
 
-// 3. تحضير واجهة الاختبار
+// 3. تحضير الاختبار
 function prepareTest(assignmentId) {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
@@ -161,10 +150,7 @@ function prepareTest(assignmentId) {
     currentTestId = assignmentId;
     currentOriginalTest = testDetails;
 
-    // تعبئة البيانات في المودال
     document.getElementById('testModalTitle').textContent = testDetails.title;
-    
-    // إعادة تعيين واجهة المودال للبداية
     document.getElementById('testInstructions').style.display = 'block';
     document.getElementById('testQuestionsArea').style.display = 'none';
     document.getElementById('testFooter').style.display = 'none';
@@ -172,7 +158,7 @@ function prepareTest(assignmentId) {
     document.getElementById('startTestModal').classList.add('show');
 }
 
-// 4. بدء عرض الأسئلة
+// 4. بدء عرض الأسئلة (واسترجاع الإجابات المحفوظة)
 function beginTestQuestions() {
     document.getElementById('testInstructions').style.display = 'none';
     document.getElementById('testQuestionsArea').style.display = 'block';
@@ -182,27 +168,44 @@ function beginTestQuestions() {
     container.innerHTML = '';
 
     if (!currentOriginalTest.questions || currentOriginalTest.questions.length === 0) {
-        container.innerHTML = '<p class="text-center">لا توجد أسئلة في هذا الاختبار.</p>';
+        container.innerHTML = '<p class="text-center">لا توجد أسئلة.</p>';
         return;
     }
 
-    // توليد HTML لكل سؤال
+    // البحث عن إجابات محفوظة مسبقاً
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const currentAssignment = studentTests.find(t => t.id === currentTestId);
+    const savedAnswers = currentAssignment.savedAnswers || [];
+
     currentOriginalTest.questions.forEach((q, index) => {
         const questionHTML = createQuestionHTML(q, index);
         container.insertAdjacentHTML('beforeend', questionHTML);
+
+        // استعادة الإجابة المحفوظة إن وجدت
+        const savedAnswer = savedAnswers.find(a => a.questionId === q.id);
+        if (savedAnswer) {
+            if (q.type === 'multiple-choice') {
+                const radio = document.querySelector(`input[name="q_${index}"][value="${savedAnswer.answer}"]`);
+                if (radio) {
+                    radio.checked = true;
+                    radio.closest('.answer-option').classList.add('selected');
+                }
+            } else if (q.type === 'true-false') {
+                const btn = document.querySelector(`.tf-btn.${savedAnswer.answer}`); // true or false class
+                if (btn) {
+                    selectTF(btn, index, savedAnswer.answer);
+                }
+            }
+        }
     });
 }
 
-// دالة مساعدة لإنشاء شكل السؤال حسب نوعه
 function createQuestionHTML(question, index) {
     let inputsHTML = '';
 
-    // نوع 1: اختيار من متعدد
     if (question.type === 'multiple-choice') {
-        // التحقق مما إذا كانت الخيارات موجودة في الكائن (fallback if missing)
         let choices = question.choices;
         if (!choices || !Array.isArray(choices) || choices.length === 0) {
-            // خيارات افتراضية في حال لم يحفظ المعلم الخيارات بشكل صحيح
             choices = ['الخيار الأول', 'الخيار الثاني', 'الخيار الثالث']; 
         }
 
@@ -216,9 +219,7 @@ function createQuestionHTML(question, index) {
                 `).join('')}
             </div>
         `;
-    } 
-    // نوع 2: صواب أو خطأ
-    else if (question.type === 'true-false') {
+    } else if (question.type === 'true-false') {
         inputsHTML = `
             <div class="tf-buttons">
                 <button type="button" class="tf-btn true" onclick="selectTF(this, ${index}, 'true')">
@@ -230,9 +231,7 @@ function createQuestionHTML(question, index) {
                 <input type="hidden" name="q_${index}">
             </div>
         `;
-    }
-    // أنواع أخرى يمكن إضافتها هنا...
-    else {
+    } else {
         inputsHTML = `<p class="text-muted">نوع السؤال غير مدعوم في العرض السريع.</p>`;
     }
 
@@ -245,63 +244,54 @@ function createQuestionHTML(question, index) {
     `;
 }
 
-// دوال التفاعل البصري عند الاختيار
 function selectOption(label) {
-    // إزالة التحديد من جميع الخيارات في نفس السؤال
     const parent = label.parentElement;
     parent.querySelectorAll('.answer-option').forEach(l => l.classList.remove('selected'));
-    
-    // تحديد الخيار الحالي
     label.classList.add('selected');
     label.querySelector('input').checked = true;
 }
 
 function selectTF(btn, index, value) {
     const parent = btn.parentElement;
-    // إزالة النشاط من الزرين
     parent.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
-    
-    // تفعيل الزر المختار
     btn.classList.add('active');
-    
-    // تحديث القيمة المخفية
     const input = parent.querySelector('input');
-    input.value = value;
+    if(input) input.value = value;
 }
 
-// 5. تسليم الإجابات
-function submitTestAnswers() {
-    if (!confirm('هل أنت متأكد من تسليم الإجابات وإنهاء الاختبار؟')) return;
+// === 5. وظيفة حفظ التقدم ===
+function saveTestProgress() {
+    const savedAnswers = collectAnswers();
+    
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const index = studentTests.findIndex(t => t.id === currentTestId);
+    
+    if (index !== -1) {
+        studentTests[index].status = 'in-progress'; // تغيير الحالة لقيد التنفيذ
+        studentTests[index].savedAnswers = savedAnswers; // حفظ الإجابات
+        localStorage.setItem('studentTests', JSON.stringify(studentTests));
+        
+        alert('✅ تم حفظ تقدمك بنجاح. يمكنك العودة لإكماله في أي وقت.');
+        closeStartTestModal();
+        loadStudentTests();
+    }
+}
 
+// === 6. تسليم الإجابات النهائية ===
+function submitTestAnswers() {
+    if (!confirm('هل أنت متأكد من تسليم الإجابات وإنهاء الاختبار؟ لا يمكن التراجع بعد ذلك.')) return;
+
+    const answers = collectAnswers();
     let correctCount = 0;
     const totalQuestions = currentOriginalTest.questions.length;
-    const answers = [];
 
-    currentOriginalTest.questions.forEach((q, index) => {
-        let studentAnswer = null;
-        
-        if (q.type === 'multiple-choice') {
-            const selected = document.querySelector(`input[name="q_${index}"]:checked`);
-            studentAnswer = selected ? selected.value : null;
-        } else if (q.type === 'true-false') {
-            const selected = document.querySelector(`input[name="q_${index}"]`);
-            studentAnswer = selected ? selected.value : null;
-        }
-
-        // ملاحظة: التصحيح هنا محاكاة لأنه يعتمد على وجود الإجابة الصحيحة في بيانات السؤال.
-        // نفترض أن أي إجابة تعتبر مشاركة إيجابية في هذا النموذج التجريبي
-        if (studentAnswer !== null) {
-            correctCount++;
-        }
-        
-        answers.push({ questionId: q.id, answer: studentAnswer });
+    // تصحيح الإجابات (محاكاة)
+    answers.forEach(ans => {
+        if(ans.answer !== null) correctCount++; 
     });
 
-    // حساب النسبة (محاكاة: درجة تشجيعية + دقة الإجابة)
-    // في النظام الفعلي: Score = (correctCount / totalQuestions) * 100
     const score = Math.round((correctCount / totalQuestions) * 100); 
 
-    // حفظ النتيجة
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const index = studentTests.findIndex(t => t.id === currentTestId);
     
@@ -310,23 +300,40 @@ function submitTestAnswers() {
         studentTests[index].completedAt = new Date().toISOString();
         studentTests[index].score = score;
         studentTests[index].answers = answers;
+        delete studentTests[index].savedAnswers; // حذف الإجابات المؤقتة
         
         localStorage.setItem('studentTests', JSON.stringify(studentTests));
         
-        // إضافة نشاط للسجل
         addStudentActivity({
             type: 'test',
             title: 'أنجزت اختباراً',
             description: `اختبار: ${currentOriginalTest.title} - الدرجة: ${score}%`
         });
 
-        // رسالة تهنئة
-        let msg = score >= 90 ? 'أداء مذهل يا بطل! 🌟' : (score >= 70 ? 'أحسنت عملاً! 👍' : 'جيد، حظاً أوفر في المرة القادمة!');
-        alert(`${msg}\nلقد حصلت على: ${score}%`);
-        
+        alert(`أحسنت يا بطل! 🎉\nلقد أكملت الاختبار.\nدرجتك هي: ${score}%`);
         closeStartTestModal();
-        loadStudentTests(); // تحديث القائمة
+        loadStudentTests();
     }
+}
+
+function collectAnswers() {
+    const answers = [];
+    currentOriginalTest.questions.forEach((q, index) => {
+        let studentAnswer = null;
+        
+        if (q.type === 'multiple-choice') {
+            const selected = document.querySelector(`input[name="q_${index}"]:checked`);
+            studentAnswer = selected ? selected.value : null;
+        } else if (q.type === 'true-false') {
+            const input = document.querySelector(`input[name="q_${index}"]`);
+            studentAnswer = input ? input.value : null;
+        }
+        
+        if (studentAnswer) {
+            answers.push({ questionId: q.id, answer: studentAnswer });
+        }
+    });
+    return answers;
 }
 
 function closeStartTestModal() {
@@ -335,7 +342,6 @@ function closeStartTestModal() {
     currentOriginalTest = null;
 }
 
-// أدوات مساعدة
 function formatDateShort(dateString) {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('ar-SA');

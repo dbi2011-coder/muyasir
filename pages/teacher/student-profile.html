@@ -2,8 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ملف الطالب - ميسر التعلم</title>
+    <title>ملف الطالب</title>
     <link rel="stylesheet" href="../../assets/css/main.css">
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../assets/css/teacher.css">
@@ -11,174 +10,49 @@
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- الشريط الجانبي -->
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
-                    <h2>ميسر التعلم</h2>
-                </div>
-            </div>
-            
+            <div class="sidebar-header"><h2>ميسر التعلم</h2></div>
             <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
-                <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
-                <li><a href="content-library.html"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
-                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
-                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
-                <li><a href="reports.html"><span class="menu-icon">📋</span>التقارير</a></li>
-                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة الصعوبات</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
+                <li><a href="dashboard.html">لوحة التحكم</a></li>
+                <li><a href="students.html" class="active">الطلاب</a></li>
+                <li><a href="#" onclick="logout()">خروج</a></li>
             </ul>
         </aside>
-
-        <!-- المحتوى الرئيسي -->
         <main class="main-content-dashboard">
-            <!-- رأس اللوحة -->
-            <header class="dashboard-header">
-                <button class="mobile-menu-btn">☰</button>
-                <div class="user-info">
-                    <div class="user-welcome">
-                        <div class="welcome-text">مرحباً بعودتك</div>
-                        <div class="user-name" id="userName">أ/ اسم المعلم</div>
-                    </div>
-                    <div class="user-avatar" id="userAvatar">م</div>
-                </div>
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="showNotifications()">🔔 الإشعارات</button>
-                </div>
-            </header>
-
-            <!-- محتوى اللوحة -->
             <div class="dashboard-content">
                 <div class="content-header">
-                    <div class="back-button">
-                        <button class="btn btn-outline-secondary" onclick="goBack()">← رجوع</button>
-                    </div>
-                    <h1 id="studentProfileTitle">ملف الطالب</h1>
-                    <div class="header-actions">
-                        <button class="btn btn-success" onclick="generateStudentReport()">📊 تقرير شامل</button>
-                    </div>
+                    <button class="btn btn-secondary" onclick="window.history.back()">رجوع</button>
+                    <h1 id="studentName">ملف الطالب</h1>
+                    <span id="studentGrade"></span>
                 </div>
-
-                <!-- معلومات الطالب -->
-                <div class="student-info-card">
-                    <div class="student-basic-info">
-                        <div class="student-avatar" id="studentAvatar">ط</div>
-                        <div class="student-details">
-                            <h2 id="studentName">اسم الطالب</h2>
-                            <div class="student-meta">
-                                <span class="meta-item" id="studentGrade">الصف: </span>
-                                <span class="meta-item" id="studentSubject">المادة: </span>
-                                <span class="meta-item" id="studentProgress">نسبة التقدم: 0%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- تبويبات ملف الطالب -->
                 <div class="student-tabs">
                     <div class="tabs-header">
                         <button class="tab-btn active" data-tab="diagnostic">الاختبار التشخيصي</button>
-                        <button class="tab-btn" data-tab="educational-plan">الخطة التربوية الفردية</button>
-                        <button class="tab-btn" data-tab="lessons">الدروس</button>
-                        <button class="tab-btn" data-tab="assignments">الواجبات</button>
-                        <button class="tab-btn" data-tab="progress">تقدم الطالب</button>
+                        <button class="tab-btn" data-tab="iep">الخطة التربوية</button>
                     </div>
-
-                    <!-- محتوى التبويبات -->
                     <div class="tabs-content">
-                        <!-- تبويب الاختبار التشخيصي -->
                         <div class="tab-pane active" id="diagnostic-tab">
-                            <div class="tab-header">
-                                <h3>الاختبار التشخيصي</h3>
-                                <button class="btn btn-primary" onclick="assignDiagnosticTest()">تعيين اختبار</button>
-                            </div>
-                            <div id="diagnosticTestContent">
-                                <!-- سيتم تعبئته بواسطة JavaScript -->
-                            </div>
+                            <div id="diagnosticTestContent"></div>
                         </div>
-
-                        <!-- تبويب الخطة التربوية الفردية -->
-                        <div class="tab-pane" id="educational-plan-tab">
-                            <div class="tab-header">
-                                <h3>الخطة التربوية الفردية</h3>
-                                <div class="plan-actions">
-                                    <button class="btn btn-success" onclick="generateEducationalPlan()">توليد الخطة</button>
-                                    <button class="btn btn-outline-primary" onclick="editEducationalPlan()">تعديل الخطة</button>
-                                    <button class="btn btn-info" onclick="exportEducationalPlan()">تصدير PDF</button>
-                                </div>
-                            </div>
-                            <div id="educationalPlanContent">
-                                <!-- سيتم تعبئته بواسطة JavaScript -->
-                            </div>
-                        </div>
-
-                        <!-- تبويب الدروس -->
-                        <div class="tab-pane" id="lessons-tab">
-                            <div class="tab-header">
-                                <h3>الدروس المخصصة</h3>
-                                <button class="btn btn-primary" onclick="assignManualLesson()">إضافة درس يدوي</button>
-                            </div>
-                            <div id="studentLessonsContent">
-                                <!-- سيتم تعبئته بواسطة JavaScript -->
-                            </div>
-                        </div>
-
-                        <!-- تبويب الواجبات -->
-                        <div class="tab-pane" id="assignments-tab">
-                            <div class="tab-header">
-                                <h3>الواجبات المخصصة</h3>
-                                <button class="btn btn-primary" onclick="assignManualAssignment()">إضافة واجب</button>
-                            </div>
-                            <div id="studentAssignmentsContent">
-                                <!-- سيتم تعبئته بواسطة JavaScript -->
-                            </div>
-                        </div>
-
-                        <!-- تبويب تقدم الطالب -->
-                        <div class="tab-pane" id="progress-tab">
-                            <div class="tab-header">
-                                <h3>تقدم الطالب</h3>
-                                <button class="btn btn-outline-primary" onclick="refreshProgress()">تحديث</button>
-                            </div>
-                            <div id="studentProgressContent">
-                                <!-- سيتم تعبئته بواسطة JavaScript -->
-                            </div>
+                        <div class="tab-pane" id="iep-tab">
+                            <div id="educationalPlanContent">جاري التحميل...</div>
                         </div>
                     </div>
                 </div>
             </div>
         </main>
     </div>
-
-    <!-- نماذج إضافية -->
+    
     <div id="assignTestModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>تعيين اختبار تشخيصي</h3>
-                <button class="modal-close" onclick="closeAssignTestModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="assignTestForm">
-                    <div class="form-group">
-                        <label for="testSelection" class="form-label">اختر الاختبار</label>
-                        <select id="testSelection" class="form-control" required>
-                            <option value="">اختر اختبار تشخيصي</option>
-                        </select>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeAssignTestModal()">إلغاء</button>
-                <button type="button" class="btn btn-success" onclick="saveAssignedTest()">تعيين</button>
-            </div>
+            <div class="modal-header"><h3>تعيين اختبار</h3><button class="modal-close" onclick="closeAssignTestModal()">×</button></div>
+            <div class="modal-body"><select id="testSelection" class="form-control"></select></div>
+            <div class="modal-footer"><button class="btn btn-success" onclick="saveAssignedTest()">حفظ</button></div>
         </div>
     </div>
 
-    <script src="../../assets/js/dashboard.js"></script>
-    <script src="../../assets/js/teacher.js"></script>
-    <script src="../../assets/js/student-profile.js"></script>
     <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/dashboard.js"></script>
+    <script src="../../assets/js/student-profile.js"></script>
 </body>
 </html>

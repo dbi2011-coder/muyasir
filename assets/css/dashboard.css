@@ -1,0 +1,282 @@
+/* أنماط أساسية للوحات التحكم */
+.dashboard-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f8f9fa;
+}
+
+/* الشريط الجانبي */
+.sidebar {
+    width: 280px;
+    background: var(--secondary-color);
+    color: white;
+    position: fixed;
+    right: 0;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.sidebar-header {
+    padding: 25px 20px;
+    background: rgba(0,0,0,0.1);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    text-align: center;
+}
+
+.sidebar-header .logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+
+.sidebar-header .logo img {
+    height: 40px;
+}
+
+.sidebar-header .logo h2 {
+    font-size: 1.3rem;
+    margin: 0;
+    color: white;
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-menu li {
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.sidebar-menu a {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    color: rgba(255,255,255,0.8);
+    text-decoration: none;
+    transition: all 0.3s ease;
+    gap: 12px;
+}
+
+.sidebar-menu a:hover,
+.sidebar-menu a.active {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    border-right: 3px solid var(--primary-color);
+}
+
+.sidebar-menu .menu-icon {
+    font-size: 1.2rem;
+    width: 20px;
+    text-align: center;
+}
+
+/* المحتوى الرئيسي */
+.main-content-dashboard {
+    flex: 1;
+    margin-right: 280px;
+    transition: all 0.3s ease;
+}
+
+/* رأس لوحة التحكم */
+.dashboard-header {
+    background: white;
+    padding: 20px 30px;
+    box-shadow: var(--shadow);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 999;
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.user-welcome {
+    text-align: right;
+}
+
+.user-welcome .welcome-text {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.user-welcome .user-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--secondary-color);
+}
+
+.user-avatar {
+    width: 45px;
+    height: 45px;
+    background: var(--primary-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* محتوى لوحة التحكم */
+.dashboard-content {
+    padding: 30px;
+}
+
+.content-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.content-header h1 {
+    color: var(--secondary-color);
+    font-size: 1.8rem;
+    margin: 0;
+}
+
+/* البطاقات الإحصائية */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 25px;
+    margin-bottom: 40px;
+}
+
+.stat-card {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    border-right: 4px solid var(--primary-color);
+}
+
+.stat-card.success {
+    border-right-color: var(--success-color);
+}
+
+.stat-card.warning {
+    border-right-color: var(--warning-color);
+}
+
+.stat-card.danger {
+    border-right-color: var(--danger-color);
+}
+
+.stat-header {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    background: rgba(52, 152, 219, 0.1);
+    color: var(--primary-color);
+}
+
+.stat-card.success .stat-icon {
+    background: rgba(39, 174, 96, 0.1);
+    color: var(--success-color);
+}
+
+.stat-card.warning .stat-icon {
+    background: rgba(243, 156, 18, 0.1);
+    color: var(--warning-color);
+}
+
+.stat-card.danger .stat-icon {
+    background: rgba(231, 76, 60, 0.1);
+    color: var(--danger-color);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--secondary-color);
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+/* التجاوب */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 250px;
+    }
+    
+    .main-content-dashboard {
+        margin-right: 250px;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(100%);
+    }
+    
+    .sidebar.active {
+        transform: translateX(0);
+    }
+    
+    .main-content-dashboard {
+        margin-right: 0;
+    }
+    
+    .dashboard-header {
+        padding: 15px 20px;
+    }
+    
+    .dashboard-content {
+        padding: 20px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* زر القائمة المتنقلة */
+.mobile-menu-btn {
+    display: none;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--secondary-color);
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-btn {
+        display: block;
+    }
+}

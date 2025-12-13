@@ -1,4 +1,5 @@
-// إدارة مكتبة المحتوى التعليمي
+// إدارة مكتبة المحتوى التعليمي - ميسر التعلم
+
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('content-library.html')) {
         loadContentLibrary();
@@ -12,98 +13,9 @@ function loadContentLibrary() {
     loadAssignments();
 }
 
-function loadTests() {
-    const testsGrid = document.getElementById('testsGrid');
-    if (!testsGrid) return;
-
-    const tests = JSON.parse(localStorage.getItem('tests') || '[]');
-    const currentTeacher = getCurrentUser();
-    const teacherTests = tests.filter(test => test.teacherId === currentTeacher.id);
-
-    if (teacherTests.length === 0) {
-        testsGrid.innerHTML = `
-            <div class="empty-content-state">
-                <div class="empty-icon">📝</div>
-                <h3>لا توجد اختبارات تشخيصية</h3>
-                <p>ابدأ بإنشاء أول اختبار تشخيصي</p>
-                <button class="btn btn-success" onclick="showCreateTestModal()">إنشاء اختبار</button>
-            </div>
-        `;
-        return;
-    }
-
-    testsGrid.innerHTML = teacherTests.map(test => `
-        <div class="content-card">
-            <div class="content-header">
-                <h4>${test.title}</h4>
-                <span class="content-badge subject-${test.subject}">${test.subject}</span>
-            </div>
-            <div class="content-body">
-                <p>${test.description || 'لا يوجد وصف'}</p>
-                <div class="content-meta">
-                    <span class="questions-count">${test.questions?.length || 0} سؤال</span>
-                    <span class="objectives-status ${test.objectivesLinked ? 'linked' : 'not-linked'}">
-                        ${test.objectivesLinked ? 'تم الربط' : 'لم يتم الربط'}
-                    </span>
-                </div>
-            </div>
-            <div class="content-actions">
-                <button class="btn btn-sm btn-primary" onclick="viewTest(${test.id})" title="عرض">👁️</button>
-                <button class="btn btn-sm btn-warning" onclick="editTest(${test.id})" title="تعديل">✏️</button>
-                <button class="btn btn-sm btn-info" onclick="exportContent('test', ${test.id})" title="تصدير">📤</button>
-                <button class="btn btn-sm btn-secondary" onclick="linkObjectives(${test.id})" title="ربط الأهداف">🎯</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteTest(${test.id})" title="حذف">🗑️</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-function loadLessons() {
-    const lessonsGrid = document.getElementById('lessonsGrid');
-    if (!lessonsGrid) return;
-
-    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const currentTeacher = getCurrentUser();
-    const teacherLessons = lessons.filter(lesson => lesson.teacherId === currentTeacher.id);
-
-    if (teacherLessons.length === 0) {
-        lessonsGrid.innerHTML = `
-            <div class="empty-content-state">
-                <div class="empty-icon">📚</div>
-                <h3>لا توجد دروس</h3>
-                <p>ابدأ بإنشاء أول درس</p>
-                <button class="btn btn-success" onclick="showCreateLessonModal()">إنشاء درس</button>
-            </div>
-        `;
-        return;
-    }
-
-    lessonsGrid.innerHTML = teacherLessons.map(lesson => `
-        <div class="content-card">
-            <div class="content-header">
-                <h4>${lesson.title}</h4>
-                <span class="content-badge subject-${lesson.subject}">${lesson.subject}</span>
-            </div>
-            <div class="content-body">
-                <p>${lesson.description || 'لا يوجد وصف'}</p>
-                <div class="content-meta">
-                    <span class="strategy">${lesson.strategy}</span>
-                    <span class="priority">الأولوية: ${lesson.priority || 'غير محدد'}</span>
-                    <span class="objectives-status ${lesson.objectivesLinked ? 'linked' : 'not-linked'}">
-                        ${lesson.objectivesLinked ? 'تم الربط' : 'لم يتم الربط'}
-                    </span>
-                </div>
-            </div>
-            <div class="content-actions">
-                <button class="btn btn-sm btn-primary" onclick="viewLesson(${lesson.id})" title="عرض">👁️</button>
-                <button class="btn btn-sm btn-warning" onclick="editLesson(${lesson.id})" title="تعديل">✏️</button>
-                <button class="btn btn-sm btn-info" onclick="exportContent('lesson', ${lesson.id})" title="تصدير">📤</button>
-                <button class="btn btn-sm btn-secondary" onclick="linkTeachingObjectives(${lesson.id})" title="ربط الأهداف">🎯</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id})" title="حذف">🗑️</button>
-            </div>
-        </div>
-    `).join('');
-}
+// ==========================================
+// 1. إدارة الأهداف قصيرة المدى (Short-term Objectives)
+// ==========================================
 
 function loadObjectives() {
     const objectivesList = document.getElementById('objectivesList');
@@ -143,465 +55,563 @@ function loadObjectives() {
     `).join('');
 }
 
-function loadAssignments() {
-    const assignmentsGrid = document.getElementById('assignmentsGrid');
-    if (!assignmentsGrid) return;
+function showCreateObjectiveModal() {
+    document.getElementById('createObjectiveModal').classList.add('show');
+    document.getElementById('createObjectiveForm').reset();
+    document.getElementById('instructionalGoalsContainer').innerHTML = `
+        <div class="input-group mb-2" style="display:flex; gap:5px;">
+            <input type="text" class="form-control instructional-goal-input" placeholder="هدف تدريسي 1" required>
+        </div>`;
+}
 
-    const assignments = JSON.parse(localStorage.getItem('assignments') || '[]');
+function closeCreateObjectiveModal() {
+    document.getElementById('createObjectiveModal').classList.remove('show');
+}
+
+function addInstructionalGoalInput() {
+    const container = document.getElementById('instructionalGoalsContainer');
+    const count = container.children.length + 1;
+    const div = document.createElement('div');
+    div.className = 'input-group mb-2';
+    div.style.display = 'flex';
+    div.style.gap = '5px';
+    div.style.marginTop = '5px';
+    div.innerHTML = `
+        <input type="text" class="form-control instructional-goal-input" placeholder="هدف تدريسي ${count}" required>
+        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">×</button>
+    `;
+    container.appendChild(div);
+}
+
+function saveObjective() {
+    const subject = document.getElementById('objSubject').value;
+    const shortTermText = document.getElementById('shortTermGoal').value.trim();
+    
+    const instructionalInputs = document.querySelectorAll('.instructional-goal-input');
+    const instructionalGoals = [];
+    instructionalInputs.forEach(input => {
+        if(input.value.trim()) instructionalGoals.push(input.value.trim());
+    });
+
+    if (!shortTermText || instructionalGoals.length === 0) {
+        showAuthNotification('يرجى كتابة الهدف القصير وهدف تدريسي واحد على الأقل', 'error');
+        return;
+    }
+
+    const objectives = JSON.parse(localStorage.getItem('objectives') || '[]');
+    const exists = objectives.some(obj => obj.shortTerm === shortTermText && obj.teacherId === getCurrentUser().id);
+    if (exists) {
+        showAuthNotification('هذا الهدف موجود مسبقاً', 'error');
+        return;
+    }
+
+    const newObj = {
+        id: generateId(),
+        teacherId: getCurrentUser().id,
+        subject: subject,
+        shortTerm: shortTermText,
+        teachingObjectives: instructionalGoals,
+        createdAt: new Date().toISOString()
+    };
+
+    objectives.push(newObj);
+    localStorage.setItem('objectives', JSON.stringify(objectives));
+    
+    showAuthNotification('تم حفظ الهدف بنجاح', 'success');
+    closeCreateObjectiveModal();
+    loadObjectives();
+}
+
+function deleteObjective(objectiveId) {
+    if (!confirm('هل أنت متأكد من حذف هذا الهدف؟')) return;
+    const objectives = JSON.parse(localStorage.getItem('objectives') || '[]');
+    const updated = objectives.filter(o => o.id !== objectiveId);
+    localStorage.setItem('objectives', JSON.stringify(updated));
+    showAuthNotification('تم الحذف بنجاح', 'success');
+    loadObjectives();
+}
+
+function editObjective(id) {
+    showAuthNotification('ميزة التعديل قيد التطوير', 'info');
+}
+
+// ==========================================
+// 2. إدارة الاختبارات والدروس والأسئلة
+// ==========================================
+
+function loadTests() {
+    const testsGrid = document.getElementById('testsGrid');
+    if (!testsGrid) return;
+
+    const tests = JSON.parse(localStorage.getItem('tests') || '[]');
     const currentTeacher = getCurrentUser();
-    const teacherAssignments = assignments.filter(assignment => assignment.teacherId === currentTeacher.id);
+    const teacherTests = tests.filter(test => test.teacherId === currentTeacher.id);
 
-    if (teacherAssignments.length === 0) {
-        assignmentsGrid.innerHTML = `
+    if (teacherTests.length === 0) {
+        testsGrid.innerHTML = `
             <div class="empty-content-state">
                 <div class="empty-icon">📝</div>
-                <h3>لا توجد واجبات</h3>
-                <p>ابدأ بإنشاء أول واجب</p>
-                <button class="btn btn-success" onclick="showCreateAssignmentModal()">إنشاء واجب</button>
+                <h3>لا توجد اختبارات تشخيصية</h3>
+                <button class="btn btn-success" onclick="showCreateTestModal()">إنشاء اختبار</button>
             </div>
         `;
         return;
     }
 
-    assignmentsGrid.innerHTML = teacherAssignments.map(assignment => `
+    testsGrid.innerHTML = teacherTests.map(test => `
         <div class="content-card">
             <div class="content-header">
-                <h4>${assignment.title}</h4>
-                <span class="content-badge subject-${assignment.subject}">${assignment.subject}</span>
+                <h4>${test.title}</h4>
+                <span class="content-badge subject-${test.subject}">${test.subject}</span>
             </div>
             <div class="content-body">
-                <p>${assignment.description || 'لا يوجد وصف'}</p>
+                <p>${test.description || 'لا يوجد وصف'}</p>
                 <div class="content-meta">
-                    <span class="exercises-count">${assignment.exercises?.length || 0} تمرين</span>
-                    <span class="total-grade">الدرجة: ${assignment.totalGrade || 0}</span>
+                    <span class="questions-count">${test.questions?.length || 0} سؤال</span>
+                    <span class="objectives-status ${test.objectivesLinked ? 'linked' : 'not-linked'}">
+                        ${test.objectivesLinked ? 'تم الربط' : 'لم يتم الربط'}
+                    </span>
                 </div>
             </div>
             <div class="content-actions">
-                <button class="btn btn-sm btn-primary" onclick="viewAssignment(${assignment.id})" title="عرض">👁️</button>
-                <button class="btn btn-sm btn-warning" onclick="editAssignment(${assignment.id})" title="تعديل">✏️</button>
-                <button class="btn btn-sm btn-info" onclick="exportContent('assignment', ${assignment.id})" title="تصدير">📤</button>
-                <button class="btn btn-sm btn-danger" onclick="deleteAssignment(${assignment.id})" title="حذف">🗑️</button>
+                <button class="btn btn-sm btn-primary" onclick="viewTest(${test.id})" title="عرض">👁️</button>
+                <button class="btn btn-sm btn-secondary" onclick="linkObjectives(${test.id})" title="ربط الأهداف">🎯</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteTest(${test.id})" title="حذف">🗑️</button>
             </div>
         </div>
     `).join('');
 }
 
-// دوال إدارة الاختبارات
+function loadLessons() {
+    const lessonsGrid = document.getElementById('lessonsGrid');
+    if (!lessonsGrid) return;
+
+    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+    const currentTeacher = getCurrentUser();
+    const teacherLessons = lessons.filter(lesson => lesson.teacherId === currentTeacher.id);
+
+    if (teacherLessons.length === 0) {
+        lessonsGrid.innerHTML = `
+            <div class="empty-content-state">
+                <div class="empty-icon">📚</div>
+                <h3>لا توجد دروس</h3>
+                <button class="btn btn-success" onclick="showCreateLessonModal()">إنشاء درس</button>
+            </div>
+        `;
+        return;
+    }
+
+    lessonsGrid.innerHTML = teacherLessons.map(lesson => `
+        <div class="content-card">
+            <div class="content-header">
+                <h4>${lesson.title}</h4>
+                <span class="content-badge subject-${lesson.subject}">${lesson.subject}</span>
+            </div>
+            <div class="content-body">
+                <p>${lesson.strategy ? 'الاستراتيجية: ' + lesson.strategy : ''}</p>
+                <div class="content-meta">
+                    <span class="priority">الأولوية: ${lesson.priority || 1}</span>
+                    <span class="objectives-status ${lesson.objectivesLinked ? 'linked' : 'not-linked'}">
+                        ${lesson.objectivesLinked ? 'تم الربط' : 'لم يتم الربط'}
+                    </span>
+                </div>
+            </div>
+            <div class="content-actions">
+                <button class="btn btn-sm btn-primary" onclick="viewLesson(${lesson.id})" title="عرض">👁️</button>
+                <button class="btn btn-sm btn-secondary" onclick="linkTeachingObjectives(${lesson.id})" title="ربط الأهداف">🎯</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id})" title="حذف">🗑️</button>
+            </div>
+        </div>
+    `).join('');
+}
+
 function showCreateTestModal() {
     document.getElementById('createTestModal').classList.add('show');
+    document.getElementById('questionsContainer').innerHTML = '';
 }
 
 function closeCreateTestModal() {
     document.getElementById('createTestModal').classList.remove('show');
     document.getElementById('createTestForm').reset();
-    document.getElementById('questionsContainer').innerHTML = '';
 }
 
-function addQuestion() {
-    const questionsContainer = document.getElementById('questionsContainer');
-    const questionIndex = questionsContainer.children.length;
-    
-    const questionHTML = `
-        <div class="question-item" data-index="${questionIndex}">
-            <div class="question-header">
-                <h5>السؤال ${questionIndex + 1}</h5>
-                <button type="button" class="btn btn-sm btn-danger" onclick="removeQuestion(${questionIndex})">🗑️</button>
-            </div>
-            <div class="form-group">
-                <label class="form-label">نوع السؤال</label>
-                <select class="form-control question-type" onchange="changeQuestionType(${questionIndex})">
-                    <option value="multiple-choice">اختيار من متعدد</option>
-                    <option value="drag-drop">سحب وإفلات</option>
-                    <option value="open-ended">سؤال مفتوح</option>
-                    <option value="reading-auto">تقييم القراءة الآلي</option>
-                    <option value="spelling-auto">تقييم الإملاء الآلي</option>
-                </select>
-            </div>
-            <div class="question-content">
-                <!-- سيتم تعبئته بناءً على نوع السؤال -->
-            </div>
-        </div>
-    `;
-    
-    questionsContainer.insertAdjacentHTML('beforeend', questionHTML);
-    changeQuestionType(questionIndex);
-}
-
-function changeQuestionType(questionIndex) {
-    const questionItem = document.querySelector(`.question-item[data-index="${questionIndex}"]`);
-    const questionType = questionItem.querySelector('.question-type').value;
-    const questionContent = questionItem.querySelector('.question-content');
-    
-    let contentHTML = '';
-    
-    switch(questionType) {
-        case 'multiple-choice':
-            contentHTML = `
-                <div class="form-group">
-                    <label class="form-label">نص السؤال</label>
-                    <textarea class="form-control question-text" rows="3"></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">الخيارات</label>
-                    <div class="choices-container">
-                        <div class="choice-item">
-                            <input type="text" class="form-control choice-text" placeholder="النص">
-                            <input type="checkbox" class="choice-correct"> صحيح
-                        </div>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addChoice(${questionIndex})">+ إضافة خيار</button>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">محك الاجتياز (%)</label>
-                    <input type="number" class="form-control passing-criteria" min="0" max="100" value="80">
-                </div>
-            `;
-            break;
-            
-        case 'open-ended':
-            contentHTML = `
-                <div class="form-group">
-                    <label class="form-label">نص السؤال</label>
-                    <textarea class="form-control question-text" rows="3"></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">الإجابة النموذجية (اختياري)</label>
-                    <textarea class="form-control model-answer" rows="2"></textarea>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">محك الاجتياز (%)</label>
-                    <input type="number" class="form-control passing-criteria" min="0" max="100" value="80">
-                </div>
-            `;
-            break;
-            
-        // يمكن إضافة الأنواع الأخرى هنا
-        default:
-            contentHTML = `<p>نوع السؤال: ${questionType} - سيتم تطويره لاحقاً</p>`;
-    }
-    
-    questionContent.innerHTML = contentHTML;
-}
-
-function removeQuestion(questionIndex) {
-    const questionItem = document.querySelector(`.question-item[data-index="${questionIndex}"]`);
-    if (questionItem) {
-        questionItem.remove();
-        // إعادة ترقيم الأسئلة المتبقية
-        const remainingQuestions = document.querySelectorAll('.question-item');
-        remainingQuestions.forEach((item, index) => {
-            item.setAttribute('data-index', index);
-            item.querySelector('h5').textContent = `السؤال ${index + 1}`;
-        });
-    }
-}
-
-function addChoice(questionIndex) {
-    const choicesContainer = document.querySelector(`.question-item[data-index="${questionIndex}"] .choices-container`);
-    const choiceHTML = `
-        <div class="choice-item">
-            <input type="text" class="form-control choice-text" placeholder="النص">
-            <input type="checkbox" class="choice-correct"> صحيح
-            <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">🗑️</button>
-        </div>
-    `;
-    choicesContainer.insertAdjacentHTML('beforeend', choiceHTML);
-}
-
-function saveTest() {
-    const form = document.getElementById('createTestForm');
-    const title = document.getElementById('testTitle').value.trim();
-    const subject = document.getElementById('testSubject').value;
-    const description = document.getElementById('testDescription').value.trim();
-
-    if (!title || !subject) {
-        showAuthNotification('يرجى ملء جميع الحقول الإجبارية', 'error');
-        return;
-    }
-
-    const questions = [];
-    const questionItems = document.querySelectorAll('.question-item');
-    
-    questionItems.forEach(item => {
-        const questionType = item.querySelector('.question-type').value;
-        const questionText = item.querySelector('.question-text')?.value.trim();
-        const passingCriteria = item.querySelector('.passing-criteria')?.value || 80;
-        
-        if (questionText) {
-            questions.push({
-                type: questionType,
-                text: questionText,
-                passingCriteria: parseInt(passingCriteria)
-            });
-        }
-    });
-
-    const tests = JSON.parse(localStorage.getItem('tests') || '[]');
-    const currentTeacher = getCurrentUser();
-
-    const newTest = {
-        id: generateId(),
-        teacherId: currentTeacher.id,
-        title: title,
-        subject: subject,
-        description: description,
-        questions: questions,
-        objectivesLinked: false,
-        createdAt: new Date().toISOString()
-    };
-
-    tests.push(newTest);
-    localStorage.setItem('tests', JSON.stringify(tests));
-
-    showAuthNotification('تم حفظ الاختبار بنجاح', 'success');
-    closeCreateTestModal();
-    loadTests();
-}
-
-// دوال إدارة الدروس
 function showCreateLessonModal() {
     document.getElementById('createLessonModal').classList.add('show');
+    document.getElementById('exercisesContainer').innerHTML = '';
 }
 
 function closeCreateLessonModal() {
     document.getElementById('createLessonModal').classList.remove('show');
     document.getElementById('createLessonForm').reset();
-    document.getElementById('exercisesContainer').innerHTML = '';
+}
+
+function addQuestion() {
+    const container = document.getElementById('questionsContainer');
+    addQuestionToContainer(container, 'السؤال');
 }
 
 function addExercise() {
-    const exercisesContainer = document.getElementById('exercisesContainer');
-    const exerciseIndex = exercisesContainer.children.length;
+    const container = document.getElementById('exercisesContainer');
+    addQuestionToContainer(container, 'تمرين');
+}
+
+function addQuestionToContainer(container, labelPrefix) {
+    const index = container.children.length;
     
-    const exerciseHTML = `
-        <div class="exercise-item" data-index="${exerciseIndex}">
-            <div class="exercise-header">
-                <h5>التمرين ${exerciseIndex + 1}</h5>
-                <button type="button" class="btn btn-sm btn-danger" onclick="removeExercise(${exerciseIndex})">🗑️</button>
+    const questionHTML = `
+        <div class="question-item card p-3 mb-3" data-index="${index}" style="border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; background: #f9f9f9;">
+            <div class="d-flex justify-content-between mb-2" style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                <h5>${labelPrefix} ${index + 1}</h5>
+                <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.parentElement.remove()">حذف</button>
             </div>
+            
             <div class="form-group">
-                <label class="form-label">نوع التمرين</label>
-                <select class="form-control exercise-type">
+                <label>نوع ${labelPrefix}</label>
+                <select class="form-control question-type" onchange="renderQuestionInputs(this, ${index})">
                     <option value="multiple-choice">اختيار من متعدد</option>
+                    <option value="true-false">صواب / خطأ</option>
                     <option value="drag-drop">سحب وإفلات</option>
                     <option value="open-ended">سؤال مفتوح</option>
+                    <option value="reading-auto">تقييم قراءة آلي</option>
+                    <option value="spelling-auto">تقييم إملاء آلي</option>
+                    <option value="complete-letter">أكمل الحرف الناقص</option>
                 </select>
             </div>
-            <div class="form-group">
-                <label class="form-label">نص التمرين</label>
-                <textarea class="form-control exercise-text" rows="3"></textarea>
+
+            <div class="question-inputs-area">
+                ${getMultipleChoiceTemplate(index)}
+            </div>
+
+            <div class="form-group mt-2" style="margin-top:10px;">
+                <label>محك الاجتياز (درجة)</label>
+                <input type="number" class="form-control passing-score" value="100" min="1" max="100" style="width: 100px;">
             </div>
         </div>
     `;
     
-    exercisesContainer.insertAdjacentHTML('beforeend', exerciseHTML);
+    container.insertAdjacentHTML('beforeend', questionHTML);
 }
 
-function removeExercise(exerciseIndex) {
-    const exerciseItem = document.querySelector(`.exercise-item[data-index="${exerciseIndex}"]`);
-    if (exerciseItem) {
-        exerciseItem.remove();
-        // إعادة ترقيم التمارين المتبقية
-        const remainingExercises = document.querySelectorAll('.exercise-item');
-        remainingExercises.forEach((item, index) => {
-            item.setAttribute('data-index', index);
-            item.querySelector('h5').textContent = `التمرين ${index + 1}`;
-        });
-    }
-}
-
-function saveLesson() {
-    const form = document.getElementById('createLessonForm');
-    const title = document.getElementById('lessonTitle').value.trim();
-    const strategy = document.getElementById('lessonStrategy').value.trim();
-    const subject = document.getElementById('lessonSubject').value;
-    const description = document.getElementById('lessonDescription').value.trim();
-
-    if (!title || !strategy || !subject) {
-        showAuthNotification('يرجى ملء جميع الحقول الإجبارية', 'error');
-        return;
-    }
-
-    const exercises = [];
-    const exerciseItems = document.querySelectorAll('.exercise-item');
+function renderQuestionInputs(selectElement, index) {
+    const type = selectElement.value;
+    const area = selectElement.parentElement.nextElementSibling;
+    let html = '';
     
-    exerciseItems.forEach(item => {
-        const exerciseType = item.querySelector('.exercise-type').value;
-        const exerciseText = item.querySelector('.exercise-text')?.value.trim();
+    switch(type) {
+        case 'multiple-choice': html = getMultipleChoiceTemplate(index); break;
+        case 'true-false': html = getTrueFalseTemplate(index); break;
+        case 'drag-drop': html = getDragDropTemplate(index); break;
+        case 'open-ended': html = getOpenEndedTemplate(index); break;
+        case 'reading-auto': html = getReadingAutoTemplate(index); break;
+        case 'spelling-auto': html = getSpellingAutoTemplate(index); break;
+        case 'complete-letter': html = getCompleteLetterTemplate(index); break;
+        default: html = '<p class="text-muted">إعدادات هذا السؤال قيد التطوير...</p>';
+    }
+    area.innerHTML = html;
+}
+
+// Templates
+function getMultipleChoiceTemplate(index) {
+    return `
+        <div class="form-group">
+            <label>نص السؤال</label>
+            <input type="text" class="form-control q-text" placeholder="اكتب السؤال هنا...">
+        </div>
+        <label>الخيارات (حدد الإجابة الصحيحة)</label>
+        <div class="choices-list">
+            <div style="display:flex; gap:5px; margin-bottom:5px;">
+                <input type="radio" name="correct_${index}" value="0">
+                <input type="text" class="form-control q-choice" placeholder="الخيار 1">
+            </div>
+            <div style="display:flex; gap:5px; margin-bottom:5px;">
+                <input type="radio" name="correct_${index}" value="1">
+                <input type="text" class="form-control q-choice" placeholder="الخيار 2">
+            </div>
+            <div style="display:flex; gap:5px; margin-bottom:5px;">
+                <input type="radio" name="correct_${index}" value="2">
+                <input type="text" class="form-control q-choice" placeholder="الخيار 3">
+            </div>
+        </div>
+    `;
+}
+
+function getTrueFalseTemplate(index) {
+    return `
+        <div class="form-group">
+            <label>نص العبارة</label>
+            <input type="text" class="form-control q-text" placeholder="اكتب العبارة هنا...">
+        </div>
+        <div style="display:flex; gap:15px; margin-top:10px;">
+            <label><input type="radio" name="correct_${index}" value="true"> صواب</label>
+            <label><input type="radio" name="correct_${index}" value="false"> خطأ</label>
+        </div>
+    `;
+}
+
+function getReadingAutoTemplate(index) {
+    return `
+        <div class="alert alert-info" style="background:#e3f2fd; padding:10px; border-radius:5px; margin-bottom:10px;">
+            <small>يتيح هذا النوع للطالب قراءة النص، وسيقوم النظام بتحليله.</small>
+        </div>
+        <div class="form-group">
+            <label>النص المراد قراءته</label>
+            <textarea class="form-control q-text" rows="3" placeholder="اكتب الجملة أو الكلمة هنا..."></textarea>
+        </div>
+    `;
+}
+
+function getSpellingAutoTemplate(index) {
+    return `
+        <div class="alert alert-info" style="background:#e3f2fd; padding:10px; border-radius:5px; margin-bottom:10px;">
+            <small>سيقوم النظام بنطق الكلمة، ويقوم الطالب بكتابتها يدوياً.</small>
+        </div>
+        <div class="form-group">
+            <label>الكلمة للإملاء</label>
+            <input type="text" class="form-control q-target-word" placeholder="اكتب الكلمة الصحيحة هنا">
+        </div>
+    `;
+}
+
+function getCompleteLetterTemplate(index) {
+    return `
+        <div class="form-group">
+            <label>الكلمة مع الحرف الناقص (استخدم _ للحرف الناقص)</label>
+            <input type="text" class="form-control q-text" placeholder="مثال: أ_د">
+        </div>
+        <div class="form-group">
+            <label>الحرف الصحيح</label>
+            <input type="text" class="form-control q-answer" placeholder="س">
+        </div>
+    `;
+}
+
+function getDragDropTemplate(index) { return '<p>إعدادات السحب والإفلات (متقدم)</p>'; }
+function getOpenEndedTemplate(index) { return '<div class="form-group"><label>نص السؤال</label><textarea class="form-control q-text"></textarea></div>'; }
+
+function saveTest() {
+    const title = document.getElementById('testTitle').value;
+    const subject = document.getElementById('testSubject').value;
+    const description = document.getElementById('testDescription').value;
+    
+    const questions = [];
+    document.querySelectorAll('#questionsContainer .question-item').forEach(item => {
+        const type = item.querySelector('.question-type').value;
+        const text = item.querySelector('.q-text')?.value || item.querySelector('.q-target-word')?.value || '';
+        const score = item.querySelector('.passing-score').value;
         
-        if (exerciseText) {
-            exercises.push({
-                type: exerciseType,
-                text: exerciseText
+        if (text) {
+            questions.push({
+                id: generateId(),
+                type,
+                text,
+                passingScore: parseInt(score)
             });
         }
     });
 
-    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const currentTeacher = getCurrentUser();
+    if (!title || questions.length === 0) {
+        showAuthNotification('يرجى كتابة العنوان وإضافة سؤال واحد على الأقل', 'error');
+        return;
+    }
 
-    const newLesson = {
+    const newTest = {
         id: generateId(),
-        teacherId: currentTeacher.id,
-        title: title,
-        strategy: strategy,
-        subject: subject,
-        description: description,
-        exercises: exercises,
+        teacherId: getCurrentUser().id,
+        title,
+        subject,
+        description,
+        questions,
         objectivesLinked: false,
-        priority: 1,
         createdAt: new Date().toISOString()
     };
 
+    const tests = JSON.parse(localStorage.getItem('tests') || '[]');
+    tests.push(newTest);
+    localStorage.setItem('tests', JSON.stringify(tests));
+    
+    showAuthNotification('تم حفظ الاختبار بنجاح', 'success');
+    closeCreateTestModal();
+    loadTests();
+}
+
+function saveLesson() {
+    const title = document.getElementById('lessonTitle').value;
+    const subject = document.getElementById('lessonSubject').value;
+    const strategy = document.getElementById('lessonStrategy').value;
+    const priority = document.getElementById('lessonPriority').value;
+    const intro = document.getElementById('lessonIntro').value;
+
+    const exercises = [];
+    document.querySelectorAll('#exercisesContainer .question-item').forEach(item => {
+        const type = item.querySelector('.question-type').value;
+        const text = item.querySelector('.q-text')?.value || '';
+        if (text) {
+            exercises.push({ id: generateId(), type, text });
+        }
+    });
+
+    if (!title || !strategy) {
+        showAuthNotification('يرجى ملء الحقول الإجبارية', 'error');
+        return;
+    }
+
+    const newLesson = {
+        id: generateId(),
+        teacherId: getCurrentUser().id,
+        title,
+        subject,
+        strategy,
+        priority: parseInt(priority),
+        intro,
+        exercises,
+        objectivesLinked: false,
+        createdAt: new Date().toISOString()
+    };
+    
+    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
     lessons.push(newLesson);
     localStorage.setItem('lessons', JSON.stringify(lessons));
-
+    
     showAuthNotification('تم حفظ الدرس بنجاح', 'success');
     closeCreateLessonModal();
     loadLessons();
 }
 
-// دوال عامة
-function showCreateObjectiveModal() {
-    showAuthNotification('سيتم تطوير هذه الوظيفة في المرحلة القادمة', 'info');
+// ==========================================
+// 3. نظام الربط (Linking System)
+// ==========================================
+
+function linkObjectives(contentId) {
+    openLinkModal(contentId, 'test');
+}
+
+function linkTeachingObjectives(contentId) {
+    openLinkModal(contentId, 'lesson');
+}
+
+function openLinkModal(contentId, type) {
+    document.getElementById('linkTargetId').value = contentId;
+    document.getElementById('linkType').value = type;
+    
+    const title = type === 'test' ? 'ربط الأسئلة بالأهداف قصيرة المدى' : 'ربط الدرس بالأهداف التدريسية';
+    document.querySelector('#linkObjectivesModal h3').textContent = title;
+    
+    renderObjectivesList(type);
+    document.getElementById('linkObjectivesModal').classList.add('show');
+}
+
+function renderObjectivesList(type, filterText = '') {
+    const container = document.getElementById('objectivesSelectionList');
+    const objectives = JSON.parse(localStorage.getItem('objectives') || '[]');
+    const currentUser = getCurrentUser();
+    const teacherObjs = objectives.filter(o => o.teacherId === currentUser.id);
+    
+    container.innerHTML = '';
+    
+    if (teacherObjs.length === 0) {
+        container.innerHTML = '<p class="text-center text-muted">لا توجد أهداف مضافة.</p>';
+        return;
+    }
+
+    teacherObjs.forEach(obj => {
+        if (filterText && !obj.shortTerm.includes(filterText)) return;
+
+        if (type === 'test') {
+            container.innerHTML += `
+                <div class="checkbox-item p-2 border-bottom" style="padding:10px; border-bottom:1px solid #eee;">
+                    <label style="display:flex; gap:10px; cursor:pointer;">
+                        <input type="radio" name="selectedObjective" value="${obj.id}">
+                        <div>
+                            <strong>${obj.shortTerm}</strong>
+                            <div class="text-muted small">${obj.subject}</div>
+                        </div>
+                    </label>
+                </div>`;
+        } else {
+            obj.teachingObjectives.forEach((tObj, idx) => {
+                container.innerHTML += `
+                    <div class="checkbox-item p-2 border-bottom" style="padding:10px; border-bottom:1px solid #eee;">
+                        <label style="display:flex; gap:10px; cursor:pointer;">
+                            <input type="radio" name="selectedObjective" value="${obj.id}_${idx}">
+                            <div>
+                                <strong>${tObj}</strong>
+                                <div class="text-muted small">هدف قصير: ${obj.shortTerm}</div>
+                            </div>
+                        </label>
+                    </div>`;
+            });
+        }
+    });
+}
+
+function saveLinking() {
+    const targetId = parseInt(document.getElementById('linkTargetId').value);
+    const type = document.getElementById('linkType').value;
+    const selected = document.querySelector('input[name="selectedObjective"]:checked');
+    
+    if (!selected) {
+        showAuthNotification('يرجى اختيار هدف للربط', 'error');
+        return;
+    }
+    
+    if (type === 'test') {
+        const tests = JSON.parse(localStorage.getItem('tests') || '[]');
+        const test = tests.find(t => t.id === targetId);
+        if (test) {
+            test.objectivesLinked = true;
+            test.linkedObjectiveId = selected.value;
+            localStorage.setItem('tests', JSON.stringify(tests));
+        }
+    } else {
+        const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+        const lesson = lessons.find(l => l.id === targetId);
+        if (lesson) {
+            lesson.objectivesLinked = true;
+            lesson.linkedInstructionalObjective = selected.value;
+            localStorage.setItem('lessons', JSON.stringify(lessons));
+        }
+    }
+    
+    showAuthNotification('تم الربط بنجاح', 'success');
+    closeLinkObjectivesModal();
+    loadContentLibrary();
+}
+
+function closeLinkObjectivesModal() {
+    document.getElementById('linkObjectivesModal').classList.remove('show');
+}
+
+function filterObjectivesList() {
+    renderObjectivesList(document.getElementById('linkType').value, document.getElementById('searchObjectives').value);
+}
+
+function deleteTest(id) {
+    if(!confirm('حذف الاختبار؟')) return;
+    const tests = JSON.parse(localStorage.getItem('tests') || '[]');
+    localStorage.setItem('tests', JSON.stringify(tests.filter(t => t.id !== id)));
+    loadTests();
+}
+
+function deleteLesson(id) {
+    if(!confirm('حذف الدرس؟')) return;
+    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+    localStorage.setItem('lessons', JSON.stringify(lessons.filter(l => l.id !== id)));
+    loadLessons();
+}
+
+function loadAssignments() {
+    const assignmentsGrid = document.getElementById('assignmentsGrid');
+    if(assignmentsGrid) assignmentsGrid.innerHTML = '<p class="text-muted p-3">سيتم تفعيل الواجبات قريباً</p>';
 }
 
 function showCreateAssignmentModal() {
-    showAuthNotification('سيتم تطوير هذه الوظيفة في المرحلة القادمة', 'info');
+    document.getElementById('createAssignmentModal').classList.add('show');
 }
-
+function closeCreateAssignmentModal() {
+    document.getElementById('createAssignmentModal').classList.remove('show');
+}
 function showImportModal(type) {
-    showAuthNotification(`سيتم تطوير استيراد ${type} في المرحلة القادمة`, 'info');
+    showAuthNotification(`استيراد ${type} قيد التطوير`, 'info');
 }
-
-function exportContent(type, id) {
-    showAuthNotification(`جاري تصدير ${type}...`, 'info');
-    setTimeout(() => {
-        showAuthNotification(`تم تصدير ${type} بنجاح`, 'success');
-    }, 1500);
-}
-
-function linkObjectives(testId) {
-    showAuthNotification('جاري فتح نافذة ربط الأهداف...', 'info');
-    // سيتم تطوير هذه الوظيفة بالكامل لاحقاً
-}
-
-function linkTeachingObjectives(lessonId) {
-    showAuthNotification('جاري فتح نافذة ربط الأهداف التدريسية...', 'info');
-    // سيتم تطوير هذه الوظيفة بالكامل لاحقاً
-}
-
-// تصدير الدوال للاستخدام العالمي
-window.showCreateTestModal = showCreateTestModal;
-window.closeCreateTestModal = closeCreateTestModal;
-window.showCreateLessonModal = showCreateLessonModal;
-window.closeCreateLessonModal = closeCreateLessonModal;
-window.addQuestion = addQuestion;
-window.addExercise = addExercise;
-window.removeQuestion = removeQuestion;
-window.removeExercise = removeExercise;
-window.changeQuestionType = changeQuestionType;
-window.addChoice = addChoice;
-window.saveTest = saveTest;
-window.saveLesson = saveLesson;
-window.showCreateObjectiveModal = showCreateObjectiveModal;
-window.showCreateAssignmentModal = showCreateAssignmentModal;
-window.showImportModal = showImportModal;
-window.exportContent = exportContent;
-window.linkObjectives = linkObjectives;
-
-window.linkTeachingObjectives = linkTeachingObjectives;
-<!-- نافذة إنشاء اختبار -->
-<div id="createTestModal" class="modal">
-    <div class="modal-content large">
-        <div class="modal-header">
-            <h3>إنشاء اختبار تشخيصي جديد</h3>
-            <button class="modal-close" onclick="closeCreateTestModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <form id="createTestForm">
-                <div class="form-group">
-                    <label class="form-label">عنوان الاختبار *</label>
-                    <input type="text" id="testTitle" class="form-control" required>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">المادة *</label>
-                    <select id="testSubject" class="form-control" required>
-                        <option value="لغتي">لغتي</option>
-                        <option value="رياضيات">رياضيات</option>
-                        <option value="علوم">علوم</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">وصف الاختبار (اختياري)</label>
-                    <textarea id="testDescription" class="form-control" rows="3"></textarea>
-                </div>
-                
-                <h4>الأسئلة</h4>
-                <div id="questionsContainer">
-                    <!-- الأسئلة ستضاف هنا -->
-                </div>
-                
-                <button type="button" class="btn btn-outline-primary" onclick="addQuestion()">
-                    + إضافة سؤال
-                </button>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-success" onclick="saveTest()">حفظ الاختبار</button>
-            <button class="btn btn-secondary" onclick="closeCreateTestModal()">إلغاء</button>
-        </div>
-    </div>
-</div>
-
-<!-- نافذة إنشاء درس -->
-<div id="createLessonModal" class="modal">
-    <div class="modal-content large">
-        <div class="modal-header">
-            <h3>إنشاء درس جديد</h3>
-            <button class="modal-close" onclick="closeCreateLessonModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <form id="createLessonForm">
-                <div class="form-group">
-                    <label class="form-label">عنوان الدرس *</label>
-                    <input type="text" id="lessonTitle" class="form-control" required>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">الاستراتيجية التدريسية *</label>
-                    <input type="text" id="lessonStrategy" class="form-control" required>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">المادة *</label>
-                    <select id="lessonSubject" class="form-control" required>
-                        <option value="لغتي">لغتي</option>
-                        <option value="رياضيات">رياضيات</option>
-                        <option value="علوم">علوم</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">وصف الدرس (اختياري)</label>
-                    <textarea id="lessonDescription" class="form-control" rows="3"></textarea>
-                </div>
-                
-                <h4>التمارين</h4>
-                <div id="exercisesContainer">
-                    <!-- التمارين ستضاف هنا -->
-                </div>
-                
-                <button type="button" class="btn btn-outline-primary" onclick="addExercise()">
-                    + إضافة تمرين
-                </button>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-success" onclick="saveLesson()">حفظ الدرس</button>
-            <button class="btn btn-secondary" onclick="closeCreateLessonModal()">إلغاء</button>
-        </div>
-    </div>
-</div>
+function viewTest(id) { showAuthNotification('عرض الاختبار...', 'info'); }
+function viewLesson(id) { showAuthNotification('عرض الدرس...', 'info'); }

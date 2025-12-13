@@ -1631,4 +1631,54 @@
         align-items: flex-start;
         gap: 8px;
     }
+
+}
+/* تحسينات إضافية لمكتبة المحتوى */
+.instructional-goal-input {
+    margin-bottom: 5px;
+}
+
+.checklist-container {
+    background: #fff;
+}
+
+.checklist-container .checkbox-item:hover {
+    background-color: #f8f9fa;
+}
+
+.question-item {
+    background-color: #fff;
+    transition: all 0.3s ease;
+}
+
+.question-item:hover {
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+}
+
+.question-inputs-area {
+    padding: 10px;
+    background: #fdfdfd;
+    border: 1px dashed #ddd;
+    border-radius: 5px;
+    margin: 10px 0;
+}
+
+.d-flex {
+    display: flex;
+}
+
+.justify-content-between {
+    justify-content: space-between;
+}
+
+.align-items-center {
+    align-items: center;
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+.mb-3 {
+    margin-bottom: 1rem;
 }

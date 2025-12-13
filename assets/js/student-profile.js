@@ -1,160 +1,323 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ملف الطالب - ميسر التعلم</title>
-    <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/teacher.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        /* أنماط خاصة لجداول الخطة */
-        .iep-page { background: white; padding: 30px; margin-bottom: 20px; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .iep-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .iep-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        .iep-table th, .iep-table td { border: 1px solid #000; padding: 10px; text-align: center; }
-        .iep-table th { background-color: #f0f0f0; }
-        .shaded-day { background-color: #3498db !important; color: white; }
-    </style>
-</head>
-<body>
-    <div class="dashboard-container">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار">
-                    <h2>ميسر التعلم</h2>
-                </div>
+// إدارة ملف الطالب - ميسر التعلم
+let currentStudentId = null;
+let currentStudent = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const params = new URLSearchParams(window.location.search);
+    currentStudentId = parseInt(params.get('id'));
+    
+    if (!currentStudentId) {
+        alert('لم يتم تحديد طالب');
+        window.location.href = 'students.html';
+        return;
+    }
+
+    loadStudentData();
+});
+
+function loadStudentData() {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    currentStudent = users.find(u => u.id === currentStudentId);
+    
+    if (!currentStudent) return;
+    
+    document.getElementById('pageStudentName').textContent = `ملف الطالب: ${currentStudent.name}`;
+    document.title = `ملف الطالب - ${currentStudent.name}`;
+    
+    loadDiagnosticTab();
+    // سيتم تحميل باقي التبويبات عند الضغط عليها
+}
+
+// --- 1. الاختبار التشخيصي ---
+function loadDiagnosticTab() {
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const assignedTest = studentTests.find(t => t.studentId === currentStudentId && t.type === 'diagnostic');
+    
+    if (assignedTest) {
+        document.getElementById('noDiagnosticTest').style.display = 'none';
+        const details = document.getElementById('diagnosticTestDetails');
+        details.style.display = 'block';
+        
+        // جلب تفاصيل الاختبار الأصلي
+        const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+        const originalTest = allTests.find(t => t.id === assignedTest.testId);
+        
+        details.innerHTML = `
+            <div class="card">
+                <h3>${originalTest ? originalTest.title : 'اختبار محذوف'}</h3>
+                <p>الحالة: ${assignedTest.status === 'completed' ? '<span class="badge badge-success">مكتمل</span>' : '<span class="badge badge-warning">قيد الانتظار</span>'}</p>
+                ${assignedTest.status === 'completed' ? `<button class="btn btn-success" onclick="generateIEP(${assignedTest.id})">تحديث الخطة التربوية</button>` : ''}
             </div>
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><i class="fas fa-chart-line"></i> لوحة التحكم</a></li>
-                <li><a href="students.html" class="active"><i class="fas fa-user-graduate"></i> الطلاب</a></li>
-                <li><a href="content-library.html"><i class="fas fa-book"></i> مكتبة المحتوى</a></li>
-                <li><a href="#" onclick="window.history.back()"><i class="fas fa-arrow-right"></i> عودة</a></li>
-            </ul>
-        </aside>
+        `;
+        
+        // إذا كان مكتمل ولم تنشأ خطة بعد، قم بإنشائها
+        if(assignedTest.status === 'completed') {
+            loadIEPTab(); 
+        }
+    }
+}
 
-        <main class="main-content-dashboard">
-            <header class="dashboard-header">
-                <div class="user-info">
-                    <div class="user-name">ملف الطالب</div>
-                </div>
-            </header>
+function showAssignTestModal() {
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    const select = document.getElementById('testSelect');
+    select.innerHTML = '<option value="">اختر اختباراً...</option>';
+    allTests.forEach(t => {
+        select.innerHTML += `<option value="${t.id}">${t.title} - ${t.subject}</option>`;
+    });
+    document.getElementById('assignTestModal').classList.add('show');
+}
 
-            <div class="dashboard-content">
-                <div class="content-header">
-                    <h1 id="pageStudentName">جاري التحميل...</h1>
-                    <div class="header-actions">
-                        <button class="btn btn-outline-secondary" onclick="window.location.href='students.html'">عودة للقائمة</button>
-                    </div>
-                </div>
+function assignTest() {
+    const testId = parseInt(document.getElementById('testSelect').value);
+    if(!testId) return;
+    
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    studentTests.push({
+        id: Date.now(),
+        studentId: currentStudentId,
+        testId: testId,
+        type: 'diagnostic',
+        status: 'pending',
+        assignedDate: new Date().toISOString()
+    });
+    localStorage.setItem('studentTests', JSON.stringify(studentTests));
+    closeModal('assignTestModal');
+    loadDiagnosticTab();
+}
 
-                <div class="student-tabs">
-                    <div class="tabs-header">
-                        <button class="tab-btn active" data-tab="diagnostic" onclick="switchTab('diagnostic')">الاختبار التشخيصي</button>
-                        <button class="tab-btn" data-tab="iep" onclick="switchTab('iep')">الخطة التربوية الفردية</button>
-                        <button class="tab-btn" data-tab="lessons" onclick="switchTab('lessons')">الدروس</button>
-                        <button class="tab-btn" data-tab="assignments" onclick="switchTab('assignments')">الواجبات</button>
-                        <button class="tab-btn" data-tab="progress" onclick="switchTab('progress')">تقدم الطالب</button>
-                    </div>
+// --- 2. الخطة التربوية الفردية (IEP) ---
+function loadIEPTab() {
+    const iepContent = document.getElementById('iepContent');
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const completedDiagnostic = studentTests.find(t => t.studentId === currentStudentId && t.type === 'diagnostic' && t.status === 'completed');
 
-                    <div class="tabs-content">
-                        
-                        <div class="tab-pane active" id="diagnostic-tab">
-                            <div class="empty-state" id="noDiagnosticTest">
-                                <div class="empty-icon">📝</div>
-                                <h3>لم يتم تعيين اختبار تشخيصي</h3>
-                                <button class="btn btn-primary" onclick="showAssignTestModal()">تعيين اختبار تشخيصي</button>
-                            </div>
-                            <div id="diagnosticTestDetails" style="display: none;">
-                                </div>
-                        </div>
+    if (!completedDiagnostic) {
+        iepContent.innerHTML = '<div class="alert alert-warning">يجب على الطالب إكمال الاختبار التشخيصي أولاً لتوليد الخطة تلقائياً.</div>';
+        return;
+    }
 
-                        <div class="tab-pane" id="iep-tab">
-                            <div id="iepContent">
-                                </div>
-                            <div style="margin-top: 20px; text-align: left;">
-                                <button class="btn btn-success" onclick="printIEP()"><i class="fas fa-print"></i> طباعة الخطة</button>
-                            </div>
-                        </div>
+    // توليد بيانات الخطة
+    const schedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]'); // جدول المعلم
+    const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+    const studentSchedule = days.map(day => {
+        // فحص إذا كان الطالب لديه حصة في هذا اليوم في جدول المعلم
+        // ملاحظة: نحتاج لمنطق في جدول المعلم يربط الحصة بالطلاب، هنا سنفترض وجود حصة عشوائية للتوضيح
+        const hasSession = schedule.some(s => s.students && s.students.includes(currentStudentId) && s.day === dayMap(day)); 
+        return { day, hasSession };
+    });
 
-                        <div class="tab-pane" id="lessons-tab">
-                            <div class="section-header">
-                                <h3>الدروس المخصصة (بناءً على الخطة)</h3>
-                                <button class="btn btn-sm btn-outline-primary" onclick="regenerateLessons()">تحديث الدروس</button>
-                            </div>
-                            <div class="content-grid" id="studentLessonsGrid"></div>
-                        </div>
+    // الصفحة الأولى: البيانات والجدول
+    let html = `
+    <div class="iep-page">
+        <div class="iep-header"><h2>الخطة التربوية الفردية - الصفحة 1</h2></div>
+        <table class="iep-table">
+            <tr>
+                <th>الاسم</th><td>${currentStudent.name}</td>
+                <th>الصف</th><td>${currentStudent.grade}</td>
+                <th>المادة</th><td>${currentStudent.subject}</td>
+            </tr>
+        </table>
+        
+        <h4>أيام الحصص المقررة</h4>
+        <table class="iep-table">
+            <tr>
+                ${studentSchedule.map(s => `<th class="${s.hasSession ? 'shaded-day' : ''}">${s.day}</th>`).join('')}
+            </tr>
+            <tr>
+                ${studentSchedule.map(s => `<td class="${s.hasSession ? 'shaded-day' : ''}">${s.hasSession ? '✓' : ''}</td>`).join('')}
+            </tr>
+        </table>
+        
+        <div style="margin-top: 20px;"><strong>اسم المعلم:</strong> ${getCurrentUser().name}</div>
+    </div>`;
 
-                        <div class="tab-pane" id="assignments-tab">
-                            <div class="section-header">
-                                <h3>الواجبات المسندة</h3>
-                                <button class="btn btn-primary" onclick="showAssignHomeworkModal()">+ إسناد واجب</button>
-                            </div>
-                            <div class="content-grid" id="studentAssignmentsGrid"></div>
-                        </div>
+    // الصفحة الثانية: نقاط القوة والاحتياج والأهداف
+    // محاكاة استخراج نقاط القوة/الاحتياج من نتائج الاختبار
+    // (في الواقع يجب أن تكون مرتبطة بإجابات الأسئلة)
+    const strengths = ["قراءة الحروف بحركاتها", "نسخ الكلمات"]; 
+    const needs = ["التمييز بين المدود", "الإملاء المنظور"]; 
+    
+    // الأهداف (محاكاة)
+    const longTermGoal = `أن يتقن التلميذ مهارات ${currentStudent.subject === 'لغتي' ? 'القراءة والكتابة' : 'الرياضيات'} لذوي صعوبات التعلم حتى صفه الحالي وبنسبة لا تقل عن 80%`;
+    
+    const objectives = [
+        { short: "أن يميز التلميذ بين المدود", instructional: "قراءة كلمات بها مد بالألف", date: "" },
+        { short: "أن يميز التلميذ بين المدود", instructional: "قراءة كلمات بها مد بالواو", date: "" },
+        { short: "صيانة للأهداف السابقة", instructional: "مراجعة المدود", date: "" }
+    ];
 
-                        <div class="tab-pane" id="progress-tab">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>الهدف التدريسي</th>
-                                        <th>الاستراتيجية</th>
-                                        <th>حالة الدرس</th>
-                                        <th>التواريخ والملاحظات</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="progressTableBody"></tbody>
-                            </table>
-                        </div>
+    html += `
+    <div class="iep-page">
+        <div class="iep-header"><h2>الخطة التربوية الفردية - الصفحة 2</h2></div>
+        
+        <table class="iep-table">
+            <tr><th width="50%">نقاط القوة (الأهداف المتقنة)</th><th>نقاط الاحتياج (الأهداف غير المتقنة)</th></tr>
+            <tr>
+                <td style="vertical-align: top;"><ul>${strengths.map(s => `<li>${s}</li>`).join('')}</ul></td>
+                <td style="vertical-align: top;"><ul>${needs.map(n => `<li>${n}</li>`).join('')}</ul></td>
+            </tr>
+        </table>
 
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
+        <table class="iep-table">
+            <tr><th>الهدف البعيد</th></tr>
+            <tr><td>${longTermGoal}</td></tr>
+        </table>
 
-    <div id="assignTestModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header"><h3>تعيين اختبار تشخيصي</h3></div>
-            <div class="modal-body">
-                <select id="testSelect" class="form-control"></select>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('assignTestModal')">إلغاء</button>
-                <button class="btn btn-success" onclick="assignTest()">حفظ</button>
+        <table class="iep-table">
+            <tr>
+                <th>الهدف قصير المدى</th>
+                <th>الهدف التدريسي</th>
+                <th>تاريخ التحقق</th>
+            </tr>
+            ${objectives.map(obj => `
+                <tr>
+                    <td>${obj.short}</td>
+                    <td>${obj.instructional}</td>
+                    <td>${obj.date || '-'}</td>
+                </tr>
+            `).join('')}
+        </table>
+    </div>`;
+
+    iepContent.innerHTML = html;
+    
+    // توليد الدروس تلقائياً إذا لم تكن موجودة
+    generateLessonsFromIEP(objectives);
+}
+
+// --- 3. الدروس (توليد تلقائي) ---
+function generateLessonsFromIEP(objectives) {
+    let studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    // التحقق مما إذا كانت الدروس مولدة مسبقاً لهذا الطالب
+    const existing = studentLessons.some(l => l.studentId === currentStudentId);
+    if(existing) return;
+
+    // جلب الدروس من المكتبة
+    const libraryLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+    
+    objectives.forEach(obj => {
+        // البحث عن درس يطابق الهدف التدريسي (بسيط جداً هنا للمثال)
+        // في الواقع نحتاج ربط IDs
+        const matchingLesson = libraryLessons.find(l => l.title.includes(obj.instructional) || l.priority === 1);
+        
+        if (matchingLesson) {
+            studentLessons.push({
+                id: Date.now() + Math.random(),
+                studentId: currentStudentId,
+                lessonId: matchingLesson.id,
+                title: matchingLesson.title,
+                objective: obj.instructional,
+                status: 'pending', // pending, completed, accelerated
+                isAccelerated: false
+            });
+        }
+    });
+    
+    localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
+}
+
+function loadLessonsTab() {
+    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    const myList = studentLessons.filter(l => l.studentId === currentStudentId);
+    
+    const container = document.getElementById('studentLessonsGrid');
+    if (myList.length === 0) {
+        container.innerHTML = '<p>لا توجد دروس مخصصة بعد.</p>';
+        return;
+    }
+
+    container.innerHTML = myList.map(l => `
+        <div class="content-card">
+            <h4>${l.title}</h4>
+            <p><small>الهدف: ${l.objective}</small></p>
+            <div class="status-badge ${l.status}">${l.status === 'accelerated' ? 'مسرع' : (l.status === 'completed' ? 'مكتمل' : 'قادم')}</div>
+            <div style="margin-top: 10px;">
+                <button class="btn btn-sm btn-outline-warning" onclick="accelerateLesson(${l.id})">تسريع الدرس</button>
+                ${l.status !== 'completed' ? `<button class="btn btn-sm btn-success" onclick="completeLesson(${l.id})">إكمال</button>` : ''}
             </div>
         </div>
-    </div>
+    `).join('');
+}
 
-    <div id="assignHomeworkModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header"><h3>إسناد واجب</h3></div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>الدرس</label>
-                    <select id="homeworkLessonSelect" class="form-control"></select>
-                </div>
-                <div class="form-group">
-                    <label>الواجب</label>
-                    <select id="homeworkSelect" class="form-control"></select>
-                </div>
-                <div class="form-group">
-                    <label>تاريخ التسليم (اختياري)</label>
-                    <input type="date" id="homeworkDueDate" class="form-control">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('assignHomeworkModal')">إلغاء</button>
-                <button class="btn btn-success" onclick="assignHomework()">إسناد</button>
-            </div>
+function accelerateLesson(id) {
+    let studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    const idx = studentLessons.findIndex(l => l.id === id);
+    if(idx !== -1) {
+        studentLessons[idx].status = 'accelerated';
+        localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
+        loadLessonsTab();
+    }
+}
+
+// --- 4. الواجبات ---
+function loadAssignmentsTab() {
+    const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId === currentStudentId);
+    const container = document.getElementById('studentAssignmentsGrid');
+    
+    container.innerHTML = list.map(a => `
+        <div class="content-card">
+            <h4>${a.title}</h4>
+            <p>موعد التسليم: ${a.dueDate || 'مفتوح'}</p>
+            <button class="btn btn-sm btn-danger" onclick="deleteAssignment(${a.id})">حذف</button>
         </div>
-    </div>
+    `).join('') || '<p>لا يوجد واجبات.</p>';
+}
 
-    <script src="../../assets/js/dashboard.js"></script>
-    <script src="../../assets/js/auth.js"></script>
-    <script src="../../assets/js/student-profile.js"></script>
-</body>
-</html>
+function showAssignHomeworkModal() {
+    // تعبئة القوائم
+    const lessons = JSON.parse(localStorage.getItem('studentLessons') || '[]').filter(l => l.studentId === currentStudentId);
+    const assignmentsLib = JSON.parse(localStorage.getItem('assignments') || '[]'); // واجبات المكتبة
+    
+    const lessonSelect = document.getElementById('homeworkLessonSelect');
+    lessonSelect.innerHTML = lessons.map(l => `<option value="${l.id}">${l.title}</option>`).join('');
+    
+    const assignSelect = document.getElementById('homeworkSelect');
+    assignSelect.innerHTML = assignmentsLib.map(a => `<option value="${a.id}">${a.title}</option>`).join('');
+    
+    document.getElementById('assignHomeworkModal').classList.add('show');
+}
+
+function assignHomework() {
+    const assignId = document.getElementById('homeworkSelect').value;
+    const dueDate = document.getElementById('homeworkDueDate').value;
+    // ... منطق الحفظ في LocalStorage ...
+    closeModal('assignHomeworkModal');
+    loadAssignmentsTab();
+}
+
+// --- 5. التقدم ---
+function loadProgressTab() {
+    const lessons = JSON.parse(localStorage.getItem('studentLessons') || '[]').filter(l => l.studentId === currentStudentId);
+    const tbody = document.getElementById('progressTableBody');
+    
+    tbody.innerHTML = lessons.map(l => `
+        <tr>
+            <td>${l.objective}</td>
+            <td>التعلم المباشر</td> <td>${l.status === 'pending' ? 'قادم' : (l.status === 'completed' ? 'متحقق' : 'قيد التنفيذ')}</td>
+            <td>
+                ${l.status === 'completed' ? 'تم التحقق في ' + new Date().toLocaleDateString('ar-SA') : 'لم يبدأ'}
+                ${l.status === 'accelerated' ? '<br><span style="color:red">تسريع (تجاوز)</span>' : ''}
+            </td>
+        </tr>
+    `).join('');
+}
+
+// أدوات مساعدة
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    
+    document.getElementById(tabName + '-tab').classList.add('active');
+    document.querySelector(`button[data-tab="${tabName}"]`).classList.add('active');
+    
+    if(tabName === 'iep') loadIEPTab();
+    if(tabName === 'lessons') loadLessonsTab();
+    if(tabName === 'assignments') loadAssignmentsTab();
+    if(tabName === 'progress') loadProgressTab();
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function dayMap(dayAr) {
+    const map = {'الأحد':'sunday', 'الاثنين':'monday', 'الثلاثاء':'tuesday', 'الأربعاء':'wednesday', 'الخميس':'thursday'};
+    return map[dayAr];
+}

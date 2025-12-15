@@ -10,13 +10,37 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* أنماط خاصة لجداول الخطة */
+        /* أنماط إضافية للتصميم الجديد */
+        .sidebar-menu li a { cursor: pointer; }
+        .content-section { display: none; animation: fadeIn 0.3s ease; }
+        .content-section.active { display: block; }
+        
+        /* تنسيق مصغر لبيانات الطالب في القائمة الجانبية */
+        .sidebar-student-info {
+            padding: 20px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.1);
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .sidebar-student-avatar {
+            width: 60px; height: 60px; margin: 0 auto 10px;
+            background: var(--primary-color); color: white;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; font-weight: bold; border: 2px solid rgba(255,255,255,0.2);
+        }
+        .sidebar-student-name { color: white; font-weight: bold; margin-bottom: 5px; }
+        .sidebar-student-grade { color: rgba(255, 255, 255, 0.7); font-size: 0.85rem; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* أنماط جداول الخطة */
         .iep-page { background: white; padding: 30px; margin-bottom: 20px; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .iep-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         .iep-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        .iep-table th, .iep-table td { border: 1px solid #000; padding: 10px; text-align: center; }
-        .iep-table th { background-color: #f0f0f0; }
-        .shaded-day { background-color: #3498db !important; color: white; }
+        .iep-table th, .iep-table td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        .iep-table th { background-color: #f8f9fa; color: var(--secondary-color); }
+        .shaded-day { background-color: var(--primary-color) !important; color: white; }
     </style>
 </head>
 <body>
@@ -28,88 +52,104 @@
                     <h2>ميسر التعلم</h2>
                 </div>
             </div>
+
+            <div class="sidebar-student-info">
+                <div class="sidebar-student-avatar" id="sideAvatar">ط</div>
+                <div class="sidebar-student-name" id="sideName">جار التحميل...</div>
+                <div class="sidebar-student-grade" id="sideGrade">...</div>
+            </div>
+            
             <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><i class="fas fa-chart-line"></i> لوحة التحكم</a></li>
-                <li><a href="students.html" class="active"><i class="fas fa-user-graduate"></i> الطلاب</a></li>
-                <li><a href="content-library.html"><i class="fas fa-book"></i> مكتبة المحتوى</a></li>
-                <li><a href="#" onclick="window.history.back()"><i class="fas fa-arrow-right"></i> عودة</a></li>
+                <li><a onclick="switchSection('diagnostic')" class="nav-link active" id="link-diagnostic"><span class="menu-icon">📝</span>الاختبار التشخيصي</a></li>
+                <li><a onclick="switchSection('iep')" class="nav-link" id="link-iep"><span class="menu-icon">📊</span>الخطة التربوية</a></li>
+                <li><a onclick="switchSection('lessons')" class="nav-link" id="link-lessons"><span class="menu-icon">📚</span>الدروس</a></li>
+                <li><a onclick="switchSection('assignments')" class="nav-link" id="link-assignments"><span class="menu-icon">📋</span>الواجبات</a></li>
+                <li><a onclick="switchSection('progress')" class="nav-link" id="link-progress"><span class="menu-icon">📈</span>تقدم الطالب</a></li>
+                
+                <li style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.1);">
+                    <a href="students.html"><span class="menu-icon">↩️</span>عودة لقائمة الطلاب</a>
+                </li>
             </ul>
         </aside>
 
         <main class="main-content-dashboard">
             <header class="dashboard-header">
+                <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
                 <div class="user-info">
-                    <div class="user-name">ملف الطالب</div>
+                    <div class="user-welcome">
+                        <div class="welcome-text">ملف الطالب</div>
+                        <div class="user-name" id="headerStudentName">...</div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-success btn-sm" onclick="generateStudentReport()">📄 تقرير شامل</button>
                 </div>
             </header>
 
             <div class="dashboard-content">
-                <div class="content-header">
-                    <h1 id="pageStudentName">جاري التحميل...</h1>
-                    <div class="header-actions">
-                        <button class="btn btn-outline-secondary" onclick="window.location.href='students.html'">عودة للقائمة</button>
+                <div id="section-diagnostic" class="content-section active">
+                    <div class="content-header">
+                        <h1>الاختبار التشخيصي</h1>
+                        <button class="btn btn-primary" onclick="showAssignTestModal()">+ تعيين اختبار</button>
+                    </div>
+                    
+                    <div id="diagnosticContent">
+                        <div class="empty-state" id="noDiagnosticTest">
+                            <div class="empty-icon">📝</div>
+                            <h3>لم يتم تعيين اختبار تشخيصي بعد</h3>
+                            <p>ابدأ بتعيين اختبار لتحديد مستوى الطالب وإنشاء الخطة.</p>
+                        </div>
+                        <div id="diagnosticTestDetails" style="display: none;">
+                            </div>
                     </div>
                 </div>
 
-                <div class="student-tabs">
-                    <div class="tabs-header">
-                        <button class="tab-btn active" data-tab="diagnostic" onclick="switchTab('diagnostic')">الاختبار التشخيصي</button>
-                        <button class="tab-btn" data-tab="iep" onclick="switchTab('iep')">الخطة التربوية الفردية</button>
-                        <button class="tab-btn" data-tab="lessons" onclick="switchTab('lessons')">الدروس</button>
-                        <button class="tab-btn" data-tab="assignments" onclick="switchTab('assignments')">الواجبات</button>
-                        <button class="tab-btn" data-tab="progress" onclick="switchTab('progress')">تقدم الطالب</button>
+                <div id="section-iep" class="content-section">
+                    <div class="content-header">
+                        <h1>الخطة التربوية الفردية</h1>
+                        <div class="header-actions">
+                            <button class="btn btn-info" onclick="printIEP()"><i class="fas fa-print"></i> طباعة</button>
+                        </div>
                     </div>
-
-                    <div class="tabs-content">
-                        
-                        <div class="tab-pane active" id="diagnostic-tab">
-                            <div class="empty-state" id="noDiagnosticTest">
-                                <div class="empty-icon">📝</div>
-                                <h3>لم يتم تعيين اختبار تشخيصي</h3>
-                                <button class="btn btn-primary" onclick="showAssignTestModal()">تعيين اختبار تشخيصي</button>
-                            </div>
-                            <div id="diagnosticTestDetails" style="display: none;">
-                                </div>
+                    <div id="iepContent">
                         </div>
+                </div>
 
-                        <div class="tab-pane" id="iep-tab">
-                            <div id="iepContent">
-                                </div>
-                            <div style="margin-top: 20px; text-align: left;">
-                                <button class="btn btn-success" onclick="printIEP()"><i class="fas fa-print"></i> طباعة الخطة</button>
-                            </div>
+                <div id="section-lessons" class="content-section">
+                    <div class="content-header">
+                        <h1>الدروس المخصصة</h1>
+                        <button class="btn btn-outline-primary" onclick="regenerateLessons()">🔄 تحديث القائمة</button>
+                    </div>
+                    <div class="content-grid" id="studentLessonsGrid">
                         </div>
+                </div>
 
-                        <div class="tab-pane" id="lessons-tab">
-                            <div class="section-header">
-                                <h3>الدروس المخصصة (بناءً على الخطة)</h3>
-                                <button class="btn btn-sm btn-outline-primary" onclick="regenerateLessons()">تحديث الدروس</button>
-                            </div>
-                            <div class="content-grid" id="studentLessonsGrid"></div>
+                <div id="section-assignments" class="content-section">
+                    <div class="content-header">
+                        <h1>الواجبات المسندة</h1>
+                        <button class="btn btn-primary" onclick="showAssignHomeworkModal()">+ إسناد واجب</button>
+                    </div>
+                    <div class="content-grid" id="studentAssignmentsGrid">
                         </div>
+                </div>
 
-                        <div class="tab-pane" id="assignments-tab">
-                            <div class="section-header">
-                                <h3>الواجبات المسندة</h3>
-                                <button class="btn btn-primary" onclick="showAssignHomeworkModal()">+ إسناد واجب</button>
-                            </div>
-                            <div class="content-grid" id="studentAssignmentsGrid"></div>
-                        </div>
-
-                        <div class="tab-pane" id="progress-tab">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>الهدف التدريسي</th>
-                                        <th>الاستراتيجية</th>
-                                        <th>حالة الدرس</th>
-                                        <th>التواريخ والملاحظات</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="progressTableBody"></tbody>
-                            </table>
-                        </div>
-
+                <div id="section-progress" class="content-section">
+                    <div class="content-header">
+                        <h1>تقدم الطالب</h1>
+                    </div>
+                    <div class="card">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>الهدف التدريسي</th>
+                                    <th>الاستراتيجية</th>
+                                    <th>حالة الدرس</th>
+                                    <th>التواريخ والملاحظات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="progressTableBody">
+                                </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -118,27 +158,36 @@
 
     <div id="assignTestModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header"><h3>تعيين اختبار تشخيصي</h3></div>
+            <div class="modal-header">
+                <h3>تعيين اختبار تشخيصي</h3>
+                <button class="modal-close" onclick="closeModal('assignTestModal')">×</button>
+            </div>
             <div class="modal-body">
-                <select id="testSelect" class="form-control"></select>
+                <div class="form-group">
+                    <label>اختر الاختبار</label>
+                    <select id="testSelect" class="form-control"></select>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('assignTestModal')">إلغاء</button>
-                <button class="btn btn-success" onclick="assignTest()">حفظ</button>
+                <button class="btn btn-success" onclick="assignTest()">حفظ وتعيين</button>
             </div>
         </div>
     </div>
 
     <div id="assignHomeworkModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header"><h3>إسناد واجب</h3></div>
+            <div class="modal-header">
+                <h3>إسناد واجب جديد</h3>
+                <button class="modal-close" onclick="closeModal('assignHomeworkModal')">×</button>
+            </div>
             <div class="modal-body">
                 <div class="form-group">
-                    <label>الدرس</label>
+                    <label>الدرس المرتبط</label>
                     <select id="homeworkLessonSelect" class="form-control"></select>
                 </div>
                 <div class="form-group">
-                    <label>الواجب</label>
+                    <label>اختر الواجب</label>
                     <select id="homeworkSelect" class="form-control"></select>
                 </div>
                 <div class="form-group">
@@ -153,7 +202,6 @@
         </div>
     </div>
 
-    <script src="../../assets/js/dashboard.js"></script>
     <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/student-profile.js"></script>
 </body>

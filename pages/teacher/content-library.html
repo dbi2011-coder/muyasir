@@ -10,12 +10,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* تحسينات لجدول الربط */
         .linking-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
         .linking-table th, .linking-table td { padding: 10px; border: 1px solid #eee; text-align: right; }
         .linking-table th { background: #f9f9f9; color: var(--secondary-color); font-weight: bold; }
-        .q-preview { font-weight: bold; color: #333; margin-bottom: 5px; display: block; }
-        .q-meta { font-size: 0.85rem; color: #777; }
+        
+        /* أنماط خاصة لإدخال الأسئلة المتقدمة */
+        .advanced-input-area { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px dashed #ccc; margin-top: 10px; }
+        .media-preview { max-width: 100%; height: auto; margin-top: 10px; border-radius: 5px; display: none; }
     </style>
 </head>
 <body>
@@ -34,8 +35,6 @@
                 <li><a href="content-library.html" class="active"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
                 <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
                 <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
-                <li><a href="reports.html"><span class="menu-icon">📋</span>التقارير</a></li>
-                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة الصعوبات</a></li>
                 <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
             </ul>
         </aside>
@@ -45,13 +44,9 @@
                 <button class="mobile-menu-btn">☰</button>
                 <div class="user-info">
                     <div class="user-welcome">
-                        <div class="welcome-text">مرحباً بعودتك</div>
-                        <div class="user-name" id="userName">أ/ اسم المعلم</div>
+                        <div class="welcome-text">مكتبة المحتوى</div>
+                        <div class="user-name" id="userName">أ/ المعلم</div>
                     </div>
-                    <div class="user-avatar" id="userAvatar">م</div>
-                </div>
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="showNotifications()">🔔 الإشعارات</button>
                 </div>
             </header>
 
@@ -60,14 +55,13 @@
                     <h1>مكتبة المحتوى التعليمي</h1>
                     <div class="header-actions">
                         <div class="dropdown">
-                            <button class="btn btn-success dropdown-toggle" type="button" id="addContentDropdown" data-toggle="dropdown" onclick="toggleDropdown()">
+                            <button class="btn btn-success dropdown-toggle" type="button" onclick="toggleDropdown()">
                                 + إضافة محتوى جديد
                             </button>
                             <div class="dropdown-menu" id="contentDropdownMenu">
                                 <a class="dropdown-item" href="#" onclick="showCreateTestModal()">اختبار تشخيصي</a>
                                 <a class="dropdown-item" href="#" onclick="showCreateLessonModal()">درس جديد</a>
                                 <a class="dropdown-item" href="#" onclick="showCreateObjectiveModal()">هدف قصير المدى</a>
-                                <a class="dropdown-item" href="#" onclick="showCreateAssignmentModal()">واجب جديد</a>
                             </div>
                         </div>
                     </div>
@@ -75,99 +69,70 @@
 
                 <div class="library-sections">
                     <div class="library-section">
-                        <div class="section-header">
-                            <h2>الاختبارات التشخيصية</h2>
-                            <div class="section-actions">
-                                <button class="btn btn-outline-primary" onclick="showImportModal('test')">📁 استيراد</button>
-                            </div>
-                        </div>
-                        <div class="content-grid" id="testsGrid">
-                            </div>
+                        <div class="section-header"><h2>الاختبارات التشخيصية</h2></div>
+                        <div class="content-grid" id="testsGrid"></div>
                     </div>
-
                     <div class="library-section">
-                        <div class="section-header">
-                            <h2>الدروس</h2>
-                            <div class="section-actions">
-                                <button class="btn btn-outline-primary" onclick="showImportModal('lesson')">📁 استيراد</button>
-                            </div>
-                        </div>
+                        <div class="section-header"><h2>الدروس</h2></div>
                         <div class="content-grid" id="lessonsGrid"></div>
                     </div>
-
                     <div class="library-section">
-                        <div class="section-header">
-                            <h2>الأهداف قصيرة المدى</h2>
-                        </div>
+                        <div class="section-header"><h2>الأهداف قصيرة المدى</h2></div>
                         <div class="objectives-list" id="objectivesList"></div>
-                    </div>
-
-                    <div class="library-section">
-                        <div class="section-header">
-                            <h2>الواجبات</h2>
-                            <div class="section-actions">
-                                <button class="btn btn-outline-primary" onclick="showImportModal('assignment')">📁 استيراد</button>
-                            </div>
-                        </div>
-                        <div class="content-grid" id="assignmentsGrid"></div>
                     </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <div id="createObjectiveModal" class="modal">
-        <div class="modal-content">
+    <div id="createTestModal" class="modal">
+        <div class="modal-content large">
             <div class="modal-header">
-                <h3>إضافة هدف قصير المدى</h3>
-                <button class="modal-close" onclick="closeCreateObjectiveModal()">&times;</button>
+                <h3 id="testModalTitle">إنشاء/تعديل اختبار</h3>
+                <button class="modal-close" onclick="closeCreateTestModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <form id="createObjectiveForm">
-                    <div class="form-group">
-                        <label class="form-label">المادة *</label>
-                        <select id="objSubject" class="form-control" required>
-                            <option value="لغتي">لغتي</option>
-                            <option value="رياضيات">رياضيات</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">نص الهدف قصير المدى *</label>
-                        <input type="text" id="shortTermGoal" class="form-control" placeholder="مثال: تحسين مهارة القراءة..." required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">الأهداف التدريسية التابعة *</label>
-                        <div id="instructionalGoalsContainer">
-                            <div class="input-group mb-2" style="display:flex; gap:5px;">
-                                <input type="text" class="form-control instructional-goal-input" placeholder="هدف تدريسي 1" required>
-                            </div>
+                <form id="createTestForm">
+                    <input type="hidden" id="editTestId">
+                    <div class="row" style="display: flex; gap: 15px;">
+                        <div class="form-group" style="flex: 2;">
+                            <label>عنوان الاختبار *</label>
+                            <input type="text" id="testTitle" class="form-control" required>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addInstructionalGoalInput()">+ إضافة هدف تدريسي آخر</button>
+                        <div class="form-group" style="flex: 1;">
+                            <label>المادة *</label>
+                            <select id="testSubject" class="form-control">
+                                <option value="لغتي">لغتي</option>
+                                <option value="رياضيات">رياضيات</option>
+                            </select>
+                        </div>
                     </div>
+                    <div class="form-group">
+                        <label>وصف الاختبار</label>
+                        <textarea id="testDescription" class="form-control"></textarea>
+                    </div>
+                    
+                    <hr>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4>الأسئلة</h4>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="addQuestion()">+ إضافة سؤال</button>
+                    </div>
+                    <div id="questionsContainer"></div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeCreateObjectiveModal()">إلغاء</button>
-                <button class="btn btn-success" onclick="saveObjective()">حفظ الهدف</button>
+                <button class="btn btn-secondary" onclick="closeCreateTestModal()">إلغاء</button>
+                <button class="btn btn-success" onclick="saveTest()">حفظ</button>
             </div>
         </div>
     </div>
 
     <div id="linkObjectivesModal" class="modal">
         <div class="modal-content large">
-            <div class="modal-header">
-                <h3>ربط الأسئلة بالأهداف</h3>
-                <button class="modal-close" onclick="closeLinkObjectivesModal()">&times;</button>
-            </div>
+            <div class="modal-header"><h3>ربط الأسئلة بالأهداف</h3><button class="modal-close" onclick="closeLinkObjectivesModal()">&times;</button></div>
             <div class="modal-body">
                 <input type="hidden" id="linkTargetId">
-                
-                <div class="alert alert-info">
-                    قم باختيار الهدف القصير المناسب لكل سؤال من القائمة المنسدلة.
-                </div>
-
-                <div id="questionsLinkingContainer" style="max-height: 500px; overflow-y: auto;">
-                    </div>
+                <div id="questionsLinkingContainer"></div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeLinkObjectivesModal()">إلغاء</button>
@@ -175,137 +140,18 @@
             </div>
         </div>
     </div>
-
-    <div id="createTestModal" class="modal">
-        <div class="modal-content large">
-            <div class="modal-header">
-                <h3 id="testModalTitle">إنشاء اختبار تشخيصي جديد</h3>
-                <button class="modal-close" onclick="closeCreateTestModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="createTestForm">
-                    <input type="hidden" id="editTestId"> <div class="row" style="display: flex; gap: 15px; flex-wrap:wrap;">
-                        <div class="form-group" style="flex: 2; min-width: 200px;">
-                            <label class="form-label">عنوان الاختبار *</label>
-                            <input type="text" id="testTitle" class="form-control" required>
-                        </div>
-                        <div class="form-group" style="flex: 1; min-width: 150px;">
-                            <label class="form-label">المادة *</label>
-                            <select id="testSubject" class="form-control" required>
-                                <option value="لغتي">لغتي</option>
-                                <option value="رياضيات">رياضيات</option>
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">وصف الاختبار (اختياري)</label>
-                        <textarea id="testDescription" class="form-control" rows="2"></textarea>
-                    </div>
-                    
-                    <hr style="border-top: 1px solid #eee; margin: 15px 0;">
-                    
-                    <div class="d-flex justify-content-between align-items-center mb-3" style="display:flex; justify-content:space-between;">
-                        <h4>أسئلة الاختبار ومحكات الاجتياز</h4>
-                        <button type="button" class="btn btn-primary btn-sm" onclick="addQuestion()">+ إضافة سؤال جديد</button>
-                    </div>
-
-                    <div id="questionsContainer">
-                        </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeCreateTestModal()">إلغاء</button>
-                <button class="btn btn-success" onclick="saveTest()">حفظ الاختبار</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="createLessonModal" class="modal">
-        <div class="modal-content large">
-            <div class="modal-header">
-                <h3>إنشاء درس جديد</h3>
-                <button class="modal-close" onclick="closeCreateLessonModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="createLessonForm">
-                    <div class="row" style="display: flex; gap: 15px; flex-wrap:wrap;">
-                        <div class="form-group" style="flex: 2; min-width: 200px;">
-                            <label class="form-label">عنوان الدرس *</label>
-                            <input type="text" id="lessonTitle" class="form-control" required>
-                        </div>
-                        <div class="form-group" style="flex: 1; min-width: 150px;">
-                            <label class="form-label">المادة *</label>
-                            <select id="lessonSubject" class="form-control" required>
-                                <option value="لغتي">لغتي</option>
-                                <option value="رياضيات">رياضيات</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="row" style="display: flex; gap: 15px; flex-wrap:wrap;">
-                        <div class="form-group" style="flex: 1; min-width: 150px;">
-                            <label class="form-label">استراتيجية التدريس *</label>
-                            <input type="text" id="lessonStrategy" class="form-control" placeholder="مثال: التعلم باللعب" required>
-                        </div>
-                        <div class="form-group" style="flex: 1; min-width: 150px;">
-                            <label class="form-label">الأولوية (1-100) *</label>
-                            <input type="number" id="lessonPriority" class="form-control" min="1" max="100" value="1" required>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">التمهيد (نص، رابط فيديو، أو صورة)</label>
-                        <textarea id="lessonIntro" class="form-control" rows="3"></textarea>
-                    </div>
-                    <hr style="border-top: 1px solid #eee; margin: 15px 0;">
-                    <div class="d-flex justify-content-between align-items-center mb-3" style="display:flex; justify-content:space-between;">
-                        <h4>التمارين والتقييم</h4>
-                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="addExercise()">+ إضافة تمرين</button>
-                    </div>
-                    <div id="exercisesContainer"></div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeCreateLessonModal()">إلغاء</button>
-                <button class="btn btn-success" onclick="saveLesson()">حفظ الدرس</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="createAssignmentModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>إنشاء واجب جديد</h3>
-                <button class="modal-close" onclick="closeCreateAssignmentModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p class="text-center">سيتم تطوير هذه الميزة في المرحلة القادمة.</p>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeCreateAssignmentModal()">إغلاق</button>
-            </div>
-        </div>
-    </div>
+    
+    <div id="createObjectiveModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>هدف جديد</h3><button class="modal-close" onclick="document.getElementById('createObjectiveModal').classList.remove('show')">×</button></div><div class="modal-body"><form id="createObjectiveForm"><div class="form-group"><label>المادة</label><select id="objSubject" class="form-control"><option value="لغتي">لغتي</option><option value="رياضيات">رياضيات</option></select></div><div class="form-group"><label>الهدف القصير</label><input type="text" id="shortTermGoal" class="form-control"></div><div class="form-group"><label>الأهداف التدريسية</label><div id="instructionalGoalsContainer"><input type="text" class="form-control instructional-goal-input mb-2"></div><button type="button" onclick="addInstructionalGoalInput()">+</button></div></form></div><div class="modal-footer"><button class="btn btn-success" onclick="saveObjective()">حفظ</button></div></div></div>
+    <div id="createLessonModal" class="modal"><div class="modal-content large"><div class="modal-header"><h3>درس جديد</h3><button class="modal-close" onclick="document.getElementById('createLessonModal').classList.remove('show')">×</button></div><div class="modal-body"><input type="text" id="lessonTitle" class="form-control" placeholder="العنوان"><select id="lessonSubject" class="form-control mt-2"><option value="لغتي">لغتي</option></select></div><div class="modal-footer"><button class="btn btn-success" onclick="saveLesson()">حفظ</button></div></div></div>
 
     <script src="../../assets/js/dashboard.js"></script>
     <script src="../../assets/js/teacher.js"></script>
     <script src="../../assets/js/content-library.js"></script>
     <script src="../../assets/js/auth.js"></script>
     <script>
-        function toggleDropdown() {
-            const menu = document.getElementById('contentDropdownMenu');
-            menu.classList.toggle('show');
-        }
-        window.onclick = function(event) {
-            if (!event.target.matches('.dropdown-toggle')) {
-                const dropdowns = document.getElementsByClassName("dropdown-menu");
-                for (let i = 0; i < dropdowns.length; i++) {
-                    const openDropdown = dropdowns[i];
-                    if (openDropdown.classList.contains('show')) {
-                        openDropdown.classList.remove('show');
-                    }
-                }
-            }
-        }
+        function toggleDropdown() { document.getElementById('contentDropdownMenu').classList.toggle('show'); }
+        window.onclick = function(e) { if (!e.target.matches('.dropdown-toggle')) document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('show')); }
+        function addInstructionalGoalInput() { document.getElementById('instructionalGoalsContainer').insertAdjacentHTML('beforeend', '<input type="text" class="form-control instructional-goal-input mb-2">'); }
     </script>
 </body>
 </html>

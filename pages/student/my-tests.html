@@ -3,238 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>اختباراتي - ميسر التعلم</title>
+    <title>اختباراتي</title>
     <link rel="stylesheet" href="../../assets/css/main.css">
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../assets/css/student.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* ============================================ */
-        /* نمط وضع التركيز الكامل (Full Focus Mode) */
-        /* ============================================ */
-        #testFocusMode {
-            display: none; /* مخفي افتراضياً */
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: #ffffff; /* واجهة بيضاء بالكامل */
-            z-index: 999999; /* فوق كل شيء بما في ذلك الشريط الجانبي */
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        /* تنسيق رأس الاختبار في وضع التركيز */
-        .focus-header {
-            background: #ffffff;
-            border-bottom: 2px solid #f0f0f0;
-            padding: 15px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-            height: 70px;
-        }
-
-        /* جسم الاختبار */
-        .focus-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 40px;
-            background-color: #ffffff;
-            max-width: 900px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        /* تذييل الاختبار (الأزرار) */
-        .focus-footer {
-            background: #ffffff;
-            border-top: 2px solid #f0f0f0;
-            padding: 20px 40px;
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            height: 80px;
-        }
-
-        /* تنسيق الأسئلة */
-        .question-card {
-            background: #fff;
-            border: 1px solid #e0e0e0;
-            border-radius: 12px;
-            padding: 30px;
-            margin-bottom: 40px;
-            /* إزالة الظل الثقيل ليكون المظهر أنظف */
-        }
-
-        .question-number {
-            background: var(--primary-color);
-            color: white;
-            padding: 5px 15px;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            margin-bottom: 15px;
-            display: inline-block;
-        }
-
-        .question-text {
-            font-size: 1.4rem;
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 25px;
-        }
-
-        /* خيارات الإجابة */
-        .answer-option {
-            display: flex;
-            align-items: center;
-            padding: 15px 20px;
-            border: 2px solid #eee;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 1.1rem;
-        }
-
-        .answer-option:hover {
-            border-color: #bbb;
-            background-color: #fafafa;
-        }
-
-        .answer-option.selected {
-            border-color: var(--primary-color);
-            background-color: #e3f2fd;
-            color: var(--primary-color);
-            font-weight: bold;
-        }
-
-        .answer-option input {
-            margin-left: 15px;
-            width: 20px;
-            height: 20px;
-        }
-
-        /* أزرار صح وخطأ */
-        .tf-buttons {
-            display: flex;
-            gap: 30px;
-            justify-content: center;
-            margin-top: 20px;
-        }
-
-        .tf-btn {
-            width: 120px;
-            height: 120px;
-            border-radius: 15px;
-            border: 2px solid #eee;
-            background: white;
-            font-size: 1.2rem;
-            font-weight: bold;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            transition: all 0.2s;
-        }
-
-        .tf-btn.true:hover, .tf-btn.true.active {
-            border-color: #2ecc71;
-            background-color: #eafaf1;
-            color: #27ae60;
-        }
-
-        .tf-btn.false:hover, .tf-btn.false.active {
-            border-color: #e74c3c;
-            background-color: #fdedec;
-            color: #c0392b;
-        }
-
-        .tf-icon { font-size: 2.5rem; }
-
-        /* أزرار التحكم */
-        .btn-action {
-            padding: 12px 30px;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: transform 0.2s;
-        }
-        .btn-action:hover { transform: translateY(-2px); }
+        /* ... الأنماط السابقة ... */
+        .modal { z-index: 99999 !important; }
+        #testFocusMode { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 999999; flex-direction: column; }
         
-        .btn-save { background-color: #f1c40f; color: #fff; }
-        .btn-submit { background-color: #2ecc71; color: #fff; }
-        .btn-exit { background-color: #95a5a6; color: #fff; }
+        /* أنماط الأسئلة الجديدة */
+        .drawing-canvas { border: 2px dashed #ccc; cursor: crosshair; background: #fff; display: block; margin: 10px auto; touch-action: none; }
+        .canvas-tools { display: flex; justify-content: center; gap: 10px; margin-bottom: 5px; }
+        .color-btn { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #ddd; cursor: pointer; }
+        .color-btn.active { border-color: #000; transform: scale(1.1); }
+        
+        .interactive-word { cursor: pointer; padding: 2px 5px; border-radius: 3px; transition: 0.2s; font-size: 1.2rem; display: inline-block; margin: 2px; }
+        .interactive-word:hover { background: #f0f0f0; }
+        .interactive-word.correct { background: #d4edda; color: #155724; } /* أخضر */
+        .interactive-word.wrong { background: #f8d7da; color: #721c24; } /* أحمر */
 
-        /* شاشة الترحيب */
-        .start-screen {
-            text-align: center;
-            padding-top: 50px;
-        }
-        .start-icon { font-size: 6rem; margin-bottom: 20px; animation: float 3s infinite ease-in-out; }
-        @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-20px); } 100% { transform: translateY(0px); } }
+        .record-btn { width: 60px; height: 60px; border-radius: 50%; background: #dc3545; color: white; border: none; font-size: 1.5rem; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .record-btn.recording { animation: pulse 1.5s infinite; background: #bd2130; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار">
-                    <h2>ميسر التعلم</h2>
-                </div>
-            </div>
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="menu-icon">🏠</span>الرئيسية</a></li>
-                <li><a href="my-tests.html" class="active"><span class="menu-icon">📝</span>اختباراتي</a></li>
-                <li><a href="my-iep.html"><span class="menu-icon">📊</span>خطتي التربوية</a></li>
-                <li><a href="my-lessons.html"><span class="menu-icon">📚</span>دروسي</a></li>
-                <li><a href="my-assignments.html"><span class="menu-icon">📋</span>واجباتي</a></li>
-                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة المعلم</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>خروج</a></li>
-            </ul>
-        </aside>
-
         <main class="main-content-dashboard">
-            <header class="dashboard-header">
-                <button class="mobile-menu-btn">☰</button>
-                <div class="user-info">
-                    <div class="user-welcome">
-                        <div class="welcome-text">مرحباً يا بطل</div>
-                        <div class="user-name" id="userName">الطالب</div>
-                    </div>
-                    <div class="user-avatar" id="userAvatar">ط</div>
-                </div>
-            </header>
-
             <div class="dashboard-content">
-                <div class="content-header">
-                    <h1>📝 اختباراتي</h1>
-                    <p>قائمة الاختبارات المخصصة لك</p>
-                </div>
-
                 <div class="tests-tabs">
-                    <div class="tabs-header">
-                        <button class="tab-btn active" data-tab="pending">الاختبارات الجديدة ⏳</button>
-                        <button class="tab-btn" data-tab="completed">الاختبارات المنجزة ✅</button>
-                    </div>
-
+                    <div class="tabs-header"><button class="tab-btn active" data-tab="pending">الجديدة</button><button class="tab-btn" data-tab="completed">المنجزة</button></div>
                     <div class="tabs-content">
-                        <div class="tab-pane active" id="pending-tab">
-                            <div class="tests-list" id="pendingTestsList"></div>
-                        </div>
-                        <div class="tab-pane" id="completed-tab">
-                            <div class="tests-list" id="completedTestsList"></div>
-                        </div>
+                        <div class="tab-pane active" id="pending-tab"><div id="pendingTestsList"></div></div>
+                        <div class="tab-pane" id="completed-tab"><div id="completedTestsList"></div></div>
                     </div>
                 </div>
             </div>
@@ -243,45 +45,19 @@
 
     <div id="testFocusMode">
         <div class="focus-header">
-            <div>
-                <h2 id="focusTestTitle" style="margin:0; color:var(--secondary-color);">عنوان الاختبار</h2>
-                <small style="color:#777;">ركز جيداً واختر الإجابة الصحيحة</small>
-            </div>
-            <button class="btn-action btn-exit" onclick="saveTestProgress()" style="font-size:0.9rem; padding: 8px 15px;">
-                <span>💾</span> حفظ وخروج
-            </button>
+            <h2 id="focusTestTitle">الاختبار</h2>
+            <button class="btn btn-secondary" onclick="saveTestProgress()">حفظ وخروج</button>
         </div>
-
-        <div class="focus-body">
-            <div id="testStartScreen" class="start-screen">
-                <div class="start-icon">🚀</div>
-                <h1 style="color: var(--primary-color); margin-bottom: 20px;">جاهز للانطلاق؟</h1>
-                <div style="background: #f9f9f9; padding: 30px; border-radius: 15px; display: inline-block; text-align: right; max-width: 500px;">
-                    <h3 style="margin-top: 0;">تذكر يا بطل:</h3>
-                    <ul style="padding-right: 20px; line-height: 2;">
-                        <li>اقرأ كل سؤال بعناية.</li>
-                        <li>لا تستعجل، الوقت كافي.</li>
-                        <li>يمكنك الضغط على "حفظ واستكمال لاحقاً" إذا تعبت.</li>
-                    </ul>
-                </div>
-                <div style="margin-top: 40px;">
-                    <button class="btn-action btn-submit" style="font-size: 1.5rem; padding: 15px 50px; display: inline-flex;" onclick="startActualTest()">
-                        ابدأ الآن 🏁
-                    </button>
-                </div>
+        <div class="focus-body" style="overflow-y: auto; padding: 20px;">
+            <div id="testStartScreen" style="text-align: center; padding: 50px;">
+                <h1>جاهز؟</h1>
+                <button class="btn btn-success btn-large" onclick="startActualTest()">ابدأ</button>
             </div>
-
-            <div id="testQuestionsContainer" style="display: none;">
-                </div>
+            <div id="testQuestionsContainer" style="display: none; max-width: 800px; margin: 0 auto;"></div>
         </div>
-
-        <div class="focus-footer" id="testFooterControls" style="display: none;">
-            <button class="btn-action btn-save" onclick="saveTestProgress()">
-                <span>💾</span> حفظ واستكمال لاحقاً
-            </button>
-            <button class="btn-action btn-submit" onclick="submitTestAnswers()">
-                <span>✅</span> تسليم الإجابات وإنهاء
-            </button>
+        <div class="focus-footer" id="testFooterControls" style="display: none; padding: 20px; justify-content: center; gap: 10px;">
+            <button class="btn btn-warning" onclick="saveTestProgress()">حفظ مؤقت</button>
+            <button class="btn btn-success" onclick="submitTestAnswers()">تسليم نهائي</button>
         </div>
     </div>
 

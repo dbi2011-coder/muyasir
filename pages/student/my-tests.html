@@ -7,30 +7,78 @@
     <link rel="stylesheet" href="../../assets/css/main.css">
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../assets/css/student.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* ... الأنماط السابقة ... */
         .modal { z-index: 99999 !important; }
         #testFocusMode { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 999999; flex-direction: column; }
         
-        /* أنماط الأسئلة الجديدة */
+        /* أنماط خاصة للتنقل بين الأسئلة */
+        .question-card { display: none; animation: fadeIn 0.3s ease; } /* مخفي افتراضياً */
+        .question-card.active { display: block; } /* يظهر فقط عند إضافة الكلاس */
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* تنسيق منطقة الأزرار السفلية */
+        .focus-footer {
+            padding: 20px;
+            border-top: 1px solid #eee;
+            background: #f9f9f9;
+            display: flex;
+            justify-content: space-between; /* توزيع يمين - وسط - يسار */
+            align-items: center;
+        }
+
+        .btn-nav { min-width: 120px; padding: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; border: none; font-family: 'Tajawal'; font-size: 1.1rem; }
+        .btn-prev { background: #e0e0e0; color: #333; }
+        .btn-next { background: var(--primary-color); color: white; }
+        .btn-save { background: #f39c12; color: white; }
+        .btn-submit { background: #27ae60; color: white; }
+        .btn-nav:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* أنماط الأسئلة (الكانفاس وغيره) */
         .drawing-canvas { border: 2px dashed #ccc; cursor: crosshair; background: #fff; display: block; margin: 10px auto; touch-action: none; }
         .canvas-tools { display: flex; justify-content: center; gap: 10px; margin-bottom: 5px; }
-        .color-btn { width: 30px; height: 30px; border-radius: 50%; border: 2px solid #ddd; cursor: pointer; }
-        .color-btn.active { border-color: #000; transform: scale(1.1); }
-        
-        .interactive-word { cursor: pointer; padding: 2px 5px; border-radius: 3px; transition: 0.2s; font-size: 1.2rem; display: inline-block; margin: 2px; }
-        .interactive-word:hover { background: #f0f0f0; }
-        .interactive-word.correct { background: #d4edda; color: #155724; } /* أخضر */
-        .interactive-word.wrong { background: #f8d7da; color: #721c24; } /* أحمر */
-
         .record-btn { width: 60px; height: 60px; border-radius: 50%; background: #dc3545; color: white; border: none; font-size: 1.5rem; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
         .record-btn.recording { animation: pulse 1.5s infinite; background: #bd2130; }
         @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        
+        .answer-option { display: block; padding: 15px; border: 2px solid #eee; margin-bottom: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .answer-option:hover { background: #f8f9fa; border-color: #ddd; }
+        .answer-option.selected { border-color: var(--primary-color); background: #e3f2fd; }
+        .answer-option input { margin-left: 10px; }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="../../assets/images/logo.png" alt="شعار">
+                    <h2>ميسر التعلم</h2>
+                </div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><span class="menu-icon">🏠</span>الرئيسية</a></li>
+                <li><a href="my-tests.html" class="active"><span class="menu-icon">📝</span>اختباراتي</a></li>
+                <li><a href="my-iep.html"><span class="menu-icon">📊</span>خطتي التربوية</a></li>
+                <li><a href="my-lessons.html"><span class="menu-icon">📚</span>دروسي</a></li>
+                <li><a href="my-assignments.html"><span class="menu-icon">📋</span>واجباتي</a></li>
+                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة المعلم</a></li>
+                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>خروج</a></li>
+            </ul>
+        </aside>
+
         <main class="main-content-dashboard">
+            <header class="dashboard-header">
+                <button class="mobile-menu-btn">☰</button>
+                <div class="user-info">
+                    <div class="user-welcome">
+                        <div class="welcome-text">مرحباً يا بطل</div>
+                        <div class="user-name" id="userName">الطالب</div>
+                    </div>
+                </div>
+            </header>
+
             <div class="dashboard-content">
                 <div class="tests-tabs">
                     <div class="tabs-header"><button class="tab-btn active" data-tab="pending">الجديدة</button><button class="tab-btn" data-tab="completed">المنجزة</button></div>
@@ -44,20 +92,31 @@
     </div>
 
     <div id="testFocusMode">
-        <div class="focus-header">
-            <h2 id="focusTestTitle">الاختبار</h2>
-            <button class="btn btn-secondary" onclick="saveTestProgress()">حفظ وخروج</button>
+        <div class="focus-header" style="padding: 15px; border-bottom: 1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+                <h2 id="focusTestTitle" style="margin:0; font-size:1.2rem;">الاختبار</h2>
+                <small id="questionCounter" style="color:#777;">سؤال 1 من 5</small>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary" onclick="saveTestProgress()">خروج مؤقت</button>
         </div>
-        <div class="focus-body" style="overflow-y: auto; padding: 20px;">
+        
+        <div class="focus-body" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; align-items: center;">
             <div id="testStartScreen" style="text-align: center; padding: 50px;">
                 <h1>جاهز؟</h1>
-                <button class="btn btn-success btn-large" onclick="startActualTest()">ابدأ</button>
+                <p>ركز جيداً، يمكنك التنقل بين الأسئلة.</p>
+                <button class="btn btn-success btn-large" onclick="startActualTest()">ابدأ الاختبار</button>
             </div>
-            <div id="testQuestionsContainer" style="display: none; max-width: 800px; margin: 0 auto;"></div>
+            
+            <div id="testQuestionsContainer" style="width: 100%; max-width: 800px; display: none;"></div>
         </div>
-        <div class="focus-footer" id="testFooterControls" style="display: none; padding: 20px; justify-content: center; gap: 10px;">
-            <button class="btn btn-warning" onclick="saveTestProgress()">حفظ مؤقت</button>
-            <button class="btn btn-success" onclick="submitTestAnswers()">تسليم نهائي</button>
+        
+        <div class="focus-footer" id="testFooterControls" style="display: none;">
+            <button id="btnPrev" class="btn-nav btn-prev" onclick="navigateQuestion(-1)">السابق</button>
+            
+            <button id="btnSave" class="btn-nav btn-save" onclick="saveTestProgress()">حفظ التقدم</button>
+            
+            <button id="btnNext" class="btn-nav btn-next" onclick="navigateQuestion(1)">التالي</button>
+            <button id="btnSubmit" class="btn-nav btn-submit" style="display: none;" onclick="submitTestAnswers()">تسليم نهائي</button>
         </div>
     </div>
 

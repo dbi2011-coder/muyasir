@@ -10,37 +10,21 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* أنماط إضافية للتصميم الجديد */
         .sidebar-menu li a { cursor: pointer; }
         .content-section { display: none; animation: fadeIn 0.3s ease; }
         .content-section.active { display: block; }
-        
-        /* تنسيق مصغر لبيانات الطالب في القائمة الجانبية */
-        .sidebar-student-info {
-            padding: 20px;
-            text-align: center;
-            background: rgba(0, 0, 0, 0.1);
-            margin-bottom: 10px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .sidebar-student-avatar {
-            width: 60px; height: 60px; margin: 0 auto 10px;
-            background: var(--primary-color); color: white;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 1.5rem; font-weight: bold; border: 2px solid rgba(255,255,255,0.2);
-        }
+        .sidebar-student-info { padding: 20px; text-align: center; background: rgba(0, 0, 0, 0.1); margin-bottom: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .sidebar-student-avatar { width: 60px; height: 60px; margin: 0 auto 10px; background: var(--primary-color); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; border: 2px solid rgba(255,255,255,0.2); }
         .sidebar-student-name { color: white; font-weight: bold; margin-bottom: 5px; }
         .sidebar-student-grade { color: rgba(255, 255, 255, 0.7); font-size: 0.85rem; }
-
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* أنماط جداول الخطة */
-        .iep-page { background: white; padding: 30px; margin-bottom: 20px; border: 1px solid #ddd; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-        .iep-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .iep-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        .iep-table th, .iep-table td { border: 1px solid #ddd; padding: 10px; text-align: center; }
-        .iep-table th { background-color: #f8f9fa; color: var(--secondary-color); }
-        .shaded-day { background-color: var(--primary-color) !important; color: white; }
+        /* أنماط نافذة التصحيح */
+        .review-question-item { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; background: #fff; }
+        .review-q-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: #f9f9f9; padding: 10px; border-radius: 5px; }
+        .student-answer-box { padding: 10px; background: #e3f2fd; border-radius: 5px; margin-bottom: 10px; border-right: 4px solid #2196f3; }
+        .teacher-feedback-box textarea { width: 100%; border: 1px solid #ccc; border-radius: 5px; padding: 8px; min-height: 60px; margin-top: 5px; }
+        .score-input { width: 70px; text-align: center; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -52,20 +36,17 @@
                     <h2>ميسر التعلم</h2>
                 </div>
             </div>
-
             <div class="sidebar-student-info">
                 <div class="sidebar-student-avatar" id="sideAvatar">ط</div>
                 <div class="sidebar-student-name" id="sideName">جار التحميل...</div>
                 <div class="sidebar-student-grade" id="sideGrade">...</div>
             </div>
-            
             <ul class="sidebar-menu">
                 <li><a onclick="switchSection('diagnostic')" class="nav-link active" id="link-diagnostic"><span class="menu-icon">📝</span>الاختبار التشخيصي</a></li>
                 <li><a onclick="switchSection('iep')" class="nav-link" id="link-iep"><span class="menu-icon">📊</span>الخطة التربوية</a></li>
                 <li><a onclick="switchSection('lessons')" class="nav-link" id="link-lessons"><span class="menu-icon">📚</span>الدروس</a></li>
                 <li><a onclick="switchSection('assignments')" class="nav-link" id="link-assignments"><span class="menu-icon">📋</span>الواجبات</a></li>
                 <li><a onclick="switchSection('progress')" class="nav-link" id="link-progress"><span class="menu-icon">📈</span>تقدم الطالب</a></li>
-                
                 <li style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.1);">
                     <a href="students.html"><span class="menu-icon">↩️</span>عودة لقائمة الطلاب</a>
                 </li>
@@ -81,123 +62,55 @@
                         <div class="user-name" id="headerStudentName">...</div>
                     </div>
                 </div>
-                <div class="header-actions">
-                    <button class="btn btn-success btn-sm" onclick="generateStudentReport()">📄 تقرير شامل</button>
-                </div>
             </header>
 
             <div class="dashboard-content">
                 <div id="section-diagnostic" class="content-section active">
-                    <div class="content-header">
-                        <h1>الاختبار التشخيصي</h1>
-                        <button class="btn btn-primary" onclick="showAssignTestModal()">+ تعيين اختبار</button>
-                    </div>
-                    
+                    <div class="content-header"><h1>الاختبار التشخيصي</h1><button class="btn btn-primary" onclick="showAssignTestModal()">+ تعيين اختبار</button></div>
                     <div id="diagnosticContent">
-                        <div class="empty-state" id="noDiagnosticTest">
-                            <div class="empty-icon">📝</div>
-                            <h3>لم يتم تعيين اختبار تشخيصي بعد</h3>
-                            <p>ابدأ بتعيين اختبار لتحديد مستوى الطالب وإنشاء الخطة.</p>
-                        </div>
-                        <div id="diagnosticTestDetails" style="display: none;">
-                            </div>
+                        <div class="empty-state" id="noDiagnosticTest"><div class="empty-icon">📝</div><h3>لم يتم تعيين اختبار</h3></div>
+                        <div id="diagnosticTestDetails" style="display: none;"></div>
                     </div>
                 </div>
-
-                <div id="section-iep" class="content-section">
-                    <div class="content-header">
-                        <h1>الخطة التربوية الفردية</h1>
-                        <div class="header-actions">
-                            <button class="btn btn-info" onclick="printIEP()"><i class="fas fa-print"></i> طباعة</button>
-                        </div>
-                    </div>
-                    <div id="iepContent">
-                        </div>
-                </div>
-
-                <div id="section-lessons" class="content-section">
-                    <div class="content-header">
-                        <h1>الدروس المخصصة</h1>
-                        <button class="btn btn-outline-primary" onclick="regenerateLessons()">🔄 تحديث القائمة</button>
-                    </div>
-                    <div class="content-grid" id="studentLessonsGrid">
-                        </div>
-                </div>
-
-                <div id="section-assignments" class="content-section">
-                    <div class="content-header">
-                        <h1>الواجبات المسندة</h1>
-                        <button class="btn btn-primary" onclick="showAssignHomeworkModal()">+ إسناد واجب</button>
-                    </div>
-                    <div class="content-grid" id="studentAssignmentsGrid">
-                        </div>
-                </div>
-
-                <div id="section-progress" class="content-section">
-                    <div class="content-header">
-                        <h1>تقدم الطالب</h1>
-                    </div>
-                    <div class="card">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>الهدف التدريسي</th>
-                                    <th>الاستراتيجية</th>
-                                    <th>حالة الدرس</th>
-                                    <th>التواريخ والملاحظات</th>
-                                </tr>
-                            </thead>
-                            <tbody id="progressTableBody">
-                                </tbody>
-                        </table>
-                    </div>
-                </div>
+                <div id="section-iep" class="content-section"><div class="content-header"><h1>الخطة التربوية</h1><button class="btn btn-info" onclick="printIEP()">طباعة</button></div><div id="iepContent"></div></div>
+                <div id="section-lessons" class="content-section"><div class="content-header"><h1>الدروس</h1><button class="btn btn-outline-primary" onclick="regenerateLessons()">تحديث</button></div><div class="content-grid" id="studentLessonsGrid"></div></div>
+                <div id="section-assignments" class="content-section"><div class="content-header"><h1>الواجبات</h1><button class="btn btn-primary" onclick="showAssignHomeworkModal()">+ واجب</button></div><div class="content-grid" id="studentAssignmentsGrid"></div></div>
+                <div id="section-progress" class="content-section"><div class="content-header"><h1>التقدم</h1></div><div class="card"><table class="table"><thead><tr><th>الهدف</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody id="progressTableBody"></tbody></table></div></div>
             </div>
         </main>
     </div>
 
     <div id="assignTestModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>تعيين اختبار تشخيصي</h3>
-                <button class="modal-close" onclick="closeModal('assignTestModal')">×</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>اختر الاختبار</label>
-                    <select id="testSelect" class="form-control"></select>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('assignTestModal')">إلغاء</button>
-                <button class="btn btn-success" onclick="assignTest()">حفظ وتعيين</button>
-            </div>
+            <div class="modal-header"><h3>تعيين اختبار</h3><button class="modal-close" onclick="closeModal('assignTestModal')">×</button></div>
+            <div class="modal-body"><select id="testSelect" class="form-control"></select></div>
+            <div class="modal-footer"><button class="btn btn-success" onclick="assignTest()">حفظ</button></div>
         </div>
     </div>
 
     <div id="assignHomeworkModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content"><div class="modal-header"><h3>إسناد واجب</h3><button class="modal-close" onclick="closeModal('assignHomeworkModal')">×</button></div><div class="modal-body"><select id="homeworkLessonSelect" class="form-control mb-2"></select><select id="homeworkSelect" class="form-control mb-2"></select><input type="date" id="homeworkDueDate" class="form-control"></div><div class="modal-footer"><button class="btn btn-success" onclick="assignHomework()">حفظ</button></div></div>
+    </div>
+
+    <div id="reviewTestModal" class="modal">
+        <div class="modal-content large" style="max-width: 900px;">
             <div class="modal-header">
-                <h3>إسناد واجب جديد</h3>
-                <button class="modal-close" onclick="closeModal('assignHomeworkModal')">×</button>
+                <h3>مراجعة إجابات الطالب وتصحيحها</h3>
+                <button class="modal-close" onclick="closeModal('reviewTestModal')">×</button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label>الدرس المرتبط</label>
-                    <select id="homeworkLessonSelect" class="form-control"></select>
-                </div>
-                <div class="form-group">
-                    <label>اختر الواجب</label>
-                    <select id="homeworkSelect" class="form-control"></select>
-                </div>
-                <div class="form-group">
-                    <label>تاريخ التسليم (اختياري)</label>
-                    <input type="date" id="homeworkDueDate" class="form-control">
-                </div>
+                <input type="hidden" id="reviewAssignmentId">
+                <div id="reviewQuestionsContainer" style="max-height: 60vh; overflow-y: auto; padding: 10px;">
+                    </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('assignHomeworkModal')">إلغاء</button>
-                <button class="btn btn-success" onclick="assignHomework()">إسناد</button>
+            <div class="modal-footer" style="justify-content: space-between;">
+                <div>
+                    <button class="btn btn-warning" onclick="returnTestForResubmission()">↩️ إعادة الاختبار للطالب للتعديل</button>
+                </div>
+                <div>
+                    <button class="btn btn-secondary" onclick="closeModal('reviewTestModal')">إلغاء</button>
+                    <button class="btn btn-success" onclick="saveTestReview()">💾 حفظ التعديلات والملاحظات</button>
+                </div>
             </div>
         </div>
     </div>

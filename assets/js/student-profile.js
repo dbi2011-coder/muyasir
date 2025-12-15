@@ -1,4 +1,7 @@
-// إدارة ملف الطالب - ميسر التعلم
+// ============================================
+// 📁 المسار: assets/js/student-profile.js
+// ============================================
+
 let currentStudentId = null;
 let currentStudent = null;
 
@@ -15,45 +18,87 @@ document.addEventListener('DOMContentLoaded', function() {
     loadStudentData();
 });
 
+// تحميل البيانات الأساسية وتحديث القائمة الجانبية
 function loadStudentData() {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     currentStudent = users.find(u => u.id === currentStudentId);
     
-    if (!currentStudent) return;
+    if (!currentStudent) {
+        alert('الطالب غير موجود');
+        window.location.href = 'students.html';
+        return;
+    }
     
-    document.getElementById('pageStudentName').textContent = `ملف الطالب: ${currentStudent.name}`;
-    document.title = `ملف الطالب - ${currentStudent.name}`;
+    // تحديث البيانات في القائمة الجانبية والرأس
+    document.getElementById('sideName').textContent = currentStudent.name;
+    document.getElementById('headerStudentName').textContent = currentStudent.name;
+    document.getElementById('sideGrade').textContent = currentStudent.grade + ' - ' + currentStudent.subject;
+    document.getElementById('sideAvatar').textContent = currentStudent.name.charAt(0);
+    document.title = `ملف الطالب: ${currentStudent.name}`;
     
-    loadDiagnosticTab();
-    // سيتم تحميل باقي التبويبات عند الضغط عليها
+    // تحميل القسم الافتراضي (الاختبار التشخيصي)
+    switchSection('diagnostic');
 }
 
-// --- 1. الاختبار التشخيصي ---
+// === دالة التنقل الرئيسية بين الأقسام ===
+function switchSection(sectionId) {
+    // 1. تحديث القائمة الجانبية
+    document.querySelectorAll('.sidebar-menu .nav-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    const activeLink = document.getElementById(`link-${sectionId}`);
+    if(activeLink) activeLink.classList.add('active');
+
+    // 2. إخفاء كل الأقسام وإظهار القسم المطلوب
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.classList.remove('active');
+    });
+    document.getElementById(`section-${sectionId}`).classList.add('active');
+
+    // 3. تحميل بيانات القسم المطلوب
+    if (sectionId === 'diagnostic') loadDiagnosticTab();
+    if (sectionId === 'iep') loadIEPTab();
+    if (sectionId === 'lessons') loadLessonsTab();
+    if (sectionId === 'assignments') loadAssignmentsTab();
+    if (sectionId === 'progress') loadProgressTab();
+}
+
+// --- 1. قسم الاختبار التشخيصي ---
 function loadDiagnosticTab() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const assignedTest = studentTests.find(t => t.studentId === currentStudentId && t.type === 'diagnostic');
     
     if (assignedTest) {
         document.getElementById('noDiagnosticTest').style.display = 'none';
-        const details = document.getElementById('diagnosticTestDetails');
-        details.style.display = 'block';
+        const detailsDiv = document.getElementById('diagnosticTestDetails');
+        detailsDiv.style.display = 'block';
         
-        // جلب تفاصيل الاختبار الأصلي
         const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
         const originalTest = allTests.find(t => t.id === assignedTest.testId);
         
-        details.innerHTML = `
+        let statusBadge = '';
+        if(assignedTest.status === 'completed') statusBadge = '<span class="badge badge-success">مكتمل</span>';
+        else if(assignedTest.status === 'in-progress') statusBadge = '<span class="badge badge-warning">قيد التنفيذ</span>';
+        else statusBadge = '<span class="badge badge-secondary">لم يبدأ</span>';
+
+        detailsDiv.innerHTML = `
             <div class="card">
-                <h3>${originalTest ? originalTest.title : 'اختبار محذوف'}</h3>
-                <p>الحالة: ${assignedTest.status === 'completed' ? '<span class="badge badge-success">مكتمل</span>' : '<span class="badge badge-warning">قيد الانتظار</span>'}</p>
-                ${assignedTest.status === 'completed' ? `<button class="btn btn-success" onclick="generateIEP(${assignedTest.id})">تحديث الخطة التربوية</button>` : ''}
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3>${originalTest ? originalTest.title : 'اختبار (محذوف)'}</h3>
+                    ${statusBadge}
+                </div>
+                <p class="text-muted">تاريخ التعيين: ${new Date(assignedTest.assignedDate).toLocaleDateString('ar-SA')}</p>
+                
+                ${assignedTest.status === 'completed' ? `
+                    <div style="margin-top:15px; padding:15px; background:#f0fff4; border:1px solid #c3e6cb; border-radius:5px;">
+                        <strong>النتيجة: ${assignedTest.score || 0}%</strong>
+                        <p>تم استخراج نقاط القوة والاحتياج تلقائياً.</p>
+                    </div>
+                ` : `
+                    <div class="alert alert-info">بانتظار حل الطالب للاختبار ليتم إنشاء الخطة.</div>
+                `}
             </div>
         `;
-        
-        // إذا كان مكتمل ولم تنشأ خطة بعد، قم بإنشائها
-        if(assignedTest.status === 'completed') {
-            loadIEPTab(); 
-        }
     }
 }
 
@@ -62,7 +107,7 @@ function showAssignTestModal() {
     const select = document.getElementById('testSelect');
     select.innerHTML = '<option value="">اختر اختباراً...</option>';
     allTests.forEach(t => {
-        select.innerHTML += `<option value="${t.id}">${t.title} - ${t.subject}</option>`;
+        select.innerHTML += `<option value="${t.id}">${t.title} (${t.subject})</option>`;
     });
     document.getElementById('assignTestModal').classList.add('show');
 }
@@ -72,6 +117,10 @@ function assignTest() {
     if(!testId) return;
     
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    // التحقق من عدم وجود اختبار سابق
+    const exists = studentTests.some(t => t.studentId === currentStudentId && t.type === 'diagnostic');
+    if(exists) { alert('يوجد اختبار تشخيصي معين مسبقاً'); return; }
+
     studentTests.push({
         id: Date.now(),
         studentId: currentStudentId,
@@ -80,34 +129,46 @@ function assignTest() {
         status: 'pending',
         assignedDate: new Date().toISOString()
     });
+    
     localStorage.setItem('studentTests', JSON.stringify(studentTests));
     closeModal('assignTestModal');
     loadDiagnosticTab();
+    showAuthNotification('تم تعيين الاختبار بنجاح', 'success');
 }
 
-// --- 2. الخطة التربوية الفردية (IEP) ---
+// --- 2. قسم الخطة التربوية الفردية ---
 function loadIEPTab() {
     const iepContent = document.getElementById('iepContent');
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const completedDiagnostic = studentTests.find(t => t.studentId === currentStudentId && t.type === 'diagnostic' && t.status === 'completed');
 
     if (!completedDiagnostic) {
-        iepContent.innerHTML = '<div class="alert alert-warning">يجب على الطالب إكمال الاختبار التشخيصي أولاً لتوليد الخطة تلقائياً.</div>';
+        iepContent.innerHTML = '<div class="alert alert-warning" style="text-align:center; padding:30px;">⚠️ يجب أن يكمل الطالب الاختبار التشخيصي أولاً لتوليد الخطة تلقائياً.</div>';
         return;
     }
 
-    // توليد بيانات الخطة
-    const schedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]'); // جدول المعلم
+    // جلب جدول المعلم
+    const schedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
+    const teacherName = getCurrentUser().name;
     const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+    
     const studentSchedule = days.map(day => {
-        // فحص إذا كان الطالب لديه حصة في هذا اليوم في جدول المعلم
-        // ملاحظة: نحتاج لمنطق في جدول المعلم يربط الحصة بالطلاب، هنا سنفترض وجود حصة عشوائية للتوضيح
         const hasSession = schedule.some(s => s.students && s.students.includes(currentStudentId) && s.day === dayMap(day)); 
         return { day, hasSession };
     });
 
-    // الصفحة الأولى: البيانات والجدول
-    let html = `
+    // نقاط القوة والاحتياج (محاكاة)
+    const strengths = ["قراءة الحروف بحركاتها", "نسخ الكلمات"]; 
+    const needs = ["التمييز بين المدود", "الإملاء المنظور"]; 
+    const longTermGoal = `أن يتقن التلميذ مهارات ${currentStudent.subject} لذوي صعوبات التعلم حتى صفه الحالي وبنسبة لا تقل عن 80%`;
+    
+    const objectives = [
+        { short: "أن يميز التلميذ بين المدود", instructional: "قراءة كلمات بها مد بالألف", date: "" },
+        { short: "أن يميز التلميذ بين المدود", instructional: "قراءة كلمات بها مد بالواو", date: "" },
+        { short: "صيانة للأهداف السابقة", instructional: "مراجعة المدود", date: "" }
+    ];
+
+    const html = `
     <div class="iep-page">
         <div class="iep-header"><h2>الخطة التربوية الفردية - الصفحة 1</h2></div>
         <table class="iep-table">
@@ -118,7 +179,7 @@ function loadIEPTab() {
             </tr>
         </table>
         
-        <h4>أيام الحصص المقررة</h4>
+        <h4>جدول الحصص</h4>
         <table class="iep-table">
             <tr>
                 ${studentSchedule.map(s => `<th class="${s.hasSession ? 'shaded-day' : ''}">${s.day}</th>`).join('')}
@@ -127,41 +188,23 @@ function loadIEPTab() {
                 ${studentSchedule.map(s => `<td class="${s.hasSession ? 'shaded-day' : ''}">${s.hasSession ? '✓' : ''}</td>`).join('')}
             </tr>
         </table>
-        
-        <div style="margin-top: 20px;"><strong>اسم المعلم:</strong> ${getCurrentUser().name}</div>
-    </div>`;
+        <div style="margin-top:20px;"><strong>معلم الصعوبات:</strong> ${teacherName}</div>
+    </div>
 
-    // الصفحة الثانية: نقاط القوة والاحتياج والأهداف
-    // محاكاة استخراج نقاط القوة/الاحتياج من نتائج الاختبار
-    // (في الواقع يجب أن تكون مرتبطة بإجابات الأسئلة)
-    const strengths = ["قراءة الحروف بحركاتها", "نسخ الكلمات"]; 
-    const needs = ["التمييز بين المدود", "الإملاء المنظور"]; 
-    
-    // الأهداف (محاكاة)
-    const longTermGoal = `أن يتقن التلميذ مهارات ${currentStudent.subject === 'لغتي' ? 'القراءة والكتابة' : 'الرياضيات'} لذوي صعوبات التعلم حتى صفه الحالي وبنسبة لا تقل عن 80%`;
-    
-    const objectives = [
-        { short: "أن يميز التلميذ بين المدود", instructional: "قراءة كلمات بها مد بالألف", date: "" },
-        { short: "أن يميز التلميذ بين المدود", instructional: "قراءة كلمات بها مد بالواو", date: "" },
-        { short: "صيانة للأهداف السابقة", instructional: "مراجعة المدود", date: "" }
-    ];
-
-    html += `
     <div class="iep-page">
         <div class="iep-header"><h2>الخطة التربوية الفردية - الصفحة 2</h2></div>
         
         <table class="iep-table">
-            <tr><th width="50%">نقاط القوة (الأهداف المتقنة)</th><th>نقاط الاحتياج (الأهداف غير المتقنة)</th></tr>
+            <tr><th width="50%">نقاط القوة</th><th>نقاط الاحتياج</th></tr>
             <tr>
                 <td style="vertical-align: top;"><ul>${strengths.map(s => `<li>${s}</li>`).join('')}</ul></td>
                 <td style="vertical-align: top;"><ul>${needs.map(n => `<li>${n}</li>`).join('')}</ul></td>
             </tr>
         </table>
 
-        <table class="iep-table">
-            <tr><th>الهدف البعيد</th></tr>
-            <tr><td>${longTermGoal}</td></tr>
-        </table>
+        <div style="margin-bottom:20px; padding:15px; background:#f9f9f9; border:1px solid #eee;">
+            <strong>الهدف البعيد:</strong> ${longTermGoal}
+        </div>
 
         <table class="iep-table">
             <tr>
@@ -181,58 +224,58 @@ function loadIEPTab() {
 
     iepContent.innerHTML = html;
     
-    // توليد الدروس تلقائياً إذا لم تكن موجودة
+    // توليد الدروس إذا لم توجد
     generateLessonsFromIEP(objectives);
 }
 
-// --- 3. الدروس (توليد تلقائي) ---
+// --- 3. قسم الدروس ---
 function generateLessonsFromIEP(objectives) {
     let studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    // التحقق مما إذا كانت الدروس مولدة مسبقاً لهذا الطالب
-    const existing = studentLessons.some(l => l.studentId === currentStudentId);
-    if(existing) return;
-
-    // جلب الدروس من المكتبة
-    const libraryLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+    const hasLessons = studentLessons.some(l => l.studentId === currentStudentId);
     
-    objectives.forEach(obj => {
-        // البحث عن درس يطابق الهدف التدريسي (بسيط جداً هنا للمثال)
-        // في الواقع نحتاج ربط IDs
-        const matchingLesson = libraryLessons.find(l => l.title.includes(obj.instructional) || l.priority === 1);
-        
-        if (matchingLesson) {
-            studentLessons.push({
-                id: Date.now() + Math.random(),
-                studentId: currentStudentId,
-                lessonId: matchingLesson.id,
-                title: matchingLesson.title,
-                objective: obj.instructional,
-                status: 'pending', // pending, completed, accelerated
-                isAccelerated: false
-            });
-        }
-    });
-    
-    localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
+    if(!hasLessons) {
+        const libraryLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+        objectives.forEach(obj => {
+            // محاكاة البحث عن درس مناسب
+            const matchingLesson = libraryLessons.find(l => l.title.includes(obj.instructional) || true) || libraryLessons[0];
+            
+            if (matchingLesson) {
+                studentLessons.push({
+                    id: Date.now() + Math.random(),
+                    studentId: currentStudentId,
+                    lessonId: matchingLesson.id,
+                    title: matchingLesson.title,
+                    objective: obj.instructional,
+                    status: 'pending', 
+                    isAccelerated: false
+                });
+            }
+        });
+        localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
+    }
 }
 
 function loadLessonsTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const myList = studentLessons.filter(l => l.studentId === currentStudentId);
-    
     const container = document.getElementById('studentLessonsGrid');
+    
     if (myList.length === 0) {
-        container.innerHTML = '<p>لا توجد دروس مخصصة بعد.</p>';
+        container.innerHTML = '<div class="empty-state"><h3>لا توجد دروس حالياً. تأكد من وجود خطة تربوية.</h3></div>';
         return;
     }
 
     container.innerHTML = myList.map(l => `
         <div class="content-card">
-            <h4>${l.title}</h4>
-            <p><small>الهدف: ${l.objective}</small></p>
-            <div class="status-badge ${l.status}">${l.status === 'accelerated' ? 'مسرع' : (l.status === 'completed' ? 'مكتمل' : 'قادم')}</div>
-            <div style="margin-top: 10px;">
-                <button class="btn btn-sm btn-outline-warning" onclick="accelerateLesson(${l.id})">تسريع الدرس</button>
+            <div class="content-header">
+                <h4>${l.title}</h4>
+                <span class="status-badge ${l.status}">${getStatusText(l.status)}</span>
+            </div>
+            <div class="content-body">
+                <p><strong>الهدف:</strong> ${l.objective}</p>
+            </div>
+            <div class="content-actions">
+                <button class="btn btn-sm btn-outline-warning" onclick="accelerateLesson(${l.id})">تسريع</button>
                 ${l.status !== 'completed' ? `<button class="btn btn-sm btn-success" onclick="completeLesson(${l.id})">إكمال</button>` : ''}
             </div>
         </div>
@@ -240,6 +283,7 @@ function loadLessonsTab() {
 }
 
 function accelerateLesson(id) {
+    if(!confirm('هل أنت متأكد من تسريع هذا الدرس (تجاوزه)؟')) return;
     let studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const idx = studentLessons.findIndex(l => l.id === id);
     if(idx !== -1) {
@@ -249,75 +293,124 @@ function accelerateLesson(id) {
     }
 }
 
-// --- 4. الواجبات ---
+function completeLesson(id) {
+    let studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    const idx = studentLessons.findIndex(l => l.id === id);
+    if(idx !== -1) {
+        studentLessons[idx].status = 'completed';
+        studentLessons[idx].completedDate = new Date().toISOString();
+        localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
+        loadLessonsTab();
+    }
+}
+
+// --- 4. قسم الواجبات ---
 function loadAssignmentsTab() {
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId === currentStudentId);
     const container = document.getElementById('studentAssignmentsGrid');
     
+    if (list.length === 0) {
+        container.innerHTML = '<div class="empty-state"><h3>لا يوجد واجبات مسندة.</h3></div>';
+        return;
+    }
+
     container.innerHTML = list.map(a => `
         <div class="content-card">
             <h4>${a.title}</h4>
-            <p>موعد التسليم: ${a.dueDate || 'مفتوح'}</p>
-            <button class="btn btn-sm btn-danger" onclick="deleteAssignment(${a.id})">حذف</button>
+            <div class="content-meta">
+                <span>تاريخ التسليم: ${a.dueDate || 'مفتوح'}</span>
+                <span class="status-badge ${a.status}">${getStatusText(a.status)}</span>
+            </div>
+            <div class="content-actions">
+                <button class="btn btn-sm btn-danger" onclick="deleteAssignment(${a.id})">حذف</button>
+            </div>
         </div>
-    `).join('') || '<p>لا يوجد واجبات.</p>';
+    `).join('');
 }
 
 function showAssignHomeworkModal() {
-    // تعبئة القوائم
     const lessons = JSON.parse(localStorage.getItem('studentLessons') || '[]').filter(l => l.studentId === currentStudentId);
-    const assignmentsLib = JSON.parse(localStorage.getItem('assignments') || '[]'); // واجبات المكتبة
+    const assignmentsLib = JSON.parse(localStorage.getItem('assignments') || '[]');
     
     const lessonSelect = document.getElementById('homeworkLessonSelect');
     lessonSelect.innerHTML = lessons.map(l => `<option value="${l.id}">${l.title}</option>`).join('');
     
     const assignSelect = document.getElementById('homeworkSelect');
-    assignSelect.innerHTML = assignmentsLib.map(a => `<option value="${a.id}">${a.title}</option>`).join('');
+    if(assignmentsLib.length === 0) {
+        assignSelect.innerHTML = '<option value="">لا توجد واجبات في المكتبة</option>';
+    } else {
+        assignSelect.innerHTML = assignmentsLib.map(a => `<option value="${a.id}">${a.title}</option>`).join('');
+    }
     
     document.getElementById('assignHomeworkModal').classList.add('show');
 }
 
 function assignHomework() {
-    const assignId = document.getElementById('homeworkSelect').value;
-    const dueDate = document.getElementById('homeworkDueDate').value;
-    // ... منطق الحفظ في LocalStorage ...
+    const assignLibId = document.getElementById('homeworkSelect').value;
+    if(!assignLibId) return;
+    
+    const assignmentsLib = JSON.parse(localStorage.getItem('assignments') || '[]');
+    const selectedAssign = assignmentsLib.find(a => a.id == assignLibId);
+    
+    const newAssign = {
+        id: Date.now(),
+        studentId: currentStudentId,
+        assignmentId: assignLibId,
+        title: selectedAssign.title,
+        status: 'pending',
+        dueDate: document.getElementById('homeworkDueDate').value,
+        assignedDate: new Date().toISOString()
+    };
+    
+    const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
+    list.push(newAssign);
+    localStorage.setItem('studentAssignments', JSON.stringify(list));
+    
     closeModal('assignHomeworkModal');
     loadAssignmentsTab();
+    showAuthNotification('تم إسناد الواجب', 'success');
 }
 
-// --- 5. التقدم ---
+// --- 5. قسم التقدم ---
 function loadProgressTab() {
     const lessons = JSON.parse(localStorage.getItem('studentLessons') || '[]').filter(l => l.studentId === currentStudentId);
     const tbody = document.getElementById('progressTableBody');
     
+    if(lessons.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center">لا توجد بيانات تقدم</td></tr>';
+        return;
+    }
+
     tbody.innerHTML = lessons.map(l => `
         <tr>
             <td>${l.objective}</td>
-            <td>التعلم المباشر</td> <td>${l.status === 'pending' ? 'قادم' : (l.status === 'completed' ? 'متحقق' : 'قيد التنفيذ')}</td>
+            <td>التعلم المباشر</td>
+            <td><span class="badge ${l.status}">${getStatusText(l.status)}</span></td>
             <td>
-                ${l.status === 'completed' ? 'تم التحقق في ' + new Date().toLocaleDateString('ar-SA') : 'لم يبدأ'}
-                ${l.status === 'accelerated' ? '<br><span style="color:red">تسريع (تجاوز)</span>' : ''}
+                ${l.status === 'completed' ? 'تم التحقق في ' + new Date(l.completedDate).toLocaleDateString('ar-SA') : '-'}
+                ${l.status === 'accelerated' ? '<span style="color:red; display:block">تم التسريع (غياب/تجاوز)</span>' : ''}
             </td>
         </tr>
     `).join('');
 }
 
 // أدوات مساعدة
-function switchTab(tabName) {
-    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    
-    document.getElementById(tabName + '-tab').classList.add('active');
-    document.querySelector(`button[data-tab="${tabName}"]`).classList.add('active');
-    
-    if(tabName === 'iep') loadIEPTab();
-    if(tabName === 'lessons') loadLessonsTab();
-    if(tabName === 'assignments') loadAssignmentsTab();
-    if(tabName === 'progress') loadProgressTab();
-}
-
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function printIEP() { window.print(); }
+function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser')).user; }
 function dayMap(dayAr) {
     const map = {'الأحد':'sunday', 'الاثنين':'monday', 'الثلاثاء':'tuesday', 'الأربعاء':'wednesday', 'الخميس':'thursday'};
     return map[dayAr];
+}
+function getStatusText(status) {
+    const map = {
+        'pending': 'قادم',
+        'in-progress': 'قيد التنفيذ',
+        'completed': 'مكتمل',
+        'accelerated': 'مسرع'
+    };
+    return map[status] || status;
+}
+function generateStudentReport() {
+    alert('سيتم توليد تقرير PDF شامل قريباً...');
 }

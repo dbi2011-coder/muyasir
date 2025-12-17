@@ -1,196 +1,125 @@
-// إدارة الجدول الدراسي
+// ============================================
+// 📁 المسار: assets/js/study-schedule.js
+// ============================================
+
 document.addEventListener('DOMContentLoaded', function() {
-    if (window.location.pathname.includes('study-schedule.html')) {
-        loadStudySchedule();
-        loadStudentsForSchedule();
-    }
+    renderScheduleTable();
 });
 
-function loadStudySchedule() {
-    const scheduleBody = document.getElementById('scheduleBody');
-    if (!scheduleBody) return;
+const DAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+const PERIODS = [1, 2, 3, 4, 5, 6, 7];
 
-    const schedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
-    const currentTeacher = getCurrentUser();
-    const teacherSchedule = schedule.filter(s => s.teacherId === currentTeacher.id);
+function renderScheduleTable() {
+    const tbody = document.getElementById('scheduleBody');
+    tbody.innerHTML = '';
 
-    // إنشاء جدول الحصص
-    let scheduleHTML = '';
-    const periods = [
-        'الحصة الأولى', 'الحصة الثانية', 'الحصة الثالثة', 
-        'الحصة الرابعة', 'الحصة الخامسة', 'الحصة السادسة', 'الحصة السابعة'
-    ];
+    const scheduleData = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
+    const users = JSON.parse(localStorage.getItem('users') || '[]'); 
 
-    periods.forEach((period, periodIndex) => {
-        scheduleHTML += `<tr>`;
-        scheduleHTML += `<td class="period-name">${period}</td>`;
+    // التعديل هنا: الحلقة الخارجية للحصص (الصفوف)
+    PERIODS.forEach(period => {
+        const row = document.createElement('tr');
         
-        ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'].forEach(day => {
-            const session = teacherSchedule.find(s => 
-                s.day === day && s.period === (periodIndex + 1)
-            );
-            
-            scheduleHTML += `<td class="schedule-cell ${session ? 'booked' : 'available'}" 
-                data-day="${day}" data-period="${periodIndex + 1}"
-                onclick="handleCellClick('${day}', ${periodIndex + 1})">`;
-            
-            if (session) {
-                scheduleHTML += `
-                    <div class="session-info">
-                        <div class="session-subject">${session.subject}</div>
-                        <div class="session-students">${session.students.length} طالب</div>
-                        <div class="session-actions">
-                            <button class="btn btn-sm btn-danger" onclick="removeSession(event, ${session.id})">🗑️</button>
-                        </div>
-                    </div>
-                `;
-            } else {
-                scheduleHTML += `<span class="cell-placeholder">+ إضافة</span>`;
+        // الخلية الأولى: رقم الحصة
+        let html = `<td>الحصة ${period}</td>`;
+        
+        // الحلقة الداخلية للأيام (الأعمدة)
+        DAYS.forEach(day => {
+            // البحث عن البيانات (نفس المنطق ولكن داخل الهيكل الجديد)
+            const sessionData = scheduleData.find(s => s.day === day && s.period === period);
+            let cellContent = '<span style="color:#eee; font-size:1.5rem;">+</span>';
+            let cellClass = '';
+
+            if (sessionData && sessionData.students && sessionData.students.length > 0) {
+                const studentNames = sessionData.students.map(sid => {
+                    const st = users.find(u => u.id === sid);
+                    return st ? st.name.split(' ')[0] : '?';
+                });
+                
+                // عرض أول اسمين + عدد الباقي لعدم تشويه الجدول
+                if(studentNames.length > 2) {
+                    cellContent = `<span class="student-chip">${studentNames[0]}</span><span class="student-chip">${studentNames[1]}</span><span class="student-chip">+${studentNames.length-2}</span>`;
+                } else {
+                    cellContent = studentNames.map(name => `<span class="student-chip">${name}</span>`).join('');
+                }
+                cellClass = 'filled';
             }
-            
-            scheduleHTML += `</td>`;
+
+            html += `
+                <td class="schedule-cell ${cellClass}" onclick="openSessionModal('${day}', ${period})">
+                    ${cellContent}
+                </td>
+            `;
         });
-        
-        scheduleHTML += `</tr>`;
+
+        row.innerHTML = html;
+        tbody.appendChild(row);
+    });
+}
+
+function openSessionModal(day, period) {
+    document.getElementById('selectedDay').value = day;
+    document.getElementById('selectedPeriod').value = period;
+    document.getElementById('modalTitle').textContent = `تسكين الطلاب: ${day} - الحصة ${period}`;
+
+    const container = document.getElementById('studentsCheckList');
+    container.innerHTML = '';
+
+    const currentTeacher = JSON.parse(sessionStorage.getItem('currentUser')).user;
+    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    // جلب طلاب المعلم الحالي فقط
+    const myStudents = allUsers.filter(u => u.role === 'student' && u.teacherId === currentTeacher.id);
+
+    const scheduleData = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
+    const currentSession = scheduleData.find(s => s.day === day && s.period === period);
+    const selectedIds = currentSession ? currentSession.students : [];
+
+    if (myStudents.length === 0) {
+        container.innerHTML = '<p class="text-danger">لا يوجد طلاب مضافين لديك.</p>';
+        return;
+    }
+
+    myStudents.forEach(student => {
+        const isChecked = selectedIds.includes(student.id) ? 'checked' : '';
+        const item = document.createElement('label');
+        item.className = 'student-checkbox-item';
+        item.innerHTML = `
+            <input type="checkbox" value="${student.id}" ${isChecked}>
+            <span>${student.name}</span>
+            <span style="font-size:0.8rem; color:#777; margin-right:auto;">(${student.grade})</span>
+        `;
+        container.appendChild(item);
     });
 
-    scheduleBody.innerHTML = scheduleHTML;
+    document.getElementById('selectStudentsModal').classList.add('show');
 }
 
-function loadStudentsForSchedule() {
-    const studentsList = document.getElementById('studentsList');
-    if (!studentsList) return;
-
-    const students = JSON.parse(localStorage.getItem('students') || '[]');
-    const currentTeacher = getCurrentUser();
-    const teacherStudents = students.filter(s => s.teacherId === currentTeacher.id);
-
-    if (teacherStudents.length === 0) {
-        studentsList.innerHTML = '<p class="no-students">لا توجد طلاب مسجلين</p>';
-        return;
-    }
-
-    studentsList.innerHTML = teacherStudents.map(student => `
-        <div class="student-checkbox">
-            <input type="checkbox" id="student_${student.id}" value="${student.id}">
-            <label for="student_${student.id}">${student.name} - ${student.grade}</label>
-        </div>
-    `).join('');
-}
-
-function handleCellClick(day, period) {
-    document.getElementById('sessionDay').value = day;
-    document.getElementById('sessionPeriod').value = period;
-    showAddSessionModal();
-}
-
-function showAddSessionModal() {
-    document.getElementById('addSessionModal').classList.add('show');
-}
-
-function closeAddSessionModal() {
-    document.getElementById('addSessionModal').classList.remove('show');
-    document.getElementById('addSessionForm').reset();
-}
-
-function addSessionToSchedule() {
-    const day = document.getElementById('sessionDay').value;
-    const period = parseInt(document.getElementById('sessionPeriod').value);
-    const subject = document.getElementById('sessionSubject').value;
-
-    if (!day || !period || !subject) {
-        showAuthNotification('يرجى ملء جميع الحقول الإجبارية', 'error');
-        return;
-    }
-
-    // الحصول على الطلاب المحددين
-    const selectedStudents = [];
-    document.querySelectorAll('#studentsList input:checked').forEach(checkbox => {
-        selectedStudents.push(parseInt(checkbox.value));
-    });
-
-    if (selectedStudents.length === 0) {
-        showAuthNotification('يرجى اختيار طالب واحد على الأقل', 'error');
-        return;
-    }
-
-    const schedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
-    const currentTeacher = getCurrentUser();
-
-    // التحقق من عدم وجود حصة مكررة
-    const existingSession = schedule.find(s => 
-        s.teacherId === currentTeacher.id && s.day === day && s.period === period
-    );
-
-    if (existingSession) {
-        showAuthNotification('هناك حصة مضافة مسبقاً في هذا الوقت', 'warning');
-        return;
-    }
-
-    const newSession = {
-        id: generateId(),
-        teacherId: currentTeacher.id,
-        day: day,
-        period: period,
-        subject: subject,
-        students: selectedStudents,
-        createdAt: new Date().toISOString()
-    };
-
-    schedule.push(newSession);
-    localStorage.setItem('teacherSchedule', JSON.stringify(schedule));
-
-    showAuthNotification('تم إضافة الحصة بنجاح', 'success');
-    closeAddSessionModal();
-    loadStudySchedule();
-}
-
-function removeSession(event, sessionId) {
-    event.stopPropagation();
+function saveSessionStudents() {
+    const day = document.getElementById('selectedDay').value;
+    const period = parseInt(document.getElementById('selectedPeriod').value);
     
-    if (!confirm('هل أنت متأكد من حذف هذه الحصة؟')) {
-        return;
+    const checkboxes = document.querySelectorAll('#studentsCheckList input[type="checkbox"]:checked');
+    const selectedStudentIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+    let scheduleData = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
+    
+    // إزالة القديم
+    scheduleData = scheduleData.filter(s => !(s.day === day && s.period === period));
+
+    // إضافة الجديد إذا وجد طلاب
+    if (selectedStudentIds.length > 0) {
+        scheduleData.push({
+            day: day,
+            period: period,
+            students: selectedStudentIds
+        });
     }
 
-    const schedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
-    const updatedSchedule = schedule.filter(s => s.id !== sessionId);
-    localStorage.setItem('teacherSchedule', JSON.stringify(updatedSchedule));
-
-    showAuthNotification('تم حذف الحصة بنجاح', 'success');
-    loadStudySchedule();
+    localStorage.setItem('teacherSchedule', JSON.stringify(scheduleData));
+    closeModal('selectStudentsModal');
+    renderScheduleTable();
 }
 
-function clearSchedule() {
-    if (!confirm('هل أنت متأكد من تفريغ الجدول بالكامل؟ هذا الإجراء لا يمكن التراجع عنه.')) {
-        return;
-    }
-
-    const schedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
-    const currentTeacher = getCurrentUser();
-    const updatedSchedule = schedule.filter(s => s.teacherId !== currentTeacher.id);
-    localStorage.setItem('teacherSchedule', JSON.stringify(updatedSchedule));
-
-    showAuthNotification('تم تفريغ الجدول بنجاح', 'success');
-    loadStudySchedule();
+function closeModal(id) {
+    document.getElementById(id).classList.remove('show');
 }
-
-function saveSchedule() {
-    showAuthNotification('تم حفظ الجدول بنجاح', 'success');
-}
-
-function printSchedule() {
-    showAuthNotification('جاري تحضير الجدول للطباعة...', 'info');
-    setTimeout(() => {
-        window.print();
-    }, 1000);
-}
-
-// تصدير الدوال للاستخدام العالمي
-window.handleCellClick = handleCellClick;
-window.showAddSessionModal = showAddSessionModal;
-window.closeAddSessionModal = closeAddSessionModal;
-window.addSessionToSchedule = addSessionToSchedule;
-window.removeSession = removeSession;
-window.clearSchedule = clearSchedule;
-window.saveSchedule = saveSchedule;
-window.printSchedule = printSchedule;

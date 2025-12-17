@@ -3,41 +3,178 @@
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    if (document.getElementById('testsGrid')) loadContentLibrary();
+    // التحقق من وجود عناصر الصفحة قبل التحميل لتجنب الأخطاء
+    if (document.getElementById('testsGrid') || document.getElementById('lessonsGrid') || document.getElementById('objectivesList')) {
+        loadContentLibrary();
+    }
 });
 
 function loadContentLibrary() {
-    loadTests();
-    loadLessons();
-    loadObjectives();
+    // استخدام try-catch لكل دالة لضمان عمل البقية حتى لو فشلت واحدة
+    try { loadTests(); } catch(e) { console.error("Error loading tests:", e); }
+    try { loadLessons(); } catch(e) { console.error("Error loading lessons:", e); }
+    try { loadObjectives(); } catch(e) { console.error("Error loading objectives:", e); }
 }
 
-// ... (نفس دوال التحميل السابقة loadTests, loadLessons, etc. دون تغيير) ...
+// ==========================================
+// 1. إدارة الاختبارات
+// ==========================================
 function loadTests() {
     const testsGrid = document.getElementById('testsGrid');
     if (!testsGrid) return;
-    try {
-        const tests = JSON.parse(localStorage.getItem('tests') || '[]');
-        const currentTeacher = getCurrentUser();
-        const teacherTests = tests.filter(test => test.teacherId === currentTeacher.id);
 
-        if (teacherTests.length === 0) {
-            testsGrid.innerHTML = `<div class="empty-content-state" style="grid-column:1/-1;text-align:center;padding:30px;"><h3>لا توجد اختبارات</h3><button class="btn btn-success mt-3" onclick="showCreateTestModal()">+ إنشاء اختبار</button></div>`;
-            return;
-        }
-        testsGrid.innerHTML = teacherTests.map(test => `
-            <div class="content-card">
-                <div class="content-header"><h4 title="${test.title}">${test.title}</h4><span class="content-badge subject-${test.subject}">${test.subject}</span></div>
-                <div class="content-body"><div class="content-meta"><span class="questions-count">❓ ${test.questions?.length||0} أسئلة</span></div></div>
-                <div class="content-actions">
-                    <button class="btn btn-sm btn-warning" onclick="editTest(${test.id})"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteTest(${test.id})"><i class="fas fa-trash"></i></button>
-                </div>
-            </div>`).join('');
-    } catch (e) { console.error(e); }
+    const tests = JSON.parse(localStorage.getItem('tests') || '[]');
+    const currentTeacher = getCurrentUser();
+    const teacherTests = tests.filter(test => test.teacherId === currentTeacher.id);
+
+    if (teacherTests.length === 0) {
+        testsGrid.innerHTML = `<div class="empty-content-state" style="grid-column:1/-1;text-align:center;padding:30px;"><h3>لا توجد اختبارات</h3><button class="btn btn-success mt-3" onclick="showCreateTestModal()">+ إنشاء اختبار</button></div>`;
+        return;
+    }
+
+    testsGrid.innerHTML = teacherTests.map(test => `
+        <div class="content-card">
+            <div class="content-header"><h4 title="${test.title}">${test.title}</h4><span class="content-badge subject-${test.subject}">${test.subject}</span></div>
+            <div class="content-body"><div class="content-meta"><span class="questions-count">❓ ${test.questions?.length||0} أسئلة</span></div></div>
+            <div class="content-actions">
+                <button class="btn btn-sm btn-warning" onclick="editTest(${test.id})"><i class="fas fa-edit"></i></button>
+                <button class="btn btn-sm btn-danger" onclick="deleteTest(${test.id})"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>`).join('');
 }
 
-// --- إدارة الأسئلة ---
+// ==========================================
+// 2. إدارة الدروس (كانت مفقودة أو فارغة)
+// ==========================================
+function loadLessons() {
+    const lessonsGrid = document.getElementById('lessonsGrid');
+    if (!lessonsGrid) return;
+
+    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+    const currentTeacher = getCurrentUser();
+    // تصفية دروس المعلم
+    const teacherLessons = lessons.filter(l => l.teacherId === currentTeacher.id);
+
+    if (teacherLessons.length === 0) {
+        lessonsGrid.innerHTML = `<div class="empty-content-state" style="grid-column:1/-1;text-align:center;padding:20px;"><h3>لا توجد دروس</h3><button class="btn btn-success mt-2" onclick="showCreateLessonModal()">+ درس جديد</button></div>`;
+        return;
+    }
+
+    lessonsGrid.innerHTML = teacherLessons.map(lesson => `
+        <div class="content-card">
+            <div class="content-header">
+                <h4>${lesson.title}</h4>
+                <span class="content-badge subject-${lesson.subject}">${lesson.subject}</span>
+            </div>
+            <div class="content-actions">
+                <button class="btn btn-sm btn-danger" onclick="deleteLesson(${lesson.id})"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function showCreateLessonModal() {
+    document.getElementById('createLessonModal').classList.add('show');
+}
+
+function saveLesson() {
+    const title = document.getElementById('lessonTitle').value;
+    const subject = document.getElementById('lessonSubject').value;
+    
+    if(!title) { alert('العنوان مطلوب'); return; }
+
+    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+    lessons.push({
+        id: Date.now(),
+        teacherId: getCurrentUser().id,
+        title,
+        subject,
+        createdAt: new Date().toISOString()
+    });
+
+    localStorage.setItem('lessons', JSON.stringify(lessons));
+    document.getElementById('createLessonModal').classList.remove('show');
+    loadLessons(); // تحديث القائمة
+}
+
+function deleteLesson(id) {
+    if(!confirm('حذف الدرس؟')) return;
+    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+    const newLessons = lessons.filter(l => l.id !== id);
+    localStorage.setItem('lessons', JSON.stringify(newLessons));
+    loadLessons();
+}
+
+// ==========================================
+// 3. إدارة الأهداف (كانت مفقودة أو فارغة)
+// ==========================================
+function loadObjectives() {
+    const listContainer = document.getElementById('objectivesList');
+    if (!listContainer) return;
+
+    const objectives = JSON.parse(localStorage.getItem('objectives') || '[]');
+    const currentTeacher = getCurrentUser();
+    const teacherObjectives = objectives.filter(o => o.teacherId === currentTeacher.id);
+
+    if (teacherObjectives.length === 0) {
+        listContainer.innerHTML = `<div class="text-center p-3">لا توجد أهداف مضافة. <button class="btn btn-sm btn-success" onclick="showCreateObjectiveModal()">+ إضافة</button></div>`;
+        return;
+    }
+
+    listContainer.innerHTML = teacherObjectives.map(obj => `
+        <div class="objective-item card p-2 mb-2" style="border-right: 4px solid var(--primary-color);">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <strong>${obj.shortTermGoal}</strong>
+                    <br><small class="text-muted">${obj.subject}</small>
+                </div>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteObjective(${obj.id})">×</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function showCreateObjectiveModal() {
+    document.getElementById('createObjectiveModal').classList.add('show');
+}
+
+function saveObjective() {
+    const subject = document.getElementById('objSubject').value;
+    const shortTerm = document.getElementById('shortTermGoal').value;
+    
+    // جمع الأهداف التدريسية
+    const instructionalGoals = [];
+    document.querySelectorAll('.instructional-goal-input').forEach(input => {
+        if(input.value) instructionalGoals.push(input.value);
+    });
+
+    if(!shortTerm) { alert('الهدف مطلوب'); return; }
+
+    const objectives = JSON.parse(localStorage.getItem('objectives') || '[]');
+    objectives.push({
+        id: Date.now(),
+        teacherId: getCurrentUser().id,
+        subject,
+        shortTermGoal: shortTerm,
+        instructionalGoals,
+        createdAt: new Date().toISOString()
+    });
+
+    localStorage.setItem('objectives', JSON.stringify(objectives));
+    document.getElementById('createObjectiveModal').classList.remove('show');
+    loadObjectives(); // تحديث القائمة
+}
+
+function deleteObjective(id) {
+    if(!confirm('حذف الهدف؟')) return;
+    const objectives = JSON.parse(localStorage.getItem('objectives') || '[]');
+    localStorage.setItem('objectives', JSON.stringify(objectives.filter(o => o.id !== id)));
+    loadObjectives();
+}
+
+// ==========================================
+// دوال الاختبارات (Create, Edit, Inputs)
+// ==========================================
 function showCreateTestModal() {
     document.getElementById('editTestId').value = ''; 
     document.getElementById('createTestForm').reset();
@@ -99,7 +236,6 @@ function renderQuestionInputs(selectElement, index, data = null) {
                 <label>الخيارات</label>${choices.map((c, i) => `<input type="text" class="form-control mb-1 q-choice" value="${c}" placeholder="الخيار ${i+1}">`).join('')}`;
     } 
     else if (type === 'drag-drop') {
-        // تحديث واجهة السحب والإفلات للمعلم
         html = `
             <div class="form-group mb-2">
                 <label>نص الجملة (ضع الإجابات بين قوسين {})</label>
@@ -174,7 +310,14 @@ function editTest(id) {
     t.questions.forEach(q => addQuestionToContainer(document.getElementById('questionsContainer'), 'سؤال', q));
     document.getElementById('createTestModal').classList.add('show');
 }
-function deleteTest(id) { if(confirm('حذف؟')) { const t = JSON.parse(localStorage.getItem('tests')).filter(x => x.id !== id); localStorage.setItem('tests', JSON.stringify(t)); loadTests(); } }
+
+function deleteTest(id) {
+    if(confirm('حذف؟')) {
+        const t = JSON.parse(localStorage.getItem('tests')).filter(x => x.id !== id);
+        localStorage.setItem('tests', JSON.stringify(t));
+        loadTests();
+    }
+}
+
+// أدوات عامة
 function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser')).user; }
-// ... (بقية دوال التحميل المساعدة loadLessons etc.)
-function loadLessons(){} function loadObjectives(){}

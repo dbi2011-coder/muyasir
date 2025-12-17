@@ -10,6 +10,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* === إصلاح القائمة الجانبية (هام جداً) === */
+        .sidebar {
+            min-width: 260px !important; /* عرض ثابت لا يقل عنه */
+            width: 260px !important;
+            flex-shrink: 0 !important;   /* منع التقلص نهائياً */
+            /* بقية التنسيقات موجودة في ملفات CSS الخارجية */
+        }
+        
         /* أنماط خطوات الدرس */
         .lesson-steps-nav { display: flex; border-bottom: 2px solid #eee; margin-bottom: 20px; }
         .step-tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; background: #f9f9f9; border: 1px solid #eee; font-weight: bold; color: #777; }
@@ -31,20 +39,30 @@
 <body>
     <div class="dashboard-container">
         <aside class="sidebar">
-            <div class="sidebar-header"><div class="logo"><img src="../../assets/images/logo.png" alt="شعار"><h2>ميسر التعلم</h2></div></div>
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="../../assets/images/logo.png" alt="شعار">
+                    <h2>ميسر التعلم</h2>
+                </div>
+            </div>
             <ul class="sidebar-menu">
                 <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
                 <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
                 <li><a href="content-library.html" class="active"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
-                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>خروج</a></li>
+                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
+                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
+                <li><a href="reports.html"><span class="menu-icon">📝</span>التقارير</a></li>
+                <li><a href="committee.html"><span class="menu-icon">🤝</span>لجنة الصعوبات</a></li>
+                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
             </ul>
         </aside>
 
         <main class="main-content-dashboard">
             <header class="dashboard-header">
                 <button class="mobile-menu-btn">☰</button>
-                <div class="user-info"><div class="welcome-text">مكتبة المحتوى</div><div class="user-name" id="userName">أ/ المعلم</div></div>
+                <div class="user-info">
+                    <div class="user-welcome"><div class="welcome-text">مكتبة المحتوى</div><div class="user-name" id="userName">أ/ المعلم</div></div>
+                </div>
             </header>
 
             <div class="dashboard-content">

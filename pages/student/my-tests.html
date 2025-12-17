@@ -1,121 +1,62 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>اختباراتي</title>
-    <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/student.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <style>
-        .modal { z-index: 99999 !important; }
-        #testFocusMode { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 999999; flex-direction: column; }
-        
-        /* تنسيق الشبكة الموحدة */
-        .tests-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-        }
+/* تنسيقات السحب والإفلات */
+.word-bank {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 15px;
+    background: #f1f8e9; /* خلفية خضراء فاتحة */
+    border: 2px dashed #8bc34a;
+    border-radius: 10px;
+    min-height: 60px;
+    margin-bottom: 25px;
+    justify-content: center;
+}
 
-        /* أنماط البطاقات والحالات */
-        .test-card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); transition: 0.3s; border: 1px solid #eee; position: relative; overflow: hidden; }
-        .test-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        
-        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; }
-        .card-title { font-size: 1.1rem; font-weight: bold; color: var(--secondary-color); margin: 0; }
-        
-        .card-status { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
-        .status-new { background: #e3f2fd; color: #1976d2; }
-        .status-progress { background: #fff3e0; color: #f57c00; }
-        .status-returned { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
-        .status-completed { background: #e8f5e9; color: #388e3c; }
+.draggable-word {
+    background: #fff;
+    border: 1px solid #ccc;
+    padding: 5px 15px;
+    border-radius: 20px;
+    cursor: grab;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    font-weight: bold;
+    user-select: none;
+    transition: 0.2s;
+}
 
-        .card-meta { font-size: 0.9rem; color: #666; margin-bottom: 20px; }
-        .meta-item { display: flex; justify-content: space-between; margin-bottom: 5px; }
-        
-        /* أنماط وضع التركيز */
-        .focus-footer { padding: 20px; border-top: 1px solid #eee; background: #f9f9f9; display: flex; justify-content: space-between; align-items: center; }
-        .btn-nav { min-width: 120px; padding: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; border: none; font-family: 'Tajawal'; font-size: 1.1rem; }
-        .btn-prev { background: #e0e0e0; color: #333; }
-        .btn-next { background: var(--primary-color); color: white; }
-        .btn-save { background: #f39c12; color: white; }
-        .btn-submit { background: #27ae60; color: white; }
-        
-        .question-card { display: none; animation: fadeIn 0.3s ease; }
-        .question-card.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .drawing-canvas { border: 2px dashed #ccc; cursor: crosshair; background: #fff; display: block; margin: 10px auto; touch-action: none; }
-        .answer-option { display: block; padding: 15px; border: 2px solid #eee; margin-bottom: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
-        .answer-option.selected { border-color: var(--primary-color); background: #e3f2fd; }
-    </style>
-</head>
-<body>
-    <div class="dashboard-container">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار">
-                    <h2>ميسر التعلم</h2>
-                </div>
-            </div>
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="menu-icon">🏠</span>الرئيسية</a></li>
-                <li><a href="my-tests.html" class="active"><span class="menu-icon">📝</span>اختباراتي</a></li>
-                <li><a href="my-iep.html"><span class="menu-icon">📊</span>خطتي التربوية</a></li>
-                <li><a href="my-lessons.html"><span class="menu-icon">📚</span>دروسي</a></li>
-                <li><a href="my-assignments.html"><span class="menu-icon">📋</span>واجباتي</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>خروج</a></li>
-            </ul>
-        </aside>
+.draggable-word:active {
+    cursor: grabbing;
+    transform: scale(1.1);
+}
 
-        <main class="main-content-dashboard">
-            <header class="dashboard-header">
-                <button class="mobile-menu-btn">☰</button>
-                <div class="user-info">
-                    <div class="user-welcome">
-                        <div class="welcome-text">اختباراتي</div>
-                        <div class="user-name" id="userName">الطالب</div>
-                    </div>
-                </div>
-            </header>
+.selected-word { /* عند النقر (للموبايل) */
+    background: #ffeb3b;
+    border-color: #fbc02d;
+    transform: scale(1.1);
+    box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
+}
 
-            <div class="dashboard-content">
-                <div id="allTestsList" class="tests-grid">
-                    </div>
-            </div>
-        </main>
-    </div>
+.sentence-area {
+    line-height: 2.8 !important; /* مسافة بين الأسطر لتناسب الفراغات */
+    font-size: 1.3rem;
+    text-align: right;
+    color: #333;
+}
 
-    <div id="testFocusMode">
-        <div class="focus-header" style="padding: 15px; border-bottom: 1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-            <div>
-                <h2 id="focusTestTitle" style="margin:0; font-size:1.2rem;">الاختبار</h2>
-                <small id="questionCounter" style="color:#777;">سؤال 1 من 5</small>
-            </div>
-            <button class="btn btn-sm btn-outline-secondary" onclick="saveTestProgress()">خروج مؤقت</button>
-        </div>
-        
-        <div class="focus-body" style="flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; align-items: center;">
-            <div id="testStartScreen" style="text-align: center; padding: 50px;">
-                <h1>جاهز؟</h1>
-                <p>ركز جيداً، يمكنك التنقل بين الأسئلة.</p>
-                <button class="btn btn-success btn-large" onclick="startActualTest()">ابدأ الاختبار</button>
-            </div>
-            
-            <div id="testQuestionsContainer" style="width: 100%; max-width: 800px; display: none;"></div>
-        </div>
-        
-        <div class="focus-footer" id="testFooterControls" style="display: none;">
-            </div>
-    </div>
+.drop-zone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 100px;
+    height: 40px;
+    background: #fff;
+    border-bottom: 2px solid #333;
+    margin: 0 5px;
+    vertical-align: middle;
+    color: var(--primary-color);
+    font-weight: bold;
+}
 
-    <script src="../../assets/js/dashboard.js"></script>
-    <script src="../../assets/js/student.js"></script>
-    <script src="../../assets/js/student-tests.js"></script>
-    <script src="../../assets/js/auth.js"></script>
-</body>
-</html>
+.drop-zone:empty {
+    background: #f9f9f9;
+}

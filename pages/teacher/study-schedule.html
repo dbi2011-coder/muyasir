@@ -14,25 +14,47 @@
         .schedule-table th, .schedule-table td { border: 1px solid #e0e0e0; padding: 10px; text-align: center; vertical-align: middle; }
         .schedule-table th { background-color: #f8f9fa; color: var(--secondary-color); font-weight: bold; height: 50px; }
         
-        /* تنسيق العمود الأول (الأيام) */
-        .schedule-table td:first-child {
-            background-color: #e8f5e9; /* لون مميز للأيام */
-            font-weight: bold;
-            color: #1b5e20;
-            width: 120px;
-        }
-
-        .schedule-cell { cursor: pointer; height: 70px; font-size: 0.9rem; transition: 0.2s; }
+        .schedule-table td:first-child { background-color: #e8f5e9; font-weight: bold; color: #1b5e20; width: 120px; }
+        .schedule-cell { cursor: pointer; height: 70px; font-size: 0.9rem; transition: 0.2s; position: relative; }
         .schedule-cell:hover { background-color: #e3f2fd; border-color: #2196f3; }
         .schedule-cell.filled { background-color: #fff3e0; }
-
+        
         .student-chip { display: inline-block; background: #fff; border: 1px solid #ccc; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem; margin: 2px; }
 
-        /* المودال */
         .students-selection-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 300px; overflow-y: auto; padding: 10px; border: 1px solid #eee; }
         .student-checkbox-item { display: flex; align-items: center; padding: 8px; background: #f9f9f9; border-radius: 5px; cursor: pointer; }
-        .student-checkbox-item:hover { background: #eee; }
         .student-checkbox-item input { margin-left: 10px; transform: scale(1.2); }
+
+        /* ========================================= */
+        /* 🖨️ تنسيقات الطباعة (هام جداً) */
+        /* ========================================= */
+        @media print {
+            @page { size: landscape; margin: 1cm; } /* الطباعة بالعرض */
+            
+            body { background: white; -webkit-print-color-adjust: exact; }
+            
+            /* إخفاء العناصر غير الضرورية */
+            .sidebar, .dashboard-header, .mobile-menu-btn, .btn, .modal { display: none !important; }
+            
+            /* ضبط المحتوى */
+            .dashboard-container { display: block; width: 100%; height: auto; grid-template-columns: 1fr; }
+            .main-content-dashboard { width: 100%; padding: 0; margin: 0; background: white; }
+            .dashboard-content { padding: 0; }
+            
+            /* تحسين الجدول للورق */
+            .schedule-container { box-shadow: none; padding: 0; border: none; }
+            .schedule-table th, .schedule-table td { border: 2px solid #000 !important; color: #000; }
+            .schedule-cell { height: auto; min-height: 60px; }
+            
+            /* إزالة علامة (+) عند الطباعة للخلايا الفارغة */
+            .schedule-cell:not(.filled) span { display: none; }
+            
+            /* تحسين مظهر أسماء الطلاب */
+            .student-chip { border: 1px solid #000; color: #000; background: #fff; padding: 2px 5px; }
+
+            /* عنوان الطباعة */
+            .content-header h1::after { content: " (جدول توزيع الطلاب)"; font-size: 0.8em; }
+        }
     </style>
 </head>
 <body>
@@ -59,11 +81,16 @@
             </header>
 
             <div class="dashboard-content">
+                <div class="content-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <h1>توزيع حصص الطلاب</h1>
+                    <button class="btn btn-secondary" onclick="window.print()">🖨️ طباعة الجدول</button>
+                </div>
+
                 <div class="schedule-container">
                     <table class="schedule-table">
                         <thead>
                             <tr>
-                                <th>الأيام</th> 
+                                <th>اليوم / الحصة</th>
                                 <th>الحصة 1</th>
                                 <th>الحصة 2</th>
                                 <th>الحصة 3</th>
@@ -73,8 +100,7 @@
                                 <th>الحصة 7</th>
                             </tr>
                         </thead>
-                        <tbody id="scheduleBody">
-                            </tbody>
+                        <tbody id="scheduleBody"></tbody>
                     </table>
                 </div>
             </div>
@@ -91,7 +117,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('selectStudentsModal')">إلغاء</button>
-                <button class="btn btn-success" onclick="saveSessionStudents()">حفظ التعديلات</button>
+                <button class="btn btn-success" onclick="saveSessionStudents()">حفظ</button>
             </div>
         </div>
     </div>

@@ -18,8 +18,15 @@
         .step-content.active { display: block; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        .section-divider { border-top: 2px dashed #ccc; margin: 20px 0; position: relative; text-align: center; }
-        .section-divider span { background: #fff; padding: 0 10px; position: relative; top: -13px; color: #777; font-weight: bold; }
+        /* تنسيق الأهداف الجديد */
+        .objective-sub-goals {
+            margin-top: 10px;
+            padding-right: 20px;
+            border-right: 2px solid #eee;
+            font-size: 0.9rem;
+            color: #555;
+        }
+        .objective-sub-goals li { margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -50,7 +57,7 @@
                             <div class="dropdown-menu" id="contentDropdownMenu">
                                 <a class="dropdown-item" href="#" onclick="showCreateTestModal()">اختبار تشخيصي</a>
                                 <a class="dropdown-item" href="#" onclick="showCreateLessonModal()">درس تفاعلي</a>
-                                <a class="dropdown-item" href="#" onclick="showCreateObjectiveModal()">هدف قصير المدى</a>
+                                <a class="dropdown-item" href="#" onclick="showCreateObjectiveModal()">هدف تعليمي</a>
                             </div>
                         </div>
                     </div>
@@ -67,7 +74,7 @@
                     </div>
                     <div class="library-section">
                         <div class="section-header"><h2>الأهداف</h2></div>
-                        <div class="objectives-list" id="objectivesList"></div>
+                        <div class="content-grid" id="objectivesList" style="grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));"></div>
                     </div>
                 </div>
             </div>
@@ -76,59 +83,32 @@
 
     <div id="createLessonModal" class="modal">
         <div class="modal-content large" style="min-width: 800px;">
-            <div class="modal-header">
-                <h3>إنشاء درس تفاعلي</h3>
-                <button class="modal-close" onclick="closeModal('createLessonModal')">×</button>
-            </div>
+            <div class="modal-header"><h3>إنشاء درس تفاعلي</h3><button class="modal-close" onclick="closeModal('createLessonModal')">×</button></div>
             <div class="modal-body">
                 <input type="hidden" id="editLessonId">
-                
                 <div class="row mb-3" style="display:flex; gap:10px;">
                     <div style="flex:2"><input type="text" id="lessonTitle" class="form-control" placeholder="عنوان الدرس" required></div>
                     <div style="flex:1"><select id="lessonSubject" class="form-control"><option value="لغتي">لغتي</option><option value="رياضيات">رياضيات</option></select></div>
                 </div>
-
                 <div class="lesson-steps-nav">
                     <div class="step-tab active" onclick="switchLessonStep('intro')" id="tab-intro">1. التمهيد</div>
                     <div class="step-tab" onclick="switchLessonStep('exercises')" id="tab-exercises">2. التمارين</div>
                     <div class="step-tab" onclick="switchLessonStep('assessment')" id="tab-assessment">3. التقييم</div>
                 </div>
-
                 <div id="step-intro" class="step-content active">
-                    <div class="form-group">
-                        <label>نوع التمهيد</label>
-                        <select id="introType" class="form-control" onchange="toggleIntroInputs()">
-                            <option value="video">فيديو (يوتيوب)</option>
-                            <option value="image">صورة توضيحية</option>
-                            <option value="link">رابط خارجي</option>
-                        </select>
-                    </div>
-                    <div class="form-group mt-2">
-                        <label>الرابط / العنوان</label>
-                        <input type="text" id="introUrl" class="form-control" placeholder="ضع رابط الفيديو أو الصورة هنا">
-                    </div>
-                    <div class="form-group mt-2">
-                        <label>وصف نصي للتمهيد (اختياري)</label>
-                        <textarea id="introText" class="form-control" rows="3"></textarea>
-                    </div>
+                    <div class="form-group"><label>نوع التمهيد</label><select id="introType" class="form-control" onchange="toggleIntroInputs()"><option value="video">فيديو (يوتيوب)</option><option value="image">صورة توضيحية</option><option value="link">رابط خارجي</option></select></div>
+                    <div class="form-group mt-2"><label>الرابط</label><input type="text" id="introUrl" class="form-control"></div>
+                    <div class="form-group mt-2"><label>وصف</label><textarea id="introText" class="form-control" rows="3"></textarea></div>
                 </div>
-
                 <div id="step-exercises" class="step-content">
-                    <div class="alert alert-info">هذه الأسئلة لتدريب الطالب. يجب عليه اجتياز نسبة محددة للانتقال للتقييم.</div>
-                    <div class="form-group mb-3">
-                        <label>نسبة الاجتياز المطلوبة (%)</label>
-                        <input type="number" id="exercisesPassScore" class="form-control" value="80" min="1" max="100" style="width: 100px;">
-                    </div>
+                    <div class="form-group mb-3"><label>نسبة الاجتياز (%)</label><input type="number" id="exercisesPassScore" class="form-control" value="80" style="width: 100px;"></div>
                     <div id="exercisesContainer"></div>
-                    <button class="btn btn-primary btn-sm mt-2" onclick="addLessonQuestion('exercisesContainer')">+ إضافة سؤال تمرين</button>
+                    <button class="btn btn-primary btn-sm mt-2" onclick="addLessonQuestion('exercisesContainer')">+ تمرين</button>
                 </div>
-
                 <div id="step-assessment" class="step-content">
-                    <div class="alert alert-warning">هذه الأسئلة هي التقييم النهائي للدرس.</div>
                     <div id="assessmentContainer"></div>
-                    <button class="btn btn-primary btn-sm mt-2" onclick="addLessonQuestion('assessmentContainer')">+ إضافة سؤال تقييم</button>
+                    <button class="btn btn-primary btn-sm mt-2" onclick="addLessonQuestion('assessmentContainer')">+ سؤال تقييم</button>
                 </div>
-
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('createLessonModal')">إلغاء</button>
@@ -152,7 +132,34 @@
         </div>
     </div>
     
-    <div id="createObjectiveModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>هدف</h3><button class="modal-close" onclick="closeModal('createObjectiveModal')">×</button></div><div class="modal-body"><input id="shortTermGoal" class="form-control"><input type="hidden" id="objSubject" value="لغتي"></div><div class="modal-footer"><button class="btn btn-success" onclick="saveObjective()">حفظ</button></div></div></div>
+    <div id="createObjectiveModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إضافة هدف تعليمي</h3>
+                <button class="modal-close" onclick="closeModal('createObjectiveModal')">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group mb-2">
+                    <label>المادة</label>
+                    <select id="objSubject" class="form-control"><option value="لغتي">لغتي</option><option value="رياضيات">رياضيات</option></select>
+                </div>
+                <div class="form-group mb-3">
+                    <label>الهدف قصير المدى (الرئيسي)</label>
+                    <input type="text" id="shortTermGoal" class="form-control" placeholder="مثال: إتقان قراءة الكلمات الثلاثية">
+                </div>
+                
+                <div class="form-group">
+                    <label>الأهداف التدريسية المتفرعة</label>
+                    <div id="instructionalGoalsContainer">
+                        </div>
+                    <button class="btn btn-sm btn-outline-primary mt-2" onclick="addInstructionalGoalInput()">+ إضافة هدف تدريسي</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-success" onclick="saveObjective()">حفظ الهدف</button>
+            </div>
+        </div>
+    </div>
 
     <script src="../../assets/js/dashboard.js"></script>
     <script src="../../assets/js/teacher.js"></script>
@@ -161,7 +168,6 @@
     <script>
         function toggleDropdown() { document.getElementById('contentDropdownMenu').classList.toggle('show'); }
         function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-        // تبديل خطوات الدرس
         function switchLessonStep(step) {
             document.querySelectorAll('.step-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.step-content').forEach(c => c.classList.remove('active'));

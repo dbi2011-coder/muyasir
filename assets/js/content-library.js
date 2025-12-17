@@ -9,11 +9,11 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function loadContentLibrary() {
-    // 1. الاختبارات
+    // 1. الاختبارات التشخيصية
     try { loadTests(); } catch(e) {}
-    // 2. الدروس
+    // 2. الدروس التفاعلية
     try { loadLessons(); } catch(e) {}
-    // 3. الأهداف
+    // 3. الأهداف قصيرة المدى
     try { loadObjectives(); } catch(e) {}
     // 4. الواجبات
     try { loadHomeworks(); } catch(e) {}
@@ -75,7 +75,6 @@ function loadHomeworks() {
 }
 
 // --- دوال إدارة المودالات والحفظ ---
-
 // دوال الواجبات
 function showCreateHomeworkModal() { document.getElementById('editHomeworkId').value=''; document.getElementById('homeworkTitle').value=''; document.getElementById('homeworkDescription').value=''; document.getElementById('homeworkQuestionsContainer').innerHTML=''; addHomeworkQuestion(); document.getElementById('createHomeworkModal').classList.add('show'); }
 function addHomeworkQuestion() { addQuestionToContainer(document.getElementById('homeworkQuestionsContainer'), 'سؤال'); }
@@ -113,7 +112,7 @@ function saveLesson() { const id=document.getElementById('editLessonId').value; 
 function deleteLesson(id) { if(confirm('حذف؟')){const l=JSON.parse(localStorage.getItem('lessons')).filter(x=>x.id!==id); localStorage.setItem('lessons',JSON.stringify(l)); loadLessons();} }
 function toggleIntroInputs() { const t=document.getElementById('introType').value; const u=document.getElementById('introUrl'); u.placeholder=t==='video'?'رابط يوتيوب':(t==='image'?'رابط الصورة':'رابط'); }
 
-// دوال الاختبارات والأسئلة (مشتركة)
+// دوال الاختبارات والأسئلة
 function showCreateTestModal() { document.getElementById('editTestId').value=''; document.getElementById('createTestForm').reset(); document.getElementById('questionsContainer').innerHTML=''; addQuestion(); document.getElementById('createTestModal').classList.add('show'); }
 function saveTest() { const t=document.getElementById('testTitle').value; if(!t)return; const qs=collectQuestionsFromContainer('questionsContainer'); const ts=JSON.parse(localStorage.getItem('tests')||'[]'); const id=document.getElementById('editTestId').value; const d={id:id?parseInt(id):Date.now(), teacherId:getCurrentUser().id, title:t, subject:document.getElementById('testSubject').value, description:document.getElementById('testDescription').value, questions:qs, createdAt:new Date().toISOString()}; if(id){const i=ts.findIndex(x=>x.id==id); if(i!==-1)ts[i]=d;}else ts.push(d); localStorage.setItem('tests',JSON.stringify(ts)); document.getElementById('createTestModal').classList.remove('show'); loadTests(); }
 function editTest(id) { const t=JSON.parse(localStorage.getItem('tests')).find(x=>x.id===id); if(!t)return; document.getElementById('editTestId').value=t.id; document.getElementById('testTitle').value=t.title; document.getElementById('testSubject').value=t.subject; document.getElementById('testDescription').value=t.description; const c=document.getElementById('questionsContainer'); c.innerHTML=''; t.questions.forEach(q=>addQuestionToContainer(c,'سؤال',q)); document.getElementById('createTestModal').classList.add('show'); }

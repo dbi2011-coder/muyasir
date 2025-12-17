@@ -16,14 +16,14 @@ function renderScheduleTable() {
     const scheduleData = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     const users = JSON.parse(localStorage.getItem('users') || '[]');
 
-    // الحلقة الخارجية: الأيام (الصفوف)
+    // الحلقة الخارجية للأيام (لإنشاء الصفوف)
     DAYS.forEach(day => {
         const row = document.createElement('tr');
         
-        // الخلية الأولى: اسم اليوم
+        // 1. الخلية الأولى في الصف: اسم اليوم
         let html = `<td>${day}</td>`;
         
-        // الحلقة الداخلية: الحصص (الأعمدة)
+        // 2. الخلايا التالية: الحصص
         PERIODS.forEach(period => {
             const sessionData = scheduleData.find(s => s.day === day && s.period === period);
             let cellContent = '<span style="color:#eee; font-size:1.5rem;">+</span>';
@@ -32,10 +32,10 @@ function renderScheduleTable() {
             if (sessionData && sessionData.students && sessionData.students.length > 0) {
                 const studentNames = sessionData.students.map(sid => {
                     const st = users.find(u => u.id === sid);
-                    return st ? st.name.split(' ')[0] : '?';
+                    return st ? st.name.split(' ')[0] : '؟';
                 });
                 
-                // عرض الأسماء
+                // تنسيق عرض الأسماء
                 if(studentNames.length > 2) {
                     cellContent = `<span class="student-chip">${studentNames[0]}</span><span class="student-chip">${studentNames[1]}</span><span class="student-chip" title="${studentNames.slice(2).join(', ')}">+${studentNames.length-2}</span>`;
                 } else {
@@ -59,13 +59,14 @@ function renderScheduleTable() {
 function openSessionModal(day, period) {
     document.getElementById('selectedDay').value = day;
     document.getElementById('selectedPeriod').value = period;
-    document.getElementById('modalTitle').textContent = `تسكين الطلاب: ${day} - الحصة ${period}`;
+    document.getElementById('modalSessionInfo').textContent = `تسكين الطلاب في يوم ${day} - الحصة ${period}`;
 
     const container = document.getElementById('studentsCheckList');
     container.innerHTML = '';
 
     const currentTeacher = JSON.parse(sessionStorage.getItem('currentUser')).user;
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    // فلترة طلاب المعلم الحالي فقط
     const myStudents = allUsers.filter(u => u.role === 'student' && u.teacherId === currentTeacher.id);
 
     const scheduleData = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
@@ -73,20 +74,20 @@ function openSessionModal(day, period) {
     const selectedIds = currentSession ? currentSession.students : [];
 
     if (myStudents.length === 0) {
-        container.innerHTML = '<p class="text-danger">لا يوجد طلاب مضافين لديك.</p>';
+        container.innerHTML = '<p class="text-danger">لا يوجد طلاب مسجلين لديك.</p>';
         return;
     }
 
     myStudents.forEach(student => {
         const isChecked = selectedIds.includes(student.id) ? 'checked' : '';
-        const item = document.createElement('label');
-        item.className = 'student-checkbox-item';
-        item.innerHTML = `
+        const label = document.createElement('label');
+        label.className = 'student-checkbox-item';
+        label.innerHTML = `
             <input type="checkbox" value="${student.id}" ${isChecked}>
             <span>${student.name}</span>
             <span style="font-size:0.8rem; color:#777; margin-right:auto;">(${student.grade})</span>
         `;
-        container.appendChild(item);
+        container.appendChild(label);
     });
 
     document.getElementById('selectStudentsModal').classList.add('show');
@@ -101,16 +102,12 @@ function saveSessionStudents() {
 
     let scheduleData = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     
-    // إزالة السجل القديم لهذه الخلية
+    // إزالة البيانات القديمة لهذه الخلية
     scheduleData = scheduleData.filter(s => !(s.day === day && s.period === period));
 
-    // إضافة الجديد
+    // إضافة البيانات الجديدة
     if (selectedStudentIds.length > 0) {
-        scheduleData.push({
-            day: day,
-            period: period,
-            students: selectedStudentIds
-        });
+        scheduleData.push({ day, period, students: selectedStudentIds });
     }
 
     localStorage.setItem('teacherSchedule', JSON.stringify(scheduleData));

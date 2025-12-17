@@ -3,51 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>مكتبة المحتوى - ميسر التعلم</title>
+    <title>مكتبة المحتوى</title>
     <link rel="stylesheet" href="../../assets/css/main.css">
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../assets/css/teacher.css">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .linking-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-        .linking-table th, .linking-table td { padding: 10px; border: 1px solid #eee; text-align: right; }
-        .linking-table th { background: #f9f9f9; color: var(--secondary-color); font-weight: bold; }
+        /* أنماط خاصة لمعالج إنشاء الدرس */
+        .lesson-steps-nav { display: flex; border-bottom: 2px solid #eee; margin-bottom: 20px; }
+        .step-tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; background: #f9f9f9; border: 1px solid #eee; font-weight: bold; color: #777; }
+        .step-tab.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+        .step-content { display: none; }
+        .step-content.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        /* أنماط خاصة لإدخال الأسئلة المتقدمة */
-        .advanced-input-area { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px dashed #ccc; margin-top: 10px; }
-        .media-preview { max-width: 100%; height: auto; margin-top: 10px; border-radius: 5px; display: none; }
+        .section-divider { border-top: 2px dashed #ccc; margin: 20px 0; position: relative; text-align: center; }
+        .section-divider span { background: #fff; padding: 0 10px; position: relative; top: -13px; color: #777; font-weight: bold; }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
-                    <h2>ميسر التعلم</h2>
-                </div>
-            </div>
-            
+            <div class="sidebar-header"><div class="logo"><img src="../../assets/images/logo.png" alt="شعار"><h2>ميسر التعلم</h2></div></div>
             <ul class="sidebar-menu">
                 <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
                 <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
                 <li><a href="content-library.html" class="active"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
-                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
-                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
+                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول</a></li>
+                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>خروج</a></li>
             </ul>
         </aside>
 
         <main class="main-content-dashboard">
             <header class="dashboard-header">
                 <button class="mobile-menu-btn">☰</button>
-                <div class="user-info">
-                    <div class="user-welcome">
-                        <div class="welcome-text">مكتبة المحتوى</div>
-                        <div class="user-name" id="userName">أ/ المعلم</div>
-                    </div>
-                </div>
+                <div class="user-info"><div class="welcome-text">مكتبة المحتوى</div><div class="user-name" id="userName">أ/ المعلم</div></div>
             </header>
 
             <div class="dashboard-content">
@@ -55,12 +46,10 @@
                     <h1>مكتبة المحتوى التعليمي</h1>
                     <div class="header-actions">
                         <div class="dropdown">
-                            <button class="btn btn-success dropdown-toggle" type="button" onclick="toggleDropdown()">
-                                + إضافة محتوى جديد
-                            </button>
+                            <button class="btn btn-success dropdown-toggle" onclick="toggleDropdown()">+ إضافة محتوى</button>
                             <div class="dropdown-menu" id="contentDropdownMenu">
                                 <a class="dropdown-item" href="#" onclick="showCreateTestModal()">اختبار تشخيصي</a>
-                                <a class="dropdown-item" href="#" onclick="showCreateLessonModal()">درس جديد</a>
+                                <a class="dropdown-item" href="#" onclick="showCreateLessonModal()">درس تفاعلي</a>
                                 <a class="dropdown-item" href="#" onclick="showCreateObjectiveModal()">هدف قصير المدى</a>
                             </div>
                         </div>
@@ -69,15 +58,15 @@
 
                 <div class="library-sections">
                     <div class="library-section">
-                        <div class="section-header"><h2>الاختبارات التشخيصية</h2></div>
+                        <div class="section-header"><h2>الاختبارات</h2></div>
                         <div class="content-grid" id="testsGrid"></div>
                     </div>
                     <div class="library-section">
-                        <div class="section-header"><h2>الدروس</h2></div>
+                        <div class="section-header"><h2>الدروس التفاعلية</h2></div>
                         <div class="content-grid" id="lessonsGrid"></div>
                     </div>
                     <div class="library-section">
-                        <div class="section-header"><h2>الأهداف قصيرة المدى</h2></div>
+                        <div class="section-header"><h2>الأهداف</h2></div>
                         <div class="objectives-list" id="objectivesList"></div>
                     </div>
                 </div>
@@ -85,64 +74,85 @@
         </main>
     </div>
 
-    <div id="createTestModal" class="modal">
-        <div class="modal-content large">
+    <div id="createLessonModal" class="modal">
+        <div class="modal-content large" style="min-width: 800px;">
             <div class="modal-header">
-                <h3 id="testModalTitle">إنشاء/تعديل اختبار</h3>
-                <button class="modal-close" onclick="closeCreateTestModal()">&times;</button>
+                <h3>إنشاء درس تفاعلي</h3>
+                <button class="modal-close" onclick="closeModal('createLessonModal')">×</button>
             </div>
             <div class="modal-body">
-                <form id="createTestForm">
-                    <input type="hidden" id="editTestId">
-                    <div class="row" style="display: flex; gap: 15px;">
-                        <div class="form-group" style="flex: 2;">
-                            <label>عنوان الاختبار *</label>
-                            <input type="text" id="testTitle" class="form-control" required>
-                        </div>
-                        <div class="form-group" style="flex: 1;">
-                            <label>المادة *</label>
-                            <select id="testSubject" class="form-control">
-                                <option value="لغتي">لغتي</option>
-                                <option value="رياضيات">رياضيات</option>
-                            </select>
-                        </div>
-                    </div>
+                <input type="hidden" id="editLessonId">
+                
+                <div class="row mb-3" style="display:flex; gap:10px;">
+                    <div style="flex:2"><input type="text" id="lessonTitle" class="form-control" placeholder="عنوان الدرس" required></div>
+                    <div style="flex:1"><select id="lessonSubject" class="form-control"><option value="لغتي">لغتي</option><option value="رياضيات">رياضيات</option></select></div>
+                </div>
+
+                <div class="lesson-steps-nav">
+                    <div class="step-tab active" onclick="switchLessonStep('intro')" id="tab-intro">1. التمهيد</div>
+                    <div class="step-tab" onclick="switchLessonStep('exercises')" id="tab-exercises">2. التمارين</div>
+                    <div class="step-tab" onclick="switchLessonStep('assessment')" id="tab-assessment">3. التقييم</div>
+                </div>
+
+                <div id="step-intro" class="step-content active">
                     <div class="form-group">
-                        <label>وصف الاختبار</label>
-                        <textarea id="testDescription" class="form-control"></textarea>
+                        <label>نوع التمهيد</label>
+                        <select id="introType" class="form-control" onchange="toggleIntroInputs()">
+                            <option value="video">فيديو (يوتيوب)</option>
+                            <option value="image">صورة توضيحية</option>
+                            <option value="link">رابط خارجي</option>
+                        </select>
                     </div>
-                    
-                    <hr>
-                    <div class="d-flex justify-content-between align-items-center mb-3">
-                        <h4>الأسئلة</h4>
-                        <button type="button" class="btn btn-primary btn-sm" onclick="addQuestion()">+ إضافة سؤال</button>
+                    <div class="form-group mt-2">
+                        <label>الرابط / العنوان</label>
+                        <input type="text" id="introUrl" class="form-control" placeholder="ضع رابط الفيديو أو الصورة هنا">
                     </div>
-                    <div id="questionsContainer"></div>
-                </form>
+                    <div class="form-group mt-2">
+                        <label>وصف نصي للتمهيد (اختياري)</label>
+                        <textarea id="introText" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div id="step-exercises" class="step-content">
+                    <div class="alert alert-info">هذه الأسئلة لتدريب الطالب. يجب عليه اجتياز نسبة محددة للانتقال للتقييم.</div>
+                    <div class="form-group mb-3">
+                        <label>نسبة الاجتياز المطلوبة (%)</label>
+                        <input type="number" id="exercisesPassScore" class="form-control" value="80" min="1" max="100" style="width: 100px;">
+                    </div>
+                    <div id="exercisesContainer"></div>
+                    <button class="btn btn-primary btn-sm mt-2" onclick="addLessonQuestion('exercisesContainer')">+ إضافة سؤال تمرين</button>
+                </div>
+
+                <div id="step-assessment" class="step-content">
+                    <div class="alert alert-warning">هذه الأسئلة هي التقييم النهائي للدرس.</div>
+                    <div id="assessmentContainer"></div>
+                    <button class="btn btn-primary btn-sm mt-2" onclick="addLessonQuestion('assessmentContainer')">+ إضافة سؤال تقييم</button>
+                </div>
+
             </div>
             <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeCreateTestModal()">إلغاء</button>
-                <button class="btn btn-success" onclick="saveTest()">حفظ</button>
+                <button class="btn btn-secondary" onclick="closeModal('createLessonModal')">إلغاء</button>
+                <button class="btn btn-success" onclick="saveLesson()">حفظ الدرس</button>
             </div>
         </div>
     </div>
 
-    <div id="linkObjectivesModal" class="modal">
+    <div id="createTestModal" class="modal">
         <div class="modal-content large">
-            <div class="modal-header"><h3>ربط الأسئلة بالأهداف</h3><button class="modal-close" onclick="closeLinkObjectivesModal()">&times;</button></div>
+            <div class="modal-header"><h3>إنشاء اختبار</h3><button class="modal-close" onclick="closeModal('createTestModal')">×</button></div>
             <div class="modal-body">
-                <input type="hidden" id="linkTargetId">
-                <div id="questionsLinkingContainer"></div>
+                <input type="hidden" id="editTestId">
+                <input type="text" id="testTitle" class="form-control mb-2" placeholder="العنوان">
+                <select id="testSubject" class="form-control mb-2"><option value="لغتي">لغتي</option></select>
+                <textarea id="testDescription" class="form-control mb-2" placeholder="الوصف"></textarea>
+                <div id="questionsContainer"></div>
+                <button class="btn btn-primary btn-sm" onclick="addQuestion()">+ سؤال</button>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeLinkObjectivesModal()">إلغاء</button>
-                <button class="btn btn-success" onclick="saveLinking()">حفظ الربط</button>
-            </div>
+            <div class="modal-footer"><button class="btn btn-success" onclick="saveTest()">حفظ</button></div>
         </div>
     </div>
     
-    <div id="createObjectiveModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>هدف جديد</h3><button class="modal-close" onclick="document.getElementById('createObjectiveModal').classList.remove('show')">×</button></div><div class="modal-body"><form id="createObjectiveForm"><div class="form-group"><label>المادة</label><select id="objSubject" class="form-control"><option value="لغتي">لغتي</option><option value="رياضيات">رياضيات</option></select></div><div class="form-group"><label>الهدف القصير</label><input type="text" id="shortTermGoal" class="form-control"></div><div class="form-group"><label>الأهداف التدريسية</label><div id="instructionalGoalsContainer"><input type="text" class="form-control instructional-goal-input mb-2"></div><button type="button" onclick="addInstructionalGoalInput()">+</button></div></form></div><div class="modal-footer"><button class="btn btn-success" onclick="saveObjective()">حفظ</button></div></div></div>
-    <div id="createLessonModal" class="modal"><div class="modal-content large"><div class="modal-header"><h3>درس جديد</h3><button class="modal-close" onclick="document.getElementById('createLessonModal').classList.remove('show')">×</button></div><div class="modal-body"><input type="text" id="lessonTitle" class="form-control" placeholder="العنوان"><select id="lessonSubject" class="form-control mt-2"><option value="لغتي">لغتي</option></select></div><div class="modal-footer"><button class="btn btn-success" onclick="saveLesson()">حفظ</button></div></div></div>
+    <div id="createObjectiveModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>هدف</h3><button class="modal-close" onclick="closeModal('createObjectiveModal')">×</button></div><div class="modal-body"><input id="shortTermGoal" class="form-control"><input type="hidden" id="objSubject" value="لغتي"></div><div class="modal-footer"><button class="btn btn-success" onclick="saveObjective()">حفظ</button></div></div></div>
 
     <script src="../../assets/js/dashboard.js"></script>
     <script src="../../assets/js/teacher.js"></script>
@@ -150,8 +160,14 @@
     <script src="../../assets/js/auth.js"></script>
     <script>
         function toggleDropdown() { document.getElementById('contentDropdownMenu').classList.toggle('show'); }
-        window.onclick = function(e) { if (!e.target.matches('.dropdown-toggle')) document.querySelectorAll('.dropdown-menu').forEach(d => d.classList.remove('show')); }
-        function addInstructionalGoalInput() { document.getElementById('instructionalGoalsContainer').insertAdjacentHTML('beforeend', '<input type="text" class="form-control instructional-goal-input mb-2">'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+        // تبديل خطوات الدرس
+        function switchLessonStep(step) {
+            document.querySelectorAll('.step-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.step-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`tab-${step}`).classList.add('active');
+            document.getElementById(`step-${step}`).classList.add('active');
+        }
     </script>
 </body>
 </html>

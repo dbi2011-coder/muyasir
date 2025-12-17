@@ -10,12 +10,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* === إصلاح القائمة الجانبية (هام جداً) === */
+        /* === إصلاح القائمة الجانبية === */
         .sidebar {
-            min-width: 260px !important; /* عرض ثابت لا يقل عنه */
+            min-width: 260px !important;
             width: 260px !important;
-            flex-shrink: 0 !important;   /* منع التقلص نهائياً */
-            /* بقية التنسيقات موجودة في ملفات CSS الخارجية */
+            flex-shrink: 0 !important;
         }
         
         /* أنماط خطوات الدرس */
@@ -26,7 +25,7 @@
         .step-content.active { display: block; animation: fadeIn 0.3s; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
-        /* تنسيق الأهداف (القائمة) */
+        /* تنسيق الأهداف */
         .objectives-container { display: flex; flex-direction: column; gap: 15px; }
         .objective-row { background: #fff; border: 1px solid #e0e0e0; border-right: 5px solid var(--primary-color); padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.2s; }
         .objective-row:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.1); transform: translateX(-5px); }
@@ -107,7 +106,21 @@
     </div>
 
     <div id="createTestModal" class="modal">
-        <div class="modal-content large"><div class="modal-header"><h3>إنشاء اختبار</h3><button class="modal-close" onclick="closeModal('createTestModal')">×</button></div><div class="modal-body"><input type="hidden" id="editTestId"><input type="text" id="testTitle" class="form-control mb-2" placeholder="العنوان"><select id="testSubject" class="form-control mb-2"><option value="لغتي">لغتي</option></select><textarea id="testDescription" class="form-control mb-2" placeholder="الوصف"></textarea><div id="questionsContainer"></div><button class="btn btn-primary btn-sm" onclick="addQuestion()">+ سؤال</button></div><div class="modal-footer"><button class="btn btn-success" onclick="saveTest()">حفظ</button></div></div>
+        <div class="modal-content large">
+            <div class="modal-header"><h3>إنشاء اختبار</h3><button class="modal-close" onclick="closeModal('createTestModal')">×</button></div>
+            <div class="modal-body">
+                <input type="hidden" id="editTestId">
+                <input type="text" id="testTitle" class="form-control mb-2" placeholder="العنوان">
+                <select id="testSubject" class="form-control mb-2">
+                    <option value="لغتي">لغتي</option>
+                    <option value="رياضيات">رياضيات</option>
+                </select>
+                <textarea id="testDescription" class="form-control mb-2" placeholder="الوصف"></textarea>
+                <div id="questionsContainer"></div>
+                <button class="btn btn-primary btn-sm" onclick="addQuestion()">+ سؤال</button>
+            </div>
+            <div class="modal-footer"><button class="btn btn-success" onclick="saveTest()">حفظ</button></div>
+        </div>
     </div>
 
     <div id="createLessonModal" class="modal">
@@ -115,7 +128,15 @@
             <div class="modal-header"><h3>إنشاء درس تفاعلي</h3><button class="modal-close" onclick="closeModal('createLessonModal')">×</button></div>
             <div class="modal-body">
                 <input type="hidden" id="editLessonId">
-                <div class="row mb-3" style="display:flex; gap:10px;"><div style="flex:2"><input type="text" id="lessonTitle" class="form-control" placeholder="العنوان"></div><div style="flex:1"><select id="lessonSubject" class="form-control"><option value="لغتي">لغتي</option></select></div></div>
+                <div class="row mb-3" style="display:flex; gap:10px;">
+                    <div style="flex:2"><input type="text" id="lessonTitle" class="form-control" placeholder="العنوان"></div>
+                    <div style="flex:1">
+                        <select id="lessonSubject" class="form-control">
+                            <option value="لغتي">لغتي</option>
+                            <option value="رياضيات">رياضيات</option>
+                        </select>
+                    </div>
+                </div>
                 <div class="lesson-steps-nav"><div class="step-tab active" onclick="switchLessonStep('intro')" id="tab-intro">1. التمهيد</div><div class="step-tab" onclick="switchLessonStep('exercises')" id="tab-exercises">2. التمارين</div><div class="step-tab" onclick="switchLessonStep('assessment')" id="tab-assessment">3. التقييم</div></div>
                 <div id="step-intro" class="step-content active"><div class="form-group"><label>نوع التمهيد</label><select id="introType" class="form-control" onchange="toggleIntroInputs()"><option value="video">فيديو</option><option value="image">صورة</option><option value="link">رابط</option></select></div><div class="form-group mt-2"><input type="text" id="introUrl" class="form-control"></div><div class="form-group mt-2"><textarea id="introText" class="form-control" rows="3"></textarea></div></div>
                 <div id="step-exercises" class="step-content"><div class="form-group mb-3"><label>نسبة الاجتياز (%)</label><input type="number" id="exercisesPassScore" class="form-control" value="80" style="width: 100px;"></div><div id="exercisesContainer"></div><button class="btn btn-primary btn-sm mt-2" onclick="addLessonQuestion('exercisesContainer')">+ تمرين</button></div>

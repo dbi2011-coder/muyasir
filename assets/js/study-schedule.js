@@ -14,18 +14,17 @@ function renderScheduleTable() {
     tbody.innerHTML = '';
 
     const scheduleData = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
-    const users = JSON.parse(localStorage.getItem('users') || '[]'); 
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
 
-    // التعديل هنا: الحلقة الخارجية للحصص (الصفوف)
-    PERIODS.forEach(period => {
+    // الحلقة الخارجية: الأيام (الصفوف)
+    DAYS.forEach(day => {
         const row = document.createElement('tr');
         
-        // الخلية الأولى: رقم الحصة
-        let html = `<td>الحصة ${period}</td>`;
+        // الخلية الأولى: اسم اليوم
+        let html = `<td>${day}</td>`;
         
-        // الحلقة الداخلية للأيام (الأعمدة)
-        DAYS.forEach(day => {
-            // البحث عن البيانات (نفس المنطق ولكن داخل الهيكل الجديد)
+        // الحلقة الداخلية: الحصص (الأعمدة)
+        PERIODS.forEach(period => {
             const sessionData = scheduleData.find(s => s.day === day && s.period === period);
             let cellContent = '<span style="color:#eee; font-size:1.5rem;">+</span>';
             let cellClass = '';
@@ -36,9 +35,9 @@ function renderScheduleTable() {
                     return st ? st.name.split(' ')[0] : '?';
                 });
                 
-                // عرض أول اسمين + عدد الباقي لعدم تشويه الجدول
+                // عرض الأسماء
                 if(studentNames.length > 2) {
-                    cellContent = `<span class="student-chip">${studentNames[0]}</span><span class="student-chip">${studentNames[1]}</span><span class="student-chip">+${studentNames.length-2}</span>`;
+                    cellContent = `<span class="student-chip">${studentNames[0]}</span><span class="student-chip">${studentNames[1]}</span><span class="student-chip" title="${studentNames.slice(2).join(', ')}">+${studentNames.length-2}</span>`;
                 } else {
                     cellContent = studentNames.map(name => `<span class="student-chip">${name}</span>`).join('');
                 }
@@ -67,7 +66,6 @@ function openSessionModal(day, period) {
 
     const currentTeacher = JSON.parse(sessionStorage.getItem('currentUser')).user;
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    // جلب طلاب المعلم الحالي فقط
     const myStudents = allUsers.filter(u => u.role === 'student' && u.teacherId === currentTeacher.id);
 
     const scheduleData = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
@@ -103,10 +101,10 @@ function saveSessionStudents() {
 
     let scheduleData = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     
-    // إزالة القديم
+    // إزالة السجل القديم لهذه الخلية
     scheduleData = scheduleData.filter(s => !(s.day === day && s.period === period));
 
-    // إضافة الجديد إذا وجد طلاب
+    // إضافة الجديد
     if (selectedStudentIds.length > 0) {
         scheduleData.push({
             day: day,

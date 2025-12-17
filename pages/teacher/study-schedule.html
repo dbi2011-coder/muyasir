@@ -9,6 +9,14 @@
     <link rel="stylesheet" href="../../assets/css/teacher.css">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
+        /* === إصلاح القائمة الجانبية (هام جداً) === */
+        .sidebar {
+            min-width: 260px !important; /* عرض ثابت لا يقل عنه */
+            width: 260px !important;
+            flex-shrink: 0 !important;   /* منع التقلص نهائياً */
+        }
+
+        /* تنسيقات الجدول */
         .schedule-container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow-x: auto; }
         .schedule-table { width: 100%; border-collapse: collapse; min-width: 900px; }
         .schedule-table th, .schedule-table td { border: 1px solid #e0e0e0; padding: 10px; text-align: center; vertical-align: middle; }
@@ -25,34 +33,19 @@
         .student-checkbox-item { display: flex; align-items: center; padding: 8px; background: #f9f9f9; border-radius: 5px; cursor: pointer; }
         .student-checkbox-item input { margin-left: 10px; transform: scale(1.2); }
 
-        /* ========================================= */
-        /* 🖨️ تنسيقات الطباعة (هام جداً) */
-        /* ========================================= */
+        /* تنسيقات الطباعة */
         @media print {
-            @page { size: landscape; margin: 1cm; } /* الطباعة بالعرض */
-            
+            @page { size: landscape; margin: 1cm; }
             body { background: white; -webkit-print-color-adjust: exact; }
-            
-            /* إخفاء العناصر غير الضرورية */
             .sidebar, .dashboard-header, .mobile-menu-btn, .btn, .modal { display: none !important; }
-            
-            /* ضبط المحتوى */
             .dashboard-container { display: block; width: 100%; height: auto; grid-template-columns: 1fr; }
             .main-content-dashboard { width: 100%; padding: 0; margin: 0; background: white; }
             .dashboard-content { padding: 0; }
-            
-            /* تحسين الجدول للورق */
             .schedule-container { box-shadow: none; padding: 0; border: none; }
             .schedule-table th, .schedule-table td { border: 2px solid #000 !important; color: #000; }
             .schedule-cell { height: auto; min-height: 60px; }
-            
-            /* إزالة علامة (+) عند الطباعة للخلايا الفارغة */
             .schedule-cell:not(.filled) span { display: none; }
-            
-            /* تحسين مظهر أسماء الطلاب */
             .student-chip { border: 1px solid #000; color: #000; background: #fff; padding: 2px 5px; }
-
-            /* عنوان الطباعة */
             .content-header h1::after { content: " (جدول توزيع الطلاب)"; font-size: 0.8em; }
         }
     </style>
@@ -64,11 +57,14 @@
                 <div class="logo"><img src="../../assets/images/logo.png" alt="شعار"><h2>ميسر التعلم</h2></div>
             </div>
             <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="menu-icon">📊</span>الرئيسية</a></li>
+                <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
                 <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
-                <li><a href="content-library.html"><span class="menu-icon">📚</span>المكتبة</a></li>
-                <li><a href="study-schedule.html" class="active"><span class="menu-icon">📅</span>الجدول</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>خروج</a></li>
+                <li><a href="content-library.html"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
+                <li><a href="study-schedule.html" class="active"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
+                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
+                <li><a href="reports.html"><span class="menu-icon">📝</span>التقارير</a></li>
+                <li><a href="committee.html"><span class="menu-icon">🤝</span>لجنة الصعوبات</a></li>
+                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
             </ul>
         </aside>
 

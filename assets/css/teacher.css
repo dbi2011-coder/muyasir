@@ -1,6 +1,125 @@
-/* =========================================
-   تنسيقات البطاقات الأساسية (ملونة)
-   ========================================= */
+/* ============================================================
+   1. التنسيقات الأساسية (الأزرار، النوافذ، القوائم) - تم استعادتها
+   ============================================================ */
+
+/* تنسيق الأزرار العامة */
+.btn {
+    padding: 8px 15px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Tajawal', sans-serif;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.btn-primary { background-color: var(--primary-color, #2c3e50); color: white; }
+.btn-primary:hover { background-color: #1a252f; }
+
+.btn-secondary { background-color: #95a5a6; color: white; }
+.btn-secondary:hover { background-color: #7f8c8d; }
+
+.btn-success { background-color: #27ae60; color: white; } /* زر إضافة محتوى */
+.btn-success:hover { background-color: #219150; }
+
+.btn-danger { background-color: #e74c3c; color: white; }
+.btn-danger:hover { background-color: #c0392b; }
+
+/* القائمة المنسدلة (Dropdown) لزر إضافة محتوى */
+.dropdown { position: relative; display: inline-block; }
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 100%;
+    background-color: white;
+    min-width: 180px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    z-index: 100;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-top: 5px;
+    border: 1px solid #eee;
+}
+.dropdown-menu.show { display: block; animation: slideDown 0.2s ease; }
+.dropdown-item {
+    color: #333;
+    padding: 10px 15px;
+    text-decoration: none;
+    display: block;
+    transition: 0.2s;
+    text-align: right;
+}
+.dropdown-item:hover { background-color: #f5f5f5; color: var(--primary-color); }
+
+/* النوافذ المنبثقة (Modals) - الإصلاح هنا */
+.modal {
+    display: none; /* مخفي افتراضياً */
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5); /* خلفية معتمة */
+    align-items: center;
+    justify-content: center;
+    overflow: auto; /* للسماح بالتمرير إذا طال المحتوى */
+}
+
+.modal.show {
+    display: flex; /* يظهر في المنتصف */
+    animation: fadeIn 0.3s;
+}
+
+.modal-content {
+    background-color: #fff;
+    padding: 0;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto; /* تمرير داخل النافذة */
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-content.large { max-width: 800px; }
+
+.modal-header {
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fcfcfc;
+    border-radius: 12px 12px 0 0;
+}
+.modal-header h3 { margin: 0; font-size: 1.2rem; color: #333; }
+.modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; }
+.modal-body { padding: 20px; flex: 1; overflow-y: auto; }
+.modal-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; background: #fcfcfc; border-radius: 0 0 12px 12px; }
+
+/* حقول الإدخال العامة */
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-family: inherit;
+    margin-bottom: 10px;
+}
+.form-control:focus { border-color: var(--primary-color); outline: none; }
+
+/* ============================================================
+   2. تنسيقات مكتبة المحتوى (البطاقات الملونة الجديدة)
+   ============================================================ */
 .content-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -9,91 +128,31 @@
 }
 
 .content-card {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-    border: 1px solid #eee;
-    transition: 0.3s;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
+    background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    border: 1px solid #eee; transition: 0.3s; display: flex; flex-direction: column; overflow: hidden;
 }
+.content-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
 
-.content-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
+.content-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+.content-header h4 { margin: 0; font-size: 1.1rem; color: #333; }
+.content-body { padding: 15px; flex: 1; color: #666; font-size: 0.95rem; }
+.content-meta { font-size: 0.85rem; color: #999; margin-top: 10px; display: flex; align-items: center; gap: 10px; }
+.content-footer { padding: 10px 15px; background: #f9f9f9; border-top: 1px solid #eee; display: flex; gap: 8px; justify-content: flex-end; }
+.btn-card-action { font-size: 0.85rem; padding: 6px 12px; border-radius: 4px; transition: 0.2s; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; background: none; border: none; }
 
-.content-header {
-    padding: 15px;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.content-header h4 {
-    margin: 0;
-    font-size: 1.1rem;
-    color: #333;
-}
-
-.content-body {
-    padding: 15px;
-    flex: 1;
-    color: #666;
-    font-size: 0.95rem;
-}
-
-.content-meta {
-    font-size: 0.85rem;
-    color: #999;
-    margin-top: 10px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.content-footer {
-    padding: 10px 15px;
-    background: #f9f9f9;
-    border-top: 1px solid #eee;
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-}
-
-.btn-card-action {
-    font-size: 0.85rem;
-    padding: 6px 12px;
-    border-radius: 4px;
-    transition: 0.2s;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    cursor: pointer;
-    background: none;
-    border: none;
-}
-
-/* === ألوان البطاقات والأزرار === */
-
-/* الاختبارات (أزرق) */
-.card-test { border-top: 4px solid #3498db; }
+/* ألوان البطاقات */
+.card-test { border-top: 4px solid #3498db; } /* أزرق */
 .btn-test-light { background: #ebf5fb; color: #2980b9; border: 1px solid #a9cce3; }
 .btn-test-light:hover { background: #3498db; color: white; border-color: #3498db; }
 
-/* الدروس (أخضر) */
-.card-lesson { border-top: 4px solid #2ecc71; }
+.card-lesson { border-top: 4px solid #2ecc71; } /* أخضر */
 .btn-lesson-light { background: #eafaf1; color: #27ae60; border: 1px solid #a9dfbf; }
 .btn-lesson-light:hover { background: #2ecc71; color: white; border-color: #2ecc71; }
 
-/* الواجبات (برتقالي) */
-.card-homework { border-top: 4px solid #f39c12; }
+.card-homework { border-top: 4px solid #f39c12; } /* برتقالي */
 .btn-homework-light { background: #fef5e7; color: #d35400; border: 1px solid #fad7a0; }
 .btn-homework-light:hover { background: #f39c12; color: white; border-color: #f39c12; }
 
-/* زر الحذف */
 .btn-delete-card { background: white; color: #e74c3c; border: 1px solid #e74c3c; }
 .btn-delete-card:hover { background: #e74c3c; color: white; }
 
@@ -103,7 +162,7 @@
 .btn-export-custom { background-color: #2c3e50; color: white; border: none; box-shadow: 0 2px 5px rgba(44, 62, 80, 0.3); }
 .btn-export-custom:hover { background-color: #1a252f; transform: translateY(-1px); }
 
-/* === تنسيق الأهداف القابلة للطي (Accordion) === */
+/* الأهداف القابلة للطي */
 .objectives-container { display: flex; flex-direction: column; gap: 10px; }
 .objective-row { background: #fff; border: 1px solid #e0e0e0; border-right: 5px solid var(--primary-color); border-radius: 8px; transition: 0.2s; overflow: hidden; }
 .objective-row:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.08); }
@@ -114,12 +173,17 @@
 .objective-row.expanded .toggle-icon { transform: rotate(180deg); color: var(--primary-color); }
 .obj-body { display: none; padding: 0 20px 20px 20px; border-top: 1px dashed #eee; margin-top: 0; background: #fafafa; padding-top: 15px; }
 .obj-body.show { display: block; animation: slideDown 0.3s ease-out; }
-@keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 .instructional-goals-list { list-style-type: disc; padding-right: 20px; margin: 0; color: #616161; }
 .instructional-goals-list li { margin-bottom: 5px; }
 
-/* === تنسيقات بناء الأسئلة الجديد (Question Builder) === */
-.question-card { background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eee; overflow: hidden; position: relative; transition: transform 0.2s; }
+/* ============================================================
+   3. تنسيقات بناء الأسئلة الجديد (داخل المودال)
+   ============================================================ */
+.question-card {
+    background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    margin-bottom: 20px; border: 1px solid #eee; overflow: hidden; position: relative;
+    transition: transform 0.2s;
+}
 .question-card:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0,0,0,0.08); }
 
 .q-stripe { position: absolute; right: 0; top: 0; bottom: 0; width: 6px; }
@@ -140,29 +204,30 @@
 .choice-row { display: flex; align-items: center; gap: 10px; }
 .btn-remove-choice { color: #e74c3c; background: #fdecec; border: none; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 
+/* السحب والإفلات */
 .highlight-area { border: 2px dashed #ccc; padding: 15px; border-radius: 8px; background: #fafafa; min-height: 80px; font-size: 1.2rem; line-height: 2; direction: rtl; cursor: text; }
 .highlight-word { cursor: pointer; padding: 2px 5px; border-radius: 4px; transition: 0.2s; }
 .highlight-word:hover { background: #e0e0e0; }
 .gap-preview { margin-top: 10px; padding: 10px; background: #e8f8f5; border-radius: 6px; font-size: 0.9rem; }
 
+/* لوحة الرسم */
 .canvas-preview-box { border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: #f9f9f9; text-align: center; }
 .canvas-placeholder { width: 100%; height: 150px; background: white; border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #aaa; margin-bottom: 10px; }
 .canvas-tools-mock { display: flex; gap: 5px; justify-content: center; }
 .tool-btn-mock { width: 30px; height: 30px; border-radius: 50%; border: 1px solid #ccc; }
 .attachment-preview { margin-top: 5px; padding: 5px; background: #eee; border-radius: 4px; font-size: 0.85rem; display: inline-block; }
 
-/* نوافذ التصدير والربط */
-.export-section { margin-bottom: 20px; border: 1px solid #eee; padding: 15px; border-radius: 8px; background: #fdfdfd; }
-.export-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold; color: var(--primary-color); border-bottom: 1px solid #eee; padding-bottom: 5px; }
-.export-list { max-height: 150px; overflow-y: auto; padding-right: 5px; }
-.export-item { display: flex; align-items: center; margin-bottom: 5px; font-size: 0.9rem; }
-.export-item input { margin-left: 8px; }
-.linking-table { width: 100%; border-collapse: collapse; }
-.linking-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
-.linking-question-text { flex: 1; font-size: 0.95rem; }
-.linking-select { flex: 1; max-width: 300px; }
+/* خطوات الدرس */
 .lesson-steps-nav { display: flex; border-bottom: 2px solid #eee; margin-bottom: 20px; }
 .step-tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; background: #f9f9f9; border: 1px solid #eee; font-weight: bold; color: #777; }
 .step-tab.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
 .step-content { display: none; }
 .step-content.active { display: block; animation: fadeIn 0.3s; }
+
+/* الرسوم البيانية للتقارير (إضافي للتقارير) */
+.charts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 30px; }
+.chart-card { background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); padding: 20px; border: 1px solid #eee; }
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 30px; }
+.kpi-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border-left: 5px solid var(--primary-color); }
+.kpi-title { font-size: 0.9rem; color: #777; margin-bottom: 5px; }
+.kpi-value { font-size: 1.8rem; font-weight: bold; color: #333; }

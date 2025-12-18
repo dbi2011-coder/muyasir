@@ -8,8 +8,142 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// ... (دوال loadTests, loadLessons, etc تبقى كما هي من الردود السابقة ولا تغيير عليها) ...
-// سنركز هنا فقط على دوال بناء الأسئلة الجديدة
+function loadContentLibrary() {
+    try { loadTests(); } catch(e) { console.error(e); }
+    try { loadLessons(); } catch(e) { console.error(e); }
+    try { loadObjectives(); } catch(e) { console.error(e); }
+    try { loadHomeworks(); } catch(e) { console.error(e); }
+}
+
+// ==========================================
+// 1. دوال العرض (البطاقات الملونة)
+// ==========================================
+
+// الاختبارات (أزرق)
+function loadTests() {
+    const grid = document.getElementById('testsGrid'); if(!grid) return;
+    const tests = JSON.parse(localStorage.getItem('tests') || '[]').filter(t => t.teacherId === getCurrentUser().id);
+    if(tests.length === 0) { grid.innerHTML = '<div class="text-center" style="grid-column:1/-1; padding:20px; color:#777;">لا توجد اختبارات تشخيصية</div>'; return; }
+    
+    grid.innerHTML = tests.map(t => {
+        const isLinked = t.questions && t.questions.some(q => q.linkedGoalId);
+        return `
+        <div class="content-card card-test">
+            <div class="content-header">
+                <h4 title="${t.title}">${t.title}</h4>
+                <span class="content-badge subject-${t.subject}">${t.subject}</span>
+            </div>
+            <div class="content-body">
+                <p class="text-muted small" style="margin-bottom:10px;">${t.description || 'لا يوجد وصف'}</p>
+                <div class="content-meta">
+                    <span><i class="fas fa-question-circle"></i> ${t.questions?.length || 0} أسئلة</span>
+                    ${isLinked ? '<span class="text-success"><i class="fas fa-link"></i> مرتبط بأهداف</span>' : ''}
+                </div>
+            </div>
+            <div class="content-footer">
+                <button class="btn-card-action btn-test-light" onclick="showLinkModal('test', ${t.id})"><i class="fas fa-link"></i> ربط</button>
+                <button class="btn-card-action btn-test-light" onclick="editTest(${t.id})"><i class="fas fa-pen"></i> تعديل</button>
+                <button class="btn-card-action btn-delete-card" onclick="deleteTest(${t.id})"><i class="fas fa-trash"></i> حذف</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// الدروس (أخضر)
+function loadLessons() {
+    const grid = document.getElementById('lessonsGrid'); if(!grid) return;
+    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]').filter(l => l.teacherId === getCurrentUser().id);
+    if (lessons.length === 0) { grid.innerHTML = `<div class="empty-content-state" style="grid-column:1/-1;text-align:center;"><h3>لا توجد دروس تفاعلية</h3></div>`; return; }
+    
+    grid.innerHTML = lessons.map(l => {
+        const isLinked = !!l.linkedInstructionalGoal;
+        return `
+        <div class="content-card card-lesson">
+            <div class="content-header">
+                <h4 title="${l.title}">${l.title}</h4>
+                <span class="content-badge subject-${l.subject}">${l.subject}</span>
+            </div>
+            <div class="content-body">
+                <div class="small text-muted" style="margin-bottom:10px;">تمهيد، تمارين (${l.exercises?.questions?.length || 0})، تقييم (${l.assessment?.questions?.length || 0})</div>
+                <div class="content-meta">
+                    ${isLinked ? '<span class="text-success"><i class="fas fa-link"></i> مرتبط بهدف تدريسي</span>' : '<span><i class="fas fa-unlink"></i> غير مرتبط</span>'}
+                </div>
+            </div>
+            <div class="content-footer">
+                <button class="btn-card-action btn-lesson-light" onclick="showLinkModal('lesson', ${l.id})"><i class="fas fa-link"></i> ربط</button>
+                <button class="btn-card-action btn-lesson-light" onclick="editLesson(${l.id})"><i class="fas fa-pen"></i> تعديل</button>
+                <button class="btn-card-action btn-delete-card" onclick="deleteLesson(${l.id})"><i class="fas fa-trash"></i> حذف</button>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// الأهداف (Accordion)
+function loadObjectives() {
+    const list = document.getElementById('objectivesList'); if (!list) return;
+    const objs = JSON.parse(localStorage.getItem('objectives') || '[]').filter(o => o.teacherId === getCurrentUser().id);
+    if (objs.length === 0) { list.innerHTML = `<div class="empty-content-state" style="text-align:center;padding:20px;"><h3>لا توجد أهداف</h3><button class="btn btn-success mt-2" onclick="showCreateObjectiveModal()">+ هدف جديد</button></div>`; return; }
+    
+    list.innerHTML = objs.map(o => `
+        <div class="objective-row" id="obj-row-${o.id}">
+            <div class="obj-header" onclick="toggleObjective(${o.id})">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <i class="fas fa-chevron-down toggle-icon" id="icon-${o.id}"></i>
+                    <h4 class="short-term-title">${o.shortTermGoal}</h4>
+                    <span class="content-badge subject-${o.subject}" style="font-size:0.8rem; padding:2px 8px;">${o.subject}</span>
+                </div>
+                <div class="obj-actions" onclick="event.stopPropagation()">
+                    <button class="btn-card-action btn-lesson-light" onclick="editObjective(${o.id})" title="تعديل"><i class="fas fa-edit"></i></button>
+                    <button class="btn-card-action btn-delete-card" onclick="deleteObjective(${o.id})" title="حذف"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+            <div class="obj-body" id="obj-body-${o.id}">
+                ${o.instructionalGoals && o.instructionalGoals.length > 0 ? `<div style="font-weight:bold; margin-bottom:5px; color:#555;">الأهداف التدريسية:</div><ul class="instructional-goals-list">${o.instructionalGoals.map(g => `<li>${g}</li>`).join('')}</ul>` : '<span class="text-muted small">لا توجد أهداف فرعية</span>'}
+            </div>
+        </div>`).join('');
+}
+
+function toggleObjective(id) {
+    const body = document.getElementById(`obj-body-${id}`);
+    const row = document.getElementById(`obj-row-${id}`);
+    if (body.classList.contains('show')) {
+        body.classList.remove('show');
+        row.classList.remove('expanded');
+    } else {
+        body.classList.add('show');
+        row.classList.add('expanded');
+    }
+}
+
+// الواجبات (برتقالي)
+function loadHomeworks() {
+    const grid = document.getElementById('homeworksGrid'); if (!grid) return;
+    const homeworks = JSON.parse(localStorage.getItem('assignments') || '[]').filter(h => h.teacherId === getCurrentUser().id);
+    if (homeworks.length === 0) { grid.innerHTML = `<div class="empty-content-state" style="grid-column:1/-1;text-align:center;"><h3>لا توجد واجبات</h3><button class="btn btn-success mt-2" onclick="showCreateHomeworkModal()">+ واجب جديد</button></div>`; return; }
+    
+    grid.innerHTML = homeworks.map(h => {
+        const isLinked = !!h.linkedInstructionalGoal;
+        return `
+        <div class="content-card card-homework">
+            <div class="content-header">
+                <h4 title="${h.title}">${h.title}</h4>
+                <span class="content-badge subject-${h.subject}">${h.subject}</span>
+            </div>
+            <div class="content-body">
+                <p class="text-muted small" style="margin-bottom:10px;">${h.description || 'لا يوجد وصف'}</p>
+                <div class="content-meta">
+                    <span><i class="fas fa-list-ol"></i> ${h.questions?.length || 0} أسئلة</span>
+                    ${isLinked ? '<span class="text-success"><i class="fas fa-link"></i> مرتبط بهدف</span>' : ''}
+                </div>
+            </div>
+            <div class="content-footer">
+                <button class="btn-card-action btn-homework-light" onclick="showLinkModal('homework', ${h.id})"><i class="fas fa-link"></i> ربط</button>
+                <button class="btn-card-action btn-homework-light" onclick="editHomework(${h.id})"><i class="fas fa-pen"></i> تعديل</button>
+                <button class="btn-card-action btn-delete-card" onclick="deleteHomework(${h.id})"><i class="fas fa-trash"></i> حذف</button>
+            </div>
+        </div>`;
+    }).join('');
+}
 
 // ==========================================
 // 🏗️ محرك بناء الأسئلة الجديد (Question Builder Engine)
@@ -24,7 +158,6 @@ function addQuestionToContainer(container, lbl, data = null) {
     const type = data ? data.type : 'mcq';
     const score = data ? data.passingScore : 1;
 
-    // تحديد لون الشريط الجانبي بناءً على النوع
     let stripeClass = 'mcq';
     if(type.includes('drag')) stripeClass = 'drag';
     else if(type.includes('ai')) stripeClass = 'ai';
@@ -62,26 +195,21 @@ function addQuestionToContainer(container, lbl, data = null) {
                 <button onclick="this.closest('.question-card').remove()" title="حذف السؤال"><i class="fas fa-trash"></i></button>
             </div>
         </div>
-        <div class="q-body question-inputs-area">
-            </div>
+        <div class="q-body question-inputs-area"></div>
     </div>`;
 
     container.insertAdjacentHTML('beforeend', cardHtml);
-    
-    // تفعيل الحقول
     const selectElem = container.lastElementChild.querySelector('select');
     renderQuestionInputs(selectElem, idx, data);
 }
 
-// الدالة الرئيسية لرسم الحقول حسب النوع
 function renderQuestionInputs(selectElem, idx, data = null) {
     const type = selectElem.value;
     const card = selectElem.closest('.question-card');
     const area = card.querySelector('.question-inputs-area');
-    
-    // تحديث لون الشريط الجانبي
     const stripe = card.querySelector('.q-stripe');
-    stripe.className = 'q-stripe'; // reset
+    
+    stripe.className = 'q-stripe';
     if(type.includes('drag')) stripe.classList.add('drag');
     else if(type.includes('ai')) stripe.classList.add('ai');
     else if(type.includes('manual')) stripe.classList.add('manual');
@@ -90,282 +218,26 @@ function renderQuestionInputs(selectElem, idx, data = null) {
     const txt = data ? data.text : '';
     let html = '';
 
-    // --- 1. اختيار من متعدد (مع وبدون مرفق) ---
     if (type === 'mcq' || type === 'mcq-media') {
-        html += `<div class="form-group mb-3">
-                    <label class="q-label">نص السؤال</label>
-                    <input type="text" class="form-control q-text" value="${txt}" placeholder="اكتب السؤال هنا...">
-                 </div>`;
-        
+        html += `<div class="form-group mb-3"><label class="q-label">نص السؤال</label><input type="text" class="form-control q-text" value="${txt}" placeholder="اكتب السؤال هنا..."></div>`;
         if (type === 'mcq-media') {
-            html += `<div class="form-group mb-3 p-2 bg-light border rounded">
-                        <label class="q-label"><i class="fas fa-paperclip"></i> مرفق (صورة/فيديو/صوت)</label>
-                        <input type="file" class="form-control-file q-attachment">
-                        ${data?.attachment ? `<div class="attachment-preview">ملف حالي: ${data.attachment}</div>` : ''}
-                     </div>`;
+            html += `<div class="form-group mb-3 p-2 bg-light border rounded"><label class="q-label"><i class="fas fa-paperclip"></i> مرفق (صورة/فيديو/صوت)</label><input type="file" class="form-control-file q-attachment">${data?.attachment ? `<div class="attachment-preview">ملف حالي: ${data.attachment}</div>` : ''}</div>`;
         }
-
-        html += `<label class="q-label">الخيارات (حدد الإجابة الصحيحة)</label>
-                 <div class="choices-container" id="choices-${idx}">`;
-        
+        html += `<label class="q-label">الخيارات (حدد الإجابة الصحيحة)</label><div class="choices-container" id="choices-${idx}">`;
         const choices = data?.choices || ['خيار 1', 'خيار 2'];
-        const correct = data?.correctAnswer || 0; // index
-
+        const correct = data?.correctAnswer || 0;
         choices.forEach((c, i) => {
-            html += `<div class="choice-row">
-                        <input type="radio" name="correct-${idx}" value="${i}" ${i == correct ? 'checked' : ''}>
-                        <input type="text" class="form-control q-choice" value="${c}" placeholder="الخيار ${i+1}">
-                        <button class="btn-remove-choice" onclick="this.parentElement.remove()">×</button>
-                     </div>`;
+            html += `<div class="choice-row"><input type="radio" name="correct-${idx}" value="${i}" ${i == correct ? 'checked' : ''}><input type="text" class="form-control q-choice" value="${c}" placeholder="الخيار ${i+1}"><button class="btn-remove-choice" onclick="this.parentElement.remove()">×</button></div>`;
         });
-        html += `</div>
-                 <button class="btn btn-sm btn-outline-primary mt-2" onclick="addChoiceInput(${idx})">+ إضافة خيار</button>`;
+        html += `</div><button class="btn btn-sm btn-outline-primary mt-2" onclick="addChoiceInput(${idx})">+ إضافة خيار</button>`;
     
-    // --- 2. سحب وإفلات (المنطق الذكي) ---
     } else if (type === 'drag-drop') {
-        html += `<div class="alert alert-info small">
-                    <i class="fas fa-info-circle"></i> اكتب الجملة كاملة، ثم حدد الكلمات أو الحروف التي تريد تحويلها لفراغات واضغط "تحويل لفراغ".
-                 </div>
-                 <div class="form-group">
-                    <label class="q-label">الجملة الأصلية</label>
-                    <div class="input-group mb-2">
-                        <input type="text" class="form-control q-source-text" id="drag-source-${idx}" value="${txt}" placeholder="مثال: ذهب محمد إلى المدرسة">
-                        <div class="input-group-append">
-                            <button class="btn btn-warning" type="button" onclick="initDragHighlighter(${idx})">تجهيز الفراغات</button>
-                        </div>
-                    </div>
-                 </div>
-                 <div id="highlighter-area-${idx}" class="highlight-area" style="display:none;"></div>
-                 <input type="hidden" class="q-gaps-data" id="gaps-data-${idx}">`;
+        html += `<div class="alert alert-info small"><i class="fas fa-info-circle"></i> اكتب الجملة كاملة، ثم حدد الكلمات أو الحروف التي تريد تحويلها لفراغات واضغط "تحويل لفراغ".</div>
+                 <div class="form-group"><label class="q-label">الجملة الأصلية</label><div class="input-group mb-2"><input type="text" class="form-control q-source-text" id="drag-source-${idx}" value="${txt}" placeholder="مثال: ذهب محمد إلى المدرسة"><div class="input-group-append"><button class="btn btn-warning" type="button" onclick="initDragHighlighter(${idx})">تجهيز الفراغات</button></div></div></div>
+                 <div id="highlighter-area-${idx}" class="highlight-area" style="display:none;"></div><input type="hidden" class="q-gaps-data" id="gaps-data-${idx}">`;
     
-    // --- 3. سؤال مفتوح ---
     } else if (type === 'open-ended') {
-        html += `<div class="form-group">
-                    <label class="q-label">السؤال</label>
-                    <textarea class="form-control q-text" rows="2">${txt}</textarea>
-                 </div>
-                 <div class="form-group mt-2">
-                    <label class="q-label">الإجابة النموذجية (اختياري للمعلم)</label>
-                    <textarea class="form-control q-model-answer" rows="2">${data?.modelAnswer || ''}</textarea>
-                 </div>`;
+        html += `<div class="form-group"><label class="q-label">السؤال</label><textarea class="form-control q-text" rows="2">${txt}</textarea></div><div class="form-group mt-2"><label class="q-label">الإجابة النموذجية (اختياري)</label><textarea class="form-control q-model-answer" rows="2">${data?.modelAnswer || ''}</textarea></div>`;
     
-    // --- 4. تقييم قراءة آلي ---
     } else if (type === 'ai-reading') {
-        html += `<div class="form-group">
-                    <label class="q-label">النص المراد قراءته</label>
-                    <textarea class="form-control q-reading-text" rows="3">${data?.readingText || ''}</textarea>
-                 </div>
-                 <div class="text-muted small mt-2">
-                    <i class="fas fa-robot"></i> سيقوم النظام بتسجيل صوت الطالب ومطابقته مع هذا النص آلياً.
-                 </div>`;
-    
-    // --- 5. تقييم إملاء آلي (رسم) ---
-    } else if (type === 'ai-spelling') {
-        html += `<div class="form-group">
-                    <label class="q-label">الكلمة/الجملة (للنطق)</label>
-                    <input type="text" class="form-control q-full-word" value="${data?.fullWord || ''}">
-                 </div>
-                 <div class="canvas-preview-box mt-3">
-                    <label class="q-label">واجهة الطالب (معاينة)</label>
-                    <div class="canvas-placeholder">
-                        <i class="fas fa-pen-fancy fa-2x"></i> &nbsp; مساحة الكتابة الحرة (Canvas)
-                    </div>
-                    <div class="canvas-tools-mock">
-                        <div class="tool-btn-mock" style="background:black"></div>
-                        <div class="tool-btn-mock" style="background:red"></div>
-                        <div class="tool-btn-mock" style="background:blue"></div>
-                        <span style="font-size:20px;">🧹</span>
-                    </div>
-                 </div>`;
-
-    // --- 6. تقييم قراءة يدوي ---
-    } else if (type === 'manual-reading') {
-        html += `<div class="form-group">
-                    <label class="q-label">النص للقراءة</label>
-                    <textarea class="form-control q-reading-text" rows="3">${data?.readingText || ''}</textarea>
-                 </div>
-                 <div class="alert alert-success small mt-2">
-                    آلية التصحيح: عند عرض الإجابة، ستضغط على الكلمة الخاطئة لتصبح <span style="background:#ffcccc; padding:2px;">حمراء</span>، وضغطة أخرى تعيدها خضراء.
-                 </div>`;
-
-    // --- 7. تقييم إملاء يدوي ---
-    } else if (type === 'manual-spelling') {
-        html += `<div class="form-group">
-                    <label class="q-label">الكلمة للإملاء</label>
-                    <input type="text" class="form-control q-full-word" value="${data?.fullWord || ''}">
-                 </div>
-                 <div class="alert alert-success small mt-2">
-                    سيظهر لك خط يد الطالب والنص الصحيح. اضغط على الكلمات في النص الصحيح لتمييز الأخطاء.
-                 </div>
-                 <div class="canvas-preview-box">
-                    <div class="canvas-placeholder">مساحة كتابة الطالب</div>
-                 </div>`;
-
-    // --- 8. أكمل الحرف الناقص ---
-    } else if (type === 'missing-char') {
-        html += `<div class="row">
-                    <div class="col-md-6">
-                        <label class="q-label">الكلمة كاملة</label>
-                        <input type="text" class="form-control q-full-word" value="${data?.fullWord || ''}">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="q-label">الكلمة مع النقص (استخدم _ )</label>
-                        <input type="text" class="form-control q-missing-word" value="${data?.missingWord || ''}" placeholder="مـ_ـمد">
-                    </div>
-                 </div>
-                 <div class="mt-2 text-muted small">سيتمكن الطالب من رسم الحرف الناقص في الفراغ.</div>`;
-    }
-
-    area.innerHTML = html;
-
-    // إعادة تحميل بيانات السحب والإفلات إذا كانت موجودة
-    if(type === 'drag-drop' && data?.gaps) {
-        initDragHighlighter(idx, data.gaps);
-    }
-}
-
-// دالة إضافة خيار جديد للاختيار من متعدد
-function addChoiceInput(idx) {
-    const container = document.getElementById(`choices-${idx}`);
-    const count = container.children.length;
-    const div = document.createElement('div');
-    div.className = 'choice-row';
-    div.innerHTML = `
-        <input type="radio" name="correct-${idx}" value="${count}">
-        <input type="text" class="form-control q-choice" placeholder="الخيار ${count+1}">
-        <button class="btn-remove-choice" onclick="this.parentElement.remove()">×</button>
-    `;
-    container.appendChild(div);
-}
-
-// ==========================================
-// 🧠 منطق السحب والإفلات الذكي (Arabic Connectivity)
-// ==========================================
-
-function initDragHighlighter(idx, savedGaps = null) {
-    const sourceInput = document.getElementById(`drag-source-${idx}`);
-    const area = document.getElementById(`highlighter-area-${idx}`);
-    const text = sourceInput.value.trim();
-    
-    if(!text) { alert('الرجاء كتابة الجملة أولاً'); return; }
-
-    area.style.display = 'block';
-    area.innerHTML = ''; // reset
-
-    // تقسيم الجملة إلى كلمات وحروف لنجعلها قابلة للضغط
-    // سنستخدم التمييز البسيط هنا: النقر على الكلمة يحولها لفراغ
-    // للتعقيد (تحديد حرف وسط الكلمة): سنعرض الكلمة كحروف
-    
-    // لتبسيط الواجهة للمعلم: سنعرض النص، وهو يظلل بالفأرة (Select) ثم يضغط زر
-    area.innerHTML = `
-        <div style="margin-bottom:10px;">
-            <p id="selectable-text-${idx}" style="font-size:1.5rem; letter-spacing:1px;">${text}</p>
-        </div>
-        <button class="btn btn-warning btn-sm" onclick="markSelectionAsGap(${idx})"><i class="fas fa-highlighter"></i> تحويل المحدد إلى فراغ</button>
-        <button class="btn btn-secondary btn-sm" onclick="resetHighlighter(${idx})">إعادة تعيين</button>
-        <div id="gaps-preview-${idx}" class="gap-preview"></div>
-    `;
-
-    // تخزين البيانات
-    if(savedGaps) {
-        // استرجاع الفراغات (للعرض فقط في هذه النسخة المبسطة)
-        const preview = document.getElementById(`gaps-preview-${idx}`);
-        preview.innerHTML = '<strong>الفراغات الحالية:</strong> ' + savedGaps.map(g => `<span class="badge badge-warning">${g.dragItem}</span>`).join(' ');
-    }
-}
-
-function markSelectionAsGap(idx) {
-    const selection = window.getSelection();
-    const selectedText = selection.toString();
-    
-    if (!selectedText) { alert('حدد جزءاً من النص أولاً'); return; }
-    
-    // 🧠 المعالجة الذكية للحروف العربية (Tatweel Logic)
-    let processedDragItem = selectedText;
-    
-    // فحص ما قبل وما بعد (محاكاة بسيطة)
-    // إذا كان الحرف في وسط الكلمة (مثل 'ح' في 'محمد')، نضيف كشيدة قبله وبعده
-    // هذا المنطق يتطلب تحليل موقع التحديد بدقة، لكن للتبسيط سنضيف الكشيدة يدوياً
-    // أو نسأل المعلم، لكن الأفضل هو الافتراض الذكي:
-    
-    // إذا كان طول المحدد حرف واحد وهو ليس الأول ولا الأخير تقديراً
-    if (selectedText.length === 1 && /[جحخعغفقثصضشسيبلتنمكطظ]/.test(selectedText)) {
-        processedDragItem = 'ـ' + selectedText + 'ـ';
-    } else if (selectedText.length > 1) {
-        // للكلمات لا نغير شيء غالباً
-    }
-
-    const preview = document.getElementById(`gaps-preview-${idx}`);
-    const span = document.createElement('span');
-    span.className = 'badge badge-warning m-1';
-    span.innerText = processedDragItem;
-    preview.appendChild(span);
-
-    // تحديث البيانات المخفية
-    const hiddenInput = document.getElementById(`gaps-data-${idx}`);
-    let currentData = hiddenInput.value ? JSON.parse(hiddenInput.value) : [];
-    currentData.push({ original: selectedText, dragItem: processedDragItem });
-    hiddenInput.value = JSON.stringify(currentData);
-
-    // تفريغ التحديد
-    selection.removeAllRanges();
-}
-
-function resetHighlighter(idx) {
-    document.getElementById(`gaps-preview-${idx}`).innerHTML = '';
-    document.getElementById(`gaps-data-${idx}`).value = '';
-}
-
-// ==========================================
-// 📥 تجميع البيانات عند الحفظ
-// ==========================================
-
-function collectQuestionsFromContainer(id) {
-    const qs = [];
-    document.querySelectorAll(`#${id} .question-card`).forEach(card => {
-        const type = card.querySelector('select').value;
-        const score = card.querySelector('.passing-score').value;
-        const qData = {
-            id: Date.now() + Math.random(),
-            type: type,
-            passingScore: score,
-            text: card.querySelector('.q-text')?.value || ''
-        };
-
-        if (type === 'mcq' || type === 'mcq-media') {
-            qData.choices = Array.from(card.querySelectorAll('.q-choice')).map(c => c.value);
-            // البحث عن الراديو المحدد
-            const radios = card.querySelectorAll('input[type="radio"]');
-            radios.forEach((r, i) => { if(r.checked) qData.correctAnswer = i; });
-            if(card.querySelector('.q-attachment')?.files[0]) {
-                qData.attachment = card.querySelector('.q-attachment').files[0].name; // تخزين الاسم فقط حالياً
-            }
-        }
-        else if (type === 'drag-drop') {
-            qData.text = card.querySelector('.q-source-text').value;
-            const gapsVal = card.querySelector('.q-gaps-data').value;
-            qData.gaps = gapsVal ? JSON.parse(gapsVal) : [];
-        }
-        else if (type === 'open-ended') {
-            qData.modelAnswer = card.querySelector('.q-model-answer').value;
-        }
-        else if (type === 'ai-reading' || type === 'manual-reading') {
-            qData.readingText = card.querySelector('.q-reading-text').value;
-        }
-        else if (type === 'ai-spelling' || type === 'manual-spelling' || type === 'missing-char') {
-            qData.fullWord = card.querySelector('.q-full-word')?.value || '';
-            qData.missingWord = card.querySelector('.q-missing-word')?.value || '';
-        }
-
-        qs.push(qData);
-    });
-    return qs;
-}
-
-// ==========================================
-// (بقية الكود: الدوال المساعدة والاستيراد والتصدير كما هي في الردود السابقة)
-// ==========================================
-function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser')).user; }
-// ... انسخ دوال التصدير والربط والمودالات كما هي ...
-// لضمان عمل الكود، تأكد من وجود دوال: showLinkModal, saveContentLinks, showExportModal, executeExport, importContent
-// بنفس المنطق السابق تماماً.
+        html += `<div class="form-group"><label class="q-label">النص المراد قراءته</label><textarea class="form-control q-reading-text" rows="3">${data?.readingText || ''}</textarea></div><div class="text-muted small mt-2"><i class="fas fa-robot"></i> سيقوم النظام بتسجيل

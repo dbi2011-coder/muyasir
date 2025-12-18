@@ -16,7 +16,7 @@ function loadContentLibrary() {
 }
 
 // ==========================================
-// 1. الاختبارات التشخيصية (لون أحمر)
+// 1. الاختبارات التشخيصية
 // ==========================================
 function loadTests() {
     const grid = document.getElementById('testsGrid'); if(!grid) return;
@@ -48,7 +48,7 @@ function loadTests() {
 }
 
 // ==========================================
-// 2. الدروس التفاعلية (لون أخضر)
+// 2. الدروس التفاعلية
 // ==========================================
 function loadLessons() {
     const grid = document.getElementById('lessonsGrid'); if(!grid) return;
@@ -79,7 +79,7 @@ function loadLessons() {
 }
 
 // ==========================================
-// 3. الأهداف قصيرة المدى (أزرار ملونة)
+// 3. الأهداف قصيرة المدى (تم تعديلها للقائمة المنسدلة)
 // ==========================================
 function loadObjectives() {
     const list = document.getElementById('objectivesList'); if (!list) return;
@@ -87,23 +87,40 @@ function loadObjectives() {
     if (objs.length === 0) { list.innerHTML = `<div class="empty-content-state" style="text-align:center;padding:20px;"><h3>لا توجد أهداف</h3><button class="btn btn-success mt-2" onclick="showCreateObjectiveModal()">+ هدف جديد</button></div>`; return; }
     
     list.innerHTML = objs.map(o => `
-        <div class="objective-row">
-            <div class="obj-header">
+        <div class="objective-row" id="obj-row-${o.id}">
+            <div class="obj-header" onclick="toggleObjective(${o.id})">
                 <div style="display:flex; align-items:center; gap:10px;">
+                    <i class="fas fa-chevron-down toggle-icon" id="icon-${o.id}"></i>
                     <h4 class="short-term-title">${o.shortTermGoal}</h4>
                     <span class="content-badge subject-${o.subject}" style="font-size:0.8rem; padding:2px 8px;">${o.subject}</span>
                 </div>
-                <div class="obj-actions" style="display:flex; gap:5px;">
-                    <button class="btn-card-action btn-lesson-light" onclick="editObjective(${o.id})" style="padding:4px 8px;"><i class="fas fa-edit"></i></button>
-                    <button class="btn-card-action btn-delete-card" onclick="deleteObjective(${o.id})" style="padding:4px 8px;"><i class="fas fa-trash"></i></button>
+                <div class="obj-actions" onclick="event.stopPropagation()">
+                    <button class="btn-card-action btn-lesson-light" onclick="editObjective(${o.id})" title="تعديل"><i class="fas fa-edit"></i></button>
+                    <button class="btn-card-action btn-delete-card" onclick="deleteObjective(${o.id})" title="حذف"><i class="fas fa-trash"></i></button>
                 </div>
             </div>
-            <div class="obj-body">${o.instructionalGoals && o.instructionalGoals.length > 0 ? `<ul class="instructional-goals-list">${o.instructionalGoals.map(g => `<li>${g}</li>`).join('')}</ul>` : '<span class="text-muted small">لا توجد أهداف فرعية</span>'}</div>
+            <div class="obj-body" id="obj-body-${o.id}">
+                ${o.instructionalGoals && o.instructionalGoals.length > 0 ? `<div style="font-weight:bold; margin-bottom:5px; color:#555;">الأهداف التدريسية:</div><ul class="instructional-goals-list">${o.instructionalGoals.map(g => `<li>${g}</li>`).join('')}</ul>` : '<span class="text-muted small">لا توجد أهداف فرعية</span>'}
+            </div>
         </div>`).join('');
 }
 
+// دالة الطي والفتح
+function toggleObjective(id) {
+    const body = document.getElementById(`obj-body-${id}`);
+    const row = document.getElementById(`obj-row-${id}`);
+    
+    if (body.classList.contains('show')) {
+        body.classList.remove('show');
+        row.classList.remove('expanded');
+    } else {
+        body.classList.add('show');
+        row.classList.add('expanded');
+    }
+}
+
 // ==========================================
-// 4. الواجبات (لون برتقالي)
+// 4. الواجبات
 // ==========================================
 function loadHomeworks() {
     const grid = document.getElementById('homeworksGrid'); if (!grid) return;
@@ -134,11 +151,10 @@ function loadHomeworks() {
     }).join('');
 }
 
+
 // ==========================================
-// بقية الأكواد (الربط، التصدير، الاستيراد، المودالات) تبقى كما هي تماماً
-// لا يوجد تغيير في المنطق، فقط في دوال العرض (HTML Generation) أعلاه.
+// بقية الدوال (Export, Link, Modals) - انسخها كما هي من الرد السابق
 // ==========================================
-// ... (انسخ بقية الكود من الملف السابق) ...
 function getAllObjectives() { return JSON.parse(localStorage.getItem('objectives') || '[]').filter(o => o.teacherId === getCurrentUser().id); }
 function showLinkModal(type, id) { document.getElementById('linkTargetId').value = id; document.getElementById('linkTargetType').value = type; const container = document.getElementById('linkContentBody'); const instruction = document.getElementById('linkInstructionText'); container.innerHTML = ''; const objectives = getAllObjectives(); if(objectives.length === 0) { container.innerHTML = '<div class="text-center text-danger p-3">لا توجد أهداف مضافة. الرجاء إضافة أهداف أولاً.</div>'; document.getElementById('linkContentModal').classList.add('show'); return; } if (type === 'test') { instruction.textContent = 'قم بربط كل سؤال بالهدف قصير المدى الذي يقيسه.'; const tests = JSON.parse(localStorage.getItem('tests') || '[]'); const test = tests.find(t => t.id === id); if(!test || !test.questions) return; const relevantObjs = objectives.filter(o => o.subject === test.subject); let optionsHtml = '<option value="">-- اختر الهدف --</option>'; relevantObjs.forEach(o => { optionsHtml += `<option value="${o.id}">${o.shortTermGoal}</option>`; }); test.questions.forEach((q, idx) => { const row = document.createElement('div'); row.className = 'linking-row'; row.innerHTML = `<div class="linking-question-text"><strong>س${idx+1}:</strong> ${q.text || 'سؤال بدون نص'}</div><select class="form-control linking-select question-link-select" data-question-id="${q.id}">${optionsHtml}</select>`; if(q.linkedGoalId) row.querySelector('select').value = q.linkedGoalId; container.appendChild(row); }); } else { instruction.textContent = 'قم باختيار هدف تدريسي واحد لربط هذا المحتوى به.'; let currentItem; if(type === 'lesson') currentItem = JSON.parse(localStorage.getItem('lessons')).find(x => x.id === id); else currentItem = JSON.parse(localStorage.getItem('assignments')).find(x => x.id === id); const relevantObjs = objectives.filter(o => o.subject === currentItem.subject); let selectHtml = '<select class="form-control" id="singleInstructionalLink"><option value="">-- غير مرتبط --</option>'; relevantObjs.forEach(o => { if(o.instructionalGoals && o.instructionalGoals.length > 0) { selectHtml += `<optgroup label="${o.shortTermGoal}">`; o.instructionalGoals.forEach(ig => { selectHtml += `<option value="${ig}">${ig}</option>`; }); selectHtml += `</optgroup>`; } }); selectHtml += '</select>'; container.innerHTML = `<div class="p-3"><label>الهدف التدريسي:</label>${selectHtml}</div>`; if(currentItem.linkedInstructionalGoal) { setTimeout(() => { const el = document.getElementById('singleInstructionalLink'); if(el) el.value = currentItem.linkedInstructionalGoal; }, 0); } } document.getElementById('linkContentModal').classList.add('show'); }
 function saveContentLinks() { const id = parseInt(document.getElementById('linkTargetId').value); const type = document.getElementById('linkTargetType').value; if (type === 'test') { const tests = JSON.parse(localStorage.getItem('tests') || '[]'); const testIndex = tests.findIndex(t => t.id === id); if(testIndex !== -1) { const selects = document.querySelectorAll('.question-link-select'); selects.forEach(sel => { const qId = parseFloat(sel.getAttribute('data-question-id')); const goalId = sel.value; const q = tests[testIndex].questions.find(qx => qx.id === qId || Math.abs(qx.id - qId) < 0.0001); if(q) q.linkedGoalId = goalId ? parseInt(goalId) : null; }); localStorage.setItem('tests', JSON.stringify(tests)); loadTests(); } } else { const key = (type === 'lesson') ? 'lessons' : 'assignments'; const arr = JSON.parse(localStorage.getItem(key) || '[]'); const idx = arr.findIndex(x => x.id === id); if(idx !== -1) { arr[idx].linkedInstructionalGoal = document.getElementById('singleInstructionalLink').value || null; localStorage.setItem(key, JSON.stringify(arr)); if(type === 'lesson') loadLessons(); else loadHomeworks(); } } document.getElementById('linkContentModal').classList.remove('show'); alert('تم حفظ الارتباطات بنجاح'); }

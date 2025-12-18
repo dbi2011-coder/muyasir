@@ -1,0 +1,104 @@
+/* ============================================
+   📁 الملف: assets/css/teacher.css
+   ============================================ */
+
+/* --- إصلاح مشكلة التداخل (هام) --- */
+.modal {
+    z-index: 9999 !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.show {
+    display: flex;
+}
+
+/* أنماط خاصة بلوحة تحكم المعلم */
+.teacher-dashboard { padding: 20px; }
+.featured-students { margin-bottom: 30px; }
+.students-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+.student-card { background: white; padding: 15px; border-radius: 10px; box-shadow: var(--shadow); text-align: center; border-left: 4px solid var(--success-color); }
+.student-avatar { width: 60px; height: 60px; border-radius: 50%; background: var(--primary-color); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin: 0 auto 10px; }
+.student-name { font-weight: 600; margin-bottom: 5px; color: var(--secondary-color); }
+.student-progress { font-size: 0.9rem; color: #666; }
+.progress-bar { background: #e0e0e0; border-radius: 10px; height: 8px; margin: 8px 0; overflow: hidden; }
+.progress-fill { background: var(--success-color); height: 100%; border-radius: 10px; transition: width 0.3s ease; }
+
+/* الإشعارات ومنطقة الرفع */
+.important-notices { margin-bottom: 30px; }
+.notice-item { display: flex; align-items: center; gap: 15px; padding: 15px; border-bottom: 1px solid var(--border-color); }
+.notice-item:last-child { border-bottom: none; }
+.notice-icon { width: 40px; height: 40px; border-radius: 50%; background: var(--warning-color); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+.notice-content { flex: 1; }
+.notice-title { font-weight: 600; margin-bottom: 5px; }
+.notice-description { font-size: 0.9rem; color: #666; }
+.file-upload-area { border: 2px dashed var(--border-color); border-radius: 10px; padding: 30px; text-align: center; margin: 20px 0; cursor: pointer; transition: all 0.3s ease; }
+.file-upload-area:hover { border-color: var(--primary-color); background: #f8f9fa; }
+.upload-placeholder { color: #666; }
+.upload-icon { font-size: 3rem; margin-bottom: 10px; }
+.file-info { background: var(--light-color); padding: 15px; border-radius: 8px; margin-top: 15px; text-align: right; }
+.student-actions { display: flex; gap: 5px; flex-wrap: wrap; }
+.btn-icon { width: 35px; height: 35px; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 6px; }
+.progress-cell { min-width: 120px; }
+.progress-text { font-weight: 600; margin-bottom: 5px; }
+
+/* مكتبة المحتوى */
+.library-sections { display: flex; flex-direction: column; gap: 30px; }
+.library-section { background: white; border-radius: 10px; padding: 20px; box-shadow: var(--shadow); }
+.section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 2px solid var(--border-color); }
+.section-header h2 { color: var(--secondary-color); margin: 0; }
+.content-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+.content-card { background: var(--light-color); border-radius: 8px; padding: 15px; border: 1px solid var(--border-color); transition: all 0.3s ease; }
+.content-card:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+.content-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+.content-header h4 { margin: 0; color: var(--secondary-color); flex: 1; margin-left: 10px; }
+.content-badge { padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 500; }
+.subject-لغتي { background: #e3f2fd; color: #1976d2; }
+.subject-رياضيات { background: #f3e5f5; color: #7b1fa2; }
+.content-meta { display: flex; justify-content: space-between; font-size: 0.85rem; color: #888; }
+.objectives-status { padding: 2px 6px; border-radius: 4px; font-weight: 500; }
+.objectives-status.linked { background: var(--success-color); color: white; }
+.objectives-status.not-linked { background: var(--warning-color); color: white; }
+.content-actions { display: flex; gap: 5px; margin-top: 15px; flex-wrap: wrap; }
+.objectives-list { display: flex; flex-direction: column; gap: 15px; }
+.objective-item { background: var(--light-color); border-radius: 8px; padding: 15px; border: 1px solid var(--border-color); }
+.objective-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.teaching-objective { background: white; padding: 8px 12px; border-radius: 6px; border-right: 3px solid var(--primary-color); font-size: 0.9rem; }
+.empty-content-state { text-align: center; padding: 40px 20px; color: #666; }
+.empty-content-state .empty-icon { font-size: 4rem; margin-bottom: 15px; }
+
+/* النوافذ المنبثقة */
+.modal-content { background: white; border-radius: 10px; padding: 0; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+.modal-content.large { max-width: 800px; }
+.modal-header { padding: 15px 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; border-radius: 10px 10px 0 0; }
+.modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666; line-height: 1; }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 15px 20px; border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px; background: #f8f9fa; border-radius: 0 0 10px 10px; }
+
+/* تحسينات الأسئلة */
+.question-item { background: #fff; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--border-color); box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+.choices-container { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.choice-item { display: flex; align-items: center; gap: 10px; padding: 8px; background: white; border-radius: 4px; border: 1px solid var(--border-color); }
+.dropdown { position: relative; display: inline-block; }
+.dropdown-toggle { background: var(--success-color); color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+.dropdown-menu { position: absolute; top: 100%; left: 0; background: white; border: 1px solid var(--border-color); border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); min-width: 200px; z-index: 1000; display: none; }
+.dropdown-menu.show { display: block; }
+.dropdown-item { display: block; padding: 10px 15px; color: var(--text-color); text-decoration: none; border: none; background: none; width: 100%; text-align: right; cursor: pointer; }
+.dropdown-item:hover { background: var(--light-color); }
+.instructional-goal-input { margin-bottom: 5px; }
+.checklist-container { background: #fff; }
+.checklist-container .checkbox-item:hover { background-color: #f8f9fa; }
+.question-inputs-area { padding: 10px; background: #fdfdfd; border: 1px dashed #ddd; border-radius: 5px; margin: 10px 0; }
+
+@media (max-width: 768px) {
+    .students-list, .content-grid { grid-template-columns: 1fr; }
+    .student-actions, .filters-section, .section-header, .content-header { flex-direction: column; align-items: flex-start; }
+    .search-box, .filter-options, .modal-content.large { width: 100%; }
+}

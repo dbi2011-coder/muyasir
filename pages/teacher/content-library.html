@@ -13,7 +13,7 @@
         /* === تثبيت القائمة الجانبية === */
         .sidebar { min-width: 260px !important; width: 260px !important; flex-shrink: 0 !important; }
 
-        /* === تنسيقات البطاقات الجديدة (الهيكل القديم بألوان جديدة) === */
+        /* === تنسيقات البطاقات (التصميم السابق الملون) === */
         .content-grid {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;
         }
@@ -29,39 +29,79 @@
         .content-body { padding: 15px; flex: 1; color: #666; font-size: 0.95rem; }
         .content-meta { font-size: 0.85rem; color: #999; margin-top: 10px; display: flex; align-items: center; gap: 10px; }
         
-        /* تذييل البطاقة والأزرار */
         .content-footer { padding: 10px 15px; background: #f9f9f9; border-top: 1px solid #eee; display: flex; gap: 8px; justify-content: flex-end; }
         .btn-card-action { font-size: 0.85rem; padding: 6px 12px; border-radius: 4px; transition: 0.2s; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
 
-        /* --- ألوان التمييز الجديدة --- */
-        /* الاختبارات (أحمر) */
+        /* ألوان التمييز */
         .card-test { border-top: 4px solid #e74c3c; }
         .btn-test-light { background: #fdecec; color: #c0392b; border: 1px solid #f5b7b1; }
         .btn-test-light:hover { background: #e74c3c; color: white; border-color: #e74c3c; }
         
-        /* الدروس (أخضر) */
         .card-lesson { border-top: 4px solid #2ecc71; }
         .btn-lesson-light { background: #eafaf1; color: #27ae60; border: 1px solid #a9dfbf; }
         .btn-lesson-light:hover { background: #2ecc71; color: white; border-color: #2ecc71; }
 
-        /* الواجبات (برتقالي) */
         .card-homework { border-top: 4px solid #f39c12; }
         .btn-homework-light { background: #fef5e7; color: #d35400; border: 1px solid #fad7a0; }
         .btn-homework-light:hover { background: #f39c12; color: white; border-color: #f39c12; }
 
-        /* زر الحذف العام */
         .btn-delete-card { background: white; color: #e74c3c; border: 1px solid #e74c3c; }
         .btn-delete-card:hover { background: #e74c3c; color: white; }
 
-        /* تنسيق الأهداف (كما هو، متناسق) */
-        .objectives-container { display: flex; flex-direction: column; gap: 15px; }
-        .objective-row { background: #fff; border: 1px solid #e0e0e0; border-right: 5px solid var(--primary-color); padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.2s; }
-        .objective-row:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.1); transform: translateX(-5px); }
-        .obj-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px dashed #eee; padding-bottom: 10px; }
-        .short-term-title { font-size: 1.2rem; font-weight: 700; color: #1565c0; margin: 0; }
-        .instructional-goals-list { list-style-type: disc; padding-right: 20px; margin: 0; color: #616161; font-weight: 400; font-size: 0.95rem; }
+        /* === تنسيق الأهداف القابلة للطي (Accordion) === */
+        .objectives-container { display: flex; flex-direction: column; gap: 10px; }
+        .objective-row { 
+            background: #fff; 
+            border: 1px solid #e0e0e0; 
+            border-right: 5px solid var(--primary-color); 
+            border-radius: 8px; 
+            transition: 0.2s; 
+            overflow: hidden;
+        }
+        .objective-row:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.08); }
+        
+        .obj-header { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 15px 20px; 
+            cursor: pointer; /* مؤشر اليد */
+            background: #fff;
+        }
+        .obj-header:hover { background: #fcfcfc; }
 
-        /* نافذة التصدير والربط */
+        .short-term-title { font-size: 1.1rem; font-weight: 700; color: #333; margin: 0; }
+        
+        /* أيقونة السهم */
+        .toggle-icon {
+            transition: transform 0.3s ease;
+            color: #888;
+            margin-left: 10px;
+        }
+        .objective-row.expanded .toggle-icon {
+            transform: rotate(180deg); /* تدوير عند الفتح */
+            color: var(--primary-color);
+        }
+
+        /* جسم الهدف (القائمة المخفية) */
+        .obj-body { 
+            display: none; /* مخفي افتراضياً */
+            padding: 0 20px 20px 20px;
+            border-top: 1px dashed #eee;
+            margin-top: 0;
+            background: #fafafa;
+            padding-top: 15px;
+        }
+        .obj-body.show { 
+            display: block; 
+            animation: slideDown 0.3s ease-out;
+        }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .instructional-goals-list { list-style-type: disc; padding-right: 20px; margin: 0; color: #616161; }
+        .instructional-goals-list li { margin-bottom: 5px; }
+
+        /* بقية التنسيقات (Modal, Steps..) */
         .export-section { margin-bottom: 20px; border: 1px solid #eee; padding: 15px; border-radius: 8px; background: #fdfdfd; }
         .export-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold; color: var(--primary-color); border-bottom: 1px solid #eee; padding-bottom: 5px; }
         .export-list { max-height: 150px; overflow-y: auto; padding-right: 5px; }
@@ -71,13 +111,11 @@
         .linking-row { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
         .linking-question-text { flex: 1; font-size: 0.95rem; }
         .linking-select { flex: 1; max-width: 300px; }
-        /* خطوات الدرس */
         .lesson-steps-nav { display: flex; border-bottom: 2px solid #eee; margin-bottom: 20px; }
         .step-tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; background: #f9f9f9; border: 1px solid #eee; font-weight: bold; color: #777; }
         .step-tab.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
         .step-content { display: none; }
         .step-content.active { display: block; animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body>

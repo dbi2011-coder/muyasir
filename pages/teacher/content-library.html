@@ -13,75 +13,69 @@
         /* === تثبيت القائمة الجانبية === */
         .sidebar { min-width: 260px !important; width: 260px !important; flex-shrink: 0 !important; }
 
-        /* === تنسيقات البطاقات === */
-        .content-grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;
+        /* === تنسيقات أزرار الاستيراد والتصدير الجديدة === */
+        .btn-import-custom {
+            background-color: #3f51b5; /* نيلي/أزرق غامق */
+            color: white;
+            border: none;
+            box-shadow: 0 2px 5px rgba(63, 81, 181, 0.3);
         }
-        .content-card {
-            background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            border: 1px solid #eee; transition: 0.3s; display: flex; flex-direction: column;
-            overflow: hidden;
+        .btn-import-custom:hover {
+            background-color: #303f9f;
+            transform: translateY(-1px);
         }
+
+        .btn-export-custom {
+            background-color: #2c3e50; /* رمادي غامق مزرق */
+            color: white;
+            border: none;
+            box-shadow: 0 2px 5px rgba(44, 62, 80, 0.3);
+        }
+        .btn-export-custom:hover {
+            background-color: #1a252f;
+            transform: translateY(-1px);
+        }
+
+        /* === بقية التنسيقات (البطاقات، الأهداف، المودالات) كما هي تماماً === */
+        .content-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .content-card { background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eee; transition: 0.3s; display: flex; flex-direction: column; overflow: hidden; }
         .content-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-        
         .content-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
         .content-header h4 { margin: 0; font-size: 1.1rem; color: #333; }
         .content-body { padding: 15px; flex: 1; color: #666; font-size: 0.95rem; }
         .content-meta { font-size: 0.85rem; color: #999; margin-top: 10px; display: flex; align-items: center; gap: 10px; }
-        
         .content-footer { padding: 10px 15px; background: #f9f9f9; border-top: 1px solid #eee; display: flex; gap: 8px; justify-content: flex-end; }
         .btn-card-action { font-size: 0.85rem; padding: 6px 12px; border-radius: 4px; transition: 0.2s; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
 
-        /* === ألوان التمييز (تم التعديل هنا) === */
-        
-        /* 1. الاختبارات (أزرق - Blue) بدلاً من الأحمر */
+        /* ألوان التمييز */
         .card-test { border-top: 4px solid #3498db; }
         .btn-test-light { background: #ebf5fb; color: #2980b9; border: 1px solid #a9cce3; }
         .btn-test-light:hover { background: #3498db; color: white; border-color: #3498db; }
-        
-        /* 2. الدروس (أخضر - Green) */
         .card-lesson { border-top: 4px solid #2ecc71; }
         .btn-lesson-light { background: #eafaf1; color: #27ae60; border: 1px solid #a9dfbf; }
         .btn-lesson-light:hover { background: #2ecc71; color: white; border-color: #2ecc71; }
-
-        /* 3. الواجبات (برتقالي - Orange) */
         .card-homework { border-top: 4px solid #f39c12; }
         .btn-homework-light { background: #fef5e7; color: #d35400; border: 1px solid #fad7a0; }
         .btn-homework-light:hover { background: #f39c12; color: white; border-color: #f39c12; }
-
-        /* زر الحذف العام (أحمر للتحذير) */
         .btn-delete-card { background: white; color: #e74c3c; border: 1px solid #e74c3c; }
         .btn-delete-card:hover { background: #e74c3c; color: white; }
 
-        /* === تنسيق الأهداف القابلة للطي (Accordion) === */
+        /* الأهداف (Accordion) */
         .objectives-container { display: flex; flex-direction: column; gap: 10px; }
-        .objective-row { 
-            background: #fff; 
-            border: 1px solid #e0e0e0; 
-            border-right: 5px solid var(--primary-color); 
-            border-radius: 8px; 
-            transition: 0.2s; 
-            overflow: hidden;
-        }
+        .objective-row { background: #fff; border: 1px solid #e0e0e0; border-right: 5px solid var(--primary-color); border-radius: 8px; transition: 0.2s; overflow: hidden; }
         .objective-row:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.08); }
-        .obj-header { 
-            display: flex; justify-content: space-between; align-items: center; 
-            padding: 15px 20px; cursor: pointer; background: #fff;
-        }
+        .obj-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; cursor: pointer; background: #fff; }
         .obj-header:hover { background: #fcfcfc; }
         .short-term-title { font-size: 1.1rem; font-weight: 700; color: #333; margin: 0; }
         .toggle-icon { transition: transform 0.3s ease; color: #888; margin-left: 10px; }
         .objective-row.expanded .toggle-icon { transform: rotate(180deg); color: var(--primary-color); }
-        .obj-body { 
-            display: none; padding: 0 20px 20px 20px; border-top: 1px dashed #eee;
-            margin-top: 0; background: #fafafa; padding-top: 15px;
-        }
+        .obj-body { display: none; padding: 0 20px 20px 20px; border-top: 1px dashed #eee; margin-top: 0; background: #fafafa; padding-top: 15px; }
         .obj-body.show { display: block; animation: slideDown 0.3s ease-out; }
         @keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
         .instructional-goals-list { list-style-type: disc; padding-right: 20px; margin: 0; color: #616161; }
         .instructional-goals-list li { margin-bottom: 5px; }
 
-        /* بقية التنسيقات (Modal, Export..) */
+        /* بقية التنسيقات */
         .export-section { margin-bottom: 20px; border: 1px solid #eee; padding: 15px; border-radius: 8px; background: #fdfdfd; }
         .export-section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold; color: var(--primary-color); border-bottom: 1px solid #eee; padding-bottom: 5px; }
         .export-list { max-height: 150px; overflow-y: auto; padding-right: 5px; }
@@ -129,10 +123,10 @@
                     <h1>مكتبة المحتوى التعليمي</h1>
                     <div class="header-actions">
                         <div class="btn-group" style="display: flex; gap: 5px;">
-                            <button class="btn btn-secondary" onclick="document.getElementById('importFileInput').click()">
+                            <button class="btn btn-import-custom" onclick="document.getElementById('importFileInput').click()">
                                 <i class="fas fa-file-import"></i> استيراد محتوى
                             </button>
-                            <button class="btn btn-secondary" onclick="showExportModal()">
+                            <button class="btn btn-export-custom" onclick="showExportModal()">
                                 <i class="fas fa-file-export"></i> تصدير محتوى
                             </button>
                         </div>

@@ -1,9 +1,10 @@
 /* ============================================================
-   ملف: assets/css/teacher.css (النسخة الكاملة المدمجة)
+   ملف: assets/css/teacher.css (النسخة الكاملة النهائية)
+   يحتوي على: مكتبة المحتوى + بناء الأسئلة + نموذج الخطة (IEP)
    ============================================================ */
 
 /* ------------------------------------------------------------
-   1. التنسيقات الأساسية (الأزرار، النوافذ، القوائم المنسدلة)
+   1. التنسيقات الأساسية (الأزرار، النوافذ، القوائم)
    ------------------------------------------------------------ */
 
 /* الأزرار العامة */
@@ -32,23 +33,6 @@
 
 .btn-danger { background-color: #e74c3c; color: white; }
 .btn-danger:hover { background-color: #c0392b; }
-
-.btn-dashed {
-    width: 100%;
-    border: 2px dashed #ccc;
-    background: none;
-    color: #777;
-    padding: 10px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: 0.2s;
-    font-weight: bold;
-}
-.btn-dashed:hover {
-    border-color: var(--primary-color);
-    color: var(--primary-color);
-    background: #f0fdf4;
-}
 
 /* القائمة المنسدلة (Dropdown) */
 .dropdown { position: relative; display: inline-block; }
@@ -172,7 +156,6 @@
     align-items: center;
 }
 .content-header h4 { margin: 0; font-size: 1.1rem; color: #333; }
-
 .content-body { padding: 15px; flex: 1; color: #666; font-size: 0.95rem; }
 .content-meta {
     font-size: 0.85rem;
@@ -182,7 +165,6 @@
     align-items: center;
     gap: 10px;
 }
-
 .content-footer {
     padding: 10px 15px;
     background: #f9f9f9;
@@ -191,7 +173,6 @@
     gap: 8px;
     justify-content: flex-end;
 }
-
 .btn-card-action {
     font-size: 0.85rem;
     padding: 6px 12px;
@@ -205,7 +186,7 @@
     border: none;
 }
 
-/* ألوان أنواع المحتوى */
+/* ألوان البطاقات */
 .card-test { border-top: 4px solid #3498db; }
 .btn-test-light { background: #ebf5fb; color: #2980b9; border: 1px solid #a9cce3; }
 .btn-test-light:hover { background: #3498db; color: white; border-color: #3498db; }
@@ -229,27 +210,12 @@
 
 /* الأهداف القابلة للطي */
 .objective-row {
-    background: #fff;
-    border: 1px solid #e0e0e0;
-    border-right: 5px solid var(--primary-color);
-    border-radius: 8px;
-    margin-bottom: 10px;
-    overflow: hidden;
+    background: #fff; border: 1px solid #e0e0e0; border-right: 5px solid var(--primary-color);
+    border-radius: 8px; margin-bottom: 10px; overflow: hidden;
 }
-.obj-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 20px;
-    cursor: pointer;
-}
+.obj-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; cursor: pointer; }
 .obj-header:hover { background: #fcfcfc; }
-.obj-body {
-    display: none;
-    padding: 0 20px 20px 20px;
-    border-top: 1px dashed #eee;
-    background: #fafafa;
-}
+.obj-body { display: none; padding: 0 20px 20px 20px; border-top: 1px dashed #eee; background: #fafafa; }
 .obj-body.show { display: block; animation: slideDown 0.3s; }
 .toggle-icon { margin-left: 10px; transition: transform 0.3s; }
 .objective-row.expanded .toggle-icon { transform: rotate(180deg); color: var(--primary-color); }
@@ -258,29 +224,16 @@
    3. تنسيقات بناء الأسئلة (Question Builder)
    ------------------------------------------------------------ */
 .question-card {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    margin-bottom: 20px;
-    border: 1px solid #eee;
-    position: relative;
-    overflow: hidden;
+    background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    margin-bottom: 20px; border: 1px solid #eee; position: relative; overflow: hidden;
 }
-
 .q-stripe { position: absolute; right: 0; top: 0; bottom: 0; width: 6px; }
 .q-stripe.mcq { background: #3498db; }
 .q-stripe.drag { background: #f39c12; }
 .q-stripe.ai { background: #9b59b6; }
 .q-stripe.manual { background: #2ecc71; }
 
-.q-header {
-    padding: 15px;
-    background: #fcfcfc;
-    border-bottom: 1px solid #eee;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
+.q-header { padding: 15px; background: #fcfcfc; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
 .q-body { padding: 20px; }
 .q-label { display: block; font-weight: bold; margin-bottom: 8px; color: #555; }
 
@@ -288,7 +241,7 @@
 .choice-row { display: flex; align-items: center; gap: 10px; }
 .btn-remove-choice { color: #e74c3c; background: #fdecec; border: none; border-radius: 50%; width: 25px; height: 25px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 
-/* السحب والإفلات ولوحة الرسم */
+/* السحب والإفلات */
 .highlight-area { border: 2px dashed #ccc; padding: 15px; border-radius: 8px; background: #fafafa; margin-top: 10px; direction: rtl; }
 .canvas-preview-box { border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: #f9f9f9; text-align: center; margin-top: 5px; }
 
@@ -304,10 +257,10 @@
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* ------------------------------------------------------------
-   4. تنسيقات ملف الطالب والخطة التربوية (NEW & EXCLUSIVE)
+   4. تنسيقات ملف الطالب والقائمة الجانبية (Student Profile)
    ------------------------------------------------------------ */
 
-/* القائمة الجانبية الخاصة بالطالب (يمين) */
+/* القائمة الجانبية الخاصة بالطالب (يمين) - التصميم الجديد */
 .student-sidebar {
     width: 280px;
     background: #2c3e50; /* الأزرق الغامق */
@@ -368,86 +321,132 @@
     height: 100vh;
 }
 
-/* ترويسة الخطة */
-.iep-header-section {
+/* ------------------------------------------------------------
+   5. تنسيقات نموذج الخطة "الورقية" (IEP Paper Style) - مطابق للوورد
+   ------------------------------------------------------------ */
+
+/* الحاوية الرئيسية للخطة (تشبه ورقة A4) */
+.iep-paper-container {
     background: white;
-    padding: 20px 30px;
-    border-bottom: 1px solid #ddd;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-}
-.iep-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-.iep-title-row h1 { margin: 0; font-size: 1.5rem; color: #2c3e50; }
-.student-info-bar { display: flex; gap: 30px; margin-bottom: 15px; font-size: 1.1rem; }
-
-/* جدول الحصص (Checkboxes) */
-.schedule-selector {
-    background: #f8f9fa;
-    padding: 10px 15px;
-    border-radius: 6px;
-    border: 1px solid #eee;
-    display: flex; align-items: center; gap: 15px;
-}
-.schedule-label { font-weight: bold; color: #555; }
-.days-checkboxes { display: flex; gap: 15px; }
-.day-check-label { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 0.9rem; }
-
-/* جسم الخطة القابل للتمرير */
-.iep-scrollable-body {
-    flex: 1;
     padding: 30px;
+    max-width: 900px;
+    margin: 20px auto;
+    border: 1px solid #d1d5db;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    border-radius: 4px;
+    font-family: 'Tajawal', sans-serif;
+    position: relative;
+    padding-bottom: 70px; /* مساحة للفوتر الثابت */
     overflow-y: auto;
-    position: relative;
+    max-height: calc(100vh - 40px);
 }
 
-/* نقاط القوة والاحتياج */
-.performance-summary-grid {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;
+/* الأقسام العامة */
+.iep-section { margin-bottom: 25px; border: 1px solid #eee; padding: 15px; border-radius: 6px; }
+.section-title {
+    margin: -15px -15px 15px -15px;
+    background: #f3f4f6;
+    padding: 10px 15px;
+    font-size: 1rem;
+    color: #374151;
+    font-weight: bold;
+    border-bottom: 1px solid #eee;
 }
-.summary-box { background: white; border-radius: 8px; border: 1px solid #eee; overflow: hidden; }
-.summary-box.strength { border-top: 4px solid #2ecc71; }
-.summary-box.need { border-top: 4px solid #e74c3c; }
-.box-header { padding: 10px 15px; font-weight: bold; background: #fcfcfc; border-bottom: 1px solid #eee; }
-.summary-box.strength .box-header { color: #27ae60; }
-.summary-box.need .box-header { color: #c0392b; }
-.skills-list { list-style: none; padding: 15px; margin: 0; min-height: 100px; }
-.skills-list li { margin-bottom: 8px; font-size: 0.95rem; display: flex; align-items: flex-start; gap: 8px; }
-.skills-list li::before { content: '•'; font-weight: bold; margin-left: 5px; }
 
-/* بطاقات أهداف الخطة */
-.goals-container { display: flex; flex-direction: column; gap: 15px; }
-.iep-goal-card {
-    background: white;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 15px 20px;
-    position: relative;
-    transition: transform 0.2s, box-shadow 0.2s;
-    border-right: 5px solid var(--primary-color);
+/* 1. شبكة البيانات (الترويسة) */
+.iep-header-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    background: #f9fafb;
 }
-.iep-goal-card:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
-.iep-goal-card.dragging { opacity: 0.5; border: 2px dashed #999; }
+.iep-header-grid .form-group { margin-bottom: 0; }
+.iep-header-grid label { display: block; font-size: 0.8rem; color: #6b7280; margin-bottom: 5px; }
+.static-value { font-weight: bold; color: #111827; font-size: 1rem; }
 
-.goal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: move; }
-.drag-handle { color: #ccc; margin-left: 10px; cursor: move; }
-.goal-title { font-weight: bold; font-size: 1.05rem; color: #333; }
+/* 2. الجدول الدراسي (Checkboxes) */
+.schedule-grid { display: flex; justify-content: space-around; background: #fff; padding: 10px; }
+.day-box { display: flex; align-items: center; gap: 8px; font-weight: 500; cursor: pointer; }
+.day-box input { width: 18px; height: 18px; accent-color: var(--primary-color); }
 
-.goal-details { background: #fafafa; padding: 10px; border-radius: 6px; font-size: 0.9rem; margin-top: 10px; }
-.goal-dates { display: flex; gap: 20px; margin-top: 10px; align-items: center; }
-.date-input-group { display: flex; align-items: center; gap: 5px; }
-.date-input-group label { font-size: 0.85rem; color: #777; margin: 0; }
-.date-input-group input { border: 1px solid #ddd; padding: 4px 8px; border-radius: 4px; font-family: inherit; font-size: 0.85rem; }
+/* 3. نقاط القوة والاحتياج */
+.performance-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0; padding: 0; overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+.perf-col { padding: 15px; }
+.perf-col.strength { border-left: 1px solid #eee; background: #f0fdf4; }
+.perf-col.need { background: #fef2f2; }
+.col-header { font-size: 1rem; margin-bottom: 10px; text-align: center; font-weight: bold; }
+.strength .col-header { color: #166534; }
+.need .col-header { color: #991b1b; }
+.iep-list { list-style: disc inside; padding: 0; margin: 0; font-size: 0.9rem; line-height: 1.6; }
 
-/* الفوتر الثابت (أسفل الخطة) */
+.btn-auto-gen {
+    width: 100%; margin-top: 15px;
+    background: #2563eb; color: white;
+    border: none; padding: 8px;
+    border-radius: 4px; cursor: pointer;
+    font-family: inherit;
+    transition: 0.2s;
+}
+.btn-auto-gen:hover { background: #1d4ed8; }
+
+/* 4. الهدف البعيد */
+.long-term-section { background: #eff6ff; border-color: #dbeafe; }
+.iep-input { width: 100%; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; font-family: inherit; }
+.date-range { display: flex; gap: 15px; align-items: center; }
+.date-range input { padding: 5px; border: 1px solid #d1d5db; border-radius: 4px; }
+
+/* 5. جدول الأهداف (Table Style) */
+.goals-table-section { padding: 0; border: 1px solid #e5e7eb; overflow: hidden; }
+.iep-table-header {
+    display: flex;
+    background: #374151;
+    color: white;
+    padding: 10px;
+    font-weight: bold;
+}
+.th-1 { width: 30%; }
+.th-2 { width: 45%; }
+.th-3 { width: 15%; text-align: center; }
+.th-4 { width: 10%; text-align: center; }
+
+.iep-goal-row { display: flex; border-bottom: 1px solid #eee; background: white; transition: 0.2s; }
+.iep-goal-row:hover { background: #f9fafb; }
+
+.td-1 { width: 30%; padding: 10px; border-left: 1px solid #eee; font-weight: bold; font-size: 0.95rem; display: flex; align-items: center; }
+.td-2 { width: 45%; padding: 10px; border-left: 1px solid #eee; }
+.td-3 { width: 15%; padding: 10px; border-left: 1px solid #eee; display: flex; align-items: center; justify-content: center; }
+.td-4 { width: 10%; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 5px; }
+
+.sub-goal-item {
+    display: flex; justify-content: space-between;
+    margin-bottom: 5px; padding: 6px;
+    background: #f3f4f6; border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.btn-add-row {
+    width: 100%; padding: 12px;
+    background: #f9fafb;
+    border: none; border-top: 1px solid #eee;
+    color: #6b7280; font-weight: bold;
+    cursor: pointer;
+    transition: 0.2s;
+}
+.btn-add-row:hover { background: #e5e7eb; color: #111827; }
+
+/* 6. التذييل الثابت (Footer) */
 .iep-fixed-footer {
     position: absolute;
     bottom: 0; left: 0; right: 0;
-    background: white;
-    border-top: 1px solid #ddd;
-    padding: 15px;
     text-align: center;
     font-size: 0.8rem;
+    color: #6b7280;
+    padding: 15px;
+    border-top: 1px solid #eee;
+    background: #fff;
     font-weight: bold;
-    color: #555;
-    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
     z-index: 10;
 }

@@ -1,113 +1,0 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ملف الطالب - ميسر التعلم</title>
-    <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/teacher.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .sidebar { min-width: 260px !important; width: 260px !important; flex-shrink: 0 !important; }
-    </style>
-</head>
-<body>
-    <div class="dashboard-container">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo"><img src="../../assets/images/logo.png" alt="شعار"><h2>ميسر التعلم</h2></div>
-            </div>
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
-                <li><a href="students.html" class="active"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li> <li><a href="content-library.html"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
-                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
-                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
-                <li><a href="reports.html"><span class="menu-icon">📝</span>التقارير</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
-            </ul>
-        </aside>
-
-        <main class="main-content-dashboard">
-            <header class="dashboard-header">
-                <div class="header-right">
-                    <button class="mobile-menu-btn">☰</button>
-                    <h2 id="studentNameHeader">ملف الطالب: جاري التحميل...</h2>
-                </div>
-            </header>
-
-            <div class="dashboard-content">
-                <div class="profile-tabs">
-                    <button class="tab-btn active" onclick="switchProfileTab('info')">البيانات الشخصية</button>
-                    <button class="tab-btn" onclick="switchProfileTab('iep')">الخطة التربوية الفردية (IEP)</button>
-                    <button class="tab-btn" onclick="switchProfileTab('progress')">تقدم الطالب</button>
-                </div>
-
-                <div id="tab-info" class="tab-content active">
-                    <div class="card p-4">
-                        <div class="row">
-                            <div class="col-md-2 text-center">
-                                <img src="../../assets/images/student-avatar.png" class="img-fluid rounded-circle mb-3" style="max-width:100px;">
-                            </div>
-                            <div class="col-md-10">
-                                <h3 id="infoName">اسم الطالب</h3>
-                                <div class="info-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px; margin-top:15px;">
-                                    <div><label class="text-muted">الصف:</label> <span id="infoGrade">-</span></div>
-                                    <div><label class="text-muted">تاريخ الميلاد:</label> <span id="infoDob">-</span></div>
-                                    <div><label class="text-muted">رقم الولي:</label> <span id="infoParentPhone">-</span></div>
-                                </div>
-                                <hr>
-                                <h4>أيام الحضور (الجدول)</h4>
-                                <p class="text-muted small">حدد الأيام التي يحضر فيها الطالب لضبط سجل الغياب التلقائي.</p>
-                                <div class="week-days-selector" id="attendanceDaysContainer">
-                                    </div>
-                                <button class="btn btn-primary mt-3" onclick="saveStudentSchedule()">حفظ الجدول</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tab-iep" class="tab-content">
-                    <div class="iep-container card">
-                        <div class="iep-header">
-                            <h3>الخطة التربوية الفردية</h3>
-                            <button class="btn btn-sm btn-outline-primary" onclick="generateIEPFromDiagnostic()">
-                                <i class="fas fa-magic"></i> توليد من التشخيص
-                            </button>
-                        </div>
-                        
-                        <div class="iep-body" id="iepGoalsContainer">
-                            <div class="text-center p-5 text-muted">لا توجد خطة بعد. اضغط "توليد من التشخيص" أو أضف أهدافاً يدوياً.</div>
-                        </div>
-
-                        <div class="iep-footer">
-                            تم إنشاء الخطة التربوية الفردية بواسطة نظام ميسر التعلم لمعلم صعوبات التعلم أ/ صالح عبد العزيز عبد لله العجلان
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tab-progress" class="tab-content">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <div class="section-header"><h4>مسار التعلم (الدروس)</h4></div>
-                            <div class="learning-path-list" id="learningPathContainer">
-                                </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="section-header"><h4>سجل المتابعة اليومي</h4></div>
-                            <div class="activity-timeline" id="progressTimeline">
-                                </div>
-                        </div>
-                    </div>
-                </div>
-
-            </div>
-        </main>
-    </div>
-
-    <script src="../../assets/js/dashboard.js"></script>
-    <script src="../../assets/js/teacher.js"></script>
-    <script src="../../assets/js/content-library.js"></script> <script src="../../assets/js/student-profile.js"></script> <script src="../../assets/js/auth.js"></script>
-</body>
-</html>

@@ -1,128 +1,43 @@
-/* ============================================================
-   ملف: assets/css/teacher.css (النسخة النهائية المحدثة)
-   ============================================================ */
+/* =========================================
+   تنسيقات ملف الطالب (الخطة والتقدم)
+   ========================================= */
 
-/* ... (نفس التنسيقات الأساسية السابقة للأزرار والنوافذ والقوائم - لا تغيير عليها) ... */
-.btn { padding: 8px 15px; border: none; border-radius: 6px; cursor: pointer; font-family: 'Tajawal', sans-serif; font-size: 0.95rem; transition: all 0.3s ease; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-.btn-primary { background-color: var(--primary-color, #2c3e50); color: white; }
-.btn-primary:hover { background-color: #1a252f; }
-.btn-secondary { background-color: #95a5a6; color: white; }
-.btn-secondary:hover { background-color: #7f8c8d; }
-.btn-success { background-color: #27ae60; color: white; }
-.btn-success:hover { background-color: #219150; }
-.btn-danger { background-color: #e74c3c; color: white; }
-.btn-danger:hover { background-color: #c0392b; }
-.dropdown { position: relative; display: inline-block; }
-.dropdown-menu { display: none; position: absolute; left: 0; top: 100%; background-color: white; min-width: 180px; box-shadow: 0 8px 16px rgba(0,0,0,0.15); z-index: 100; border-radius: 8px; overflow: hidden; margin-top: 5px; border: 1px solid #eee; }
-.dropdown-menu.show { display: block; animation: slideDown 0.2s ease; }
-.dropdown-item { color: #333; padding: 10px 15px; text-decoration: none; display: block; transition: 0.2s; text-align: right; }
-.dropdown-item:hover { background-color: #f5f5f5; color: var(--primary-color); }
-.modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; overflow: auto; }
-.modal.show { display: flex; animation: fadeIn 0.3s; }
-.modal-content { background-color: #fff; padding: 0; border-radius: 12px; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); position: relative; max-height: 90vh; overflow-y: auto; display: flex; flex-direction: column; }
-.modal-content.large { max-width: 800px; }
-.modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #fcfcfc; border-radius: 12px 12px 0 0; }
-.modal-header h3 { margin: 0; font-size: 1.2rem; color: #333; }
-.modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; }
-.modal-body { padding: 20px; flex: 1; overflow-y: auto; }
-.modal-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 10px; background: #fcfcfc; border-radius: 0 0 12px 12px; }
-.form-control { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; margin-bottom: 10px; }
-.form-control:focus { border-color: var(--primary-color); outline: none; }
+/* التبويبات */
+.profile-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; }
+.tab-btn { padding: 10px 20px; background: none; border: none; font-weight: bold; color: #777; cursor: pointer; border-bottom: 3px solid transparent; }
+.tab-btn.active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+.tab-content { display: none; }
+.tab-content.active { display: block; animation: fadeIn 0.3s; }
 
-/* ... (تنسيقات البطاقات الملونة - لا تغيير عليها) ... */
-.content-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; padding: 10px 0; }
-.content-card { background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eee; transition: 0.3s; display: flex; flex-direction: column; overflow: hidden; }
-.content-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
-.content-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-.content-header h4 { margin: 0; font-size: 1.1rem; color: #333; }
-.content-body { padding: 15px; flex: 1; color: #666; font-size: 0.95rem; }
-.content-meta { font-size: 0.85rem; color: #999; margin-top: 10px; display: flex; align-items: center; gap: 10px; }
-.content-footer { padding: 10px 15px; background: #f9f9f9; border-top: 1px solid #eee; display: flex; gap: 8px; justify-content: flex-end; }
-.btn-card-action { font-size: 0.85rem; padding: 6px 12px; border-radius: 4px; transition: 0.2s; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; background: none; border: none; }
-.card-test { border-top: 4px solid #3498db; }
-.btn-test-light { background: #ebf5fb; color: #2980b9; border: 1px solid #a9cce3; }
-.btn-test-light:hover { background: #3498db; color: white; border-color: #3498db; }
-.card-lesson { border-top: 4px solid #2ecc71; }
-.btn-lesson-light { background: #eafaf1; color: #27ae60; border: 1px solid #a9dfbf; }
-.btn-lesson-light:hover { background: #2ecc71; color: white; border-color: #2ecc71; }
-.card-homework { border-top: 4px solid #f39c12; }
-.btn-homework-light { background: #fef5e7; color: #d35400; border: 1px solid #fad7a0; }
-.btn-homework-light:hover { background: #f39c12; color: white; border-color: #f39c12; }
-.btn-delete-card { background: white; color: #e74c3c; border: 1px solid #e74c3c; }
-.btn-delete-card:hover { background: #e74c3c; color: white; }
-.btn-import-custom { background-color: #3f51b5; color: white; border: none; box-shadow: 0 2px 5px rgba(63, 81, 181, 0.3); }
-.btn-import-custom:hover { background-color: #303f9f; transform: translateY(-1px); }
-.btn-export-custom { background-color: #2c3e50; color: white; border: none; box-shadow: 0 2px 5px rgba(44, 62, 80, 0.3); }
-.btn-export-custom:hover { background-color: #1a252f; transform: translateY(-1px); }
-.objectives-container { display: flex; flex-direction: column; gap: 10px; }
-.objective-row { background: #fff; border: 1px solid #e0e0e0; border-right: 5px solid var(--primary-color); border-radius: 8px; transition: 0.2s; overflow: hidden; }
-.objective-row:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.08); }
-.obj-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; cursor: pointer; background: #fff; }
-.obj-header:hover { background: #fcfcfc; }
-.short-term-title { font-size: 1.1rem; font-weight: 700; color: #333; margin: 0; }
-.toggle-icon { transition: transform 0.3s ease; color: #888; margin-left: 10px; }
-.objective-row.expanded .toggle-icon { transform: rotate(180deg); color: var(--primary-color); }
-.obj-body { display: none; padding: 0 20px 20px 20px; border-top: 1px dashed #eee; margin-top: 0; background: #fafafa; padding-top: 15px; }
-.obj-body.show { display: block; animation: slideDown 0.3s ease-out; }
-.instructional-goals-list { list-style-type: disc; padding-right: 20px; margin: 0; color: #616161; }
-.instructional-goals-list li { margin-bottom: 5px; }
+/* 1. تصميم الخطة (IEP) */
+.iep-container { border: 1px solid #ddd; border-radius: 8px; overflow: hidden; min-height: 500px; display: flex; flex-direction: column; }
+.iep-header { background: #f8f9fa; padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+.iep-body { padding: 20px; flex: 1; background: #fafafa; overflow-y: auto; }
+.iep-footer { background: #2c3e50; color: white; text-align: center; padding: 10px; font-size: 0.8rem; font-weight: bold; margin-top: auto; }
 
-/* === تنسيقات بناء الأسئلة الجديد (Question Builder) === */
-.question-card { background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eee; overflow: hidden; position: relative; transition: transform 0.2s; }
-.question-card:hover { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0,0,0,0.08); }
-.q-stripe { position: absolute; right: 0; top: 0; bottom: 0; width: 6px; }
-.q-stripe.mcq { background: #3498db; }
-.q-stripe.drag { background: #f39c12; }
-.q-stripe.ai { background: #9b59b6; }
-.q-stripe.manual { background: #2ecc71; }
-.q-header { padding: 15px 20px 15px 15px; background: #fcfcfc; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-.q-title { font-weight: 700; color: #444; font-size: 1rem; display: flex; align-items: center; gap: 10px; }
-.q-actions button { background: none; border: none; cursor: pointer; color: #999; padding: 5px; transition: 0.2s; }
-.q-actions button:hover { color: #e74c3c; transform: scale(1.1); }
-.q-body { padding: 20px; }
-.q-label { display: block; font-weight: 600; margin-bottom: 8px; color: #555; font-size: 0.9rem; }
-.choices-container { display: flex; flex-direction: column; gap: 10px; }
-.choice-row { display: flex; align-items: center; gap: 10px; }
-.btn-remove-choice { color: #e74c3c; background: #fdecec; border: none; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+/* بطاقة الهدف في الخطة */
+.iep-goal-card { background: white; border: 1px solid #eee; border-right: 4px solid var(--primary-color); padding: 15px; margin-bottom: 15px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.03); position: relative; transition: 0.2s; }
+.iep-goal-card:hover { transform: translateX(-3px); box-shadow: 0 5px 10px rgba(0,0,0,0.05); }
+.iep-goal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; cursor: move; } /* مؤشر السحب */
+.iep-dates-row { display: flex; gap: 15px; font-size: 0.85rem; color: #666; background: #f9f9f9; padding: 8px; border-radius: 4px; }
+.iep-drag-handle { color: #ccc; cursor: move; margin-left: 10px; }
 
-/* +++ جديد: تنسيق الفقرات الفرعية (Paragraph Items) +++ */
-.paragraph-item {
-    background: #fdfdfd;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
-    position: relative;
-    transition: 0.2s;
-}
-.paragraph-item:hover { border-color: var(--primary-color); box-shadow: 0 2px 8px rgba(0,0,0,0.03); }
-.btn-remove-paragraph {
-    position: absolute;
-    top: 10px; left: 10px;
-    color: #e74c3c;
-    background: white; border: 1px solid #eee;
-    width: 28px; height: 28px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center; cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-.btn-remove-paragraph:hover { background: #e74c3c; color: white; border-color: #e74c3c; }
+/* 2. مسار التعلم (الأقفال) */
+.learning-path-item { display: flex; align-items: center; background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #eee; transition: 0.3s; opacity: 1; }
+.learning-path-item.locked { opacity: 0.6; background: #f4f4f4; pointer-events: none; } /* باهت وغير قابل للنقر */
+.lp-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; margin-left: 15px; }
+.lp-status-open { background: #eafaf1; color: #2ecc71; }
+.lp-status-locked { background: #eee; color: #999; }
+.lp-status-done { background: #3498db; color: white; }
 
-/* السحب والإفلات */
-.highlight-area { border: 2px dashed #ccc; padding: 15px; border-radius: 8px; background: #fafafa; min-height: 60px; font-size: 1.1rem; line-height: 1.8; direction: rtl; cursor: text; margin-top: 10px; }
-.highlight-word { cursor: pointer; padding: 1px 4px; border-radius: 4px; transition: 0.2s; }
-.highlight-word:hover { background: #e0e0e0; }
-.gap-preview { margin-top: 8px; padding: 8px; background: #e8f8f5; border-radius: 6px; font-size: 0.85rem; }
+/* 3. سجل المتابعة (Timeline) */
+.activity-timeline { border-right: 2px solid #eee; padding-right: 20px; margin-top: 20px; }
+.timeline-item { position: relative; margin-bottom: 20px; }
+.timeline-item::before { content: ''; position: absolute; right: -26px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: #ccc; border: 2px solid white; box-shadow: 0 0 0 2px #eee; }
+.timeline-item.absent::before { background: #e74c3c; } /* أحمر للغياب */
+.timeline-item.present::before { background: #2ecc71; } /* أخضر للحضور */
+.timeline-date { font-size: 0.8rem; color: #999; margin-bottom: 3px; }
+.timeline-content { background: white; padding: 10px; border-radius: 6px; border: 1px solid #eee; font-size: 0.9rem; }
 
-/* لوحة الرسم */
-.canvas-preview-box { border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: #f9f9f9; text-align: center; margin-top: 5px; }
-.canvas-placeholder { width: 100%; height: 100px; background: white; border: 1px solid #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #aaa; margin-bottom: 5px; }
-.canvas-tools-mock { display: flex; gap: 5px; justify-content: center; }
-.tool-btn-mock { width: 25px; height: 25px; border-radius: 50%; border: 1px solid #ccc; }
-.attachment-preview { margin-top: 5px; padding: 5px; background: #eee; border-radius: 4px; font-size: 0.85rem; display: inline-block; }
-
-/* خطوات الدرس */
-.lesson-steps-nav { display: flex; border-bottom: 2px solid #eee; margin-bottom: 20px; }
-.step-tab { flex: 1; text-align: center; padding: 10px; cursor: pointer; background: #f9f9f9; border: 1px solid #eee; font-weight: bold; color: #777; }
-.step-tab.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
-.step-content { display: none; }
-.step-content.active { display: block; animation: fadeIn 0.3s; }
+/* محدد الأيام (Checkboxes) */
+.week-days-selector label { display: inline-block; margin-left: 10px; cursor: pointer; }

@@ -10,112 +10,104 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        .sidebar-menu li a { cursor: pointer; }
-        .content-section { display: none; animation: fadeIn 0.3s ease; }
-        .content-section.active { display: block; }
-        .sidebar-student-info { padding: 20px; text-align: center; background: rgba(0, 0, 0, 0.1); margin-bottom: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-        .sidebar-student-avatar { width: 60px; height: 60px; margin: 0 auto 10px; background: var(--primary-color); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; border: 2px solid rgba(255,255,255,0.2); }
-        .sidebar-student-name { color: white; font-weight: bold; margin-bottom: 5px; }
-        .sidebar-student-grade { color: rgba(255, 255, 255, 0.7); font-size: 0.85rem; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* أنماط نافذة التصحيح */
-        .review-question-item { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; background: #fff; }
-        .review-q-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: #f9f9f9; padding: 10px; border-radius: 5px; }
-        .student-answer-box { padding: 10px; background: #e3f2fd; border-radius: 5px; margin-bottom: 10px; border-right: 4px solid #2196f3; }
-        .teacher-feedback-box textarea { width: 100%; border: 1px solid #ccc; border-radius: 5px; padding: 8px; min-height: 60px; margin-top: 5px; }
-        .score-input { width: 70px; text-align: center; font-weight: bold; }
+        .sidebar { min-width: 260px !important; width: 260px !important; flex-shrink: 0 !important; }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="sidebar-header">
-                <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار">
-                    <h2>ميسر التعلم</h2>
-                </div>
-            </div>
-            <div class="sidebar-student-info">
-                <div class="sidebar-student-avatar" id="sideAvatar">ط</div>
-                <div class="sidebar-student-name" id="sideName">جار التحميل...</div>
-                <div class="sidebar-student-grade" id="sideGrade">...</div>
+                <div class="logo"><img src="../../assets/images/logo.png" alt="شعار"><h2>ميسر التعلم</h2></div>
             </div>
             <ul class="sidebar-menu">
-                <li><a onclick="switchSection('diagnostic')" class="nav-link active" id="link-diagnostic"><span class="menu-icon">📝</span>الاختبار التشخيصي</a></li>
-                <li><a onclick="switchSection('iep')" class="nav-link" id="link-iep"><span class="menu-icon">📊</span>الخطة التربوية</a></li>
-                <li><a onclick="switchSection('lessons')" class="nav-link" id="link-lessons"><span class="menu-icon">📚</span>الدروس</a></li>
-                <li><a onclick="switchSection('assignments')" class="nav-link" id="link-assignments"><span class="menu-icon">📋</span>الواجبات</a></li>
-                <li><a onclick="switchSection('progress')" class="nav-link" id="link-progress"><span class="menu-icon">📈</span>تقدم الطالب</a></li>
-                <li style="margin-top: 40px; border-top: 1px solid rgba(255,255,255,0.1);">
-                    <a href="students.html"><span class="menu-icon">↩️</span>عودة لقائمة الطلاب</a>
-                </li>
+                <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
+                <li><a href="students.html" class="active"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li> <li><a href="content-library.html"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
+                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
+                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
+                <li><a href="reports.html"><span class="menu-icon">📝</span>التقارير</a></li>
+                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
             </ul>
         </aside>
 
         <main class="main-content-dashboard">
             <header class="dashboard-header">
-                <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
-                <div class="user-info">
-                    <div class="user-welcome">
-                        <div class="welcome-text">ملف الطالب</div>
-                        <div class="user-name" id="headerStudentName">...</div>
-                    </div>
+                <div class="header-right">
+                    <button class="mobile-menu-btn">☰</button>
+                    <h2 id="studentNameHeader">ملف الطالب: جاري التحميل...</h2>
                 </div>
             </header>
 
             <div class="dashboard-content">
-                <div id="section-diagnostic" class="content-section active">
-                    <div class="content-header"><h1>الاختبار التشخيصي</h1><button class="btn btn-primary" onclick="showAssignTestModal()">+ تعيين اختبار</button></div>
-                    <div id="diagnosticContent">
-                        <div class="empty-state" id="noDiagnosticTest"><div class="empty-icon">📝</div><h3>لم يتم تعيين اختبار</h3></div>
-                        <div id="diagnosticTestDetails" style="display: none;"></div>
+                <div class="profile-tabs">
+                    <button class="tab-btn active" onclick="switchProfileTab('info')">البيانات الشخصية</button>
+                    <button class="tab-btn" onclick="switchProfileTab('iep')">الخطة التربوية الفردية (IEP)</button>
+                    <button class="tab-btn" onclick="switchProfileTab('progress')">تقدم الطالب</button>
+                </div>
+
+                <div id="tab-info" class="tab-content active">
+                    <div class="card p-4">
+                        <div class="row">
+                            <div class="col-md-2 text-center">
+                                <img src="../../assets/images/student-avatar.png" class="img-fluid rounded-circle mb-3" style="max-width:100px;">
+                            </div>
+                            <div class="col-md-10">
+                                <h3 id="infoName">اسم الطالب</h3>
+                                <div class="info-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px; margin-top:15px;">
+                                    <div><label class="text-muted">الصف:</label> <span id="infoGrade">-</span></div>
+                                    <div><label class="text-muted">تاريخ الميلاد:</label> <span id="infoDob">-</span></div>
+                                    <div><label class="text-muted">رقم الولي:</label> <span id="infoParentPhone">-</span></div>
+                                </div>
+                                <hr>
+                                <h4>أيام الحضور (الجدول)</h4>
+                                <p class="text-muted small">حدد الأيام التي يحضر فيها الطالب لضبط سجل الغياب التلقائي.</p>
+                                <div class="week-days-selector" id="attendanceDaysContainer">
+                                    </div>
+                                <button class="btn btn-primary mt-3" onclick="saveStudentSchedule()">حفظ الجدول</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div id="section-iep" class="content-section"><div class="content-header"><h1>الخطة التربوية</h1><button class="btn btn-info" onclick="printIEP()">طباعة</button></div><div id="iepContent"></div></div>
-                <div id="section-lessons" class="content-section"><div class="content-header"><h1>الدروس</h1><button class="btn btn-outline-primary" onclick="regenerateLessons()">تحديث</button></div><div class="content-grid" id="studentLessonsGrid"></div></div>
-                <div id="section-assignments" class="content-section"><div class="content-header"><h1>الواجبات</h1><button class="btn btn-primary" onclick="showAssignHomeworkModal()">+ واجب</button></div><div class="content-grid" id="studentAssignmentsGrid"></div></div>
-                <div id="section-progress" class="content-section"><div class="content-header"><h1>التقدم</h1></div><div class="card"><table class="table"><thead><tr><th>الهدف</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody id="progressTableBody"></tbody></table></div></div>
+
+                <div id="tab-iep" class="tab-content">
+                    <div class="iep-container card">
+                        <div class="iep-header">
+                            <h3>الخطة التربوية الفردية</h3>
+                            <button class="btn btn-sm btn-outline-primary" onclick="generateIEPFromDiagnostic()">
+                                <i class="fas fa-magic"></i> توليد من التشخيص
+                            </button>
+                        </div>
+                        
+                        <div class="iep-body" id="iepGoalsContainer">
+                            <div class="text-center p-5 text-muted">لا توجد خطة بعد. اضغط "توليد من التشخيص" أو أضف أهدافاً يدوياً.</div>
+                        </div>
+
+                        <div class="iep-footer">
+                            تم إنشاء الخطة التربوية الفردية بواسطة نظام ميسر التعلم لمعلم صعوبات التعلم أ/ صالح عبد العزيز عبد لله العجلان
+                        </div>
+                    </div>
+                </div>
+
+                <div id="tab-progress" class="tab-content">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="section-header"><h4>مسار التعلم (الدروس)</h4></div>
+                            <div class="learning-path-list" id="learningPathContainer">
+                                </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="section-header"><h4>سجل المتابعة اليومي</h4></div>
+                            <div class="activity-timeline" id="progressTimeline">
+                                </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </main>
     </div>
 
-    <div id="assignTestModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header"><h3>تعيين اختبار</h3><button class="modal-close" onclick="closeModal('assignTestModal')">×</button></div>
-            <div class="modal-body"><select id="testSelect" class="form-control"></select></div>
-            <div class="modal-footer"><button class="btn btn-success" onclick="assignTest()">حفظ</button></div>
-        </div>
-    </div>
-
-    <div id="assignHomeworkModal" class="modal">
-        <div class="modal-content"><div class="modal-header"><h3>إسناد واجب</h3><button class="modal-close" onclick="closeModal('assignHomeworkModal')">×</button></div><div class="modal-body"><select id="homeworkLessonSelect" class="form-control mb-2"></select><select id="homeworkSelect" class="form-control mb-2"></select><input type="date" id="homeworkDueDate" class="form-control"></div><div class="modal-footer"><button class="btn btn-success" onclick="assignHomework()">حفظ</button></div></div>
-    </div>
-
-    <div id="reviewTestModal" class="modal">
-        <div class="modal-content large" style="max-width: 900px;">
-            <div class="modal-header">
-                <h3>مراجعة إجابات الطالب وتصحيحها</h3>
-                <button class="modal-close" onclick="closeModal('reviewTestModal')">×</button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="reviewAssignmentId">
-                <div id="reviewQuestionsContainer" style="max-height: 60vh; overflow-y: auto; padding: 10px;">
-                    </div>
-            </div>
-            <div class="modal-footer" style="justify-content: space-between;">
-                <div>
-                    <button class="btn btn-warning" onclick="returnTestForResubmission()">↩️ إعادة الاختبار للطالب للتعديل</button>
-                </div>
-                <div>
-                    <button class="btn btn-secondary" onclick="closeModal('reviewTestModal')">إلغاء</button>
-                    <button class="btn btn-success" onclick="saveTestReview()">💾 حفظ التعديلات والملاحظات</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="../../assets/js/auth.js"></script>
-    <script src="../../assets/js/student-profile.js"></script>
+    <script src="../../assets/js/dashboard.js"></script>
+    <script src="../../assets/js/teacher.js"></script>
+    <script src="../../assets/js/content-library.js"></script> <script src="../../assets/js/student-profile.js"></script> <script src="../../assets/js/auth.js"></script>
 </body>
 </html>

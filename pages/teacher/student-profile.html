@@ -1,97 +1,82 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ملف الطالب - الخطة التربوية</title>
-    <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/teacher.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
-<body>
-    <div class="dashboard-container" style="display: flex; height: 100vh; overflow: hidden;">
-        
-        <aside class="student-sidebar">
-            <div class="student-profile-header">
-                <div class="student-avatar-large">
-                    <span id="avatarInitials">ن</span>
-                </div>
-                <h3 id="sidebarStudentName">نايف</h3>
-                <span class="student-grade" id="sidebarStudentGrade">1 - لغتي</span>
-            </div>
-            
-            <nav class="student-nav-menu">
-                <a href="#" class="nav-item"><i class="fas fa-clipboard-list"></i> الاختبار التشخيصي</a>
-                <a href="#" class="nav-item active"><i class="fas fa-chart-line"></i> الخطة التربوية</a>
-                <a href="#" class="nav-item"><i class="fas fa-book-open"></i> الدروس</a>
-                <a href="#" class="nav-item"><i class="fas fa-tasks"></i> الواجبات</a>
-                <a href="#" class="nav-item"><i class="fas fa-chart-bar"></i> تقدم الطالب</a>
-            </nav>
-
-            <div class="sidebar-footer">
-                <a href="students.html" class="back-link"><i class="fas fa-arrow-right"></i> عودة لقائمة الطلاب</a>
-            </div>
-        </aside>
-
-        <main class="student-content-area">
-            
-            <header class="iep-header-section">
-                <div class="iep-title-row">
-                    <h1>الخطة التربوية الفردية</h1>
-                    <button class="btn btn-sm btn-outline-primary" onclick="generateIEPFromDiagnostic()">
-                        <i class="fas fa-sync-alt"></i> تحديث من التشخيص
-                    </button>
-                </div>
-                <div class="student-info-bar">
-                    <div class="info-item"><strong>الاسم:</strong> <span id="contentStudentName">نايف ...</span></div>
-                    <div class="info-item"><strong>الصف:</strong> <span id="contentStudentGrade">الأول الابتدائي</span></div>
-                </div>
-                
-                <div class="schedule-selector">
-                    <span class="schedule-label">أيام الحضور:</span>
-                    <div class="days-checkboxes" id="attendanceDays">
-                        </div>
-                </div>
-            </header>
-
-            <div class="iep-scrollable-body">
-                
-                <div class="performance-summary-grid">
-                    <div class="summary-box strength">
-                        <div class="box-header"><i class="fas fa-check-circle"></i> نقاط القوة (متقن)</div>
-                        <ul id="strengthsList" class="skills-list">
-                            </ul>
-                    </div>
-                    <div class="summary-box need">
-                        <div class="box-header"><i class="fas fa-exclamation-circle"></i> نقاط الاحتياج (غير متقن)</div>
-                        <ul id="needsList" class="skills-list">
-                            </ul>
-                    </div>
-                </div>
-
-                <hr class="divider">
-
-                <div class="iep-goals-section">
-                    <h3><i class="fas fa-list-ol"></i> تسلسل الأهداف التدريسية</h3>
-                    <p class="text-muted small mb-3">يمكنك سحب وإفلات الأهداف لإعادة ترتيب أولوياتها في الخطة.</p>
-                    
-                    <div id="iepGoalsContainer" class="goals-container">
-                        </div>
-
-                    <button class="btn btn-dashed mt-3" onclick="addManualGoal()">+ إضافة هدف يدوياً</button>
-                </div>
-
-                <div class="iep-fixed-footer">
-                    تم إنشاء الخطة التربوية الفردية بواسطة نظام ميسر التعلم لمعلم صعوبات التعلم أ/ صالح عبد العزيز عبد لله العجلان
-                </div>
-                
-                <div style="height: 60px;"></div>
-            </div>
-        </main>
+<div class="iep-paper-container">
+    
+    <div class="iep-section iep-header-grid">
+        <div class="form-group">
+            <label>اسم الطالب</label>
+            <div class="static-value" id="iepStudentName">...</div>
+        </div>
+        <div class="form-group">
+            <label>المادة</label>
+            <div class="static-value" id="iepSubject">لغتي</div>
+        </div>
+        <div class="form-group">
+            <label>الصف</label>
+            <div class="static-value" id="iepGrade">...</div>
+        </div>
+        <div class="form-group">
+            <label>المستوى الفعلي (من التشخيص)</label>
+            <div class="static-value" id="iepActualLevel">جاري الحساب...</div>
+        </div>
     </div>
 
-    <script src="../../assets/js/student-profile.js"></script>
-</body>
-</html>
+    <div class="iep-section">
+        <h4 class="section-title">الجدول الدراسي (أيام الحضور)</h4>
+        <div class="schedule-grid">
+            <label class="day-box"><input type="checkbox" value="0"> الأحد</label>
+            <label class="day-box"><input type="checkbox" value="1"> الاثنين</label>
+            <label class="day-box"><input type="checkbox" value="2"> الثلاثاء</label>
+            <label class="day-box"><input type="checkbox" value="3"> الأربعاء</label>
+            <label class="day-box"><input type="checkbox" value="4"> الخميس</label>
+        </div>
+    </div>
+
+    <div class="iep-section performance-grid">
+        <div class="perf-col strength">
+            <h4 class="col-header">نقاط القوة (ما يتقنه الطالب)</h4>
+            <ul id="iepStrengthsList" class="iep-list"></ul>
+        </div>
+        <div class="perf-col need">
+            <h4 class="col-header">نقاط الاحتياج (أساس بناء الخطة)</h4>
+            <ul id="iepNeedsList" class="iep-list"></ul>
+            <button class="btn-auto-gen" onclick="generateIEPGoalsFromNeeds()">
+                <i class="fas fa-magic"></i> توليد الأهداف من الاحتياج
+            </button>
+        </div>
+    </div>
+
+    <div class="iep-section long-term-section">
+        <div class="row">
+            <div class="col-8">
+                <label>الهدف بعيد المدى</label>
+                <input type="text" class="iep-input" id="iepLongTermGoal" value="أن يتقن التلميذ مهارات القراءة لذوي صعوبات التعلم حتى صفه الحالي وبنسبة لا تقل عن 80%">
+            </div>
+            <div class="col-4">
+                <label>الفترة الزمنية المتوقعة</label>
+                <div class="date-range">
+                    <span>من: <input type="date" id="iepStartDate"></span>
+                    <span>إلى: <input type="date" id="iepEndDate"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="iep-section goals-table-section">
+        <h4 class="section-title">الأهداف القصيرة والتدريسية</h4>
+        <div class="iep-table-header">
+            <div class="th-1">الهدف قصير المدى</div>
+            <div class="th-2">الأهداف التدريسية</div>
+            <div class="th-3">تاريخ التحقق</div>
+            <div class="th-4">تحكم</div>
+        </div>
+        
+        <div id="iepGoalsWrapper">
+            </div>
+
+        <button class="btn-add-row" onclick="addManualGoalRow()">+ إضافة هدف يدوياً</button>
+    </div>
+
+    <div class="iep-fixed-footer">
+        تم إنشاء الخطة التربوية الفردية بواسطة نظام ميسر التعلم لمعلم صعوبات التعلم أ/ صالح عبد العزيز عبد لله العجلان
+    </div>
+
+</div>

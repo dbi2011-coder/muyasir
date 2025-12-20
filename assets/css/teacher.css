@@ -1,3 +1,6 @@
+/* ==========================================================================
+   بداية محتوى ملف teacher.css الأصلي (من النسخة الذهبية)
+   ========================================================================== */
 :root {
     --primary-color: #2c3e50;
     --secondary-color: #34495e;
@@ -324,126 +327,65 @@ th {
 
 .profile-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: 2fr 1fr;
     gap: 20px;
 }
 
 /* ==========================================================================
-   تنسيقات نموذج الخطة التربوية الفردية الجديد (IEP)
+   إضافة: تنسيقات نموذج الخطة المطابق لملف الوورد
+   (هذا الجزء فقط هو الجديد حسب الطلب)
    ========================================================================== */
-.iep-container {
+.iep-word-model {
     background: #fff;
     padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    margin-top: 20px;
-    direction: rtl;
-    border: 1px solid #e1e1e1;
-}
-
-.iep-header {
-    text-align: center;
-    margin-bottom: 25px;
-    border-bottom: 2px solid #eee;
-    padding-bottom: 15px;
-}
-
-.iep-header h3 {
-    color: var(--primary-color);
-    font-size: 1.5rem;
-    margin-bottom: 5px;
-}
-
-.iep-info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 15px;
-    margin-bottom: 25px;
-    background: #f8f9fa;
-    padding: 20px;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-}
-
-.iep-info-item label {
-    display: block;
-    font-weight: bold;
-    color: var(--secondary-color);
-    margin-bottom: 8px;
-    font-size: 0.9rem;
-}
-
-.iep-info-item input {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 6px;
-    background: #fff;
-    font-family: inherit;
-}
-
-.iep-table-wrapper {
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
     overflow-x: auto;
-    background: white;
-    border-radius: 8px;
 }
 
-.iep-table {
+.word-table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 800px; /* ضمان عرض مناسب للجدول */
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+    border: 1px solid #000; /* محاكاة حدود الوورد */
 }
 
-.iep-table th, .iep-table td {
-    border: 1px solid #dee2e6;
-    padding: 12px;
+.word-table th, .word-table td {
+    border: 1px solid #000;
+    padding: 8px;
     text-align: center;
     vertical-align: middle;
 }
 
-.iep-table th {
-    background-color: var(--accent-color);
-    color: white;
+.word-table th {
+    background-color: #e9ecef;
     font-weight: bold;
-    font-size: 0.95rem;
+    color: #000;
 }
 
-.iep-table td input, .iep-table td textarea {
+.word-table input[type="text"], 
+.word-table input[type="date"],
+.word-table textarea {
     width: 100%;
-    border: 1px solid transparent;
+    border: none;
     background: transparent;
-    padding: 8px;
     font-family: inherit;
     resize: none;
-    transition: all 0.2s;
-    border-radius: 4px;
+    text-align: center;
 }
 
-.iep-table td input:focus, .iep-table td textarea:focus {
-    background: #f0f8ff;
-    border-color: #b1d4ef;
+.word-table input:focus, .word-table textarea:focus {
+    background-color: #f8f9fa;
     outline: none;
 }
 
-.iep-table td input:hover, .iep-table td textarea:hover {
-    background: #fcfcfc;
-}
+.text-right { text-align: right !important; }
 
-.add-row-btn {
-    margin-top: 15px;
-    background-color: var(--success);
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.95rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: background 0.2s;
-}
-
-.add-row-btn:hover {
-    background-color: #219150;
+/* تنسيق خاص لقسم الهدف البعيد */
+.long-term-goal-box {
+    border: 1px solid #000;
+    padding: 10px;
+    margin-bottom: 15px;
+    background-color: #fff;
 }

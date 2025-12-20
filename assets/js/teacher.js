@@ -33,7 +33,7 @@ function switchSection(sectionId) {
 }
 
 /* --------------------------------------------------------------------------
-   2. إدارة النوافذ المنبثقة (Modals) - [تم الإصلاح هنا]
+   2. إدارة النوافذ المنبثقة (Modals)
    -------------------------------------------------------------------------- */
 
 // دالة إظهار نافذة "إضافة طالب"
@@ -41,12 +41,11 @@ function showAddStudentModal() {
     const modal = document.getElementById('addStudentModal');
     if (modal) {
         modal.style.display = 'flex';
-        // مهلة بسيطة لتفعيل الأنيميشن (CSS Transition)
         setTimeout(() => {
             modal.classList.add('show');
         }, 10);
     } else {
-        console.error("خطأ: نافذة إضافة الطالب (addStudentModal) غير موجودة في كود HTML.");
+        console.error("خطأ: نافذة إضافة الطالب (addStudentModal) غير موجودة.");
         alert("عذراً، نافذة إضافة الطالب غير موجودة في الصفحة الحالية.");
     }
 }
@@ -73,28 +72,35 @@ function showAssignHomeworkModal() {
 function closeModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
-        modal.classList.remove('show'); // إلغاء الأنيميشن
+        modal.classList.remove('show');
         setTimeout(() => {
-            modal.style.display = 'none'; // الإخفاء الفعلي
-        }, 300); // نفس مدة الـ transition في CSS
+            modal.style.display = 'none';
+        }, 300);
     }
 }
 
-// دالة حفظ الطالب (محاكاة)
-function saveStudent() {
-    // هنا يتم وضع كود الحفظ الفعلي أو إرسال البيانات
-    alert("تم حفظ بيانات الطالب بنجاح! (محاكاة)");
+/* --------------------------------------------------------------------------
+   3. الوظائف الأساسية (إضافة طالب، حفظ، إلخ) - [تم الإصلاح هنا]
+   -------------------------------------------------------------------------- */
+
+// دالة إضافة طالب جديد (التي كانت تسبب الخطأ)
+function addNewStudent() {
+    // هنا يمكنك إضافة كود قراءة البيانات من الحقول وحفظها
+    // مثال للمحاكاة:
+    alert("تم إضافة الطالب بنجاح! (محاكاة)");
     closeModal('addStudentModal');
-    // يمكن هنا استدعاء دالة لتحديث قائمة الطلاب
+    
+    // تحديث الصفحة أو القائمة إذا لزم الأمر
+    // location.reload(); 
 }
 
 /* --------------------------------------------------------------------------
-   3. الأتمتة الذكية: ربط الخطة بالجدول الدراسي
+   4. الأتمتة الذكية: ربط الخطة بالجدول الدراسي
    -------------------------------------------------------------------------- */
 function autoFillIEPSchedule() {
     // التحقق من وجود عناصر الخطة في الصفحة الحالية
     const studentNameInput = document.getElementById('iep-student-name');
-    if (!studentNameInput) return; // لسنا في صفحة الخطة
+    if (!studentNameInput) return;
     
     const studentName = studentNameInput.value.trim();
     if (!studentName) return;
@@ -152,15 +158,14 @@ function autoFillIEPSchedule() {
 }
 
 /* --------------------------------------------------------------------------
-   4. وظائف واجهة المستخدم الإضافية (UI Helpers)
+   5. وظائف واجهة المستخدم الإضافية (UI Helpers)
    -------------------------------------------------------------------------- */
 
-// توسيع/طي الأهداف (Accordion)
+// توسيع/طي الأهداف
 function toggleObjective(headerElement) {
     const row = headerElement.parentElement;
     const body = row.querySelector('.obj-body');
     
-    // التبديل
     if (body.style.display === 'block') {
         body.style.display = 'none';
         row.classList.remove('expanded');

@@ -1,137 +1,302 @@
 /* ==========================================================================
    ملف: assets/js/teacher.js
-   الوصف: الكود البرمجي الخاص بلوحة تحكم المعلم (الطلاب، الخطة، الدروس)
+   الوصف: ملف شامل يدمج إدارة قائمة الطلاب (الجدول) مع إدارة ملف الطالب (الخطة)
    ========================================================================== */
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log("Teacher Script Loaded");
-    
-    // 1. تحميل قائمة الطلاب (إذا كنا في صفحة الطلاب)
-    loadStudents();
 
-    // 2. محاولة تشغيل تعبئة الجدول (إذا كنا في صفحة الخطة)
-    setTimeout(autoFillIEPSchedule, 500);
+    // التحقق من الصفحة الحالية لتشغيل الدالة المناسبة
+    const path = window.location.pathname;
+
+    if (path.includes('students.html')) {
+        // نحن في صفحة قائمة الطلاب
+        loadStudentsData();
+    } else if (path.includes('student-profile.html')) {
+        // نحن في صفحة ملف الطالب
+        // (يمكن إضافة دالة تحميل بيانات الطالب هنا إذا لزم الأمر)
+        setTimeout(autoFillIEPSchedule, 500);
+    }
 });
 
-/* --------------------------------------------------------------------------
-   1. وظائف إدارة وعرض الطلاب (الجزء الذي كان مفقوداً)
-   -------------------------------------------------------------------------- */
+/* ==========================================================================
+   القسم الأول: إدارة قائمة الطلاب (students.html) - نظام الجدول
+   ========================================================================== */
 
-// دالة جلب وعرض الطلاب
-function loadStudents() {
-    const grid = document.getElementById('studentsGrid');
-    // إذا لم نجد الشبكة (Grid) فهذا يعني أننا لسنا في صفحة "طلابي"، لذا نخرج
-    if (!grid) return;
+// 1. دالة تحميل وعرض بيانات الطلاب في الجدول
+function loadStudentsData() {
+    const loadingState = document.getElementById('loadingState');
+    const emptyState = document.getElementById('emptyState');
+    const tableBody = document.getElementById('studentsTableBody');
 
-    // بيانات وهمية (Mock Data) في حال لم يكن هناك قاعدة بيانات حقيقية بعد
-    // يمكنك استبدال هذا الجزء بجلب البيانات من LocalStorage
-    let students = JSON.parse(localStorage.getItem('myStudents'));
+    // إذا لم نجد الجدول، نخرج (لسنا في صفحة الطلاب)
+    if (!tableBody) return;
 
-    if (!students || students.length === 0) {
-        // بيانات افتراضية للتجربة
-        students = [
-            { id: 1, name: "نايف", grade: "الأول", diagnosis: "صعوبات قراءة", avatar: "ن" },
-            { id: 2, name: "محمد", grade: "الثاني", diagnosis: "تشتت انتباه", avatar: "م" },
-            { id: 3, name: "سعد", grade: "الثالث", diagnosis: "صعوبات رياضيات", avatar: "س" }
-        ];
-        // حفظها للاستخدام المستقبلي
-        localStorage.setItem('myStudents', JSON.stringify(students));
-    }
+    // إظهار التحميل
+    if(loadingState) loadingState.style.display = 'block';
+    if(emptyState) emptyState.style.display = 'none';
+    tableBody.innerHTML = '';
 
-    // تفريغ الشبكة من رسالة "جاري التحميل..."
-    grid.innerHTML = '';
+    // محاكاة تأخير الشبكة لجلب البيانات
+    setTimeout(() => {
+        // جلب البيانات من LocalStorage أو استخدام بيانات افتراضية
+        let users = JSON.parse(localStorage.getItem('users') || '[]');
+        // (للتجربة: إذا كانت فارغة نضيف طلاب افتراضيين)
+        if (users.length === 0) {
+             users = [
+                { id: 1, name: "نايف", grade: "الأول", subject: "لغتي", role: "student", progress: 65, teacherId: 1 },
+                { id: 2, name: "محمد", grade: "الثاني", subject: "رياضيات", role: "student", progress: 40, teacherId: 1 }
+            ];
+            localStorage.setItem('users', JSON.stringify(users));
+        }
 
-    // بناء البطاقات
-    students.forEach(student => {
-        const card = document.createElement('div');
-        card.className = 'student-card'; // تأكد أن هذا الكلاس موجود في CSS
-        // لاحظ: تم ربط الرابط بصفحة student-profile.html
-        card.innerHTML = `
-            <div class="card-header">
-                <div class="student-avatar" style="background-color: var(--accent-color); color: white; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">${student.avatar}</div>
-                <div class="student-meta">
-                    <h3>${student.name}</h3>
-                    <small>الصف: ${student.grade}</small>
-                </div>
-            </div>
-            <div class="card-body" style="padding: 10px;">
-                <span class="tag" style="background: #ecf0f1; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem;">${student.diagnosis}</span>
-            </div>
-            <div class="card-footer" style="padding: 10px; border-top: 1px solid #eee; text-align: center;">
-                <a href="student-profile.html?id=${student.id}" class="btn btn-primary" style="text-decoration: none; font-size: 0.9rem;">عرض الملف</a>
-            </div>
-        `;
-        grid.appendChild(card);
-    });
+        // تصفية الطلاب فقط (role === 'student')
+        // (هنا نفترض أن المعلم الحالي ID = 1، يمكن تعديله لاحقاً ليكون ديناميكياً)
+        const students = users.filter(u => u.role === 'student');
+
+        if(loadingState) loadingState.style.display = 'none';
+
+        if (students.length === 0) {
+            if(emptyState) emptyState.style.display = 'block';
+            return;
+        }
+
+        // رسم الجدول
+        tableBody.innerHTML = students.map((student, index) => {
+            const progress = student.progress || 0;
+            const progressColor = progress >= 80 ? 'success' : progress >= 50 ? 'warning' : 'danger';
+            
+            return `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${student.name}</td>
+                    <td>${student.grade}</td>
+                    <td>${student.subject}</td>
+                    <td class="progress-cell">
+                        <div class="progress-text text-${progressColor}">${progress}%</div>
+                        <div class="progress-bar">
+                            <div class="progress-fill bg-${progressColor}" style="width: ${progress}%"></div>
+                        </div>
+                    </td>
+                    <td>
+                        <div class="student-actions" style="display: flex; gap: 5px;">
+                            <a href="student-profile.html?id=${student.id}" class="btn btn-sm btn-primary" title="ملف الطالب">
+                                <i class="fas fa-file-alt"></i> ملف الطالب
+                            </a>
+                            <button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})" title="حذف">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }, 500);
 }
 
-// دالة إضافة طالب جديد (مصححة)
+// 2. دالة إضافة طالب جديد
 function addNewStudent() {
-    // 1. جلب البيانات من الحقول (تأكد من وجود IDs هذه في HTML النافذة)
-    // في هذا المثال سنقوم بمحاكاة الإضافة
+    const nameInput = document.getElementById('studentName');
+    const gradeInput = document.getElementById('studentGrade');
+    const subjectInput = document.getElementById('studentSubject');
+
+    if (!nameInput || !gradeInput || !subjectInput) {
+        console.error("عناصر النموذج غير موجودة");
+        return;
+    }
+
+    const name = nameInput.value.trim();
+    const grade = gradeInput.value;
+    const subject = subjectInput.value;
+
+    if (!name || !grade || !subject) {
+        alert('يرجى ملء جميع الحقول');
+        return;
+    }
+
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    
     const newStudent = {
         id: Date.now(), // رقم فريد
-        name: "طالب جديد",
-        grade: "الأول",
-        diagnosis: "قيد التشخيص",
-        avatar: "ط"
+        teacherId: 1, // افتراضي
+        role: 'student',
+        name: name,
+        grade: grade,
+        subject: subject,
+        progress: 0,
+        createdAt: new Date().toISOString()
     };
 
-    // 2. جلب القائمة القديمة وإضافة الجديد
-    let students = JSON.parse(localStorage.getItem('myStudents')) || [];
-    students.push(newStudent);
-    localStorage.setItem('myStudents', JSON.stringify(students));
+    users.push(newStudent);
+    localStorage.setItem('users', JSON.stringify(users));
 
-    alert("تم إضافة الطالب بنجاح!");
-    
-    // 3. إغلاق النافذة وتحديث القائمة
-    closeModal('addStudentModal');
-    loadStudents(); // إعادة تحميل القائمة لتظهر الإضافة
+    alert('تم إضافة الطالب بنجاح');
+    closeAddStudentModal();
+    loadStudentsData(); // تحديث الجدول
 }
 
-
-/* --------------------------------------------------------------------------
-   2. التنقل بين الأقسام (Tabs) - لصفحة البروفايل
-   -------------------------------------------------------------------------- */
-function switchSection(sectionId) {
-    document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active'));
-    
-    const target = document.getElementById('section-' + sectionId);
-    if(target) target.classList.add('active');
-    
-    document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
-    const link = document.getElementById('link-' + sectionId);
-    if(link) link.classList.add('active');
-
-    // **ميزة ذكية**: تحديث الجدول عند فتح الخطة
-    if(sectionId === 'iep') {
-        autoFillIEPSchedule();
-    }
-}
-
-/* --------------------------------------------------------------------------
-   3. إدارة النوافذ المنبثقة (Modals)
-   -------------------------------------------------------------------------- */
+// 3. دوال النوافذ المنبثقة (Modals)
 function showAddStudentModal() {
     const modal = document.getElementById('addStudentModal');
-    if (modal) {
-        modal.style.display = 'flex';
-        setTimeout(() => modal.classList.add('show'), 10);
-    } else {
-        console.error("خطأ: نافذة إضافة الطالب غير موجودة.");
-    }
-}
-
-function showAssignTestModal() {
-    const modal = document.getElementById('assignTestModal');
     if(modal) {
         modal.style.display = 'flex';
         setTimeout(() => modal.classList.add('show'), 10);
     }
 }
 
+function closeAddStudentModal() {
+    const modal = document.getElementById('addStudentModal');
+    if(modal) {
+        modal.classList.remove('show');
+        setTimeout(() => modal.style.display = 'none', 300);
+    }
+}
+
+function deleteStudent(id) {
+    if(confirm('هل أنت متأكد من حذف هذا الطالب؟')) {
+        let users = JSON.parse(localStorage.getItem('users') || '[]');
+        users = users.filter(u => u.id !== id);
+        localStorage.setItem('users', JSON.stringify(users));
+        loadStudentsData();
+    }
+}
+
+// 4. دوال البحث والفلترة
+function searchStudents() {
+    const term = document.getElementById('studentSearch').value.toLowerCase();
+    const rows = document.querySelectorAll('#studentsTableBody tr');
+    rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(term) ? '' : 'none';
+    });
+}
+
+function filterStudents() {
+    const grade = document.getElementById('gradeFilter').value;
+    const rows = document.querySelectorAll('#studentsTableBody tr');
+    rows.forEach(row => {
+        // العمود الثالث (index 2) هو الصف
+        const rowGrade = row.children[2] ? row.children[2].innerText : '';
+        if (grade === 'all' || rowGrade.includes(grade)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+/* ==========================================================================
+   القسم الثاني: إدارة ملف الطالب (student-profile.html) - الخطة والجدول
+   ========================================================================== */
+
+// 1. التنقل بين الأقسام (Tabs) في صفحة البروفايل
+function switchSection(sectionId) {
+    // إخفاء كل الأقسام
+    document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active'));
+    
+    // إظهار القسم المطلوب
+    const target = document.getElementById('section-' + sectionId);
+    if(target) target.classList.add('active');
+    
+    // تحديث القائمة الجانبية
+    document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+    const link = document.getElementById('link-' + sectionId);
+    if(link) link.classList.add('active');
+
+    // **ميزة ذكية**: تحديث الجدول عند فتح قسم الخطة
+    if(sectionId === 'iep') {
+        autoFillIEPSchedule();
+    }
+}
+
+// 2. الميزة الذكية: تعبئة جدول الحصص في الخطة آلياً
+function autoFillIEPSchedule() {
+    const studentNameInput = document.getElementById('iep-student-name');
+    if (!studentNameInput) return; // لسنا في صفحة الخطة
+    
+    const studentName = studentNameInput.value.trim();
+    if (!studentName) return;
+
+    // جلب الجدول الدراسي من التخزين
+    const scheduleDataString = localStorage.getItem('studySchedule') || localStorage.getItem('schoolSchedule') || localStorage.getItem('teacherSchedule');
+    
+    if (!scheduleDataString) {
+        console.log("لا يوجد جدول دراسي محفوظ.");
+        return; 
+    }
+
+    const scheduleData = JSON.parse(scheduleDataString);
+
+    // خريطة لربط أسماء الأيام بـ IDs خانات الاختيار
+    const daysMap = {
+        'الأحد': 'iep-chk-sunday',
+        'الاثنين': 'iep-chk-monday',
+        'الثلاثاء': 'iep-chk-tuesday',
+        'الأربعاء': 'iep-chk-wednesday',
+        'الخميس': 'iep-chk-thursday'
+    };
+
+    // تصفير جميع الخانات أولاً
+    Object.values(daysMap).forEach(id => {
+        const checkbox = document.getElementById(id);
+        if(checkbox) checkbox.checked = false;
+    });
+
+    // البحث في البيانات (ندعم هيكلين مختلفين للبيانات لضمان العمل)
+    // الاحتمال 1: البيانات مصفوفة كائنات {day: 'الأحد', period: 1, students: [1, 2]}
+    if (Array.isArray(scheduleData)) {
+        // نحتاج معرفة ID الطالب إذا كانت البيانات تخزن IDs
+        // سنجرب البحث بالاسم مباشرة في الجدول الدراسي إذا كان يخزن أسماء
+        // أو سنحتاج منطق أعقد إذا كان يخزن IDs
+        
+        // للتبسيط في هذا الإصدار: سنفترض أن الجدول يخزن IDs ونحن نبحث عن اسم الطالب
+        // الحل: البحث عن الطالب في جدول المستخدمين للحصول على ID
+        let users = JSON.parse(localStorage.getItem('users') || '[]');
+        let studentObj = users.find(u => u.name === studentName);
+        let studentId = studentObj ? studentObj.id : null;
+
+        scheduleData.forEach(session => {
+            if (session.students && (session.students.includes(studentId) || session.students.includes(studentName))) {
+                if (daysMap[session.day]) {
+                    const checkbox = document.getElementById(daysMap[session.day]);
+                    if(checkbox) checkbox.checked = true;
+                }
+            }
+        });
+    } 
+    // الاحتمال 2: البيانات كائن { "الأحد": { "1": [...] } }
+    else {
+        for (const [dayName, periods] of Object.entries(scheduleData)) {
+            if (daysMap[dayName]) {
+                let isPresent = false;
+                if (periods && typeof periods === 'object') {
+                    for (const periodStudents of Object.values(periods)) {
+                        if (Array.isArray(periodStudents) && periodStudents.includes(studentName)) {
+                            isPresent = true;
+                            break; 
+                        }
+                    }
+                }
+                if (isPresent) {
+                    const checkbox = document.getElementById(daysMap[dayName]);
+                    if (checkbox) checkbox.checked = true;
+                }
+            }
+        }
+    }
+}
+
+// 3. دوال النوافذ الأخرى في البروفايل
 function showAssignHomeworkModal() {
     const modal = document.getElementById('assignHomeworkModal');
+    if(modal) {
+        modal.style.display = 'flex';
+        setTimeout(() => modal.classList.add('show'), 10);
+    }
+}
+
+function showAssignTestModal() {
+    const modal = document.getElementById('assignTestModal');
     if(modal) {
         modal.style.display = 'flex';
         setTimeout(() => modal.classList.add('show'), 10);
@@ -148,79 +313,12 @@ function closeModal(modalId) {
     }
 }
 
-/* --------------------------------------------------------------------------
-   4. الأتمتة الذكية: ربط الخطة بالجدول الدراسي
-   -------------------------------------------------------------------------- */
-function autoFillIEPSchedule() {
-    const studentNameInput = document.getElementById('iep-student-name');
-    if (!studentNameInput) return;
-    
-    const studentName = studentNameInput.value.trim();
-    if (!studentName) return;
-
-    // جلب الجدول الدراسي
-    const scheduleDataString = localStorage.getItem('studySchedule') || localStorage.getItem('schoolSchedule');
-    
-    if (!scheduleDataString) return;
-
-    const scheduleData = JSON.parse(scheduleDataString);
-
-    const daysMap = {
-        'الأحد': 'iep-chk-sunday',
-        'الاثنين': 'iep-chk-monday',
-        'الثلاثاء': 'iep-chk-tuesday',
-        'الأربعاء': 'iep-chk-wednesday',
-        'الخميس': 'iep-chk-thursday'
-    };
-
-    // تصفير الخانات
-    Object.values(daysMap).forEach(id => {
-        const checkbox = document.getElementById(id);
-        if(checkbox) checkbox.checked = false;
-    });
-
-    // البحث والتعبئة
-    for (const [dayName, periods] of Object.entries(scheduleData)) {
-        if (daysMap[dayName]) {
-            let isPresent = false;
-            if (periods && typeof periods === 'object') {
-                for (const periodStudents of Object.values(periods)) {
-                    if (Array.isArray(periodStudents) && periodStudents.includes(studentName)) {
-                        isPresent = true;
-                        break; 
-                    }
-                }
-            }
-            if (isPresent) {
-                const checkbox = document.getElementById(daysMap[dayName]);
-                if (checkbox) checkbox.checked = true;
-            }
-        }
-    }
-}
-
-/* --------------------------------------------------------------------------
-   5. وظائف واجهة المستخدم الإضافية
-   -------------------------------------------------------------------------- */
-function toggleObjective(headerElement) {
-    const row = headerElement.parentElement;
-    const body = row.querySelector('.obj-body');
-    
-    if (body.style.display === 'block') {
-        body.style.display = 'none';
-        row.classList.remove('expanded');
-    } else {
-        body.style.display = 'block';
-        row.classList.add('expanded');
-    }
-}
-
 function regenerateLessons() {
     const grid = document.getElementById('studentLessonsGrid');
     if(grid) {
         grid.innerHTML = '<div style="text-align:center; padding:20px;">جاري التحديث... <i class="fas fa-spinner fa-spin"></i></div>';
         setTimeout(() => {
-            grid.innerHTML = '<p style="text-align:center;">تم تحديث الدروس.</p>';
+            grid.innerHTML = '<p style="text-align:center;">تم تحديث الدروس المقترحة.</p>';
         }, 1000);
     }
 }

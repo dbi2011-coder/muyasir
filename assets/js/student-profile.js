@@ -1,47 +1,75 @@
 // =========================================================
 // 📁 الملف: assets/js/student-profile.js
-// الوظيفة: إدارة ملف الطالب بالكامل (التنقل، البيانات، الخطة التلقائية)
+// الوظيفة: إدارة ملف الطالب - نسخة ذكية (تقوم بإصلاح أخطاء الرابط تلقائياً)
 // =========================================================
 
 let currentStudentId = null;
 let currentStudent = null;
 
 // =========================================================
-// 1. عند تحميل الصفحة وتشغيل النظام
+// 1. عند تحميل الصفحة
 // =========================================================
 document.addEventListener('DOMContentLoaded', function() {
     // جلب معرف الطالب من الرابط
     const params = new URLSearchParams(window.location.search);
-    const idParam = params.get('id');
+    let idParam = params.get('id');
 
-    // التحقق من وجود المعرف
-    if (!idParam) {
-        alert('لم يتم تحديد طالب، جاري العودة للقائمة...');
-        window.location.href = 'students.html';
+    // تحميل بيانات الطلاب من الذاكرة
+    const students = JSON.parse(localStorage.getItem('students') || '[]');
+
+    // --- بداية الإصلاح الذكي ---
+    if (students.length === 0) {
+        // حالة: لا يوجد أي طالب مضاف في النظام
+        alert('تنبيه: لا يوجد أي طلاب مضافين في النظام حالياً.\nسيتم إضافة "طالب تجريبي" تلقائياً لتتمكن من معاينة الصفحة.');
+        seedTestData(); // إضافة بيانات تجريبية فوراً
+        window.location.reload(); // إعادة تحميل الصفحة لرؤية الطالب التجريبي
         return;
     }
 
-    // تخزين المعرف (بدون تحويل قسري لضمان المرونة بين النصوص والأرقام)
-    currentStudentId = idParam;
+    // محاولة العثور على الطالب المحدد
+    let foundStudent = students.find(s => s.id == idParam);
 
-    // تحميل بيانات الطالب الأساسية
+    if (!foundStudent) {
+        // حالة: الرابط يحتوي على رقم خطأ، أو الطالب المحذوف
+        console.warn(`لم يتم العثور على الطالب برقم ${idParam}. جاري البحث عن بديل...`);
+        
+        if (students.length > 0) {
+            // الحل: فتح أول طالب موجود في القائمة
+            foundStudent = students[0];
+            // alert(`تنبيه: لم يتم العثور على الطالب المطلوب (رقم ${idParam || 'غير محدد'}).\nسيتم عرض ملف الطالب: "${foundStudent.name}" بدلاً منه.`);
+            
+            // تحديث الرابط في المتصفح ليعكس الرقم الصحيح (بدون إعادة تحميل)
+            const newUrl = new URL(window.location);
+            newUrl.searchParams.set('id', foundStudent.id);
+            window.history.replaceState({}, '', newUrl);
+        }
+    }
+
+    // اعتماد الطالب الذي تم العثور عليه
+    currentStudent = foundStudent;
+    currentStudentId = currentStudent.id;
+    // --- نهاية الإصلاح الذكي ---
+
+    console.log("تم تحميل ملف الطالب:", currentStudent.name);
+
+    // تحميل بيانات الواجهة
     loadStudentData();
     
-    // تفعيل التبويب الافتراضي (الاختبار التشخيصي)
+    // تفعيل التبويب الافتراضي
     switchSection('diagnostic');
 });
 
 // =========================================================
-// 2. دالة التنقل بين التبويبات (التي كانت مفقودة)
+// 2. دالة التنقل بين التبويبات
 // =========================================================
 function switchSection(sectionId) {
-    // إخفاء جميع الأقسام
+    // إخفاء الكل
     document.querySelectorAll('.content-section').forEach(section => {
         section.classList.remove('active');
-        section.style.display = 'none'; // ضمان الإخفاء
+        section.style.display = 'none';
     });
-
-    // إزالة التفعيل من القائمة الجانبية
+    
+    // إزالة التفعيل من القائمة
     document.querySelectorAll('.sidebar-menu .nav-link').forEach(link => {
         link.classList.remove('active');
     });
@@ -53,103 +81,80 @@ function switchSection(sectionId) {
         targetSection.style.display = 'block';
     }
 
-    // تفعيل الرابط في القائمة
+    // تفعيل الرابط
     const targetLink = document.getElementById(`link-${sectionId}`);
     if (targetLink) {
         targetLink.classList.add('active');
     }
 
-    // تشغيل وظائف خاصة عند فتح تبويب "الخطة التربوية"
+    // إذا كان قسم الخطة، حمل البيانات
     if (sectionId === 'iep') {
         loadIEPTab(currentStudentId);
     }
 }
 
 // =========================================================
-// 3. دالة تحميل بيانات الطالب (الاسم، الصورة، الصف)
+// 3. عرض بيانات الطالب الأساسية
 // =========================================================
 function loadStudentData() {
-    const students = JSON.parse(localStorage.getItem('students') || '[]');
-    
-    // استخدام (==) للمقارنة المرنة بين النص والرقم
-    currentStudent = students.find(s => s.id == currentStudentId);
+    if (!currentStudent) return;
 
-    if (currentStudent) {
-        // تحديث القائمة الجانبية
-        const elements = {
-            sideName: document.getElementById('sideName'),
-            sideGrade: document.getElementById('sideGrade'),
-            sideAvatar: document.getElementById('sideAvatar'),
-            headerName: document.getElementById('headerStudentName')
-        };
+    // تحديث العناصر في الصفحة
+    const els = {
+        name: document.getElementById('sideName'),
+        grade: document.getElementById('sideGrade'),
+        avatar: document.getElementById('sideAvatar'),
+        header: document.getElementById('headerStudentName')
+    };
 
-        if (elements.sideName) elements.sideName.textContent = currentStudent.name;
-        if (elements.sideGrade) elements.sideGrade.textContent = currentStudent.grade || 'غير محدد';
-        if (elements.sideAvatar) elements.sideAvatar.textContent = currentStudent.name.charAt(0);
-        if (elements.headerName) elements.headerName.textContent = currentStudent.name;
-        
-    } else {
-        alert('خطأ: بيانات الطالب غير موجودة في قاعدة البيانات.');
-        window.location.href = 'students.html';
-    }
+    if (els.name) els.name.textContent = currentStudent.name;
+    if (els.grade) els.grade.textContent = currentStudent.grade || 'غير محدد';
+    if (els.avatar) els.avatar.textContent = currentStudent.name.charAt(0);
+    if (els.header) els.header.textContent = currentStudent.name;
 }
 
 // =========================================================
-// 4. المحرك الرئيسي: تعبئة الخطة التربوية تلقائياً (النموذج 9)
+// 4. تعبئة الخطة التربوية (نموذج 9) تلقائياً
 // =========================================================
 function loadIEPTab(studentId) {
-    console.log("جاري إعداد الخطة للطالب:", studentId);
+    console.log("تجهيز الخطة للطالب:", studentId);
     
-    // جلب البيانات من النظام
+    // جلب المصادر
     const objectives = JSON.parse(localStorage.getItem('objectives') || '[]');
     const tests = JSON.parse(localStorage.getItem('tests') || '[]');
     const allResults = JSON.parse(localStorage.getItem('testResults') || '[]');
 
-    // البحث عن أحدث اختبار تشخيصي للطالب
+    // البحث عن آخر اختبار تشخيصي
     const studentResult = allResults
         .filter(r => r.studentId == studentId && r.type === 'diagnostic')
         .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
 
-    // مصفوفات لتخزين البيانات المستخلصة
     let strengthPoints = [];
     let needPoints = []; 
-    let targetObjectives = []; // لتعبئة جدول الأهداف
+    let targetObjectives = []; 
 
-    // -----------------------------------------------------
-    // أ) تحليل نتائج الاختبار وتصنيفها (قوة vs احتياج)
-    // -----------------------------------------------------
+    // تحليل الإجابات
     if (studentResult && studentResult.answers) {
         const originalTest = tests.find(t => t.id == studentResult.testId);
-        
         if (originalTest) {
             studentResult.answers.forEach(answer => {
-                // البحث عن السؤال والهدف المرتبط به
                 const question = originalTest.questions.find(q => q.id == answer.questionId);
-                
                 if (question && question.linkedGoalId) {
                     const objective = objectives.find(obj => obj.id == question.linkedGoalId);
-                    
                     if (objective) {
                         if (answer.isCorrect) {
-                            // إجابة صحيحة -> نقاط القوة
                             strengthPoints.push(objective.shortTermGoal);
                         } else {
-                            // إجابة خاطئة -> نقاط الاحتياج
                             needPoints.push(objective.shortTermGoal);
-                            
-                            // تحضير الأهداف للخطة (قصيرة المدى + التدريسية)
-                            if (objective.instructionalGoals && objective.instructionalGoals.length > 0) {
-                                targetObjectives.push({
-                                    short: objective.shortTermGoal,
-                                    instructional: objective.instructionalGoals
-                                });
-                            } else {
-                                // إذا لم توجد أهداف تدريسية، نستخدم الهدف القصير نفسه
-                                targetObjectives.push({
-                                    short: objective.shortTermGoal,
-                                    instructional: [objective.shortTermGoal]
-                                });
-                            }
+                            // إضافة للأهداف
+                            const instructional = (objective.instructionalGoals && objective.instructionalGoals.length > 0)
+                                ? objective.instructionalGoals
+                                : [objective.shortTermGoal];
+                                
+                            targetObjectives.push({
+                                short: objective.shortTermGoal,
+                                instructional: instructional
+                            });
                         }
                     }
                 }
@@ -157,62 +162,48 @@ function loadIEPTab(studentId) {
         }
     }
 
-    // -----------------------------------------------------
-    // ب) تعبئة حقول "نقاط القوة" و "نقاط الاحتياج" في الواجهة
-    // -----------------------------------------------------
-    // ملاحظة: تأكد أن عناصر HTML تمتلك هذه الـ IDs
+    // تعبئة الواجهة (Textareas)
     const strengthsInput = document.getElementById('iep-strengths');
     const needsInput = document.getElementById('iep-needs');
 
     if (strengthsInput) {
-        strengthsInput.value = strengthPoints.length > 0 
-            ? strengthPoints.join('\n- ') 
-            : 'لا توجد نقاط قوة مسجلة بناءً على الاختبار التشخيصي.';
+        strengthsInput.value = strengthPoints.length > 0 ? strengthPoints.join('\n- ') : '';
+        if(strengthPoints.length === 0) strengthsInput.placeholder = "لا توجد نقاط قوة مسجلة من الاختبار";
     }
-
     if (needsInput) {
-        needsInput.value = needPoints.length > 0 
-            ? needPoints.join('\n- ') 
-            : 'لا توجد نقاط احتياج مسجلة.';
+        needsInput.value = needPoints.length > 0 ? needPoints.join('\n- ') : '';
+        if(needPoints.length === 0) needsInput.placeholder = "لا توجد نقاط احتياج مسجلة";
     }
 
-    // -----------------------------------------------------
-    // ج) تعبئة جدول الأهداف (القصيرة والتدريسية)
-    // -----------------------------------------------------
-    const goalsTableBody = document.getElementById('iep-goals-body');
-    
-    if (goalsTableBody) {
-        goalsTableBody.innerHTML = ''; // مسح المحتوى القديم
-
+    // تعبئة جدول الأهداف
+    const goalsBody = document.getElementById('iep-goals-body');
+    if (goalsBody) {
+        goalsBody.innerHTML = '';
         if (targetObjectives.length > 0) {
-            targetObjectives.forEach((objGroup) => {
-                objGroup.instructional.forEach((instrGoal) => {
-                    const row = document.createElement('tr');
-                    
-                    // بناء الصف: هدف قصير (قابل للتعديل) - هدف تدريسي (قابل للتعديل) - حقول فارغة للتقييم
-                    row.innerHTML = `
-                        <td><input type="text" class="form-control" value="${objGroup.short}"></td>
-                        <td><input type="text" class="form-control" value="${instrGoal}"></td>
-                        <td><input type="date" class="form-control"></td>
-                        <td><input type="text" class="form-control" placeholder="%"></td>
-                        <td><input type="text" class="form-control"></td>
-                    `;
-                    goalsTableBody.appendChild(row);
+            targetObjectives.forEach(grp => {
+                grp.instructional.forEach(instr => {
+                    const row = `
+                        <tr>
+                            <td><input type="text" class="form-control" value="${grp.short}"></td>
+                            <td><input type="text" class="form-control" value="${instr}"></td>
+                            <td><input type="date" class="form-control"></td>
+                            <td><input type="text" class="form-control" placeholder="%"></td>
+                            <td><input type="text" class="form-control"></td>
+                        </tr>`;
+                    goalsBody.insertAdjacentHTML('beforeend', row);
                 });
             });
         } else {
-            goalsTableBody.innerHTML = `<tr><td colspan="5" class="text-center">لم يتم تحديد أهداف، يرجى إجراء اختبار تشخيصي أولاً.</td></tr>`;
+            goalsBody.innerHTML = '<tr><td colspan="5" class="text-center">لم يتم استخراج أهداف من الاختبار التشخيصي.</td></tr>';
         }
     }
 
-    // -----------------------------------------------------
-    // د) تعبئة جدول الحصص (من جدول المعلم)
-    // -----------------------------------------------------
+    // تعبئة جدول الحصص
     fillScheduleTable(studentId);
 }
 
 // =========================================================
-// 5. دالة تعبئة جدول الحصص
+// 5. دالة جدول الحصص
 // =========================================================
 function fillScheduleTable(studentId) {
     const scheduleBody = document.getElementById('iep-schedule-body');
@@ -221,31 +212,42 @@ function fillScheduleTable(studentId) {
     const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
     
-    // بناء الجدول (الأيام كصفوف، والحصص كأعمدة) أو العكس حسب تصميم الجدول لديك
-    // هنا نفترض التصميم: الصفوف = الأيام، الأعمدة = الحصص (1-7)
-    
     let html = '';
     days.forEach(day => {
-        html += `<tr><td class="font-weight-bold">${day}</td>`;
-        
-        for (let period = 1; period <= 7; period++) {
-            // البحث هل توجد حصة للطالب في هذا اليوم وهذه الفترة
+        html += `<tr><td style="font-weight:bold; background:#f8f9fa;">${day}</td>`;
+        for (let p = 1; p <= 7; p++) {
+            // البحث عن الحصة
             const session = teacherSchedule.find(s => 
-                s.day === day && 
-                s.period == period && 
-                s.students && s.students.includes(parseInt(studentId)) // التأكد من وجود الطالب في القائمة
+                s.day === day && s.period == p && 
+                s.students && s.students.includes(parseInt(studentId))
             );
 
             if (session) {
-                // حصة موجودة: نضع المادة أو علامة
-                html += `<td><input type="text" class="form-control filled-session" value="${session.subject || 'صعوبات'}" style="background-color: #e8f5e9;"></td>`;
+                html += `<td><input type="text" class="form-control" value="${session.subject || 'صعوبات'}" style="background:#e8f5e9; text-align:center;"></td>`;
             } else {
-                // حصة فارغة
-                html += `<td><input type="text" class="form-control" disabled style="background-color: #f1f1f1;"></td>`;
+                html += `<td><input type="text" class="form-control" disabled style="background:#f1f1f1;"></td>`;
             }
         }
         html += '</tr>';
     });
-
     scheduleBody.innerHTML = html;
+}
+
+// =========================================================
+// 6. بيانات احتياطية (تعمل فقط إذا كان النظام فارغاً تماماً)
+// =========================================================
+function seedTestData() {
+    // هذه الدالة تعمل فقط إذا لم يكن لديك أي بيانات بتاتاً
+    // للتأكد من أن الصفحة تعمل لأول مرة
+    if (!localStorage.getItem('students')) {
+        localStorage.setItem('students', JSON.stringify([
+            { id: 1, name: "الطالب (تجريبي)", grade: "الخامس", disabilityType: "صعوبات تعلم" }
+        ]));
+    }
+    // إضافة أهداف وتجهيزات للاختبار إذا لزم الأمر...
+    if (!localStorage.getItem('objectives')) {
+        localStorage.setItem('objectives', JSON.stringify([
+            { id: 101, shortTermGoal: "قراءة الحروف بالحركات", instructionalGoals: ["قراءة بالفتح", "قراءة بالضم"] }
+        ]));
+    }
 }

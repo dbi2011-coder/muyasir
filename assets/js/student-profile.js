@@ -1,35 +1,30 @@
 // =========================================================
 // 📁 الملف: assets/js/student-profile.js
-// الوظيفة: إدارة ملف الطالب (النسخة الشاملة - بحث ذكي عن الاختبارات)
 // =========================================================
 
 let currentStudentId = null;
 let currentStudent = null;
 
-// =========================================================
-// 1. عند تحميل الصفحة
-// =========================================================
+// عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', function() {
+    console.log("🚀 تم تحميل ملف student-profile.js بنجاح"); // رسالة تأكيد
+
     const params = new URLSearchParams(window.location.search);
     const targetId = params.get('id');
     const students = JSON.parse(localStorage.getItem('students') || '[]');
 
-    // التحقق من وجود طلاب
     if (students.length === 0) {
-        alert('لا توجد بيانات طلاب. سيتم توجيهك لإضافة طالب جديد.');
+        alert('تنبيه: لا يوجد طلاب في النظام.');
         window.location.href = 'students.html';
         return;
     }
 
-    // البحث عن الطالب (مقارنة مرنة)
     let foundStudent = students.find(s => s.id == targetId);
 
-    // معالجة حالة عدم تطابق المعرف
+    // إذا لم نجد الطالب، نفتح أول طالب تلقائياً
     if (!foundStudent) {
-        console.warn(`لم يتم العثور على الطالب ${targetId}، جاري الفتح التلقائي لأول ملف متاح.`);
+        console.warn('لم يتم العثور على الطالب، جاري فتح أول طالب متاح.');
         foundStudent = students[0];
-        
-        // تعديل الرابط
         const newUrl = new URL(window.location);
         newUrl.searchParams.set('id', foundStudent.id);
         window.history.replaceState({}, '', newUrl);
@@ -38,50 +33,52 @@ document.addEventListener('DOMContentLoaded', function() {
     currentStudent = foundStudent;
     currentStudentId = currentStudent.id;
 
-    // تحميل الواجهة
     loadStudentData();
-    switchSection('diagnostic'); // البدء بصفحة التشخيص
+    switchSection('diagnostic'); // تفعيل التبويب الأول
 });
 
 // =========================================================
-// 2. التنقل بين التبويبات (هذه هي الدالة المفقودة)
+// 1. دالة التنقل بين التبويبات (switchSection)
 // =========================================================
-function switchSection(sectionId) {
-    // إخفاء جميع الأقسام
+window.switchSection = function(sectionId) {
+    // إخفاء الكل
     document.querySelectorAll('.content-section').forEach(el => {
-        el.classList.remove('active');
         el.style.display = 'none';
+        el.classList.remove('active');
     });
     
-    // إلغاء تفعيل الروابط
+    // إزالة التفعيل من القوائم
     document.querySelectorAll('.sidebar-menu .nav-link').forEach(el => {
         el.classList.remove('active');
     });
 
     // إظهار القسم المطلوب
-    const targetSection = document.getElementById(`section-${sectionId}`);
+    const targetSection = document.getElementById('section-' + sectionId);
     if (targetSection) {
-        targetSection.classList.add('active');
         targetSection.style.display = 'block';
+        targetSection.classList.add('active');
     }
 
     // تفعيل الرابط
-    const targetLink = document.getElementById(`link-${sectionId}`);
+    const targetLink = document.getElementById('link-' + sectionId);
     if (targetLink) targetLink.classList.add('active');
 
-    // إذا تم فتح "الخطة التربوية"، نفذ الخوارزمية الخاصة بها
+    // إذا كان الخطة، حمل البيانات
     if (sectionId === 'iep') {
         loadIEPTab(currentStudentId);
     }
-}
+};
 
 // =========================================================
-// 3. عرض بيانات الطالب
+// 2. تحميل بيانات الطالب
 // =========================================================
 function loadStudentData() {
     if (!currentStudent) return;
     
-    const setText = (id, txt) => { const el = document.getElementById(id); if(el) el.textContent = txt; };
+    const setText = (id, txt) => { 
+        const el = document.getElementById(id); 
+        if(el) el.textContent = txt; 
+    };
     
     setText('sideName', currentStudent.name);
     setText('headerStudentName', currentStudent.name);
@@ -92,24 +89,33 @@ function loadStudentData() {
 }
 
 // =========================================================
-// 4. إدارة النوافذ والاختبارات (البحث الذكي الشامل)
+// 3. النوافذ المنبثقة (Modals)
 // =========================================================
-function showAssignTestModal() {
+window.showAssignTestModal = function() {
     const modal = document.getElementById('assignTestModal');
     if (modal) {
         modal.style.display = 'block';
-        loadAvailableTests(); // استدعاء دالة البحث الذكي
+        loadAvailableTests();
     } else {
-        alert('خطأ: نافذة AssignTestModal غير موجودة في HTML');
+        alert('خطأ: كود النافذة المنبثقة غير موجود في HTML');
     }
-}
+};
 
-function closeModal(modalId) {
+window.closeModal = function(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) modal.style.display = 'none';
-}
+};
 
-// --- دالة البحث الذكي عن الاختبارات (Smart Search) ---
+// إغلاق النافذة عند النقر خارجها
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = "none";
+    }
+};
+
+// =========================================================
+// 4. تحميل الاختبارات (بحث شامل)
+// =========================================================
 function loadAvailableTests() {
     const select = document.getElementById('assignTestSelect');
     if (!select) return;
@@ -117,50 +123,41 @@ function loadAvailableTests() {
     select.innerHTML = '<option value="">اختر الاختبار...</option>';
     let allFoundTests = [];
 
-    // 1. جلب كل المفاتيح من الذاكرة
-    const keys = Object.keys(localStorage);
-
-    // 2. البحث داخل كل مفتاح
-    keys.forEach(key => {
+    // بحث في كل المفاتيح
+    Object.keys(localStorage).forEach(key => {
         try {
             const raw = localStorage.getItem(key);
-            if (!raw || !raw.startsWith('[') || raw.length < 10) return;
-            
-            const data = JSON.parse(raw);
-            if (Array.isArray(data) && data.length > 0) {
-                const sample = data[0];
-                // معايير التعرف على الاختبار
-                if (sample.hasOwnProperty('questions') || sample.hasOwnProperty('items') || 
-                   (sample.hasOwnProperty('title') && sample.hasOwnProperty('id')) ||
-                    key.toLowerCase().includes('bank') || key.toLowerCase().includes('test')) {
-                    
-                    allFoundTests = [...allFoundTests, ...data];
+            if (raw && raw.startsWith('[')) {
+                const data = JSON.parse(raw);
+                if (Array.isArray(data) && data.length > 0) {
+                    const sample = data[0];
+                    if (sample.title || sample.questions || key.includes('bank') || key.includes('test')) {
+                        allFoundTests = [...allFoundTests, ...data];
+                    }
                 }
             }
         } catch(e) {}
     });
 
-    // 3. إزالة التكرار
+    // إزالة التكرار
     const uniqueTests = Array.from(new Map(allFoundTests.map(item => [item.id, item])).values());
 
     if (uniqueTests.length === 0) {
-        const option = document.createElement('option');
-        option.text = "⚠️ لم يتم العثور على اختبارات";
-        option.disabled = true;
-        select.appendChild(option);
+        const opt = document.createElement('option');
+        opt.text = "لا توجد اختبارات متاحة";
+        select.appendChild(opt);
         return;
     }
 
-    // 4. تعبئة القائمة
     uniqueTests.forEach(test => {
         const option = document.createElement('option');
         option.value = test.id;
-        option.textContent = test.title || test.name || test.bankName || `اختبار #${test.id}`;
+        option.textContent = test.title || test.name || `اختبار #${test.id}`;
         select.appendChild(option);
     });
 }
 
-function saveAssignedTest() {
+window.saveAssignedTest = function() {
     const select = document.getElementById('assignTestSelect');
     const testId = select ? select.value : null;
 
@@ -168,40 +165,35 @@ function saveAssignedTest() {
 
     const assignedTests = JSON.parse(localStorage.getItem('assignedTests') || '[]');
     
-    // منع التكرار (للاختبارات المعلقة)
-    const exists = assignedTests.find(a => a.studentId == currentStudentId && a.testId == testId && a.status === 'pending');
-    if(exists) { alert('هذا الاختبار مسند بالفعل.'); return; }
-
+    // حفظ التعيين
     assignedTests.push({
         id: Date.now(),
         studentId: currentStudentId,
         testId: testId,
-        assignedDate: new Date().toISOString(),
-        status: 'pending'
+        status: 'pending',
+        assignedDate: new Date().toISOString()
     });
 
     localStorage.setItem('assignedTests', JSON.stringify(assignedTests));
     alert('تم إسناد الاختبار بنجاح');
     closeModal('assignTestModal');
-}
+};
 
 // =========================================================
-// 5. الخوارزمية: تعبئة نموذج 9 (الخطة التربوية)
+// 5. الخطة التربوية (نموذج 9)
 // =========================================================
 function loadIEPTab(studentId) {
-    console.log("تحديث الخطة للطالب:", studentId);
-
+    console.log("تحليل بيانات الخطة...");
+    
     const objectives = JSON.parse(localStorage.getItem('objectives') || '[]');
     const allResults = JSON.parse(localStorage.getItem('testResults') || '[]');
     
-    // تجميع الاختبارات للوصول للأسئلة
+    // جلب كل الاختبارات للبحث عن الأسئلة
     let allTests = [];
     Object.keys(localStorage).forEach(key => {
         try {
-            const data = JSON.parse(localStorage.getItem(key));
-            if(Array.isArray(data) && data.length > 0 && (data[0].questions || data[0].items)) {
-                allTests = [...allTests, ...data];
-            }
+            const d = JSON.parse(localStorage.getItem(key));
+            if(Array.isArray(d)) allTests = [...allTests, ...d];
         } catch(e){}
     });
 
@@ -211,7 +203,7 @@ function loadIEPTab(studentId) {
 
     let strengthPoints = [];
     let needPoints = []; 
-    let detailedPlan = []; 
+    let detailedPlan = [];
 
     if (studentResult && studentResult.answers) {
         const originalTest = allTests.find(t => t.id == studentResult.testId);
@@ -225,10 +217,10 @@ function loadIEPTab(studentId) {
                     const objective = objectives.find(obj => obj.id == question.linkedGoalId);
                     if (objective) {
                         if (answer.isCorrect) {
-                            if(!strengthPoints.includes(objective.shortTermGoal)) 
+                            if (!strengthPoints.includes(objective.shortTermGoal)) 
                                 strengthPoints.push(objective.shortTermGoal);
                         } else {
-                            if(!needPoints.includes(objective.shortTermGoal)) {
+                            if (!needPoints.includes(objective.shortTermGoal)) {
                                 needPoints.push(objective.shortTermGoal);
                                 const instructionals = (objective.instructionalGoals && objective.instructionalGoals.length > 0)
                                     ? objective.instructionalGoals : [objective.shortTermGoal];
@@ -241,12 +233,11 @@ function loadIEPTab(studentId) {
         }
     }
 
-    // تعبئة الواجهة
+    // تعبئة البيانات
     const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
     setVal('iep-strengths', strengthPoints.join('\n- '));
     setVal('iep-needs', needPoints.join('\n- '));
 
-    // تعبئة الجدول
     const goalsBody = document.getElementById('iep-goals-body');
     if (goalsBody) {
         goalsBody.innerHTML = '';
@@ -265,16 +256,13 @@ function loadIEPTab(studentId) {
                 });
             });
         } else {
-            goalsBody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">لا توجد نتائج تشخيصية.</td></tr>`;
+            goalsBody.innerHTML = `<tr><td colspan="5" class="text-center">لا توجد نتائج تشخيصية.</td></tr>`;
         }
     }
-
+    
     fillScheduleTable(studentId);
 }
 
-// =========================================================
-// 6. جدول الحصص
-// =========================================================
 function fillScheduleTable(studentId) {
     const scheduleBody = document.getElementById('iep-schedule-body');
     if (!scheduleBody) return;
@@ -284,26 +272,16 @@ function fillScheduleTable(studentId) {
     
     let html = '';
     days.forEach(day => {
-        html += `<tr><td style="font-weight:bold; background-color:#f8f9fa;">${day}</td>`;
+        html += `<tr><td class="font-weight-bold">${day}</td>`;
         for (let p = 1; p <= 7; p++) {
-            const session = teacherSchedule.find(s => 
-                s.day === day && s.period == p && 
-                s.students && s.students.includes(parseInt(studentId))
-            );
+            const session = teacherSchedule.find(s => s.day === day && s.period == p && s.students && s.students.includes(parseInt(studentId)));
             if (session) {
-                html += `<td><input type="text" class="form-control" value="${session.subject || 'صعوبات'}" style="background-color:#e8f5e9; text-align:center;"></td>`;
+                html += `<td><input type="text" class="form-control" value="${session.subject || 'صعوبات'}" style="background:#e8f5e9;text-align:center;"></td>`;
             } else {
-                html += `<td><input type="text" class="form-control" disabled style="background-color:#f9f9f9;"></td>`;
+                html += `<td><input type="text" class="form-control" disabled style="background:#f9f9f9;"></td>`;
             }
         }
         html += '</tr>';
     });
     scheduleBody.innerHTML = html;
-}
-
-// إغلاق النوافذ عند النقر خارجها
-window.onclick = function(event) {
-    if (event.target.classList.contains('modal')) {
-        event.target.style.display = "none";
-    }
 }

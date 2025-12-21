@@ -1,210 +1,77 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ملف الطالب - ميسر التعلم</title>
-    <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/teacher.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <style>
-        /* تنسيقات خاصة بنموذج 9 */
-        .model-9-container {
-            background: white;
-            padding: 30px;
-            border: 1px solid #000;
-            direction: rtl;
-            max-width: 210mm; /* عرض A4 */
-            margin: 0 auto;
-        }
-        .model-header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #000;
-            padding-bottom: 10px;
-        }
-        .model-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 15px;
-            font-size: 14px;
-        }
-        .model-table th, .model-table td {
-            border: 1px solid #000;
-            padding: 5px;
-            text-align: center;
-            vertical-align: middle;
-        }
-        .model-table th {
-            background-color: #f0f0f0;
-            font-weight: bold;
-        }
-        .editable-field {
-            width: 100%;
-            border: none;
-            background: transparent;
-            font-family: 'Tajawal', sans-serif;
-            font-size: 14px;
-            resize: none;
-            text-align: right;
-            padding: 5px;
-        }
-        .editable-field:focus {
-            background-color: #e8f0fe;
-            outline: none;
-        }
-        textarea.editable-field {
-            min-height: 60px;
-        }
-        .schedule-cell {
-            height: 40px;
-            cursor: pointer;
-        }
-        .schedule-cell.active {
-            background-color: #e0e0e0;
-            font-weight: bold;
-        }
-        @media print {
-            .no-print { display: none; }
-            .dashboard-container { display: block; }
-            .sidebar, .dashboard-header { display: none; }
-            .main-content-dashboard { margin: 0; padding: 0; }
-            .model-9-container { border: none; }
-        }
-    </style>
-</head>
-<body>
-    <div class="dashboard-container">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار">
-                    <h2>ميسر التعلم</h2>
-                </div>
-            </div>
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="menu-icon">🏠</span>الرئيسية</a></li>
-                <li><a href="students.html" class="active"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
-                </ul>
-        </aside>
-
-        <main class="main-content-dashboard">
-            <header class="dashboard-header">
-                <div class="user-info">
-                    <div class="welcome-text">ملف الطالب</div>
-                    <div class="user-name" id="studentNameHeader">...</div>
-                </div>
-            </header>
-
-            <div class="dashboard-content">
-                <div class="settings-tabs">
-                    <button class="settings-tab active" onclick="switchProfileTab('info')">البيانات الأساسية</button>
-                    <button class="settings-tab" onclick="switchProfileTab('iep')">الخطة التربوية (نموذج 9)</button>
-                    <button class="settings-tab" onclick="switchProfileTab('tests')">نتائج الاختبارات</button>
-                </div>
-
-                <div id="tab-info" class="tab-content">
-                    <div class="card">
-                        <h3>بيانات الطالب</h3>
-                        <div id="studentInfoDisplay"></div>
-                    </div>
-                </div>
-
-                <div id="tab-iep" class="tab-content" style="display: none;">
-                    <div class="action-buttons mb-3 no-print">
-                        <button class="btn btn-primary" onclick="autoFillIEP()">🔄 إعادة التعبئة التلقائية (من التشخيصي)</button>
-                        <button class="btn btn-success" onclick="saveIEP()">💾 حفظ الخطة</button>
-                        <button class="btn btn-secondary" onclick="window.print()">🖨️ طباعة النموذج</button>
-                    </div>
-                    
-                    <div class="model-9-container" id="model9Form">
-                        <div class="model-header">
-                            <h3>المملكة العربية السعودية</h3>
-                            <h3>وزارة التعليم</h3>
-                            <h3>نموذج رقم (9) - الخطة التربوية الفردية</h3>
-                        </div>
-
-                        <table class="model-table">
-                            <tr>
-                                <th width="15%">اسم الطالب</th>
-                                <td width="35%"><input type="text" id="iepName" class="editable-field" readonly></td>
-                                <th width="15%">الصف</th>
-                                <td width="35%"><input type="text" id="iepGrade" class="editable-field"></td>
-                            </tr>
-                            <tr>
-                                <th>تاريخ الميلاد</th>
-                                <td><input type="date" id="iepDob" class="editable-field"></td>
-                                <th>المادة</th>
-                                <td><input type="text" id="iepSubject" class="editable-field"></td>
-                            </tr>
-                        </table>
-
-                        <table class="model-table">
-                            <tr>
-                                <th width="50%">نقاط القوة (من الاختبار التشخيصي)</th>
-                                <th width="50%">نقاط الاحتياج (الأهداف التعليمية)</th>
-                            </tr>
-                            <tr>
-                                <td style="vertical-align: top;">
-                                    <textarea id="iepStrengths" class="editable-field" rows="10" placeholder="ستظهر هنا المهارات التي أتقنها الطالب..."></textarea>
-                                </td>
-                                <td style="vertical-align: top;">
-                                    <textarea id="iepNeeds" class="editable-field" rows="10" placeholder="ستظهر هنا المهارات التي لم يتقنها الطالب (الأهداف)..."></textarea>
-                                </td>
-                            </tr>
-                        </table>
-
-                        <div class="mb-3">
-                            <h4>الأهداف التدريسية للخطة:</h4>
-                            <table class="model-table" id="iepGoalsTable">
-                                <thead>
-                                    <tr>
-                                        <th width="30%">الهدف قصير المدى</th>
-                                        <th width="40%">الأهداف التدريسية</th>
-                                        <th width="15%">معيار الإتقان</th>
-                                        <th width="15%">تاريخ التحقق</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    </tbody>
-                            </table>
-                            <button class="btn btn-sm btn-outline-primary no-print" onclick="addGoalRow()">+ إضافة هدف يدوياً</button>
-                        </div>
-
-                        <div class="mb-3">
-                            <h4>جدول حصص المصادر:</h4>
-                            <table class="model-table">
-                                <thead>
-                                    <tr>
-                                        <th>الحصة / اليوم</th>
-                                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="iepScheduleBody">
-                                    </tbody>
-                            </table>
-                        </div>
-
-                        <div class="row mt-4">
-                            <div class="col-6 text-center">
-                                <p><strong>معلم صعوبات التعلم:</strong> <input type="text" id="iepTeacherName" class="editable-field text-center" style="width:200px"></p>
-                            </div>
-                            <div class="col-6 text-center">
-                                <p><strong>قائد المدرسة:</strong> ..............................</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="tab-tests" class="tab-content" style="display: none;">
-                    <div id="studentTestsList"></div>
-                </div>
-            </div>
-        </main>
+<div id="iep-section" class="iep-container" style="direction: rtl; background: #fff; padding: 20px; border: 1px solid #ccc;">
+    
+    <div class="action-buttons no-print" style="margin-bottom: 20px; text-align: left;">
+        <button onclick="autoFillIEP()" style="background: #28a745; color: white; padding: 10px 20px; border: none; cursor: pointer;">
+            🔄 تعبئة تلقائية (من التشخيصي)
+        </button>
+        <button onclick="window.print()" style="background: #6c757d; color: white; padding: 10px 20px; border: none; cursor: pointer;">
+            🖨️ طباعة النموذج
+        </button>
     </div>
 
-    <script src="../../assets/js/auth.js"></script>
-    <script src="../../assets/js/dashboard.js"></script>
-    <script src="../../assets/js/student-profile.js"></script> </body>
-</html>
+    <div class="model-header" style="text-align: center; border-bottom: 2px solid #000; margin-bottom: 20px;">
+        <h3>المملكة العربية السعودية - وزارة التعليم</h3>
+        <h3>نموذج رقم (9) - الخطة التربوية الفردية</h3>
+    </div>
+
+    <table border="1" style="width: 100%; border-collapse: collapse; text-align: center; margin-bottom: 20px;">
+        <tr style="background: #f9f9f9;">
+            <th width="15%">اسم الطالب</th>
+            <td width="35%"><input type="text" id="iepName" class="editable-input" style="width:98%; border:none;"></td>
+            <th width="15%">المادة</th>
+            <td width="35%"><input type="text" id="iepSubject" class="editable-input" style="width:98%; border:none;"></td>
+        </tr>
+        <tr>
+            <th>الصف</th>
+            <td><input type="text" id="iepGrade" class="editable-input" style="width:98%; border:none;"></td>
+            <th>تاريخ الميلاد</th>
+            <td><input type="date" id="iepDob" class="editable-input" style="width:98%; border:none;"></td>
+        </tr>
+    </table>
+
+    <table border="1" style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+        <tr style="background: #f0f0f0; text-align: center;">
+            <th width="50%">نقاط القوة (المهارات المتقنة في التشخيصي)</th>
+            <th width="50%">نقاط الاحتياج (الأهداف المرتبطة بالإخفاق)</th>
+        </tr>
+        <tr>
+            <td style="vertical-align: top; padding: 5px;">
+                <textarea id="iepStrengths" rows="8" style="width: 100%; border: none; resize: vertical;" placeholder="تعبئة تلقائية: الأهداف التي أجاب عليها الطالب بشكل صحيح..."></textarea>
+            </td>
+            <td style="vertical-align: top; padding: 5px;">
+                <textarea id="iepNeeds" rows="8" style="width: 100%; border: none; resize: vertical;" placeholder="تعبئة تلقائية: الأهداف التي أخفق فيها الطالب..."></textarea>
+            </td>
+        </tr>
+    </table>
+
+    <h4 style="margin-bottom: 10px;">الأهداف التدريسية (مستخلصة من نقاط الاحتياج):</h4>
+    <table border="1" style="width: 100%; border-collapse: collapse; text-align: center; margin-bottom: 20px;" id="iepGoalsTable">
+        <thead>
+            <tr style="background: #f0f0f0;">
+                <th width="30%">الهدف قصير المدى</th>
+                <th width="40%">الأهداف التدريسية</th>
+                <th width="15%">معيار الإتقان</th>
+                <th width="15%">تاريخ التحقق</th>
+            </tr>
+        </thead>
+        <tbody>
+            </tbody>
+    </table>
+
+    <h4 style="margin-bottom: 10px;">جدول حصص المصادر:</h4>
+    <table border="1" style="width: 100%; border-collapse: collapse; text-align: center;" id="iepScheduleTable">
+        <thead>
+            <tr style="background: #f0f0f0;">
+                <th>اليوم / الحصة</th>
+                <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th>
+            </tr>
+        </thead>
+        <tbody id="iepScheduleBody">
+            </tbody>
+    </table>
+
+    <div style="margin-top: 30px; display: flex; justify-content: space-between;">
+        <div><strong>معلم الصعوبات:</strong> <input type="text" id="iepTeacher" style="border:none; border-bottom:1px dotted #000;"></div>
+        <div><strong>قائد المدرسة:</strong> ..............................</div>
+    </div>
+</div>

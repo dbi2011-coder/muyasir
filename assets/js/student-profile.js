@@ -1,244 +1,478 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ملف الطالب - ميسر التعلم</title>
-    <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/teacher.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        .sidebar-menu li a { cursor: pointer; }
-        .content-section { display: none; animation: fadeIn 0.3s ease; }
-        .content-section.active { display: block; }
-        .sidebar-student-info { padding: 20px; text-align: center; background: rgba(0, 0, 0, 0.1); margin-bottom: 10px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-        .sidebar-student-avatar { width: 60px; height: 60px; margin: 0 auto 10px; background: var(--primary-color); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; border: 2px solid rgba(255,255,255,0.2); }
-        .sidebar-student-name { color: white; font-weight: bold; margin-bottom: 5px; }
-        .sidebar-student-grade { color: rgba(255, 255, 255, 0.7); font-size: 0.85rem; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* أنماط نافذة التصحيح */
-        .review-question-item { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; background: #fff; }
-        .review-q-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: #f9f9f9; padding: 10px; border-radius: 5px; }
-        .student-answer-box { padding: 10px; background: #e3f2fd; border-radius: 5px; margin-bottom: 10px; border-right: 4px solid #2196f3; }
-        .teacher-feedback-box textarea { width: 100%; border: 1px solid #ccc; border-radius: 5px; padding: 8px; min-height: 60px; margin-top: 5px; }
-        .score-input { width: 70px; text-align: center; font-weight: bold; }
-    </style>
-</head>
-<body>
-    <div class="dashboard-container">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار">
-                    <h2>ميسر التعلم</h2>
-                </div>
-            </div>
-            <div class="sidebar-student-info">
-                <div class="sidebar-student-avatar" id="sideAvatar">ط</div>
-                <div class="sidebar-student-name" id="sideName">جار التحميل...</div>
-                <div class="sidebar-student-grade" id="sideGrade">...</div>
-            </div>
-            <ul class="sidebar-menu">
-                <li><a onclick="switchSection('diagnostic')" class="nav-link active" id="link-diagnostic"><span class="menu-icon">📝</span>الاختبار التشخيصي</a></li>
-                <li><a onclick="switchSection('iep')" class="nav-link" id="link-iep"><span class="menu-icon">📊</span>الخطة التربوية</a></li>
-                <li><a onclick="switchSection('lessons')" class="nav-link" id="link-lessons"><span class="menu-icon">📚</span>الدروس</a></li>
-                <li><a onclick="switchSection('assignments')" class="nav-link" id="link-assignments"><span class="menu-icon">📋</span>الواجبات</a></li>
-                <li><a onclick="switchSection('progress')" class="nav-link" id="link-progress"><span class="menu-icon">📈</span>تقدم الطالب</a></li>
-                <li style="margin-top: 40px;"><a href="students.html"><span class="menu-icon">↩️</span>عودة للقائمة</a></li>
-            </ul>
-        </aside>
+// ============================================
+// 📁 المسار: assets/js/student-profile.js
+// ============================================
+
+let currentStudentId = null;
+let currentStudent = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const params = new URLSearchParams(window.location.search);
+    currentStudentId = parseInt(params.get('id'));
+    
+    if (!currentStudentId) {
+        alert('لم يتم تحديد طالب');
+        window.location.href = 'students.html';
+        return;
+    }
+    loadStudentData();
+});
+
+// تحميل بيانات الطالب الأساسية
+function loadStudentData() {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    currentStudent = users.find(u => u.id === currentStudentId);
+    
+    if (!currentStudent) {
+        alert('الطالب غير موجود');
+        window.location.href = 'students.html';
+        return;
+    }
+    
+    // تحديث الواجهة
+    document.getElementById('sideName').textContent = currentStudent.name;
+    document.getElementById('headerStudentName').textContent = currentStudent.name;
+    document.getElementById('sideGrade').textContent = currentStudent.grade + ' - ' + (currentStudent.subject || 'عام');
+    document.getElementById('sideAvatar').textContent = currentStudent.name.charAt(0);
+    document.title = `ملف الطالب: ${currentStudent.name}`;
+    
+    // البدء بالقسم الافتراضي
+    switchSection('diagnostic');
+}
+
+// التنقل بين الأقسام
+function switchSection(sectionId) {
+    // تحديث القائمة الجانبية
+    document.querySelectorAll('.sidebar-menu .nav-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    const activeLink = document.getElementById(`link-${sectionId}`);
+    if(activeLink) activeLink.classList.add('active');
+
+    // إظهار القسم المطلوب
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.classList.remove('active');
+    });
+    document.getElementById(`section-${sectionId}`).classList.add('active');
+
+    // تشغيل دالة التحميل الخاصة بالقسم
+    if (sectionId === 'diagnostic') loadDiagnosticTab();
+    if (sectionId === 'iep') loadIEPTab();
+    if (sectionId === 'lessons') loadLessonsTab();
+    if (sectionId === 'assignments') loadAssignmentsTab();
+    if (sectionId === 'progress') loadProgressTab();
+}
+
+// ==========================================
+// 1. قسم الاختبار التشخيصي (مع المراجعة)
+// ==========================================
+function loadDiagnosticTab() {
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    // نبحث عن أحدث اختبار تشخيصي
+    const assignedTest = studentTests.find(t => t.studentId === currentStudentId && t.type === 'diagnostic');
+    
+    if (assignedTest) {
+        document.getElementById('noDiagnosticTest').style.display = 'none';
+        const detailsDiv = document.getElementById('diagnosticTestDetails');
+        detailsDiv.style.display = 'block';
         
-        <main class="main-content-dashboard">
-            <header class="dashboard-header">
-                <button class="mobile-menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('active')">☰</button>
-                <div class="user-info">
-                    <div class="user-welcome">
-                        <div class="welcome-text">ملف الطالب</div>
-                        <div class="user-name" id="headerStudentName">...</div>
-                    </div>
+        const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+        const originalTest = allTests.find(t => t.id === assignedTest.testId);
+        
+        let statusBadge = '';
+        let actionContent = '';
+
+        if(assignedTest.status === 'completed') {
+            statusBadge = '<span class="badge badge-success">مكتمل</span>';
+            actionContent = `
+                <div style="margin-top:15px; padding:15px; background:#f0fff4; border:1px solid #c3e6cb; border-radius:5px;">
+                    <strong>الدرجة الحالية: ${assignedTest.score || 0}%</strong>
+                    <p>تم التصحيح الآلي.</p>
+                    <button class="btn btn-warning mt-2" onclick="openReviewModal(${assignedTest.id})">🔍 مراجعة وتصحيح وتدوين ملاحظات</button>
+                </div>`;
+        } else if (assignedTest.status === 'returned') {
+            statusBadge = '<span class="badge badge-warning" style="background:#ffc107; color:#000;">معاد للتعديل</span>';
+            actionContent = `<div class="alert alert-warning mt-3">تم إعادة الاختبار للطالب لتعديل الإجابات بناءً على الملاحظات. بانتظار التسليم الجديد.</div>`;
+        } else if (assignedTest.status === 'in-progress') {
+            statusBadge = '<span class="badge badge-info">قيد التنفيذ</span>';
+            actionContent = `<div class="alert alert-info mt-3">الطالب بدأ بحل الاختبار ولم يسلمه بعد.</div>`;
+        } else {
+            statusBadge = '<span class="badge badge-secondary">لم يبدأ</span>';
+            actionContent = `<div class="alert alert-secondary mt-3">بانتظار دخول الطالب للاختبار.</div>`;
+        }
+
+        detailsDiv.innerHTML = `
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3>${originalTest ? originalTest.title : 'اختبار (محذوف)'}</h3>
+                    ${statusBadge}
                 </div>
-            </header>
-            
-            <div class="dashboard-content">
-                <div id="section-diagnostic" class="content-section active">
-                    <div class="content-header"><h1>الاختبار التشخيصي</h1><button class="btn btn-primary" onclick="showAssignTestModal()">+ تعيين اختبار</button></div>
-                    <div id="diagnosticContent">
-                        <div class="empty-state" id="noDiagnosticTest"><div class="empty-icon">📝</div><h3>لم يتم تعيين اختبار</h3></div>
-                        <div id="diagnosticTestDetails" style="display: none;"></div>
-                    </div>
-                </div>
-
-                <div id="section-iep" class="content-section">
-                    <div class="content-header"><h1>الخطة التربوية</h1><button class="btn btn-info" onclick="window.print()">طباعة</button></div>
-                    
-                    <div class="iep-word-model">
-                        <h3 style="text-align: center; margin-bottom: 15px; color: #000;">الخطة التربوية الفردية</h3>
-                        
-                        <table class="word-table">
-                            <tr>
-                                <th width="15%">اسم الطالب</th>
-                                <td><input type="text" value="نايف"></td>
-                                <th width="15%">المادة</th>
-                                <td><input type="text" value="لغتي"></td>
-                                <th width="10%">الصف</th>
-                                <td><input type="text" value="الأول"></td>
-                                <th width="15%">المستوى الفعلي</th>
-                                <td><input type="text"></td>
-                            </tr>
-                        </table>
-
-                        <table class="word-table">
-                            <thead>
-                                <tr>
-                                    <th>اليوم</th>
-                                    <th>الأحد</th>
-                                    <th>الاثنين</th>
-                                    <th>الثلاثاء</th>
-                                    <th>الأربعاء</th>
-                                    <th>الخميس</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><strong>الحصة</strong></td>
-                                    <td><input type="checkbox"></td>
-                                    <td><input type="checkbox"></td>
-                                    <td><input type="checkbox"></td>
-                                    <td><input type="checkbox"></td>
-                                    <td><input type="checkbox"></td>
-                                </tr>
-                            </tbody>
-                        </table>
-
-                        <table class="word-table">
-                            <thead>
-                                <tr>
-                                    <th width="5%">م</th>
-                                    <th width="45%">نقاط القوة</th>
-                                    <th width="5%">م</th>
-                                    <th width="45%">نقاط الاحتياج</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>1</td>
-                                    <td><textarea rows="2" class="text-right"></textarea></td>
-                                    <td>1</td>
-                                    <td><textarea rows="2" class="text-right"></textarea></td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td><textarea rows="2" class="text-right"></textarea></td>
-                                    <td>2</td>
-                                    <td><textarea rows="2" class="text-right"></textarea></td>
-                                </tr>
-                            </tbody>
-                        </table>
-
-                        <div class="long-term-goal-box">
-                            <strong>الهدف بعيد المدى:</strong>
-                            <textarea rows="2" class="text-right" style="width: 100%; border: none; resize: none;" placeholder="أن يتقن التلميذ مهارات..."></textarea>
-                            <div style="margin-top: 10px; text-align: center;">
-                                <span>الفترة الزمنية المتوقعة: من <input type="date" style="border: 1px solid #ccc;"></span>
-                                <span style="margin-right: 20px;">إلى <input type="date" style="border: 1px solid #ccc;"></span>
-                            </div>
-                        </div>
-
-                        <table class="word-table">
-                            <thead>
-                                <tr>
-                                    <th width="5%">م</th>
-                                    <th width="75%">الأهداف التدريسية</th>
-                                    <th width="20%">تاريخ التحقق</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr style="background-color: #f9f9f9;">
-                                    <td><strong>1</strong></td>
-                                    <td class="text-right" colspan="2">
-                                        <strong>الهدف قصير المدى (1):</strong> 
-                                        <input type="text" style="width: 60%; border-bottom: 1px solid #ccc;" placeholder="اكتب الهدف القصير هنا">
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>1</td>
-                                    <td><textarea rows="1" class="text-right" placeholder="الهدف التدريسي.."></textarea></td>
-                                    <td><input type="date"></td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td><textarea rows="1" class="text-right" placeholder="الهدف التدريسي.."></textarea></td>
-                                    <td><input type="date"></td>
-                                </tr>
-                                <tr style="background-color: #f9f9f9;">
-                                    <td><strong>2</strong></td>
-                                    <td class="text-right" colspan="2">
-                                        <strong>الهدف قصير المدى (2):</strong> 
-                                        <input type="text" style="width: 60%; border-bottom: 1px solid #ccc;" placeholder="اكتب الهدف القصير هنا">
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>1</td>
-                                    <td><textarea rows="1" class="text-right" placeholder="الهدف التدريسي.."></textarea></td>
-                                    <td><input type="date"></td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td><textarea rows="1" class="text-right" placeholder="الهدف التدريسي.."></textarea></td>
-                                    <td><input type="date"></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <button class="add-row-btn">+ إضافة هدف قصير مدى جديد</button>
-                    </div>
-                    <div id="iepContent" style="display:none;"></div>
-                </div>
-
-                <div id="section-lessons" class="content-section"><div class="content-header"><h1>الدروس</h1><button class="btn btn-outline-primary" onclick="regenerateLessons()">تحديث</button></div><div class="content-grid" id="studentLessonsGrid"></div></div>
-                <div id="section-assignments" class="content-section"><div class="content-header"><h1>الواجبات</h1><button class="btn btn-primary" onclick="showAssignHomeworkModal()">+ واجب</button></div><div class="content-grid" id="studentAssignmentsGrid"></div></div>
-                <div id="section-progress" class="content-section"><div class="content-header"><h1>التقدم</h1></div><div class="card"><table class="table"><thead><tr><th>الهدف</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody id="progressTableBody"></tbody></table></div></div>
+                <p class="text-muted">تاريخ التعيين: ${new Date(assignedTest.assignedDate).toLocaleDateString('ar-SA')}</p>
+                ${actionContent}
             </div>
-        </main>
-    </div>
+        `;
+    } else {
+        document.getElementById('noDiagnosticTest').style.display = 'block';
+        document.getElementById('diagnosticTestDetails').style.display = 'none';
+    }
+}
 
-    <div id="assignTestModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header"><h3>تعيين اختبار</h3><button class="modal-close" onclick="closeModal('assignTestModal')">×</button></div>
-            <div class="modal-body"><select id="testSelect" class="form-control"></select></div>
-            <div class="modal-footer"><button class="btn btn-success" onclick="assignTest()">حفظ</button></div>
-        </div>
-    </div>
-    <div id="assignHomeworkModal" class="modal">
-        <div class="modal-content"><div class="modal-header"><h3>إسناد واجب</h3><button class="modal-close" onclick="closeModal('assignHomeworkModal')">×</button></div><div class="modal-body"><select id="homeworkLessonSelect" class="form-control mb-2"></select><select id="homeworkSelect" class="form-control mb-2"></select><input type="date" id="homeworkDueDate" class="form-control"></div><div class="modal-footer"><button class="btn btn-success" onclick="assignHomework()">حفظ</button></div></div>
-    </div>
-    <div id="reviewTestModal" class="modal">
-        <div class="modal-content large" style="max-width: 900px;">
-            <div class="modal-header">
-                <h3>مراجعة إجابات الطالب وتصحيحها</h3>
-                <button class="modal-close" onclick="closeModal('reviewTestModal')">×</button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="reviewAssignmentId">
-                <div id="reviewQuestionsContainer" style="max-height: 60vh; overflow-y: auto; padding: 10px;"></div>
-            </div>
-            <div class="modal-footer" style="justify-content: space-between;">
+function showAssignTestModal() {
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    const select = document.getElementById('testSelect');
+    select.innerHTML = '<option value="">اختر اختباراً...</option>';
+    allTests.forEach(t => {
+        select.innerHTML += `<option value="${t.id}">${t.title} (${t.subject})</option>`;
+    });
+    document.getElementById('assignTestModal').classList.add('show');
+}
+
+function assignTest() {
+    const testId = parseInt(document.getElementById('testSelect').value);
+    if(!testId) return;
+    
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const exists = studentTests.some(t => t.studentId === currentStudentId && t.type === 'diagnostic');
+    if(exists) { alert('يوجد اختبار تشخيصي معين مسبقاً'); return; }
+
+    studentTests.push({
+        id: Date.now(),
+        studentId: currentStudentId,
+        testId: testId,
+        type: 'diagnostic',
+        status: 'pending',
+        assignedDate: new Date().toISOString()
+    });
+    
+    localStorage.setItem('studentTests', JSON.stringify(studentTests));
+    closeModal('assignTestModal');
+    loadDiagnosticTab();
+    alert('تم تعيين الاختبار بنجاح');
+}
+
+// ==========================================
+// 2. منطق المراجعة والتصحيح (الجديد)
+// ==========================================
+function openReviewModal(assignmentId) {
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const assignment = studentTests.find(t => t.id === assignmentId);
+    if(!assignment) return;
+    
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    const originalTest = allTests.find(t => t.id === assignment.testId);
+    
+    document.getElementById('reviewAssignmentId').value = assignmentId;
+    const container = document.getElementById('reviewQuestionsContainer');
+    container.innerHTML = '';
+
+    originalTest.questions.forEach((q, index) => {
+        const studentAnsObj = assignment.answers?.find(a => a.questionId === q.id);
+        const studentAns = studentAnsObj ? studentAnsObj.answer : 'لم يجب';
+        
+        // الدرجة الحالية (إما المخزنة أو الافتراضية)
+        const currentScore = studentAnsObj?.score !== undefined ? studentAnsObj.score : (q.passingScore || 5);
+        const teacherNote = studentAnsObj?.teacherNote || '';
+
+        let displayAnswer = studentAns;
+        if(q.type.includes('multiple-choice') && q.choices) displayAnswer = q.choices[studentAns] || studentAns;
+        if(studentAns && String(studentAns).startsWith('data:image')) displayAnswer = `<br><img src="${studentAns}" style="max-height:100px; border:1px solid #ccc;">`;
+        if(q.type.includes('reading')) displayAnswer = `(نص مسجل): ${studentAns}`;
+
+        const item = document.createElement('div');
+        item.className = 'review-question-item';
+        item.innerHTML = `
+            <div class="review-q-header">
+                <strong>س${index+1}: ${q.text}</strong>
                 <div>
-                    <button class="btn btn-warning" onclick="returnTestForResubmission()">↩️ إعادة الاختبار للطالب للتعديل</button>
-                </div>
-                <div>
-                    <button class="btn btn-secondary" onclick="closeModal('reviewTestModal')">إلغاء</button>
-                    <button class="btn btn-success" onclick="saveTestReview()">💾 حفظ التعديلات والملاحظات</button>
+                    <label>الدرجة:</label>
+                    <input type="number" class="score-input" name="score_${q.id}" value="${currentScore}" max="${q.passingScore || 10}">
+                    <span class="text-muted"> / ${q.passingScore || 5}</span>
                 </div>
             </div>
-        </div>
-    </div>
+            <div class="student-answer-box">
+                <strong>إجابة الطالب:</strong> ${displayAnswer}
+            </div>
+            <div class="teacher-feedback-box">
+                <label>ملاحظات المعلم:</label>
+                <textarea name="note_${q.id}" placeholder="اكتب تغذية راجعة للطالب هنا...">${teacherNote}</textarea>
+            </div>
+        `;
+        container.appendChild(item);
+    });
 
-    <script src="../../assets/js/auth.js"></script>
-    <script src="../../assets/js/student-profile.js"></script>
-</body>
-</html>
+    document.getElementById('reviewTestModal').classList.add('show');
+}
+
+function saveTestReview() {
+    const assignmentId = parseInt(document.getElementById('reviewAssignmentId').value);
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const index = studentTests.findIndex(t => t.id === assignmentId);
+    if(index === -1) return;
+
+    let totalScore = 0;
+    let maxScore = 0;
+    
+    const container = document.getElementById('reviewQuestionsContainer');
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    const originalTest = allTests.find(t => t.id === studentTests[index].testId);
+
+    originalTest.questions.forEach(q => {
+        const scoreInput = container.querySelector(`input[name="score_${q.id}"]`);
+        const noteInput = container.querySelector(`textarea[name="note_${q.id}"]`);
+        
+        const newScore = parseInt(scoreInput.value) || 0;
+        const newNote = noteInput.value;
+
+        // تحديث أو إضافة الإجابة
+        const ansIndex = studentTests[index].answers.findIndex(a => a.questionId === q.id);
+        if(ansIndex !== -1) {
+            studentTests[index].answers[ansIndex].score = newScore;
+            studentTests[index].answers[ansIndex].teacherNote = newNote;
+        } else {
+            studentTests[index].answers.push({
+                questionId: q.id,
+                answer: null,
+                score: newScore,
+                teacherNote: newNote
+            });
+        }
+        
+        totalScore += newScore;
+        maxScore += (q.passingScore || 5);
+    });
+
+    const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+    studentTests[index].score = percentage;
+    
+    localStorage.setItem('studentTests', JSON.stringify(studentTests));
+    
+    alert('تم حفظ الملاحظات والدرجات');
+    closeModal('reviewTestModal');
+    loadDiagnosticTab();
+}
+
+function returnTestForResubmission() {
+    if(!confirm('إعادة الاختبار للطالب للتعديل؟')) return;
+    const assignmentId = parseInt(document.getElementById('reviewAssignmentId').value);
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const index = studentTests.findIndex(t => t.id === assignmentId);
+    
+    if(index !== -1) {
+        studentTests[index].status = 'returned';
+        localStorage.setItem('studentTests', JSON.stringify(studentTests));
+        alert('تمت الإعادة بنجاح');
+        closeModal('reviewTestModal');
+        loadDiagnosticTab();
+    }
+}
+
+// ==========================================
+// 3. قسم الخطة التربوية (IEP)
+// ==========================================
+function loadIEPTab() {
+    const iepContent = document.getElementById('iepContent');
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const completedDiagnostic = studentTests.find(t => t.studentId === currentStudentId && t.type === 'diagnostic' && t.status === 'completed');
+
+    // إذا لم يكمل الاختبار، نعرض رسالة
+    if (!completedDiagnostic) {
+        iepContent.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">📊</div>
+                <h3>الخطة غير جاهزة</h3>
+                <p>يجب أن يكمل الطالب الاختبار التشخيصي ويتم تصحيحه أولاً لتوليد الخطة.</p>
+            </div>`;
+        return;
+    }
+
+    // توليد بيانات وهمية للخطة (يمكن استبدالها ببيانات حقيقية مستقبلاً)
+    const teacherName = JSON.parse(sessionStorage.getItem('currentUser'))?.user?.name || 'المعلم';
+    const schedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
+    const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+    
+    // حساب جدول الطالب بناءً على جدول المعلم
+    const studentSchedule = days.map(day => {
+        const hasSession = schedule.some(s => s.students && s.students.includes(currentStudentId) && s.day === dayMap(day)); 
+        return { day, hasSession };
+    });
+
+    const strengths = ["قراءة الحروف", "نسخ الكلمات"]; 
+    const needs = ["التمييز بين المدود", "الإملاء المنظور"]; 
+    
+    const html = `
+    <div class="iep-page">
+        <div class="iep-header"><h2>الخطة التربوية الفردية</h2></div>
+        <table class="iep-table">
+            <tr><th>الاسم</th><td>${currentStudent.name}</td><th>الصف</th><td>${currentStudent.grade}</td></tr>
+        </table>
+        
+        <h4>جدول الحصص</h4>
+        <table class="iep-table">
+            <tr>${studentSchedule.map(s => `<th class="${s.hasSession ? 'shaded-day' : ''}">${s.day}</th>`).join('')}</tr>
+            <tr>${studentSchedule.map(s => `<td class="${s.hasSession ? 'shaded-day' : ''}">${s.hasSession ? '✓' : ''}</td>`).join('')}</tr>
+        </table>
+        
+        <table class="iep-table" style="margin-top:20px;">
+            <tr><th width="50%">نقاط القوة</th><th>نقاط الاحتياج</th></tr>
+            <tr>
+                <td><ul>${strengths.map(s => `<li>${s}</li>`).join('')}</ul></td>
+                <td><ul>${needs.map(n => `<li>${n}</li>`).join('')}</ul></td>
+            </tr>
+        </table>
+    </div>`;
+
+    iepContent.innerHTML = html;
+}
+
+// ==========================================
+// 4. قسم الدروس
+// ==========================================
+function loadLessonsTab() {
+    // نجلب الدروس المسندة للطالب (من جدول studentLessons)
+    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    const myList = studentLessons.filter(l => l.studentId === currentStudentId);
+    const container = document.getElementById('studentLessonsGrid');
+    
+    if (myList.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state" style="grid-column: 1/-1;">
+                <h3>لا توجد دروس حالياً</h3>
+                <p>سيتم توليد الدروس بناءً على الخطة التربوية.</p>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = myList.map(l => `
+        <div class="content-card">
+            <div class="content-header">
+                <h4>${l.title}</h4>
+                <span class="status-badge ${l.status}">${getStatusText(l.status)}</span>
+            </div>
+            <div class="content-body">
+                <p><strong>الهدف:</strong> ${l.objective}</p>
+            </div>
+            <div class="content-actions">
+                ${l.status !== 'completed' ? `<button class="btn btn-sm btn-success" onclick="completeLesson(${l.id})">إكمال</button>` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function regenerateLessons() {
+    alert('جاري تحديث قائمة الدروس بناءً على نقاط الاحتياج...');
+    // هنا يمكن إضافة منطق لإضافة دروس جديدة
+    loadLessonsTab();
+}
+
+function completeLesson(id) {
+    let studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    const idx = studentLessons.findIndex(l => l.id === id);
+    if(idx !== -1) {
+        studentLessons[idx].status = 'completed';
+        localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
+        loadLessonsTab();
+    }
+}
+
+// ==========================================
+// 5. قسم الواجبات
+// ==========================================
+function loadAssignmentsTab() {
+    const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId === currentStudentId);
+    const container = document.getElementById('studentAssignmentsGrid');
+    
+    if (list.length === 0) {
+        container.innerHTML = '<div class="empty-state"><h3>لا توجد واجبات مسندة.</h3></div>';
+        return;
+    }
+
+    container.innerHTML = list.map(a => `
+        <div class="content-card">
+            <h4>${a.title}</h4>
+            <div class="content-meta">
+                <span>التسليم: ${a.dueDate || 'مفتوح'}</span>
+                <span class="status-badge ${a.status}">${getStatusText(a.status)}</span>
+            </div>
+            <button class="btn btn-sm btn-danger" onclick="deleteAssignment(${a.id})">حذف</button>
+        </div>
+    `).join('');
+}
+
+function showAssignHomeworkModal() {
+    // تعبئة القوائم
+    const assignmentsLib = JSON.parse(localStorage.getItem('assignments') || '[]'); // نفترض وجود مكتبة واجبات
+    const select = document.getElementById('homeworkSelect');
+    
+    // إضافة خيار افتراضي للتجربة
+    if(assignmentsLib.length === 0) {
+         select.innerHTML = '<option value="1">واجب تجريبي: كتابة الحروف</option>';
+    } else {
+        select.innerHTML = assignmentsLib.map(a => `<option value="${a.id}">${a.title}</option>`).join('');
+    }
+    
+    document.getElementById('assignHomeworkModal').classList.add('show');
+}
+
+function assignHomework() {
+    const title = document.getElementById('homeworkSelect').options[document.getElementById('homeworkSelect').selectedIndex].text;
+    const dueDate = document.getElementById('homeworkDueDate').value;
+    
+    const newAssign = {
+        id: Date.now(),
+        studentId: currentStudentId,
+        title: title,
+        status: 'pending',
+        dueDate: dueDate,
+        assignedDate: new Date().toISOString()
+    };
+    
+    const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
+    list.push(newAssign);
+    localStorage.setItem('studentAssignments', JSON.stringify(list));
+    
+    closeModal('assignHomeworkModal');
+    loadAssignmentsTab();
+    alert('تم إسناد الواجب');
+}
+
+function deleteAssignment(id) {
+    if(!confirm('حذف الواجب؟')) return;
+    let list = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
+    list = list.filter(a => a.id !== id);
+    localStorage.setItem('studentAssignments', JSON.stringify(list));
+    loadAssignmentsTab();
+}
+
+// ==========================================
+// 6. قسم التقدم
+// ==========================================
+function loadProgressTab() {
+    const lessons = JSON.parse(localStorage.getItem('studentLessons') || '[]').filter(l => l.studentId === currentStudentId);
+    const tbody = document.getElementById('progressTableBody');
+    
+    if(lessons.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" class="text-center">لا توجد بيانات</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = lessons.map(l => `
+        <tr>
+            <td>${l.objective}</td>
+            <td><span class="badge ${l.status}">${getStatusText(l.status)}</span></td>
+            <td>${l.status === 'completed' ? 'تم' : '-'}</td>
+        </tr>
+    `).join('');
+}
+
+// دوال مساعدة عامة
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function dayMap(dayAr) {
+    const map = {'الأحد':'sunday', 'الاثنين':'monday', 'الثلاثاء':'tuesday', 'الأربعاء':'wednesday', 'الخميس':'thursday'};
+    return map[dayAr];
+}
+function getStatusText(status) {
+    const map = {'pending': 'قادم', 'in-progress': 'جاري', 'completed': 'مكتمل', 'returned': 'معاد'};
+    return map[status] || status;
+}
 // دالة التعبئة التلقائية الذكية (قابلة للتعديل)
 function autoFillIEPForm(studentId) {
     console.log("جاري التعبئة التلقائية للطالب:", studentId);

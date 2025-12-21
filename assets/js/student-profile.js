@@ -1,663 +1,365 @@
-// ============================================
-// 📁 الملف: student-profile.js (النسخة المحدثة)
-// ============================================
+// =========================================================
+// 📁 الملف: assets/js/student-profile.js
+// الوظيفة: إدارة ملف الطالب + الخطة التربوية (المنطق المعتمد: نموذج 9)
+// =========================================================
 
-// نظام التعبئة التلقائية للخطة التربوية من الاختبار التشخيصي
+let currentStudentId = null;
+let currentStudent = null;
 
+// =========================================================
+// 1. تشغيل النظام والتحقق من الطالب
+// =========================================================
 document.addEventListener('DOMContentLoaded', function() {
-    initializeStudentProfile();
-});
+    const params = new URLSearchParams(window.location.search);
+    const targetId = params.get('id');
 
-function initializeStudentProfile() {
-    const currentUser = getCurrentUser();
-    const urlParams = new URLSearchParams(window.location.search);
-    const studentId = parseInt(urlParams.get('id'));
-    
-    if (!studentId) {
-        showAuthNotification('لم يتم تحديد طالب', 'error');
-        setTimeout(() => window.history.back(), 2000);
+    // جلب قائمة الطلاب الحالية
+    const students = JSON.parse(localStorage.getItem('students') || '[]');
+
+    // --- منطقة الأمان: معالجة مشكلة "الطالب غير موجود" ---
+    if (students.length === 0) {
+        alert('لا توجد بيانات طلاب. سيتم توجيهك لإضافة طالب جديد.');
+        window.location.href = 'students.html';
         return;
     }
+
+    // البحث عن الطالب (مقارنة مرنة)
+    let foundStudent = students.find(s => s.id == targetId);
+
+    if (!foundStudent) {
+        // إذا كان الرابط خاطئاً، نفتح أول طالب موجود تلقائياً لضمان عمل الصفحة
+        console.warn(`لم يتم العثور على الطالب ${targetId}، جاري الفتح التلقائي لأول ملف متاح.`);
+        foundStudent = students[0];
+        
+        // تعديل الرابط في المتصفح بصمت
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.set('id', foundStudent.id);
+        window.history.replaceState({}, '', newUrl);
+    }
+
+    currentStudent = foundStudent;
+    currentStudentId = currentStudent.id;
+    // -----------------------------------------------------
+
+    // تحميل الواجهة
+    loadStudentData();
+    switchSection('diagnostic'); // البدء بصفحة التشخيص
+});
+
+// =========================================================
+// 2. التنقل بين التبويبات
+// =========================================================
+function switchSection(sectionId) {
+    // إخفاء الكل
+    document.querySelectorAll('.content-section').forEach(el => el.classList.remove('active', 'show'));
+    document.querySelectorAll('.content-section').forEach(el => el.style.display = 'none');
     
-    loadStudentProfile(studentId);
-    setupIEPAutoGeneration(studentId);
-}
+    // إلغاء تفعيل الروابط
+    document.querySelectorAll('.sidebar-menu .nav-link').forEach(el => el.classList.remove('active'));
 
-function setupIEPAutoGeneration(studentId) {
-    // التحقق من وجود اختبار تشخيصي للطالب
-    checkAndGenerateIEP(studentId);
-}
+    // إظهار القسم المطلوب
+    const targetSection = document.getElementById(`section-${sectionId}`);
+    if (targetSection) {
+        targetSection.classList.add('active', 'show');
+        targetSection.style.display = 'block';
+    }
 
-// ============================================
-// نظام التعبئة التلقائية للخطة التربوية
-// ============================================
+    // تفعيل الرابط
+    const targetLink = document.getElementById(`link-${sectionId}`);
+    if (targetLink) targetLink.classList.add('active');
 
-function checkAndGenerateIEP(studentId) {
-    // البحث عن اختبار تشخيصي مكتمل للطالب
-    const diagnosticTest = getStudentDiagnosticTest(studentId);
-    
-    if (diagnosticTest && diagnosticTest.status === 'completed' && !diagnosticTest.iepGenerated) {
-        // إذا كان هناك اختبار مكتمل ولم يتم إنشاء خطة بعد
-        autoGenerateIEPFromDiagnostic(studentId, diagnosticTest);
+    // إذا تم فتح "الخطة التربوية"، نفذ الخوارزمية الخاصة بها
+    if (sectionId === 'iep') {
+        loadIEPTab(currentStudentId);
     }
 }
 
-function getStudentDiagnosticTest(studentId) {
-    const tests = JSON.parse(localStorage.getItem('tests') || '[]');
+// =========================================================
+// 3. عرض بيانات الطالب (الهيدر والقائمة الجانبية)
+// =========================================================
+function loadStudentData() {
+    if (!currentStudent) return;
     
-    // البحث عن الاختبار التشخيصي للطالب
-    return tests.find(test => 
-        test.studentId === studentId && 
-        test.type === 'diagnostic' &&
-        test.status === 'completed'
-    );
+    const setTxt = (id, txt) => { const el = document.getElementById(id); if(el) el.textContent = txt; };
+    
+    setTxt('sideName', currentStudent.name);
+    setTxt('headerStudentName', currentStudent.name);
+    setTxt('sideGrade', currentStudent.grade || 'غير محدد');
+    
+    const avatar = document.getElementById('sideAvatar');
+    if(avatar) avatar.textContent = currentStudent.name.charAt(0);
 }
 
-async function autoGenerateIEPFromDiagnostic(studentId, diagnosticTest) {
-    try {
-        showAuthNotification('جاري إنشاء الخطة التربوية تلقائياً...', 'info');
+// =========================================================
+// 4. الخوارزمية الأساسية: تعبئة نموذج 9 تلقائياً
+// =========================================================
+function loadIEPTab(studentId) {
+    console.log("جاري تحليل الاختبار التشخيصي وتعبئة النموذج 9...");
+
+    // 1. جلب المصادر
+    const objectives = JSON.parse(localStorage.getItem('objectives') || '[]');
+    const allResults = JSON.parse(localStorage.getItem('testResults') || '[]');
+    
+    // تجميع مصادر الاختبارات (لضمان العثور على الأسئلة)
+    const bank1 = JSON.parse(localStorage.getItem('questionBanks') || '[]');
+    const bank2 = JSON.parse(localStorage.getItem('tests') || '[]');
+    const allTests = [...bank1, ...bank2];
+
+    // 2. العثور على أحدث اختبار تشخيصي للطالب
+    const studentResult = allResults
+        .filter(r => r.studentId == studentId && r.type === 'diagnostic')
+        .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+
+    // مصفوفات التخزين
+    let strengthGoals = []; // لتخزين الأهداف القصيرة (نقاط القوة)
+    let needGoals = [];     // لتخزين الأهداف القصيرة (نقاط الاحتياج)
+    let detailedPlan = [];  // لتخزين الهيكل التفصيلي للجدول
+
+    // 3. تحليل الأسئلة (المنطق المطلوب)
+    if (studentResult && studentResult.answers) {
+        const originalTest = allTests.find(t => t.id == studentResult.testId);
         
-        // تحليل نتائج الاختبار
-        const analysis = await analyzeDiagnosticResults(diagnosticTest);
-        
-        // إنشاء الخطة التربوية
-        const iepData = await generateIEPData(studentId, analysis);
-        
-        // حفظ الخطة
-        await saveAutoGeneratedIEP(studentId, iepData);
-        
-        // تحديث حالة الاختبار
-        markIEPAsGenerated(diagnosticTest.id);
-        
-        showAuthNotification('تم إنشاء الخطة التربوية تلقائياً', 'success');
-        
-        // إذا كان النموذج مفتوحاً، تحديثه
-        if (document.getElementById('iepSection')) {
-            setTimeout(() => {
-                populateIEPForm(iepData);
-            }, 1000);
+        if (originalTest) {
+            // التعامل مع اختلاف مسميات الأسئلة في قواعد البيانات المختلفة
+            const questionsList = originalTest.questions || originalTest.items || [];
+
+            studentResult.answers.forEach(answer => {
+                const question = questionsList.find(q => q.id == answer.questionId);
+                
+                // شرط أساسي: السؤال مربوط بهدف
+                if (question && question.linkedGoalId) {
+                    const objective = objectives.find(obj => obj.id == question.linkedGoalId);
+                    
+                    if (objective) {
+                        if (answer.isCorrect) {
+                            // أ) إجابة صحيحة -> قائمة نقاط القوة (هدف قصير فقط)
+                            // نمنع التكرار إذا تكرر الهدف في أكثر من سؤال
+                            if (!strengthGoals.includes(objective.shortTermGoal)) {
+                                strengthGoals.push(objective.shortTermGoal);
+                            }
+                        } else {
+                            // ب) إجابة خاطئة -> قائمة نقاط الاحتياج (هدف قصير فقط)
+                            if (!needGoals.includes(objective.shortTermGoal)) {
+                                needGoals.push(objective.shortTermGoal);
+                                
+                                // ج) تحضير بيانات الجدول (هدف قصير + أهدافه التدريسية)
+                                // إذا لم يكن للهدف أهداف تدريسية فرعية، نستخدم الهدف القصير نفسه كتدريسي
+                                const instructionals = (objective.instructionalGoals && objective.instructionalGoals.length > 0)
+                                    ? objective.instructionalGoals
+                                    : [objective.shortTermGoal];
+
+                                detailedPlan.push({
+                                    short: objective.shortTermGoal,
+                                    instructional: instructionals
+                                });
+                            }
+                        }
+                    }
+                }
+            });
         }
-        
-    } catch (error) {
-        console.error('خطأ في إنشاء الخطة التلقائية:', error);
-        showAuthNotification('فشل في إنشاء الخطة التلقائية', 'error');
     }
-}
 
-async function analyzeDiagnosticResults(diagnosticTest) {
-    // تحليل نتائج الاختبار
-    const questions = diagnosticTest.questions || [];
-    const studentAnswers = diagnosticTest.studentAnswers || {};
-    
-    const analysis = {
-        strengths: [],      // نقاط القوة (أسئلة صحيحة)
-        weaknesses: [],     // نقاط الاحتياج (أسئلة خاطئة)
-        totalQuestions: questions.length,
-        correctCount: 0,
-        incorrectCount: 0
-    };
-    
-    // تحليل كل سؤال
-    questions.forEach((question, index) => {
-        const studentAnswer = studentAnswers[question.id];
-        const isCorrect = studentAnswer && studentAnswer.isCorrect;
-        
-        if (isCorrect) {
-            analysis.correctCount++;
-            analysis.strengths.push({
-                questionId: question.id,
-                questionText: question.text,
-                shortTermGoal: question.shortTermGoal,
-                instructionalGoals: question.instructionalGoals || []
+    // 4. التعبئة في الواجهة (DOM Manipulation)
+
+    // أ) تعبئة حقل نقاط القوة
+    const strengthInput = document.getElementById('iep-strengths');
+    if (strengthInput) {
+        strengthInput.value = strengthGoals.length > 0 
+            ? strengthGoals.join('\n- ') // كل هدف في سطر
+            : '';
+        if (strengthGoals.length === 0) strengthInput.placeholder = "لا توجد نقاط قوة مسجلة بناءً على الاختبار.";
+    }
+
+    // ب) تعبئة حقل نقاط الاحتياج
+    const needsInput = document.getElementById('iep-needs');
+    if (needsInput) {
+        needsInput.value = needGoals.length > 0 
+            ? needGoals.join('\n- ') 
+            : '';
+        if (needGoals.length === 0) needsInput.placeholder = "لا توجد نقاط احتياج مسجلة.";
+    }
+
+    // ج) تعبئة الجدول التفصيلي (الهدف القصير | الأهداف التدريسية | التاريخ)
+    const goalsBody = document.getElementById('iep-goals-body');
+    if (goalsBody) {
+        goalsBody.innerHTML = ''; // مسح المحتوى القديم
+
+        if (detailedPlan.length > 0) {
+            detailedPlan.forEach(planItem => {
+                // سنقوم بإنشاء صف لكل هدف تدريسي ليكون قابلاً للتعديل بشكل منفصل
+                // العمود الأول (الهدف القصير) سيتكرر أو يمكن دمجه، هنا سأكرره للوضوح وقابلية التعديل
+                
+                planItem.instructional.forEach((instrGoal, index) => {
+                    const row = document.createElement('tr');
+                    
+                    // تصميم الصف:
+                    // 1. الهدف القصير (يظهر القيمة الآلية وقابل للتعديل)
+                    // 2. الهدف التدريسي (يظهر القيمة الآلية وقابل للتعديل)
+                    // 3. تاريخ التحقق (فارغ للمعلم)
+                    
+                    row.innerHTML = `
+                        <td>
+                            <input type="text" class="form-control" 
+                                   value="${planItem.short}" 
+                                   title="الهدف قصير المدى">
+                        </td>
+                        <td>
+                            <input type="text" class="form-control" 
+                                   value="${instrGoal}" 
+                                   title="الهدف التدريسي">
+                        </td>
+                        <td>
+                            <input type="date" class="form-control" title="تاريخ التحقق">
+                        </td>
+                        <td><input type="text" class="form-control" placeholder="%"></td>
+                        <td><input type="text" class="form-control"></td>
+                    `;
+                    goalsBody.appendChild(row);
+                });
             });
         } else {
-            analysis.incorrectCount++;
-            analysis.weaknesses.push({
-                questionId: question.id,
-                questionText: question.text,
-                shortTermGoal: question.shortTermGoal,
-                instructionalGoals: question.instructionalGoals || []
-            });
+            // رسالة في حال عدم وجود بيانات
+            goalsBody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-muted p-4">
+                        لم يتم استخراج أهداف. قم بإسناد اختبار تشخيصي وتصحيحه لتعبئة الخطة تلقائياً.
+                    </td>
+                </tr>`;
         }
-    });
-    
-    return analysis;
-}
-
-async function generateIEPData(studentId, analysis) {
-    const student = getStudentById(studentId);
-    const teacher = getCurrentUser();
-    const schedule = getTeacherSchedule(teacher.id);
-    
-    // تاريخ التحقق (أسبوعين من الآن)
-    const verificationDate = new Date();
-    verificationDate.setDate(verificationDate.getDate() + 14);
-    
-    // توليد نقاط القوة (أهداف قصيرة فقط)
-    const strengths = analysis.strengths.map(item => ({
-        type: 'strength',
-        shortTermGoal: item.shortTermGoal,
-        sourceQuestion: item.questionText
-    }));
-    
-    // توليد نقاط الاحتياج (أهداف قصيرة مع تدريسية)
-    const weaknesses = analysis.weaknesses.map(item => ({
-        type: 'weakness',
-        shortTermGoal: item.shortTermGoal,
-        instructionalGoals: item.instructionalGoals,
-        sourceQuestion: item.questionText,
-        verificationDate: verificationDate.toISOString().split('T')[0],
-        scheduleSlots: getAvailableScheduleSlots(schedule)
-    }));
-    
-    return {
-        studentId: studentId,
-        studentName: student.name,
-        studentGrade: student.grade,
-        teacherId: teacher.id,
-        teacherName: teacher.name,
-        generatedDate: new Date().toISOString(),
-        diagnosticTestId: analysis.diagnosticTestId,
-        strengths: strengths,
-        weaknesses: weaknesses,
-        schedule: schedule,
-        status: 'auto-generated'
-    };
-}
-
-async function saveAutoGeneratedIEP(studentId, iepData) {
-    const ieps = JSON.parse(localStorage.getItem('studentIEPs') || '[]');
-    
-    // التحقق من عدم وجود خطة سابقة
-    const existingIEPIndex = ieps.findIndex(iep => iep.studentId === studentId);
-    
-    const newIEP = {
-        id: generateId(),
-        ...iepData,
-        lastUpdated: new Date().toISOString(),
-        version: '1.0'
-    };
-    
-    if (existingIEPIndex !== -1) {
-        // تحديث الخطة الموجودة
-        ieps[existingIEPIndex] = newIEP;
-    } else {
-        // إضافة خطة جديدة
-        ieps.push(newIEP);
     }
-    
-    localStorage.setItem('studentIEPs', JSON.stringify(ieps));
-    
-    // إضافة سجل النشاط
-    addStudentActivity(studentId, {
-        type: 'iep_generated',
-        title: 'تم إنشاء الخطة التربوية تلقائياً',
-        description: `من نتائج الاختبار التشخيصي (${iepData.correctCount} صحيحة، ${iepData.incorrectCount} خاطئة)`,
-        timestamp: new Date().toISOString()
-    });
+
+    // 5. تعبئة جدول الحصص (من جدول المعلم)
+    fillScheduleTable(studentId);
 }
 
-function markIEPAsGenerated(testId) {
-    const tests = JSON.parse(localStorage.getItem('tests') || '[]');
-    const testIndex = tests.findIndex(t => t.id === testId);
+// =========================================================
+// 5. تعبئة جدول الحصص (منعكس من جدول المعلم)
+// =========================================================
+function fillScheduleTable(studentId) {
+    const scheduleBody = document.getElementById('iep-schedule-body');
+    if (!scheduleBody) return;
+
+    const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
+    const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
     
-    if (testIndex !== -1) {
-        tests[testIndex].iepGenerated = true;
-        tests[testIndex].iepGeneratedAt = new Date().toISOString();
-        localStorage.setItem('tests', JSON.stringify(tests));
-    }
-}
-
-// ============================================
-// دالة تعبئة النموذج تلقائياً
-// ============================================
-
-function populateIEPForm(iepData) {
-    if (!iepData) {
-        // محاولة جلب الخطة المحفوظة
-        const urlParams = new URLSearchParams(window.location.search);
-        const studentId = parseInt(urlParams.get('id'));
-        iepData = getStudentIEP(studentId);
+    let html = '';
+    days.forEach(day => {
+        html += `<tr><td style="font-weight:bold; background-color:#f8f9fa;">${day}</td>`;
         
-        if (!iepData) return;
-    }
-    
-    // تعبئة نقاط القوة
-    populateStrengthsSection(iepData.strengths);
-    
-    // تعبئة نقاط الاحتياج
-    populateWeaknessesSection(iepData.weaknesses);
-    
-    // تعبئة الجدول التفصيلي
-    populateIEPTable(iepData.weaknesses, iepData.schedule);
-    
-    // تعبئة معلومات الطالب
-    populateStudentInfo(iepData);
-    
-    // إظهار رسالة أن الخطة معبأة تلقائياً
-    showAutoGeneratedMessage(iepData);
-}
+        for (let p = 1; p <= 7; p++) {
+            // البحث عن حصة لهذا الطالب في هذا اليوم وهذا الوقت
+            const session = teacherSchedule.find(s => 
+                s.day === day && 
+                s.period == p && 
+                s.students && s.students.includes(parseInt(studentId)) // التأكد من النوع الرقمي
+            );
 
-function populateStrengthsSection(strengths) {
-    const strengthsContainer = document.getElementById('strengthsList');
-    if (!strengthsContainer) return;
-    
-    strengthsContainer.innerHTML = strengths.map((strength, index) => `
-        <div class="strength-item" data-index="${index}">
-            <input type="text" 
-                   class="form-control strength-goal" 
-                   value="${escapeHtml(strength.shortTermGoal)}"
-                   placeholder="هدف قصير المدى">
-            <button type="button" class="btn btn-sm btn-danger remove-strength" onclick="removeStrength(${index})">
-                حذف
-            </button>
-        </div>
-    `).join('');
-}
-
-function populateWeaknessesSection(weaknesses) {
-    const weaknessesContainer = document.getElementById('weaknessesList');
-    if (!weaknessesContainer) return;
-    
-    weaknessesContainer.innerHTML = weaknesses.map((weakness, index) => `
-        <div class="weakness-item" data-index="${index}">
-            <input type="text" 
-                   class="form-control weakness-goal" 
-                   value="${escapeHtml(weakness.shortTermGoal)}"
-                   placeholder="هدف قصير المدى">
-            <button type="button" class="btn btn-sm btn-danger remove-weakness" onclick="removeWeakness(${index})">
-                حذف
-            </button>
-        </div>
-    `).join('');
-}
-
-function populateIEPTable(weaknesses, schedule) {
-    const iepTableBody = document.getElementById('iepTableBody');
-    if (!iepTableBody) return;
-    
-    iepTableBody.innerHTML = weaknesses.map((weakness, index) => {
-        // الحصول على الحصة المتاحة من الجدول
-        const scheduleSlot = weakness.scheduleSlots && weakness.scheduleSlots.length > 0 
-            ? weakness.scheduleSlots[0] 
-            : { day: 'الأحد', time: '08:00 ص', duration: '45 دقيقة' };
-        
-        // تحويل الأهداف التدريسية إلى نص
-        const instructionalGoalsText = weakness.instructionalGoals 
-            ? weakness.instructionalGoals.map(goal => `• ${goal}`).join('<br>')
-            : 'لا توجد أهداف تدريسية محددة';
-        
-        return `
-        <tr>
-            <td>
-                <input type="text" 
-                       class="form-control" 
-                       value="${escapeHtml(weakness.shortTermGoal)}"
-                       data-field="shortTermGoal"
-                       data-index="${index}">
-            </td>
-            <td>
-                <textarea class="form-control instructional-goals" 
-                          rows="3"
-                          data-field="instructionalGoals"
-                          data-index="${index}">${weakness.instructionalGoals ? weakness.instructionalGoals.join('\n') : ''}</textarea>
-            </td>
-            <td>
-                <input type="text" 
-                       class="form-control" 
-                       value="${scheduleSlot.day} - ${scheduleSlot.time}"
-                       data-field="schedule"
-                       data-index="${index}"
-                       placeholder="اليوم - الوقت">
-            </td>
-            <td>
-                <input type="date" 
-                       class="form-control verification-date" 
-                       value="${weakness.verificationDate || ''}"
-                       data-field="verificationDate"
-                       data-index="${index}">
-            </td>
-            <td>
-                <button type="button" class="btn btn-sm btn-danger" onclick="removeIEPRow(${index})">
-                    حذف
-                </button>
-            </td>
-        </tr>
-        `;
-    }).join('');
-}
-
-function populateStudentInfo(iepData) {
-    // تعبئة معلومات الطالب في النموذج
-    const elements = {
-        'studentName': iepData.studentName,
-        'studentGrade': iepData.studentGrade,
-        'teacherName': iepData.teacherName,
-        'iepDate': formatDate(iepData.generatedDate),
-        'diagnosticDate': iepData.diagnosticTestDate ? formatDate(iepData.diagnosticTestDate) : formatDate(new Date())
-    };
-    
-    Object.keys(elements).forEach(id => {
-        const element = document.getElementById(id);
-        if (element && elements[id]) {
-            element.value = elements[id];
-        }
-    });
-}
-
-function showAutoGeneratedMessage(iepData) {
-    // إضافة رسالة توضيحية
-    const message = `
-    <div class="alert alert-info mt-3">
-        <strong>ملاحظة:</strong> تم تعبئة هذه الخطة تلقائياً من نتائج الاختبار التشخيصي.
-        <br><small>تاريخ الإنشاء: ${formatDate(iepData.generatedDate)} | 
-        عدد نقاط القوة: ${iepData.strengths.length} | 
-        عدد نقاط الاحتياج: ${iepData.weaknesses.length}</small>
-    </div>
-    `;
-    
-    const container = document.getElementById('iepSection');
-    if (container) {
-        const existingAlert = container.querySelector('.alert-info');
-        if (existingAlert) {
-            existingAlert.remove();
-        }
-        container.insertAdjacentHTML('afterbegin', message);
-    }
-}
-
-// ============================================
-// دوال مساعدة
-// ============================================
-
-function getStudentById(studentId) {
-    const students = JSON.parse(localStorage.getItem('students') || '[]');
-    return students.find(s => s.id === studentId);
-}
-
-function getStudentIEP(studentId) {
-    const ieps = JSON.parse(localStorage.getItem('studentIEPs') || '[]');
-    return ieps.find(iep => iep.studentId === studentId);
-}
-
-function getTeacherSchedule(teacherId) {
-    const schedules = JSON.parse(localStorage.getItem('teacherSchedules') || '[]');
-    return schedules.find(s => s.teacherId === teacherId) || { slots: [] };
-}
-
-function getAvailableScheduleSlots(schedule) {
-    if (!schedule || !schedule.slots || schedule.slots.length === 0) {
-        // جدول افتراضي إذا لم يكن هناك جدول
-        return [
-            { day: 'الأحد', time: '08:00 ص', duration: '45 دقيقة' },
-            { day: 'الاثنين', time: '09:00 ص', duration: '45 دقيقة' },
-            { day: 'الثلاثاء', time: '10:00 ص', duration: '45 دقيقة' }
-        ];
-    }
-    
-    return schedule.slots.filter(slot => slot.available);
-}
-
-function addStudentActivity(studentId, activity) {
-    const activities = JSON.parse(localStorage.getItem('studentActivities') || '[]');
-    
-    activities.push({
-        id: generateId(),
-        studentId: studentId,
-        ...activity
-    });
-    
-    // الاحتفاظ فقط بآخر 50 نشاط
-    if (activities.length > 50) {
-        activities.splice(0, activities.length - 50);
-    }
-    
-    localStorage.setItem('studentActivities', JSON.stringify(activities));
-}
-
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function formatDate(dateString) {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ar-SA');
-}
-
-// ============================================
-// دوال التحكم في الواجهة (محفوظة كما هي)
-// ============================================
-
-function loadStudentProfile(studentId) {
-    // ... (الكود الأصلي محفوظ)
-}
-
-function saveIEP() {
-    // ... (الكود الأصلي محفوظ مع تعديلات طفيفة لدعم النظام التلقائي)
-    const urlParams = new URLSearchParams(window.location.search);
-    const studentId = parseInt(urlParams.get('id'));
-    
-    // جمع البيانات من النموذج
-    const iepData = collectIEPFormData();
-    
-    // حفظ البيانات
-    const ieps = JSON.parse(localStorage.getItem('studentIEPs') || '[]');
-    const existingIndex = ieps.findIndex(iep => iep.studentId === studentId);
-    
-    const updatedIEP = {
-        ...iepData,
-        studentId: studentId,
-        lastUpdated: new Date().toISOString(),
-        status: 'manually_edited' // تغيير الحالة لأن المعلم عدل عليها
-    };
-    
-    if (existingIndex !== -1) {
-        ieps[existingIndex] = updatedIEP;
-    } else {
-        ieps.push(updatedIEP);
-    }
-    
-    localStorage.setItem('studentIEPs', JSON.stringify(ieps));
-    showAuthNotification('تم حفظ الخطة التربوية', 'success');
-}
-
-function collectIEPFormData() {
-    // جمع البيانات من النموذج
-    const strengths = [];
-    const weaknesses = [];
-    
-    // جمع نقاط القوة
-    document.querySelectorAll('.strength-item').forEach(item => {
-        const goalInput = item.querySelector('.strength-goal');
-        if (goalInput && goalInput.value.trim()) {
-            strengths.push({
-                shortTermGoal: goalInput.value.trim(),
-                type: 'strength'
-            });
-        }
-    });
-    
-    // جمع نقاط الاحتياج والجدول
-    document.querySelectorAll('#iepTableBody tr').forEach((row, index) => {
-        const shortTermGoal = row.querySelector('input[data-field="shortTermGoal"]')?.value || '';
-        const instructionalGoals = row.querySelector('.instructional-goals')?.value || '';
-        const schedule = row.querySelector('input[data-field="schedule"]')?.value || '';
-        const verificationDate = row.querySelector('.verification-date')?.value || '';
-        
-        if (shortTermGoal.trim()) {
-            weaknesses.push({
-                shortTermGoal: shortTermGoal.trim(),
-                instructionalGoals: instructionalGoals.split('\n').filter(g => g.trim()),
-                schedule: schedule.trim(),
-                verificationDate: verificationDate,
-                type: 'weakness'
-            });
-        }
-    });
-    
-    return {
-        strengths: strengths,
-        weaknesses: weaknesses,
-        collectedDate: new Date().toISOString()
-    };
-}
-
-// ============================================
-// تصدير الدوال للاستخدام العالمي
-// ============================================
-
-window.removeStrength = function(index) {
-    const item = document.querySelector(`.strength-item[data-index="${index}"]`);
-    if (item) {
-        if (confirm('هل تريد حذف نقطة القوة هذه؟')) {
-            item.remove();
-        }
-    }
-};
-
-window.removeWeakness = function(index) {
-    const item = document.querySelector(`.weakness-item[data-index="${index}"]`);
-    if (item) {
-        if (confirm('هل تريد حذف نقطة الاحتياج هذه؟')) {
-            item.remove();
-            
-            // حذف الصف المقابل من الجدول
-            const tableRow = document.querySelector(`#iepTableBody tr td input[data-index="${index}"]`)?.closest('tr');
-            if (tableRow) {
-                tableRow.remove();
-            }
-        }
-    }
-};
-
-window.removeIEPRow = function(index) {
-    const row = document.querySelector(`#iepTableBody tr:nth-child(${index + 1})`);
-    if (row) {
-        if (confirm('هل تريد حذف هذا الهدف من الخطة؟')) {
-            row.remove();
-            
-            // حذف نقطة الاحتياج المقابلة
-            const weaknessItem = document.querySelector(`.weakness-item[data-index="${index}"]`);
-            if (weaknessItem) {
-                weaknessItem.remove();
-            }
-        }
-    }
-};
-
-window.addNewStrength = function() {
-    const container = document.getElementById('strengthsList');
-    if (!container) return;
-    
-    const index = container.children.length;
-    const newItem = document.createElement('div');
-    newItem.className = 'strength-item';
-    newItem.setAttribute('data-index', index);
-    newItem.innerHTML = `
-        <input type="text" 
-               class="form-control strength-goal" 
-               placeholder="هدف قصير المدى جديد">
-        <button type="button" class="btn btn-sm btn-danger remove-strength" onclick="removeStrength(${index})">
-            حذف
-        </button>
-    `;
-    
-    container.appendChild(newItem);
-};
-
-window.addNewWeakness = function() {
-    const container = document.getElementById('weaknessesList');
-    const tableBody = document.getElementById('iepTableBody');
-    
-    if (!container || !tableBody) return;
-    
-    const index = container.children.length;
-    
-    // إضافة إلى قائمة نقاط الاحتياج
-    const newWeaknessItem = document.createElement('div');
-    newWeaknessItem.className = 'weakness-item';
-    newWeaknessItem.setAttribute('data-index', index);
-    newWeaknessItem.innerHTML = `
-        <input type="text" 
-               class="form-control weakness-goal" 
-               placeholder="هدف قصير مدى جديد">
-        <button type="button" class="btn btn-sm btn-danger remove-weakness" onclick="removeWeakness(${index})">
-            حذف
-        </button>
-    `;
-    
-    container.appendChild(newWeaknessItem);
-    
-    // إضافة إلى الجدول
-    const newRow = document.createElement('tr');
-    newRow.innerHTML = `
-        <td>
-            <input type="text" 
-                   class="form-control" 
-                   data-field="shortTermGoal"
-                   data-index="${index}"
-                   placeholder="هدف قصير المدى">
-        </td>
-        <td>
-            <textarea class="form-control instructional-goals" 
-                      rows="3"
-                      data-field="instructionalGoals"
-                      data-index="${index}"
-                      placeholder="الأهداف التدريسية (سطر لكل هدف)"></textarea>
-        </td>
-        <td>
-            <input type="text" 
-                   class="form-control" 
-                   data-field="schedule"
-                   data-index="${index}"
-                   placeholder="اليوم - الوقت">
-        </td>
-        <td>
-            <input type="date" 
-                   class="form-control verification-date" 
-                   data-field="verificationDate"
-                   data-index="${index}">
-        </td>
-        <td>
-            <button type="button" class="btn btn-sm btn-danger" onclick="removeIEPRow(${index})">
-                حذف
-            </button>
-        </td>
-    `;
-    
-    tableBody.appendChild(newRow);
-};
-
-// ============================================
-// التهيئة التلقائية عند تحميل الصفحة
-// ============================================
-
-// عند تحميل صفحة الخطة التربوية، التحقق التلقائي
-if (window.location.pathname.includes('student-profile') && 
-    window.location.search.includes('tab=iep')) {
-    
-    // انتظار تحميل DOM ثم التحقق
-    setTimeout(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const studentId = parseInt(urlParams.get('id'));
-        
-        if (studentId) {
-            // محاولة جلب الخطة التربوية
-            const iepData = getStudentIEP(studentId);
-            
-            if (iepData) {
-                // إذا كانت هناك خطة محفوظة، تعبئة النموذج
-                setTimeout(() => {
-                    populateIEPForm(iepData);
-                }, 500);
+            if (session) {
+                // حصة موجودة
+                html += `
+                    <td>
+                        <input type="text" class="form-control" 
+                               value="${session.subject || 'صعوبات'}" 
+                               style="background-color:#e8f5e9; text-align:center; font-weight:bold;">
+                    </td>`;
             } else {
-                // إذا لم توجد خطة، التحقق من وجود اختبار لتوليدها
-                checkAndGenerateIEP(studentId);
+                // حصة فارغة
+                html += `<td><input type="text" class="form-control" disabled style="background-color:#f9f9f9;"></td>`;
             }
         }
-    }, 1000);
+        html += '</tr>';
+    });
+    scheduleBody.innerHTML = html;
+}
+
+// =========================================================
+// 6. دوال النوافذ المنبثقة (إسناد الاختبارات)
+// =========================================================
+function showAssignTestModal() {
+    const modal = document.getElementById('assignTestModal');
+    if (modal) {
+        modal.style.display = 'block';
+        loadAvailableTests();
+    } else {
+        alert('نافذة إسناد الاختبار غير موجودة في الصفحة.');
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.style.display = 'none';
+}
+
+function loadAvailableTests() {
+    const select = document.getElementById('assignTestSelect');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">اختر الاختبار...</option>';
+
+    // البحث في جميع المخازن المحتملة
+    const sources = [
+        JSON.parse(localStorage.getItem('questionBanks') || '[]'),
+        JSON.parse(localStorage.getItem('tests') || '[]'),
+        JSON.parse(localStorage.getItem('assessments') || '[]')
+    ];
+
+    let allTests = [];
+    sources.forEach(src => { if(Array.isArray(src)) allTests = [...allTests, ...src]; });
+
+    // إزالة التكرار
+    const uniqueTests = Array.from(new Map(allTests.map(item => [item.id, item])).values());
+
+    if (uniqueTests.length === 0) {
+        const option = document.createElement('option');
+        option.text = "لا توجد اختبارات متاحة";
+        option.disabled = true;
+        select.appendChild(option);
+        return;
+    }
+
+    uniqueTests.forEach(test => {
+        const option = document.createElement('option');
+        option.value = test.id;
+        option.textContent = test.title || test.name || test.bankName || `اختبار #${test.id}`;
+        select.appendChild(option);
+    });
+}
+
+function saveAssignedTest() {
+    const select = document.getElementById('assignTestSelect');
+    const testId = select ? select.value : null;
+
+    if (!testId) {
+        alert('الرجاء اختيار اختبار');
+        return;
+    }
+
+    const assignedTests = JSON.parse(localStorage.getItem('assignedTests') || '[]');
+    
+    // التحقق من التكرار
+    const exists = assignedTests.find(a => a.studentId == currentStudentId && a.testId == testId && a.status === 'pending');
+    if(exists) {
+        alert('الاختبار مسند بالفعل.');
+        return;
+    }
+
+    assignedTests.push({
+        id: Date.now(),
+        studentId: currentStudentId,
+        testId: testId,
+        assignedDate: new Date().toISOString(),
+        status: 'pending'
+    });
+
+    localStorage.setItem('assignedTests', JSON.stringify(assignedTests));
+    alert('تم إسناد الاختبار بنجاح');
+    closeModal('assignTestModal');
+}
+
+// إغلاق المودال عند النقر في الخارج
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = "none";
+    }
 }

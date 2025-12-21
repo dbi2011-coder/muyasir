@@ -1,75 +1,116 @@
-// =========================================================
-// 📁 الملف: assets/js/student-profile.js
-// الوظيفة: تعبئة نموذج 9 تلقائياً مع السماح بالتعديل اليدوي
-// =========================================================
+/**
+ * ====================================================================
+ * ملف: assets/js/student-profile.js
+ * الوظيفة: إدارة شاملة (التنقل + النوافذ + التعبئة التلقائية القابلة للتعديل)
+ * ====================================================================
+ */
 
+let currentStudentId = null;
+
+// 1. عند تحميل الصفحة: تجهيز البيانات
 document.addEventListener('DOMContentLoaded', function() {
-    // جلب معرف الطالب من الرابط
     const params = new URLSearchParams(window.location.search);
-    const studentId = params.get('id');
+    let targetId = params.get('id');
+    const students = JSON.parse(localStorage.getItem('students') || '[]');
 
-    if (studentId) {
-        // تشغيل دالة التعبئة التلقائية عند تحميل الصفحة
-        populateIEPFormAutomatically(studentId);
+    // معالجة حالة عدم وجود طلاب أو رابط خطأ
+    if (students.length === 0) {
+        console.warn('لا توجد بيانات طلاب.');
+    } else {
+        let student = students.find(s => s.id == targetId);
+        if (!student) {
+            student = students[0]; // فتح أول طالب تلقائياً لتجنب الخطأ
+            targetId = student.id;
+        }
+        currentStudentId = targetId;
+        
+        // تعبئة بيانات الهيدر
+        const nameEl = document.getElementById('headerStudentName');
+        const sideNameEl = document.getElementById('sideName');
+        const gradeEl = document.getElementById('sideGrade');
+        const avatarEl = document.getElementById('sideAvatar');
+        
+        if (nameEl) nameEl.textContent = student.name;
+        if (sideNameEl) sideNameEl.textContent = student.name;
+        if (gradeEl) gradeEl.textContent = student.grade || '-';
+        if (avatarEl) avatarEl.textContent = student.name.charAt(0);
     }
+
+    // فتح التبويب الأول
+    switchSection('diagnostic');
 });
 
-function populateIEPFormAutomatically(studentId) {
-    // 1. جلب البيانات من النظام (localStorage)
+// 2. دالة التنقل بين التبويبات (إصلاح الخطأ السابق)
+window.switchSection = function(sectionId) {
+    // إخفاء كل الأقسام
+    document.querySelectorAll('.content-section').forEach(el => {
+        el.style.display = 'none';
+        el.classList.remove('active');
+    });
+    document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+
+    // إظهار القسم المطلوب
+    const section = document.getElementById(`section-${sectionId}`);
+    const link = document.getElementById(`link-${sectionId}`);
+    
+    if (section) {
+        section.style.display = 'block';
+        section.classList.add('active');
+    }
+    if (link) link.classList.add('active');
+
+    // إذا تم فتح الخطة، نفذ التعبئة التلقائية
+    if (sectionId === 'iep') {
+        populateIEPForm();
+    }
+};
+
+// 3. دالة التعبئة التلقائية (قلب الطلب: تحويل البيانات لمدخلات قابلة للتعديل)
+function populateIEPForm() {
+    console.log("بدء التعبئة التلقائية للخطة...");
+    
+    if (!currentStudentId) return;
+
     const allResults = JSON.parse(localStorage.getItem('testResults') || '[]');
     const objectives = JSON.parse(localStorage.getItem('objectives') || '[]');
-    const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     
-    // للبحث عن نص السؤال والهدف المرتبط به
-    // نجمع كل الاختبارات المحتملة للبحث فيها
-    const allTests = [
-        ...(JSON.parse(localStorage.getItem('questionBanks') || '[]')),
-        ...(JSON.parse(localStorage.getItem('tests') || '[]'))
-    ];
+    // البحث عن الاختبارات في كل مكان محتمل
+    let allTests = [];
+    Object.keys(localStorage).forEach(key => {
+        try {
+            const d = JSON.parse(localStorage.getItem(key));
+            if(Array.isArray(d)) allTests = [...allTests, ...d];
+        } catch(e){}
+    });
 
-    // 2. البحث عن آخر اختبار تشخيصي للطالب
-    const diagnosticResult = allResults
-        .filter(r => r.studentId == studentId && r.type === 'diagnostic')
+    // جلب آخر اختبار تشخيصي
+    const result = allResults
+        .filter(r => r.studentId == currentStudentId && r.type === 'diagnostic')
         .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
 
-    // مصفوفات لتخزين النصوص
-    let strengthsText = []; // لنقاط القوة
-    let needsText = [];     // لنقاط الاحتياج
-    let goalsData = [];     // لجدول الأهداف
+    let strengths = [];
+    let needs = [];
+    let goalsData = [];
 
-    // 3. منطق التحويل: من إجابات إلى نصوص
-    if (diagnosticResult && diagnosticResult.answers) {
-        // العثور على الاختبار الأصلي لمعرفة تفاصيل الأسئلة
-        const testRef = allTests.find(t => t.id == diagnosticResult.testId);
-        
+    // تحليل النتائج
+    if (result && result.answers) {
+        const testRef = allTests.find(t => t.id == result.testId);
         if (testRef) {
             const questions = testRef.questions || testRef.items || [];
-            
-            diagnosticResult.answers.forEach(ans => {
-                const question = questions.find(q => q.id == ans.questionId);
-                
-                // إذا وجدنا السؤال وكان مرتبطاً بهدف
-                if (question && question.linkedGoalId) {
-                    const goal = objectives.find(obj => obj.id == question.linkedGoalId);
-                    
-                    if (goal) {
+            result.answers.forEach(ans => {
+                const q = questions.find(x => x.id == ans.questionId);
+                if (q && q.linkedGoalId) {
+                    const obj = objectives.find(o => o.id == q.linkedGoalId);
+                    if (obj) {
                         if (ans.isCorrect) {
-                            // إجابة صحيحة -> نقاط قوة
-                            strengthsText.push(goal.shortTermGoal);
+                            if (!strengths.includes(obj.shortTermGoal)) strengths.push(obj.shortTermGoal);
                         } else {
-                            // إجابة خاطئة -> نقاط احتياج + أهداف الخطة
-                            needsText.push(goal.shortTermGoal);
-                            
-                            // تجهيز البيانات لجدول الأهداف التفصيلي
-                            // جلب الأهداف التدريسية (إن وجدت) أو استخدام القصير نفسه
-                            const instructionals = (goal.instructionalGoals && goal.instructionalGoals.length > 0) 
-                                ? goal.instructionalGoals 
-                                : [goal.shortTermGoal];
-                                
-                            goalsData.push({
-                                short: goal.shortTermGoal,
-                                instructional: instructionals
-                            });
+                            if (!needs.includes(obj.shortTermGoal)) {
+                                needs.push(obj.shortTermGoal);
+                                const inst = (obj.instructionalGoals && obj.instructionalGoals.length > 0) 
+                                    ? obj.instructionalGoals : [obj.shortTermGoal];
+                                goalsData.push({ short: obj.shortTermGoal, instr: inst });
+                            }
                         }
                     }
                 }
@@ -77,91 +118,124 @@ function populateIEPFormAutomatically(studentId) {
         }
     }
 
-    // 4. الحقن داخل الحقول (التعبئة التلقائية) مع الحفاظ على قابلية التعديل
+    // أ) تعبئة نقاط القوة والضعف (Textarea قابل للتعديل)
+    const sInput = document.getElementById('iep-strengths');
+    const nInput = document.getElementById('iep-needs');
+    
+    if (sInput) sInput.value = strengths.join('\n');
+    if (nInput) nInput.value = needs.join('\n');
 
-    // أ) تعبئة نقاط القوة (Textarea)
-    const strengthInput = document.getElementById('iep-strengths');
-    if (strengthInput) {
-        // نضع القيم داخل .value لكي تكون قابلة للتعديل
-        strengthInput.value = strengthsText.length > 0 ? strengthsText.join('\n') : '';
-    }
-
-    // ب) تعبئة نقاط الاحتياج (Textarea)
-    const needsInput = document.getElementById('iep-needs');
-    if (needsInput) {
-        needsInput.value = needsText.length > 0 ? needsText.join('\n') : '';
-    }
-
-    // ج) تعبئة جدول الأهداف (Inputs inside Table)
+    // ب) تعبئة جدول الأهداف (Inputs قابلة للتعديل)
     const goalsBody = document.getElementById('iep-goals-body');
     if (goalsBody) {
-        goalsBody.innerHTML = ''; // تفريغ الجدول القديم
-
+        goalsBody.innerHTML = '';
         if (goalsData.length > 0) {
-            goalsData.forEach(item => {
-                item.instructional.forEach(instr => {
-                    // إنشاء صف جديد يحتوي على Inputs وليس نصوص ثابتة
+            goalsData.forEach(g => {
+                g.instr.forEach(i => {
+                    // هنا يتم وضع القيم داخل value لتكون قابلة للتعديل
                     const row = `
                         <tr>
-                            <td>
-                                <input type="text" class="form-control" value="${item.short}" style="width:100%">
-                            </td>
-                            <td>
-                                <input type="text" class="form-control" value="${instr}" style="width:100%">
-                            </td>
+                            <td><input type="text" class="form-control" value="${g.short}"></td>
+                            <td><input type="text" class="form-control" value="${i}"></td>
                             <td><input type="date" class="form-control"></td>
                             <td><input type="text" class="form-control"></td>
                             <td><input type="text" class="form-control"></td>
-                        </tr>
-                    `;
+                        </tr>`;
                     goalsBody.insertAdjacentHTML('beforeend', row);
                 });
             });
         } else {
-            // صف فارغ قابل للكتابة في حال عدم وجود بيانات
-            goalsBody.innerHTML = `
-                <tr>
-                    <td><input type="text" class="form-control" placeholder="هدف قصير..."></td>
-                    <td><input type="text" class="form-control" placeholder="هدف تدريسي..."></td>
-                    <td><input type="date" class="form-control"></td>
-                    <td><input type="text" class="form-control"></td>
-                    <td><input type="text" class="form-control"></td>
-                </tr>
-            `;
+            goalsBody.innerHTML = `<tr><td colspan="5" class="text-center">لا توجد أهداف (أدخل يدوياً أو قم بإجراء اختبار)</td></tr>`;
         }
     }
 
-    // د) تعبئة جدول الحصص تلقائياً (Inputs)
-    fillScheduleAutomatically(studentId, teacherSchedule);
+    // ج) تعبئة الجدول الدراسي
+    fillSchedule();
 }
 
-function fillScheduleAutomatically(studentId, scheduleData) {
-    const scheduleBody = document.getElementById('iep-schedule-body');
-    if (!scheduleBody) return;
+// 4. دالة الجدول الدراسي
+function fillSchedule() {
+    const tbody = document.getElementById('iep-schedule-body');
+    if (!tbody) return;
 
+    const schedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
     let html = '';
 
     days.forEach(day => {
-        html += `<tr><td style="font-weight:bold">${day}</td>`;
+        html += `<tr><td class="font-weight-bold">${day}</td>`;
         for (let p = 1; p <= 7; p++) {
-            // البحث هل الطالب موجود في هذه الحصة
-            const session = scheduleData.find(s => 
-                s.day === day && 
-                s.period == p && 
-                s.students && s.students.includes(parseInt(studentId)) // مطابقة رقم الطالب
-            );
-
+            const session = schedule.find(s => s.day === day && s.period == p && s.students && s.students.includes(parseInt(currentStudentId)));
+            
+            // إذا وجدت حصة، ضعها في Input، وإلا Input فارغ
             if (session) {
-                // تعبئة تلقائية بالمادة مع إمكانية التعديل
-                html += `<td><input type="text" class="form-control" value="${session.subject || 'صعوبات'}" style="background-color:#e8f5e9; text-align:center"></td>`;
+                html += `<td><input type="text" class="form-control" value="${session.subject || 'صعوبات'}" style="background:#e8f5e9; text-align:center;"></td>`;
             } else {
-                // حصة فارغة قابلة للكتابة
-                html += `<td><input type="text" class="form-control" disabled style="background-color:#f9f9f9"></td>`;
+                html += `<td><input type="text" class="form-control" disabled style="background:#f9f9f9;"></td>`;
             }
         }
         html += '</tr>';
     });
-
-    scheduleBody.innerHTML = html;
+    tbody.innerHTML = html;
 }
+
+// 5. دوال النوافذ (Modals) وإسناد الاختبار
+window.showAssignTestModal = function() {
+    const modal = document.getElementById('assignTestModal');
+    if(modal) {
+        modal.style.display = 'block';
+        loadTestsToSelect();
+    }
+};
+
+window.closeModal = function(id) {
+    const m = document.getElementById(id);
+    if(m) m.style.display = 'none';
+};
+
+function loadTestsToSelect() {
+    const sel = document.getElementById('assignTestSelect');
+    if(!sel) return;
+    sel.innerHTML = '<option value="">اختر الاختبار...</option>';
+    
+    // بحث شامل
+    let found = [];
+    Object.keys(localStorage).forEach(k => {
+        try {
+            const d = JSON.parse(localStorage.getItem(k));
+            if(Array.isArray(d) && d.length>0 && (d[0].title || d[0].questions)) found = [...found, ...d];
+        } catch(e){}
+    });
+    
+    // إزالة تكرار
+    const unique = Array.from(new Map(found.map(i => [i.id, i])).values());
+    
+    unique.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t.id;
+        opt.textContent = t.title || t.name || `اختبار ${t.id}`;
+        sel.appendChild(opt);
+    });
+}
+
+window.saveAssignedTest = function() {
+    const sel = document.getElementById('assignTestSelect');
+    if(!sel || !sel.value) return alert('اختر اختباراً');
+    
+    const list = JSON.parse(localStorage.getItem('assignedTests') || '[]');
+    list.push({
+        id: Date.now(),
+        studentId: currentStudentId,
+        testId: sel.value,
+        status: 'pending',
+        assignedDate: new Date().toISOString()
+    });
+    localStorage.setItem('assignedTests', JSON.stringify(list));
+    alert('تم الإسناد');
+    closeModal('assignTestModal');
+};
+
+// إغلاق عند النقر بالخارج
+window.onclick = function(e) {
+    if(e.target.classList.contains('modal')) e.target.style.display = 'none';
+};

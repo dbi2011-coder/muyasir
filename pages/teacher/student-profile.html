@@ -237,5 +237,152 @@
 
     <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/student-profile.js"></script>
+    <script>
+    // ============================================================
+    // دالة التعبئة الفورية (موجودة داخل HTML لضمان العمل)
+    // ============================================================
+    function forceAutoFill() {
+        // 1. استخراج رقم الطالب من الرابط
+        const params = new URLSearchParams(window.location.search);
+        const studentId = params.get('id');
+
+        if (!studentId) {
+            alert("خطأ: لا يمكن تحديد رقم الطالب من الرابط.");
+            return;
+        }
+
+        alert("جاري سحب البيانات من الاختبار التشخيصي للطالب رقم: " + studentId);
+
+        // 2. جلب البيانات من الذاكرة
+        const allResults = JSON.parse(localStorage.getItem('testResults') || '[]');
+        const objectives = JSON.parse(localStorage.getItem('objectives') || '[]');
+        
+        // البحث عن الاختبارات في كل مكان محتمل
+        let allTests = [];
+        Object.keys(localStorage).forEach(key => {
+            try {
+                let d = JSON.parse(localStorage.getItem(key));
+                if(Array.isArray(d)) allTests = [...allTests, ...d];
+            } catch(e){}
+        });
+
+        // 3. البحث عن نتيجة الطالب (تشخيصي)
+        const result = allResults
+            .filter(r => r.studentId == studentId && r.type === 'diagnostic')
+            .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+
+        if (!result) {
+            alert("⚠️ لم يتم العثور على أي نتائج اختبار تشخيصي لهذا الطالب.\nتأكد أن الطالب قام بحل اختبار نوعه 'diagnostic'.");
+            return;
+        }
+
+        // 4. تحليل الإجابات
+        let strengths = [];
+        let needs = [];
+        let goals = [];
+
+        const testRef = allTests.find(t => t.id == result.testId);
+        
+        // إذا لم نجد ملف الاختبار الأصلي، نحاول العمل بالمعرفات فقط
+        if (result.answers) {
+            // جلب قائمة الأسئلة (إذا وجدنا الاختبار)
+            const questions = testRef ? (testRef.questions || testRef.items || []) : [];
+
+            result.answers.forEach(ans => {
+                // محاولة ربط السؤال بالهدف
+                // نبحث عن السؤال في الاختبار، أو نفترض أن السؤال يحتوي على linkedGoalId في النتيجة نفسها
+                let q = questions.find(x => x.id == ans.questionId);
+                
+                // البحث عن الهدف
+                let linkedGoalId = q ? q.linkedGoalId : ans.linkedGoalId; // محاولة إيجاد الرابط
+                
+                if (linkedGoalId) {
+                    const obj = objectives.find(o => o.id == linkedGoalId);
+                    if (obj) {
+                        if (ans.isCorrect) {
+                            if (!strengths.includes(obj.shortTermGoal)) strengths.push(obj.shortTermGoal);
+                        } else {
+                            if (!needs.includes(obj.shortTermGoal)) {
+                                needs.push(obj.shortTermGoal);
+                                const subs = (obj.instructionalGoals && obj.instructionalGoals.length > 0) 
+                                    ? obj.instructionalGoals : [obj.shortTermGoal];
+                                goals.push({ short: obj.shortTermGoal, sub: subs });
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        // 5. تعبئة الحقول (قابلة للتعديل)
+        // ============================================================
+        
+        // تعبئة نقاط القوة
+        const sEl = document.getElementById('iep-strengths');
+        if (sEl) {
+            sEl.value = strengths.join('\n');
+            sEl.style.backgroundColor = "#e8f5e9"; // ومضة لون للتأكيد
+        } else {
+            console.error("لم يتم العثور على حقل iep-strengths");
+        }
+
+        // تعبئة نقاط الاحتياج
+        const nEl = document.getElementById('iep-needs');
+        if (nEl) {
+            nEl.value = needs.join('\n');
+            nEl.style.backgroundColor = "#ffebee"; // ومضة لون للتأكيد
+        } else {
+            console.error("لم يتم العثور على حقل iep-needs");
+        }
+
+        // تعبئة الجدول
+        const tBody = document.getElementById('iep-goals-body');
+        if (tBody) {
+            tBody.innerHTML = ''; // مسح القديم
+            if (goals.length > 0) {
+                goals.forEach(g => {
+                    g.sub.forEach(sub => {
+                        const row = `
+                            <tr>
+                                <td><input type="text" class="form-control" value="${g.short}"></td>
+                                <td><input type="text" class="form-control" value="${sub}"></td>
+                                <td><input type="date" class="form-control"></td>
+                                <td><input type="text" class="form-control"></td>
+                                <td><input type="text" class="form-control"></td>
+                            </tr>
+                        `;
+                        tBody.insertAdjacentHTML('beforeend', row);
+                    });
+                });
+            } else {
+                tBody.innerHTML = '<tr><td colspan="5" class="text-center">تم التحليل ولكن لا توجد أهداف (ربما أجاب الطالب بشكل صحيح على الكل أو لا توجد أهداف مربوطة).</td></tr>';
+            }
+        } else {
+            console.error("لم يتم العثور على جدول iep-goals-body");
+        }
+
+        // تعبئة جدول الحصص (إضافي)
+        const scheduleBody = document.getElementById('iep-schedule-body');
+        if (scheduleBody) {
+             const schedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
+             const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+             let html = '';
+             days.forEach(day => {
+                html += `<tr><td><strong>${day}</strong></td>`;
+                for(let i=1; i<=7; i++){
+                    let sess = schedule.find(s => s.day==day && s.period==i && s.students && s.students.includes(parseInt(studentId)));
+                    if(sess) html += `<td><input type="text" class="form-control" value="${sess.subject || 'صعوبات'}" style="background:#ccffcc"></td>`;
+                    else html += `<td><input type="text" class="form-control" disabled></td>`;
+                }
+                html += '</tr>';
+             });
+             scheduleBody.innerHTML = html;
+        }
+
+        alert("✅ تمت العملية! يمكنك الآن تعديل البيانات يدوياً.");
+    }
+</script>
 </body>
 </html>
+

@@ -1,6 +1,6 @@
 // =========================================================
 // 📁 الملف: assets/js/student-profile.js
-// الوظيفة: إدارة ملف الطالب (نسخة الإصلاح التلقائي)
+// الوظيفة: إدارة ملف الطالب كاملة (البيانات، الخطة، الاختبارات)
 // =========================================================
 
 let currentStudentId = null;
@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // إذا لم يوجد رقم في الرابط، نفترض الرقم 1
     if (!targetId) {
         targetId = 1;
-        // تحديث الرابط في المتصفح
         const newUrl = new URL(window.location);
         newUrl.searchParams.set('id', targetId);
         window.history.replaceState({}, '', newUrl);
@@ -32,7 +31,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // 4. (الحل الجذري) إذا لم نجد الطالب، نقوم بإنشائه فوراً
     if (!foundStudent) {
         console.warn(`لم يتم العثور على الطالب ${targetId}، جاري إنشاؤه تلقائياً...`);
-        
         foundStudent = {
             id: targetId,
             name: "طالب جديد (تم إنشاؤه تلقائياً)",
@@ -40,21 +38,20 @@ document.addEventListener('DOMContentLoaded', function() {
             disabilityType: "صعوبات تعلم",
             age: 10
         };
-
-        // حفظه في القائمة حتى لا تظهر الرسالة مرة أخرى
         students.push(foundStudent);
         localStorage.setItem('students', JSON.stringify(students));
     }
 
-    // الآن أصبح لدينا طالب بالتأكيد
     currentStudent = foundStudent;
     currentStudentId = targetId;
 
     // 5. بدء تحميل الصفحة
     loadStudentData();
-    switchSection('diagnostic'); // الذهاب لصفحة التشخيص أولاً
     
-    // التأكد من وجود بيانات للمعلم والاختبارات لتجنب الأخطاء لاحقاً
+    // تحميل التبويب الافتراضي
+    switchSection('diagnostic');
+    
+    // التأكد من وجود بيانات للنظام
     ensureSystemDataExists(); 
 });
 
@@ -98,7 +95,6 @@ function switchSection(sectionId) {
 function loadStudentData() {
     if (!currentStudent) return;
 
-    // تحديث النصوص في الصفحة
     const setText = (id, text) => {
         const el = document.getElementById(id);
         if (el) el.textContent = text;
@@ -113,17 +109,85 @@ function loadStudentData() {
 }
 
 // =========================================================
-// 4. تعبئة الخطة التربوية (النموذج 9) تلقائياً
+// 4. إدارة النوافذ المنبثقة (Modals) - [تمت إضافتها لحل المشكلة]
+// =========================================================
+
+// دالة فتح نافذة إسناد الاختبار
+function showAssignTestModal() {
+    const modal = document.getElementById('assignTestModal');
+    if (modal) {
+        modal.style.display = 'block';
+        loadAvailableTests(); // تحميل قائمة الاختبارات في القائمة المنسدلة
+    } else {
+        alert('عذراً، نافذة إسناد الاختبار غير موجودة في الصفحة.');
+    }
+}
+
+// دالة إغلاق أي نافذة
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// تحميل الاختبارات المتاحة في القائمة المنسدلة
+function loadAvailableTests() {
+    const select = document.getElementById('assignTestSelect');
+    if (!select) return;
+
+    const tests = JSON.parse(localStorage.getItem('tests') || '[]');
+    select.innerHTML = '<option value="">اختر الاختبار...</option>';
+    
+    tests.forEach(test => {
+        const option = document.createElement('option');
+        option.value = test.id;
+        option.textContent = test.title;
+        select.appendChild(option);
+    });
+}
+
+// حفظ إسناد الاختبار (عند الضغط على حفظ في النافذة)
+function saveAssignedTest() {
+    const select = document.getElementById('assignTestSelect');
+    const testId = select ? select.value : null;
+
+    if (!testId) {
+        alert('الرجاء اختيار اختبار أولاً');
+        return;
+    }
+
+    // حفظ عملية الإسناد (يمكن تعديل هذا الجزء حسب هيكلية بياناتك)
+    const assignedTests = JSON.parse(localStorage.getItem('assignedTests') || '[]');
+    assignedTests.push({
+        studentId: currentStudentId,
+        testId: testId,
+        date: new Date().toISOString(),
+        status: 'pending'
+    });
+    localStorage.setItem('assignedTests', JSON.stringify(assignedTests));
+
+    alert('تم إسناد الاختبار للطالب بنجاح');
+    closeModal('assignTestModal');
+}
+
+// إغلاق النافذة عند النقر خارجها
+window.onclick = function(event) {
+    if (event.target.classList.contains('modal')) {
+        event.target.style.display = "none";
+    }
+}
+
+// =========================================================
+// 5. تعبئة الخطة التربوية (النموذج 9) تلقائياً
 // =========================================================
 function loadIEPTab(studentId) {
     console.log("تحديث بيانات الخطة للطالب:", studentId);
 
-    // جلب البيانات
     const objectives = JSON.parse(localStorage.getItem('objectives') || '[]');
     const tests = JSON.parse(localStorage.getItem('tests') || '[]');
     const allResults = JSON.parse(localStorage.getItem('testResults') || '[]');
 
-    // البحث عن أحدث نتيجة تشخيصية
     const studentResult = allResults
         .filter(r => r.studentId == studentId && r.type === 'diagnostic')
         .sort((a, b) => new Date(b.date) - new Date(a.date))[0];
@@ -132,7 +196,6 @@ function loadIEPTab(studentId) {
     let needPoints = []; 
     let targetObjectives = []; 
 
-    // تحليل النتائج (إن وجدت)
     if (studentResult && studentResult.answers) {
         const originalTest = tests.find(t => t.id == studentResult.testId);
         if (originalTest) {
@@ -145,7 +208,6 @@ function loadIEPTab(studentId) {
                             strengthPoints.push(objective.shortTermGoal);
                         } else {
                             needPoints.push(objective.shortTermGoal);
-                            // تحضير الأهداف
                             targetObjectives.push({
                                 short: objective.shortTermGoal,
                                 instructional: (objective.instructionalGoals && objective.instructionalGoals.length > 0) 
@@ -159,7 +221,6 @@ function loadIEPTab(studentId) {
         }
     }
 
-    // تعبئة حقول النموذج (Input/Textarea)
     const setVal = (id, val) => {
         const el = document.getElementById(id);
         if (el) el.value = val;
@@ -168,7 +229,6 @@ function loadIEPTab(studentId) {
     setVal('iep-strengths', strengthPoints.length > 0 ? strengthPoints.join('\n- ') : '');
     setVal('iep-needs', needPoints.length > 0 ? needPoints.join('\n- ') : '');
 
-    // تعبئة جدول الأهداف
     const goalsBody = document.getElementById('iep-goals-body');
     if (goalsBody) {
         goalsBody.innerHTML = '';
@@ -187,7 +247,6 @@ function loadIEPTab(studentId) {
                 });
             });
         } else {
-            // صف فارغ للكتابة اليدوية إذا لم توجد نتائج
             goalsBody.innerHTML = `
                 <tr>
                     <td><input type="text" class="form-control" placeholder="هدف قصير المدى"></td>
@@ -199,12 +258,11 @@ function loadIEPTab(studentId) {
         }
     }
 
-    // تعبئة جدول الحصص
     fillScheduleTable(studentId);
 }
 
 // =========================================================
-// 5. جدول الحصص
+// 6. جدول الحصص
 // =========================================================
 function fillScheduleTable(studentId) {
     const scheduleBody = document.getElementById('iep-schedule-body');
@@ -234,17 +292,10 @@ function fillScheduleTable(studentId) {
 }
 
 // =========================================================
-// 6. التحقق من تكامل النظام (لإصلاح المشاكل الخفية)
+// 7. التحقق من تكامل النظام
 // =========================================================
 function ensureSystemDataExists() {
-    // التأكد من وجود بنية للأهداف والاختبارات لكي لا يتوقف الكود
-    if (!localStorage.getItem('objectives')) {
-        localStorage.setItem('objectives', JSON.stringify([]));
-    }
-    if (!localStorage.getItem('tests')) {
-        localStorage.setItem('tests', JSON.stringify([]));
-    }
-    if (!localStorage.getItem('testResults')) {
-        localStorage.setItem('testResults', JSON.stringify([]));
-    }
+    if (!localStorage.getItem('objectives')) localStorage.setItem('objectives', JSON.stringify([]));
+    if (!localStorage.getItem('tests')) localStorage.setItem('tests', JSON.stringify([]));
+    if (!localStorage.getItem('testResults')) localStorage.setItem('testResults', JSON.stringify([]));
 }

@@ -3,7 +3,7 @@
    الوصف: تنسيقات ملف الطالب + النموذج 9 (الخطة التربوية الذكية)
    ============================================================ */
 
-/* --- تنسيقات واجهة الطالب الأساسية (القديمة) --- */
+/* --- تنسيقات البطاقات والإحصائيات (القديمة) --- */
 .stats-cards {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -22,9 +22,7 @@
     transition: transform 0.3s ease;
 }
 
-.stat-card:hover {
-    transform: translateY(-5px);
-}
+.stat-card:hover { transform: translateY(-5px); }
 
 .stat-icon {
     font-size: 2rem;
@@ -35,10 +33,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    color: #2980b9;
 }
 
 .stat-info { flex: 1; }
-.stat-value { font-size: 1.8rem; font-weight: bold; color: #2980b9; margin-bottom: 5px; }
+.stat-value { font-size: 1.8rem; font-weight: bold; color: #2c3e50; margin-bottom: 5px; }
 .stat-label { color: #666; font-size: 0.9rem; }
 
 /* الإجراءات السريعة */
@@ -59,12 +58,12 @@
 
 .actions-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 20px;
 }
 
 .action-card {
-    background: #ecf0f1;
+    background: #f8f9fa;
     border-radius: 10px;
     padding: 20px;
     text-align: center;
@@ -75,26 +74,26 @@
 
 .action-card:hover {
     background: white;
-    border-color: #2980b9;
+    border-color: #3498db;
     transform: translateY(-3px);
 }
 
-.action-icon { font-size: 2.5rem; margin-bottom: 10px; }
+.action-icon { font-size: 2.5rem; margin-bottom: 10px; color: #3498db; }
 .action-title { font-weight: bold; color: #2c3e50; margin-bottom: 8px; }
 .action-description { color: #666; font-size: 0.9rem; line-height: 1.4; }
 
 /* ============================================================
-   🟢 2. تنسيقات نموذج 9 الجديد (الخطة التربوية الذكية) - هام جداً
+   🟢 تنسيقات نموذج 9 الجديد (الخطة التربوية الذكية)
    ============================================================ */
 
 .iep-word-model {
     background: #fff;
     padding: 40px;
     border-radius: 5px;
-    box-shadow: 0 0 20px rgba(0,0,0,0.1); /* ظل خفيف مثل الورقة */
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
     direction: rtl;
     max-width: 1000px;
-    margin: 0 auto;
+    margin: 20px auto;
     font-family: 'Tajawal', sans-serif;
     border: 1px solid #ddd;
 }
@@ -105,11 +104,11 @@
     border-collapse: collapse;
     margin-bottom: 25px;
     font-size: 1rem;
-    border: 2px solid #000; /* حدود خارجية سوداء */
+    border: 2px solid #000;
 }
 
 .word-table th, .word-table td {
-    border: 1px solid #000; /* حدود داخلية سوداء */
+    border: 1px solid #000;
     padding: 8px 10px;
     vertical-align: middle;
 }
@@ -121,7 +120,7 @@
     text-align: center;
 }
 
-/* الحقول داخل الجدول لتبدو كجزء من الورقة */
+/* حقول الإدخال لتندمج مع الجدول */
 .word-table input[type="text"], 
 .word-table input[type="number"], 
 .word-table input[type="date"], 
@@ -190,7 +189,7 @@
     text-decoration: underline;
 }
 
-/* وحدات الأهداف القصيرة (Blocks) */
+/* وحدات الأهداف القصيرة */
 .goal-unit {
     border: 2px solid #555;
     margin-bottom: 30px;
@@ -199,7 +198,7 @@
     border-radius: 8px;
     position: relative;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    page-break-inside: avoid; /* منع قص الوحدة في الطباعة */
+    page-break-inside: avoid;
 }
 
 .short-goal-header {
@@ -258,7 +257,6 @@
     cursor: pointer;
     font-weight: bold;
     padding: 0 10px;
-    line-height: 1;
 }
 
 .btn-delete-unit {
@@ -272,11 +270,10 @@
     cursor: pointer;
 }
 
-/* --- تحسينات الطباعة (Print Styles) --- */
+/* --- إعدادات الطباعة --- */
 @media print {
     body { background: #fff; font-size: 12pt; }
     
-    /* إخفاء القائمة الجانبية والأزرار عند الطباعة */
     .profile-sidebar, .sidebar, .header, .btn, .btn-iep, .btn-delete-row, .btn-add-sub, .no-print, .header-actions {
         display: none !important;
     }
@@ -285,10 +282,6 @@
         padding: 0;
         margin: 0;
         width: 100%;
-    }
-
-    .student-profile-wrapper, .dashboard-container {
-        display: block; /* إلغاء الفليكس عند الطباعة */
     }
 
     .iep-word-model {
@@ -306,7 +299,6 @@
         margin-bottom: 20px;
     }
 
-    /* إجبار المتصفح على طباعة ألوان الخلفية */
     .word-table th, .short-goal-header {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;

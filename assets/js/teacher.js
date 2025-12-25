@@ -1,179 +1,147 @@
 // ============================================
 // 📁 المسار: assets/js/teacher.js
-// الوصف: لوحة تحكم المعلم + النموذج 9 الذكي (مصحح)
+// الوصف: لوحة المعلم + النموذج 9 (نسخة التشخيص)
 // ============================================
 
+// 1. رسالة تأكيد أن الملف تم تحميله (ستظهر نافذة منبثقة عند تشغيل الصفحة)
+// يمكنك حذف هذا السطر لاحقاً بعد التأكد من عمله
+// alert("ملف المعلم يعمل بنجاح!");
+
 document.addEventListener('DOMContentLoaded', function() {
+    console.log("Teacher.js: بدأ التشغيل...");
     checkAuthAndInit();
 });
 
 function checkAuthAndInit() {
-    // 1. التحقق من المستخدم (Auth Check)
+    // التحقق من تسجيل الدخول
     const userJson = localStorage.getItem('currentUser');
-    
-    // إذا لم يكن هناك مستخدم مسجل، نوجهه لصفحة الدخول
     if (!userJson) {
-        console.log("لا يوجد مستخدم مسجل، جاري التحويل...");
-        // نحاول العودة للصفحة الرئيسية (جربنا مسارين لضمان العمل)
-        window.location.href = '../../index.html'; 
+        console.warn("Teacher.js: لا يوجد مستخدم مسجل، جاري التحويل لصفحة الدخول.");
+        window.location.href = '../../index.html'; // تأكد أن المسار صحيح لصفحة الدخول
         return;
     }
 
     const user = JSON.parse(userJson);
-
-    // التحقق من أن المستخدم هو "معلم"
     if (user.role !== 'teacher') {
-        alert("عذراً، هذه الصفحة مخصصة للمعلمين فقط.");
+        alert("تنبيه: هذا الحساب ليس حساب معلم.");
         window.location.href = '../../index.html';
         return;
     }
 
-    // 2. إذا نجح الدخول، نعرض البيانات
-    console.log("تم الدخول بنجاح: ", user.name);
-    
+    console.log(`Teacher.js: تم الدخول بنجاح للمعلم (${user.name})`);
+
+    // عرض اسم المعلم (مع فحص وجود العنصر لتجنب الأخطاء)
     const teacherNameEl = document.getElementById('teacherName');
     if (teacherNameEl) {
         teacherNameEl.textContent = user.name;
+    } else {
+        console.warn("تنبيه: لم يتم العثور على عنصر 'teacherName' في HTML.");
     }
 
-    // 3. تحميل قائمة الطلاب
     loadMyStudents();
 }
 
-// ================================================================
-// 📋 دالة تحميل الطلاب وإضافة زر النموذج 9
-// ================================================================
 function loadMyStudents() {
-    // جلب البيانات من التخزين
+    // تحميل الطلاب
     const allStudents = JSON.parse(localStorage.getItem('students') || '[]');
     
-    // ملاحظة: هنا نفترض عرض كل الطلاب، يمكنك تصفيتهم لاحقاً حسب المعلم
-    const myStudents = allStudents; 
-
+    // ابحث عن الجدول في HTML
     const studentsList = document.getElementById('studentsList');
     
-    // التأكد من وجود الجدول في الصفحة قبل محاولة الكتابة فيه
-    if(studentsList) {
-        studentsList.innerHTML = ''; // مسح القائمة القديمة
-        
-        if (myStudents.length === 0) {
-            studentsList.innerHTML = '<tr><td colspan="4" style="text-align:center;">لا يوجد طلاب مسجلين</td></tr>';
-            return;
-        }
-
-        myStudents.forEach(student => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${student.name}</td>
-                <td>${student.grade || 'غير محدد'}</td>
-                <td>${student.subject || 'عام'}</td>
-                <td>
-                    <button class="btn btn-sm btn-info" style="background-color:#17a2b8; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;" onclick="openIEPModal(${student.id})">
-                        <i class="fas fa-file-alt"></i> نموذج 9 (الذكية)
-                    </button>
-                </td>
-            `;
-            studentsList.appendChild(tr);
-        });
-    }
-}
-
-// ================================================================
-// 🟢 المحرك الذكي للنموذج 9 (Smart IEP Engine)
-// ================================================================
-
-function openIEPModal(studentId) {
-    // جلب بيانات الطالب المحدد
-    const allStudents = JSON.parse(localStorage.getItem('students') || '[]');
-    const student = allStudents.find(s => s.id === studentId);
-    
-    if (!student) {
-        alert('حدث خطأ: بيانات الطالب غير موجودة');
+    if (!studentsList) {
+        console.error("خطأ: لم يتم العثور على الجدول <tbody id='studentsList'> في الصفحة.");
+        console.log("يرجى التأكد من أن ملف HTML يحتوي على جدول بهذا الـ ID لعرض الطلاب.");
         return;
     }
 
-    // إنشاء النافذة المنبثقة (Modal)
+    studentsList.innerHTML = '';
+    
+    if (allStudents.length === 0) {
+        studentsList.innerHTML = '<tr><td colspan="4" style="text-align:center;">لا يوجد طلاب في قاعدة البيانات</td></tr>';
+        return;
+    }
+
+    // رسم الجدول وإضافة زر النموذج 9
+    allStudents.forEach(student => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${student.name}</td>
+            <td>${student.grade || '-'}</td>
+            <td>${student.subject || '-'}</td>
+            <td>
+                <button class="btn btn-sm btn-info" 
+                        style="background-color:#17a2b8; color:white; border:none; padding:5px 10px; border-radius:4px; cursor:pointer;" 
+                        onclick="openIEPModal(${student.id})">
+                    <i class="fas fa-file-alt"></i> نموذج 9 (الذكية)
+                </button>
+            </td>
+        `;
+        studentsList.appendChild(tr);
+    });
+}
+
+// ================================================================
+// 🟢 كود النافذة المنبثقة للنموذج 9
+// ================================================================
+
+window.openIEPModal = function(studentId) {
+    console.log("فتح النموذج للطالب رقم:", studentId);
+    
+    const allStudents = JSON.parse(localStorage.getItem('students') || '[]');
+    const student = allStudents.find(s => s.id === studentId);
+    
+    if (!student) { alert('بيانات الطالب غير موجودة'); return; }
+
+    // إزالة المودال القديم إن وجد
     const oldModal = document.getElementById('iepModal');
     if (oldModal) oldModal.remove();
 
+    // تحليل البيانات
+    const analysis = analyzeStudentData(studentId);
+
+    // إنشاء المودال
     const modal = document.createElement('div');
     modal.id = 'iepModal';
     modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; overflow-y:auto; display:flex; justify-content:center; align-items:flex-start; padding-top:20px;';
     
-    // تحليل البيانات
-    const analysis = analyzeStudentData(studentId);
-
     modal.innerHTML = `
-        <div class="modal-content" style="background:#fff; width:95%; max-width:1000px; border-radius:8px; padding:0; box-shadow:0 5px 15px rgba(0,0,0,0.3); position:relative; margin-bottom:50px;">
-            <div style="background:#f8f9fa; padding:15px; border-bottom:1px solid #ddd; display:flex; justify-content:space-between; align-items:center;">
-                <h3 style="margin:0; color:#2c3e50;">الخطة التربوية الفردية (نموذج 9)</h3>
-                <button onclick="document.getElementById('iepModal').remove()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#666;">&times;</button>
+        <div class="modal-content" style="background:#fff; width:95%; max-width:1000px; border-radius:8px; padding:20px; position:relative; margin-bottom:50px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px;">
+                <h3 style="margin:0;">الخطة التربوية (نموذج 9)</h3>
+                <button onclick="document.getElementById('iepModal').remove()" style="font-size:24px; border:none; background:none; cursor:pointer;">&times;</button>
             </div>
             
-            <div class="modal-body" style="padding:20px;">
-                <div class="iep-word-model">
-                    
-                    <div class="no-print" style="margin-bottom:20px; text-align:left;">
-                        <button onclick="window.print()" style="background:#2980b9; color:white; padding:8px 15px; border:none; border-radius:4px; cursor:pointer; font-family:inherit;">🖨️ طباعة الخطة</button>
-                    </div>
-
-                    <table class="word-table">
-                        <tr>
-                            <th width="15%">اسم الطالب</th><td width="35%">${student.name}</td>
-                            <th width="15%">المادة</th><td width="35%">${student.subject || 'لغتي'}</td>
-                        </tr>
-                        <tr>
-                            <th>الصف</th><td>${student.grade || '-'}</td>
-                            <th>تاريخ الإعداد</th><td>${new Date().toLocaleDateString('ar-SA')}</td>
-                        </tr>
-                        <tr>
-                            <th>نسبة الإنجاز</th>
-                            <td colspan="3" style="font-weight:bold; color:${analysis.percent > 50 ? 'green' : 'red'}">${analysis.percent}%</td>
-                        </tr>
-                    </table>
-
-                    <table class="word-table" style="margin-top:15px;">
-                        <thead>
-                            <tr>
-                                <th>اليوم</th><th>الأحد</th><th>الاثنين</th><th>الثلاثاء</th><th>الأربعاء</th><th>الخميس</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td style="background:#eee; font-weight:bold;">الحصة</td>
-                                <td><input type="number" placeholder="-"></td>
-                                <td><input type="number" placeholder="-"></td>
-                                <td><input type="number" placeholder="-"></td>
-                                <td><input type="number" placeholder="-"></td>
-                                <td><input type="number" placeholder="-"></td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <table class="word-table">
-                        <tr>
-                            <th width="50%" style="background:#d4edda; color:#155724;">جوانب القوة (ما اجتازه)</th>
-                            <th width="50%" style="background:#f8d7da; color:#721c24;">جوانب الاحتياج (ما أخفق فيه)</th>
-                        </tr>
-                        <tr>
-                            <td style="vertical-align:top; text-align:right;"><ul class="points-list" style="list-style:none; padding:0;">${analysis.strengthsHTML}</ul></td>
-                            <td style="vertical-align:top; text-align:right;"><ul class="points-list" style="list-style:none; padding:0;">${analysis.needsHTML}</ul></td>
-                        </tr>
-                    </table>
-
-                    <div class="long-term-goal-box" style="border:2px solid #333; padding:15px; margin-bottom:20px;">
-                        <h4 style="margin-top:0;">الهدف بعيد المدى:</h4>
-                        <p style="font-weight:bold; margin-bottom:0;">${analysis.longTermGoal}</p>
-                    </div>
-
-                    <hr style="border-top:2px dashed #ccc; margin:20px 0;">
-
-                    <div id="goalsContainer">
-                        ${analysis.goalsUnitsHTML}
-                    </div>
-
-                    <button onclick="addManualGoal()" class="no-print" style="background:#2c3e50; color:white; width:100%; padding:10px; border:none; margin-top:10px; cursor:pointer;">+ إضافة هدف يدوياً</button>
+            <div class="iep-word-model">
+                <div class="no-print" style="margin-bottom:15px;">
+                    <button onclick="window.print()" style="background:#2980b9; color:white; padding:8px 15px; border:none; border-radius:4px; cursor:pointer;">🖨️ طباعة</button>
                 </div>
+
+                <table class="word-table" style="width:100%; border:2px solid #000; border-collapse:collapse; margin-bottom:20px;">
+                    <tr>
+                        <th style="border:1px solid #000; padding:8px; background:#eee;">الاسم</th><td style="border:1px solid #000; padding:8px;">${student.name}</td>
+                        <th style="border:1px solid #000; padding:8px; background:#eee;">المادة</th><td style="border:1px solid #000; padding:8px;">${student.subject || 'عام'}</td>
+                    </tr>
+                    <tr>
+                        <th style="border:1px solid #000; padding:8px; background:#eee;">الصف</th><td style="border:1px solid #000; padding:8px;">${student.grade || '-'}</td>
+                        <th style="border:1px solid #000; padding:8px; background:#eee;">نسبة الإنجاز</th>
+                        <td style="border:1px solid #000; padding:8px; color:${analysis.percent > 50 ? 'green' : 'red'}; font-weight:bold;">${analysis.percent}%</td>
+                    </tr>
+                </table>
+
+                <div style="display:flex; gap:10px; margin-bottom:20px;">
+                    <div style="flex:1;">
+                        <h4 style="background:#d4edda; padding:10px; margin:0; border:1px solid #c3e6cb;">نقاط القوة</h4>
+                        <ul style="border:1px solid #ccc; padding:10px; margin:0; list-style:none;">${analysis.strengthsHTML}</ul>
+                    </div>
+                    <div style="flex:1;">
+                        <h4 style="background:#f8d7da; padding:10px; margin:0; border:1px solid #f5c6cb;">نقاط الاحتياج</h4>
+                        <ul style="border:1px solid #ccc; padding:10px; margin:0; list-style:none;">${analysis.needsHTML}</ul>
+                    </div>
+                </div>
+
+                <div id="goalsContainer">${analysis.goalsUnitsHTML}</div>
+                
+                <button onclick="addManualGoal()" class="no-print" style="margin-top:10px; padding:10px; background:#2c3e50; color:white; border:none; width:100%; cursor:pointer;">+ إضافة هدف جديد</button>
             </div>
         </div>
     `;
@@ -181,86 +149,49 @@ function openIEPModal(studentId) {
     document.body.appendChild(modal);
 }
 
-// دالة تحليل البيانات
+// تحليل البيانات
 function analyzeStudentData(studentId) {
-    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    
-    const assignedTest = studentTests.find(t => t.studentId === studentId && t.type === 'diagnostic');
-    const originalTest = assignedTest ? allTests.find(t => t.id === assignedTest.testId) : null;
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    const assigned = studentTests.find(t => t.studentId === studentId && t.type === 'diagnostic');
+    const original = assigned ? allTests.find(t => t.id === assigned.testId) : null;
 
-    let strengthsHTML = '';
-    let needsHTML = '';
-    let goalsUnitsHTML = '';
+    let strengthsHTML = '', needsHTML = '', goalsUnitsHTML = '';
     let total = 0, passed = 0;
 
-    if(originalTest && assignedTest && assignedTest.answers) {
-        originalTest.questions.forEach(q => {
+    if (original && assigned && assigned.answers) {
+        original.questions.forEach(q => {
             total++;
-            const ans = assignedTest.answers.find(a => a.questionId === q.id);
+            const ans = assigned.answers.find(a => a.questionId === q.id);
             const score = ans ? ans.score : 0;
-            const passScore = q.passingScore || 5;
-
-            if(score >= passScore) {
+            if (score >= (q.passingScore || 5)) {
                 passed++;
-                strengthsHTML += `<li style="margin-bottom:5px;">✅ <input type="text" value="${q.text}" readonly style="border:none; width:90%;"></li>`;
+                strengthsHTML += `<li>✅ ${q.text}</li>`;
             } else {
-                needsHTML += `<li style="margin-bottom:5px;">❌ <input type="text" value="${q.text}" readonly style="border:none; width:90%;"></li>`;
+                needsHTML += `<li>❌ ${q.text}</li>`;
                 goalsUnitsHTML += createGoalUnitHTML(q.text);
             }
         });
     } else {
-        strengthsHTML = '<li>لا يوجد بيانات اختبار تشخيصي</li>';
-        needsHTML = '<li>يحتاج لإجراء اختبار</li>';
-        goalsUnitsHTML = createGoalUnitHTML('هدف قصير المدى مقترح');
+        strengthsHTML = '<li>لا يوجد بيانات اختبار</li>';
+        needsHTML = '<li>يحتاج لاختبار تشخيصي</li>';
+        goalsUnitsHTML = createGoalUnitHTML('هدف مقترح...');
     }
-
     const percent = total === 0 ? 0 : Math.round((passed/total)*100);
-    const longTermGoal = `أن يتقن الطالب المهارات الأساسية بنسبة إتقان 80%`;
-
-    return { strengthsHTML, needsHTML, goalsUnitsHTML, percent, longTermGoal };
+    return { strengthsHTML, needsHTML, goalsUnitsHTML, percent };
 }
 
-// دالة إنشاء وحدة الهدف
 function createGoalUnitHTML(title) {
     return `
-    <div class="goal-unit" style="border:2px solid #555; padding:15px; margin-bottom:20px; background:#fff; border-radius:8px;">
-        <div style="background:#e3f2fd; padding:10px; margin-bottom:10px; border:1px solid #90caf9;">
-            <button onclick="this.closest('.goal-unit').remove()" class="no-print" style="float:left; background:#c0392b; color:white; border:none; padding:3px 10px; cursor:pointer;">حذف</button>
-            <strong>الهدف قصير المدى:</strong>
-            <input type="text" value="${title}" style="width:70%; border:none; background:transparent; font-weight:bold;">
+    <div class="goal-unit" style="border:2px solid #555; padding:10px; margin-bottom:10px; border-radius:5px;">
+        <div style="background:#e3f2fd; padding:5px; margin-bottom:5px;">
+            <button onclick="this.parentElement.parentElement.remove()" class="no-print" style="float:left; color:red; border:none; background:none; cursor:pointer;">حذف</button>
+            <strong>الهدف:</strong> <input type="text" value="${title}" style="border:none; background:transparent; width:70%;">
         </div>
-        <table class="word-table" style="width:100%; border:1px solid #000; border-collapse:collapse;">
-            <thead>
-                <tr style="background:#eee;">
-                    <th style="border:1px solid #000; padding:5px;">الهدف التدريسي</th>
-                    <th style="border:1px solid #000; padding:5px;">الإجراءات والوسائل</th>
-                    <th style="border:1px solid #000; padding:5px;">تاريخ التحقق</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td style="border:1px solid #000;"><input type="text" style="width:100%; border:none; text-align:center;"></td>
-                    <td style="border:1px solid #000;"><input type="text" style="width:100%; border:none; text-align:center;"></td>
-                    <td style="border:1px solid #000;"><input type="date" style="width:100%; border:none; text-align:center;"></td>
-                </tr>
-                <tr>
-                    <td style="border:1px solid #000;"><input type="text" style="width:100%; border:none; text-align:center;"></td>
-                    <td style="border:1px solid #000;"><input type="text" style="width:100%; border:none; text-align:center;"></td>
-                    <td style="border:1px solid #000;"><input type="date" style="width:100%; border:none; text-align:center;"></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>`;
+        </div>`;
 }
-
 function addManualGoal() {
     const div = document.createElement('div');
     div.innerHTML = createGoalUnitHTML('');
     document.getElementById('goalsContainer').appendChild(div.firstElementChild);
 }
-
-// تصدير الدوال
-window.loadMyStudents = loadMyStudents;
-window.openIEPModal = openIEPModal;
-window.addManualGoal = addManualGoal;

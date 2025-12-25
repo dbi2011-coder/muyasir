@@ -1,5 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
+// الوصف: إدارة ملف الطالب والنموذج 9 الذكي
 // ============================================
 
 let currentStudentId = null;
@@ -11,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (!currentStudentId) {
         alert('لم يتم تحديد طالب');
-        window.location.href = 'students.html';
+        window.location.href = 'students.html'; // أو dashboard.html حسب مسارك
         return;
     }
     
@@ -25,11 +26,10 @@ function loadStudentData() {
     
     if (!currentStudent) {
         alert('الطالب غير موجود');
-        window.location.href = 'students.html';
         return;
     }
 
-    // تحديث الواجهة
+    // تحديث الواجهة بالعناصر الموجودة
     if(document.getElementById('sideName')) document.getElementById('sideName').textContent = currentStudent.name;
     if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = currentStudent.name;
     if(document.getElementById('sideGrade')) document.getElementById('sideGrade').textContent = currentStudent.grade + ' - ' + (currentStudent.subject || 'عام');
@@ -40,7 +40,7 @@ function loadStudentData() {
     switchSection('diagnostic');
 }
 
-// التنقل بين الأقسام
+// التنقل بين الأقسام (Tabs)
 function switchSection(sectionId) {
     // تحديث القائمة الجانبية
     document.querySelectorAll('.sidebar-menu .nav-link').forEach(link => {
@@ -63,48 +63,42 @@ function switchSection(sectionId) {
 
     // تشغيل الدالة المناسبة
     if (sectionId === 'diagnostic') loadDiagnosticTab();
-    if (sectionId === 'iep') loadIEPTab(); // هنا التغيير المهم
+    if (sectionId === 'iep') loadIEPTab(); // هنا يتم استدعاء النموذج الجديد
     if (sectionId === 'lessons') loadLessonsTab();
     if (sectionId === 'assignments') loadAssignmentsTab();
     if (sectionId === 'progress') loadProgressTab();
 }
 
 // ================================================================
-//  ⚡ المحرك الذكي لنموذج 9 (Smart IEP Engine) - النسخة المدمجة
+//  ⚡ المحرك الذكي لنموذج 9 (Smart IEP Engine) - النموذج الجديد
 // ================================================================
 
 function loadIEPTab() {
     console.log("تشغيل دالة الخطة التربوية الذكية...");
     
     // محاولة العثور على الحاوية الصحيحة (ندعم الاسمين المحتملين)
+    // ملاحظة: تأكد أن ملف HTML يحتوي على div بهذا الـ ID
     const iepContent = document.getElementById('iepContent') || document.getElementById('iepContainer');
     
     if (!iepContent) {
-        console.error("لم يتم العثور على حاوية الخطة (iepContent أو iepContainer)");
+        console.error("لم يتم العثور على حاوية الخطة (iepContent أو iepContainer) في ملف HTML");
         return;
     }
 
+    // تجهيز البيانات
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    // البحث عن أي اختبار تشخيصي (مكتمل أو لا)
     const assignedTest = studentTests.find(t => t.studentId === currentStudentId && t.type === 'diagnostic');
-
-    // 1. تجهيز البيانات
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const originalTest = assignedTest ? allTests.find(t => t.id === assignedTest.testId) : null;
     
-    // جلب جدول المعلم (اختياري)
-    const scheduleData = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
-    const studentSchedule = { D_01: '', D_02: '', D_03: '', D_04: '', D_05: '' };
-    // (يمكن إضافة منطق الجدول هنا لاحقاً)
-
-    // 2. تحليل النتائج (Pass/Fail Logic)
+    // متغيرات لبناء الخطة
     let strengthsHTML = '';
     let needsHTML = '';
     let goalsUnitsHTML = '';
     let totalGoals = 0;
     let passedGoals = 0;
 
-    // إذا وجد اختبار، نقوم بتحليله
+    // المنطق الذكي: تحليل نتائج الاختبار
     if (originalTest && originalTest.questions && assignedTest && assignedTest.answers) {
         const answers = assignedTest.answers || [];
         originalTest.questions.forEach(q => {
@@ -117,28 +111,35 @@ function loadIEPTab() {
             if (score >= passingScore) {
                 // اجتياز -> نقاط قوة
                 passedGoals++;
-                strengthsHTML += `<li class="point-item"><span class="point-bullet">•</span><input type="text" value="${skillText}" style="width:90%"></li>`;
+                strengthsHTML += `<li class="point-item"><span class="point-bullet">•</span><input type="text" value="${skillText}" readonly></li>`;
             } else {
                 // إخفاق -> احتياج + هدف جديد
-                needsHTML += `<li class="point-item"><span class="point-bullet">•</span><input type="text" value="${skillText}" style="width:90%"></li>`;
+                needsHTML += `<li class="point-item"><span class="point-bullet">•</span><input type="text" value="${skillText}" readonly></li>`;
+                // إنشاء وحدة هدف للخطة
                 goalsUnitsHTML += generateGoalUnitHTML(skillText);
             }
         });
-    } 
-    // إذا لم يوجد اختبار، نضع بيانات افتراضية للتجربة (لكي لا تظهر الصفحة فارغة)
-    else if (totalGoals === 0) {
-        strengthsHTML = `<li class="point-item"><span class="point-bullet">•</span><input type="text" value="التعاون مع الزملاء" style="width:90%"></li>`;
-        needsHTML = `<li class="point-item"><span class="point-bullet">•</span><input type="text" value="تحتاج لإجراء اختبار تشخيصي" style="width:90%"></li>`;
+    } else {
+        // بيانات افتراضية إذا لم يوجد اختبار (للتجربة)
+        if (totalGoals === 0) {
+            strengthsHTML = `<li class="point-item"><span class="point-bullet">•</span><input type="text" value="التعاون مع الزملاء"></li>`;
+            needsHTML = `<li class="point-item"><span class="point-bullet">•</span><input type="text" value="يحتاج لإجراء اختبار تشخيصي لتحديد المهارات"></li>`;
+        }
     }
 
+    // حساب نسبة الإنجاز والهدف البعيد
     const progressPercent = totalGoals === 0 ? 0 : Math.round((passedGoals / totalGoals) * 100);
     const subjectSkill = currentStudent.subject && currentStudent.subject.includes('رياضيات') ? "العمليات الحسابية" : "القراءة والكتابة";
-    const longTermGoal = `أن يتقن التلميذ مهارات "${subjectSkill}" للصف ${currentStudent.grade} وبنسبة إتقان لا تقل عن 80%`;
+    const longTermGoal = `أن يتقن التلميذ مهارات "${subjectSkill}" للصف ${currentStudent.grade || 'الحالي'} وبنسبة إتقان لا تقل عن 80%`;
     const todayDate = new Date().toISOString().split('T')[0];
 
-    // 3. بناء الهيكل (HTML Injection)
+    // بناء الهيكل (HTML Injection)
     const iepHTML = `
     <div class="iep-word-model">
+        <div class="no-print" style="margin-bottom:10px; text-align:left;">
+            <button class="btn btn-primary" onclick="window.print()">🖨️ طباعة الخطة</button>
+        </div>
+
         <h3 style="text-align:center; margin-bottom:20px; color:#000;">نموذج (9) الخطة التربوية الفردية</h3>
 
         <table class="word-table">
@@ -206,10 +207,6 @@ function loadIEPTab() {
         </div>
         
         <button class="btn btn-secondary btn-sm mt-3 no-print" onclick="addNewGoalUnit()">+ إضافة هدف قصير مدى جديد (يدوي)</button>
-        
-        <div style="text-align:center; margin-top:30px;" class="no-print">
-            <button class="btn btn-primary" onclick="window.print()">🖨️ طباعة الخطة</button>
-        </div>
     </div>
     `;
 
@@ -270,12 +267,88 @@ window.addIEPSubGoalRow = function(btn) {
 };
 
 // ==========================================
-// بقية دوال الأقسام الأخرى (للأمان)
+// بقية الدوال القديمة (يجب الاحتفاظ بها لكي لا يتوقف الموقع)
 // ==========================================
 
 function loadDiagnosticTab() {
-    // يمكنك إضافة كود تحميل الاختبار هنا إذا كنت تستخدمه
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const assignedTest = studentTests.find(t => t.studentId === currentStudentId && t.type === 'diagnostic');
+
+    if (assignedTest) {
+        document.getElementById('noDiagnosticTest').style.display = 'none';
+        const detailsDiv = document.getElementById('diagnosticTestDetails');
+        detailsDiv.style.display = 'block';
+        
+        const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+        const originalTest = allTests.find(t => t.id === assignedTest.testId);
+        
+        let statusBadge = '';
+        let actionContent = '';
+
+        if(assignedTest.status === 'completed') {
+            statusBadge = '<span class="badge badge-success">مكتمل</span>';
+            actionContent = `
+                <div style="margin-top:15px; padding:15px; background:#f0fff4; border:1px solid #c3e6cb; border-radius:5px;">
+                    <strong>الدرجة الحالية: ${assignedTest.score || 0}%</strong>
+                    <p>تم التصحيح.</p>
+                    <button class="btn btn-warning mt-2" onclick="openReviewModal(${assignedTest.id})">🔍 مراجعة وتصحيح</button>
+                </div>`;
+        } else {
+            statusBadge = '<span class="badge badge-secondary">قيد الانتظار</span>';
+            actionContent = `<div class="alert alert-info mt-3">لم يكمل الطالب الاختبار بعد.</div>`;
+        }
+
+        detailsDiv.innerHTML = `
+            <div class="card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3>${originalTest ? originalTest.title : 'اختبار محذوف'}</h3>
+                    ${statusBadge}
+                </div>
+                <p class="text-muted">تاريخ التعيين: ${new Date(assignedTest.assignedDate).toLocaleDateString('ar-SA')}</p>
+                ${actionContent}
+            </div>
+        `;
+    } else {
+        document.getElementById('noDiagnosticTest').style.display = 'block';
+        document.getElementById('diagnosticTestDetails').style.display = 'none';
+    }
 }
+
+function showAssignTestModal() {
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    const select = document.getElementById('testSelect');
+    select.innerHTML = '<option value="">اختر اختباراً...</option>';
+    allTests.forEach(t => {
+        select.innerHTML += `<option value="${t.id}">${t.title} (${t.subject})</option>`;
+    });
+    document.getElementById('assignTestModal').classList.add('show');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('show');
+}
+
+function assignTest() {
+    const testId = parseInt(document.getElementById('testSelect').value);
+    if(!testId) return;
+    
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    studentTests.push({
+        id: Date.now(),
+        studentId: currentStudentId,
+        testId: testId,
+        type: 'diagnostic',
+        status: 'pending',
+        assignedDate: new Date().toISOString()
+    });
+    
+    localStorage.setItem('studentTests', JSON.stringify(studentTests));
+    closeModal('assignTestModal');
+    loadDiagnosticTab();
+    alert('تم تعيين الاختبار بنجاح');
+}
+
+// دوال فارغة للأقسام الأخرى
 function loadLessonsTab() {
     const el = document.getElementById('studentLessonsGrid');
     if(el) el.innerHTML = '<div class="empty-state"><p>قائمة الدروس (قيد التطوير)</p></div>';
@@ -289,6 +362,9 @@ function loadProgressTab() {
     if(el) el.innerHTML = '<div class="empty-state"><p>الرسوم البيانية (قيد التطوير)</p></div>';
 }
 
-// تصدير الدوال الضرورية
+// تصدير الدوال الضرورية لملف HTML
 window.switchSection = switchSection;
 window.loadIEPTab = loadIEPTab;
+window.showAssignTestModal = showAssignTestModal;
+window.closeModal = closeModal;
+window.assignTest = assignTest;

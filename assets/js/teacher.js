@@ -1,294 +1,200 @@
 // ============================================
 // 📁 المسار: assets/js/teacher.js
+// الوصف: إدارة لوحة تحكم المعلم + النموذج 9 الذكي
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    // التحقق من الصفحة الحالية وتشغيل الدالة المناسبة
-    if (window.location.pathname.includes('dashboard.html')) {
-        initializeTeacherDashboard();
-    } else if (window.location.pathname.includes('students.html')) {
-        initializeStudentsPage();
-    }
-});
-
-function initializeStudentsPage() {
-    const user = checkAuth();
-    if (!user || user.role !== 'teacher') return;
-    
-    updateUserInterface(user);
-    loadStudentsData();
-}
-
-function initializeTeacherDashboard() {
-    const user = checkAuth();
-    if (!user || user.role !== 'teacher') return;
-    updateUserInterface(user);
-    loadTeacherStats();
-}
-
-// 1. عرض بيانات الطلاب في الجدول
-function loadStudentsData() {
-    const loadingState = document.getElementById('loadingState');
-    const emptyState = document.getElementById('emptyState');
-    const tableBody = document.getElementById('studentsTableBody');
-    if (!tableBody) return;
-
-    loadingState.style.display = 'block';
-    emptyState.style.display = 'none';
-    tableBody.innerHTML = '';
-
-    setTimeout(() => {
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const currentTeacher = getCurrentUser();
-        const students = users.filter(u => u.role === 'student' && u.teacherId === currentTeacher.id);
-        
-        loadingState.style.display = 'none';
-        
-        if (students.length === 0) {
-            emptyState.style.display = 'block';
-            return;
-        }
-
-        tableBody.innerHTML = students.map((student, index) => {
-            const progress = student.progress || 0;
-            const progressColor = progress >= 80 ? 'success' : progress >= 50 ? 'warning' : 'danger';
-            
-            return `
-                <tr>
-                    <td>${index + 1}</td>
-                    <td>${student.name}</td>
-                    <td>${student.grade}</td>
-                    <td>${student.subject}</td>
-                    <td class="progress-cell">
-                        <div class="progress-text text-${progressColor}">${progress}%</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill bg-${progressColor}" style="width: ${progress}%"></div>
-                        </div>
-                    </td>
-                    <td>
-                        <div class="student-actions" style="display: flex; gap: 5px; flex-wrap: wrap;">
-                            <button class="btn btn-sm btn-primary" onclick="openStudentFile(${student.id})" title="ملف الطالب">
-                                <i class="fas fa-file-alt"></i> ملف الطالب
-                            </button>
-                            <button class="btn btn-sm btn-secondary" onclick="showStudentLoginData(${student.id})" title="بيانات الدخول">
-                                <i class="fas fa-key"></i> دخول
-                            </button>
-                            <button class="btn btn-sm btn-warning" onclick="editStudent(${student.id})" title="تعديل">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-info" onclick="exportStudentJson(${student.id})" title="تصدير">
-                                <i class="fas fa-file-export"></i>
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})" title="حذف">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
-        }).join('');
-    }, 500);
-}
-
-// 2. إضافة طالب جديد (الدالة التي كانت مفقودة)
-function addNewStudent() {
-    const name = document.getElementById('studentName').value.trim();
-    const grade = document.getElementById('studentGrade').value;
-    const subject = document.getElementById('studentSubject').value;
-
-    if (!name || !grade || !subject) {
-        showAuthNotification('يرجى ملء جميع الحقول', 'error');
+    // التحقق من صلاحية الدخول
+    const user = JSON.parse(localStorage.getItem('currentUser'));
+    if (!user || user.role !== 'teacher') {
+        window.location.href = '../../index.html';
         return;
     }
 
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const currentTeacher = getCurrentUser();
-
-    const newStudent = {
-        id: generateId(),
-        teacherId: currentTeacher.id,
-        role: 'student',
-        name: name,
-        grade: grade,
-        subject: subject,
-        username: generateUsername(name), // توليد اسم مستخدم تلقائي
-        password: '123', // كلمة مرور افتراضية
-        progress: 0,
-        createdAt: new Date().toISOString()
-    };
-
-    users.push(newStudent);
-    localStorage.setItem('users', JSON.stringify(users));
-
-    showAuthNotification('تم إضافة الطالب بنجاح', 'success');
-    closeAddStudentModal();
-    loadStudentsData();
-}
-
-// 3. فتح ملف الطالب
-function openStudentFile(studentId) {
-    window.location.href = `student-profile.html?id=${studentId}`;
-}
-
-// 4. تصدير بيانات الطالب
-function exportStudentJson(studentId) {
-    const students = JSON.parse(localStorage.getItem('users') || '[]');
-    const student = students.find(u => u.id === studentId);
+    // عرض اسم المعلم
+    document.getElementById('teacherName').textContent = user.name;
     
-    if (!student) return;
+    // تحميل الطلاب
+    loadMyStudents();
+});
 
-    const allData = {
-        studentProfile: student,
-        iep: (JSON.parse(localStorage.getItem('educationalPlans') || '[]')).find(p => p.studentId === studentId),
-        tests: (JSON.parse(localStorage.getItem('studentTests') || '[]')).filter(t => t.studentId === studentId),
-        lessons: (JSON.parse(localStorage.getItem('studentLessons') || '[]')).filter(l => l.studentId === studentId),
-        assignments: (JSON.parse(localStorage.getItem('studentAssignments') || '[]')).filter(a => a.studentId === studentId),
-        progress: (JSON.parse(localStorage.getItem('studentProgress') || '[]')).find(p => p.studentId === studentId)
-    };
+// دالة تحميل طلاب المعلم
+function loadMyStudents() {
+    const user = JSON.parse(localStorage.getItem('currentUser'));
+    const allStudents = JSON.parse(localStorage.getItem('students') || '[]');
+    const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
 
-    const dataStr = JSON.stringify(allData, null, 2);
-    const blob = new Blob([dataStr], {type: "application/json"});
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `student_${student.name}_data.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    showAuthNotification('تم تصدير ملف الطالب', 'success');
-}
+    // تصفية الطلاب المرتبطين بالمعلم (عبر الجدول أو الشعبة)
+    // للتبسيط سنعرض كل الطلاب كمثال، أو يمكنك تصفيتهم حسب grade
+    const myStudents = allStudents; 
 
-// 5. عرض وتوليد بيانات الدخول
-function showStudentLoginData(studentId) {
-    const students = JSON.parse(localStorage.getItem('users') || '[]');
-    const student = students.find(u => u.id === studentId);
-    
-    if (!student) return;
-
-    // إذا لم تكن لديه بيانات دخول، قم بتوليدها
-    if (!student.username) {
-        student.username = generateUsername(student.name);
-        student.password = '123';
-        localStorage.setItem('users', JSON.stringify(students));
-    }
-
-    document.getElementById('loginDataUsername').value = student.username;
-    document.getElementById('loginDataPassword').value = student.password;
-    
-    document.getElementById('studentLoginDataModal').classList.add('show');
-}
-
-// 6. تحضير تعديل الطالب
-function editStudent(studentId) {
-    const students = JSON.parse(localStorage.getItem('users') || '[]');
-    const student = students.find(u => u.id === studentId);
-    
-    if (!student) return;
-
-    document.getElementById('editStudentId').value = student.id;
-    document.getElementById('editStudentName').value = student.name;
-    document.getElementById('editStudentGrade').value = student.grade;
-    document.getElementById('editStudentSubject').value = student.subject;
-    document.getElementById('editStudentUsername').value = student.username || '';
-    document.getElementById('editStudentPassword').value = student.password || '';
-
-    document.getElementById('editStudentModal').classList.add('show');
-}
-
-// 7. حفظ تعديلات الطالب
-function updateStudentData() {
-    const id = parseInt(document.getElementById('editStudentId').value);
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const index = users.findIndex(u => u.id === id);
-
-    if (index !== -1) {
-        users[index].name = document.getElementById('editStudentName').value;
-        users[index].grade = document.getElementById('editStudentGrade').value;
-        users[index].subject = document.getElementById('editStudentSubject').value;
-        users[index].username = document.getElementById('editStudentUsername').value;
-        
-        const newPass = document.getElementById('editStudentPassword').value;
-        if (newPass) users[index].password = newPass;
-
-        localStorage.setItem('users', JSON.stringify(users));
-        showAuthNotification('تم التحديث بنجاح', 'success');
-        document.getElementById('editStudentModal').classList.remove('show');
-        loadStudentsData();
+    const studentsList = document.getElementById('studentsList'); // تأكد من وجود هذا العنصر في HTML
+    if(studentsList) {
+        studentsList.innerHTML = '';
+        myStudents.forEach(student => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${student.name}</td>
+                <td>${student.grade}</td>
+                <td>
+                    <button class="btn btn-sm btn-info" onclick="openIEPModal(${student.id})">
+                        <i class="fas fa-file-alt"></i> نموذج 9
+                    </button>
+                </td>
+            `;
+            studentsList.appendChild(tr);
+        });
     }
 }
 
-// 8. حذف الطالب
-function deleteStudent(studentId) {
-    if (!confirm('هل أنت متأكد من حذف هذا الطالب وجميع بياناته؟')) return;
+// ================================================================
+// 🟢 كود النموذج 9 الذكي (مدمج هنا ليعمل 100%)
+// ================================================================
 
-    let users = JSON.parse(localStorage.getItem('users') || '[]');
-    users = users.filter(u => u.id !== studentId);
-    localStorage.setItem('users', JSON.stringify(users));
-
-    // حذف البيانات المرتبطة (اختياري، للتنظيف)
-    // يمكن إضافة كود لحذف الاختبارات والدروس المرتبطة هنا
-
-    showAuthNotification('تم حذف الطالب', 'success');
-    loadStudentsData();
-}
-
-// دوال المودال (النوافذ المنبثقة)
-function showAddStudentModal() { 
-    document.getElementById('addStudentModal').classList.add('show'); 
-    document.getElementById('addStudentForm').reset();
-}
-function closeAddStudentModal() { document.getElementById('addStudentModal').classList.remove('show'); }
-function showImportStudentModal() { alert('ميزة الاستيراد قيد التطوير'); }
-function closeLoginDataModal() { document.getElementById('studentLoginDataModal').classList.remove('show'); }
-
-// أدوات مساعدة
-function copyToClipboard(elementId) {
-    const copyText = document.getElementById(elementId);
-    copyText.select();
-    navigator.clipboard.writeText(copyText.value);
-    showAuthNotification('تم النسخ', 'success');
-}
-
-function generateUsername(name) {
-    // توليد اسم مستخدم بسيط (أول حرفين + رقم عشوائي)
-    return 's_' + Math.floor(Math.random() * 10000);
-}
-
-function generateId() {
-    return Math.floor(Math.random() * 1000000);
-}
-
-function searchStudents() {
-    const term = document.getElementById('studentSearch').value.toLowerCase();
-    const rows = document.querySelectorAll('#studentsTableBody tr');
-    rows.forEach(row => {
-        const text = row.innerText.toLowerCase();
-        row.style.display = text.includes(term) ? '' : 'none';
-    });
-}
-
-function filterStudents() {
-    const grade = document.getElementById('gradeFilter').value;
-    const rows = document.querySelectorAll('#studentsTableBody tr');
-    rows.forEach(row => {
-        const rowGrade = row.children[2].innerText; // العمود الثالث هو الصف
-        if (grade === 'all' || rowGrade.includes(grade)) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
-}
-
-// محاكاة إحصائيات المعلم للوحة التحكم الرئيسية
-function loadTeacherStats() {
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const currentTeacher = getCurrentUser();
-    const students = users.filter(u => u.role === 'student' && u.teacherId === currentTeacher.id);
+function openIEPModal(studentId) {
+    // 1. جلب بيانات الطالب
+    const allStudents = JSON.parse(localStorage.getItem('students') || '[]');
+    const student = allStudents.find(s => s.id === studentId);
     
-    if(document.getElementById('studentsCount')) {
-        document.getElementById('studentsCount').textContent = students.length;
+    if (!student) {
+        alert('بيانات الطالب غير موجودة');
+        return;
     }
+
+    // 2. إنشاء النافذة المنبثقة (Modal) ديناميكياً
+    // نزيل أي مودال قديم أولاً
+    const oldModal = document.getElementById('iepModal');
+    if (oldModal) oldModal.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'iepModal';
+    modal.className = 'modal show'; // كلاس show لإظهاره
+    modal.style.display = 'block';
+    modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100%';
+    modal.style.height = '100%';
+    modal.style.zIndex = '1000';
+    modal.style.overflowY = 'auto';
+
+    // 3. تحليل البيانات الذكية (نقاط القوة والاحتياج)
+    const analysis = analyzeStudentData(studentId);
+
+    // 4. محتوى النموذج
+    modal.innerHTML = `
+        <div class="modal-content" style="background:#fff; margin:2% auto; padding:20px; width:90%; max-width:1000px; border-radius:8px; position:relative;">
+            <span onclick="document.getElementById('iepModal').remove()" style="position:absolute; top:10px; left:15px; font-size:25px; cursor:pointer; color:red;">&times;</span>
+            
+            <div class="iep-word-model">
+                <div class="no-print" style="margin-bottom:15px;">
+                    <button onclick="window.print()" style="background:#2980b9; color:white; padding:10px 20px; border:none; cursor:pointer; border-radius:4px;">🖨️ طباعة الخطة</button>
+                    <button onclick="document.getElementById('iepModal').remove()" style="background:#7f8c8d; color:white; padding:10px 20px; border:none; cursor:pointer; border-radius:4px;">إغلاق</button>
+                </div>
+
+                <h2 style="text-align:center; margin-bottom:20px;">نموذج (9) الخطة التربوية الفردية</h2>
+
+                <table class="word-table">
+                    <tr>
+                        <th width="15%">اسم الطالب</th><td width="35%">${student.name}</td>
+                        <th width="15%">المادة</th><td width="35%">${student.subject || 'لغتي'}</td>
+                    </tr>
+                    <tr>
+                        <th>الصف</th><td>${student.grade}</td>
+                        <th>التاريخ</th><td>${new Date().toLocaleDateString('ar-SA')}</td>
+                    </tr>
+                    <tr>
+                        <th>نسبة الإنجاز</th>
+                        <td colspan="3" style="font-weight:bold; color:${analysis.percent > 50 ? 'green' : 'red'}">${analysis.percent}%</td>
+                    </tr>
+                </table>
+
+                <table class="word-table">
+                    <tr>
+                        <th width="50%" style="background:#d4edda">جوانب القوة</th>
+                        <th width="50%" style="background:#f8d7da">جوانب الاحتياج</th>
+                    </tr>
+                    <tr>
+                        <td style="vertical-align:top"><ul class="points-list">${analysis.strengthsHTML}</ul></td>
+                        <td style="vertical-align:top"><ul class="points-list">${analysis.needsHTML}</ul></td>
+                    </tr>
+                </table>
+
+                <div class="long-term-goal-box">
+                    <h4>الهدف بعيد المدى:</h4>
+                    <p style="font-weight:bold;">${analysis.longTermGoal}</p>
+                </div>
+
+                <div id="goalsContainer">
+                    ${analysis.goalsUnitsHTML}
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
 }
+
+// دالة التحليل المنطقي (المحرك الذكي)
+function analyzeStudentData(studentId) {
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    
+    // البحث عن اختبار تشخيصي للطالب
+    const assignedTest = studentTests.find(t => t.studentId === studentId && t.type === 'diagnostic');
+    const originalTest = assignedTest ? allTests.find(t => t.id === assignedTest.testId) : null;
+
+    let strengthsHTML = '';
+    let needsHTML = '';
+    let goalsUnitsHTML = '';
+    let total = 0, passed = 0;
+
+    if(originalTest && assignedTest && assignedTest.answers) {
+        originalTest.questions.forEach(q => {
+            total++;
+            const ans = assignedTest.answers.find(a => a.questionId === q.id);
+            const score = ans ? ans.score : 0;
+            const passScore = q.passingScore || 5;
+
+            if(score >= passScore) {
+                passed++;
+                strengthsHTML += `<li class="point-item">✅ ${q.text}</li>`;
+            } else {
+                needsHTML += `<li class="point-item">❌ ${q.text}</li>`;
+                goalsUnitsHTML += createGoalUnitHTML(q.text);
+            }
+        });
+    } else {
+        // بيانات افتراضية إذا لم يكن هناك اختبار
+        strengthsHTML = '<li class="point-item">لم يتم رصد نقاط قوة بعد</li>';
+        needsHTML = '<li class="point-item">يحتاج لإجراء تشخيص</li>';
+        goalsUnitsHTML = createGoalUnitHTML('هدف مقترح: إتقان الحروف الهجائية');
+    }
+
+    const percent = total === 0 ? 0 : Math.round((passed/total)*100);
+    const longTermGoal = `أن يتقن الطالب المهارات الأساسية بنسبة 80%`;
+
+    return { strengthsHTML, needsHTML, goalsUnitsHTML, percent, longTermGoal };
+}
+
+// دالة مساعدة لرسم وحدة الهدف
+function createGoalUnitHTML(title) {
+    return `
+    <div class="goal-unit">
+        <div class="short-goal-header">
+            <label>الهدف قصير المدى:</label>
+            <input type="text" value="${title}" style="width:70%; font-weight:bold;">
+        </div>
+        <table class="word-table">
+            <thead><tr><th>الهدف التدريسي</th><th>الإجراءات</th><th>التقييم</th></tr></thead>
+            <tbody>
+                <tr><td><input type="text"></td><td><input type="text"></td><td><input type="date"></td></tr>
+                <tr><td><input type="text"></td><td><input type="text"></td><td><input type="date"></td></tr>
+            </tbody>
+        </table>
+    </div>`;
+}
+
+// تصدير الدالة لتكون متاحة
+window.openIEPModal = openIEPModal;

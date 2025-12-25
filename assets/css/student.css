@@ -1,6 +1,6 @@
 /* ============================================================
-   ملف تنسيقات ملف الطالب (Student Profile CSS)
-   يشمل: التخطيط العام، القائمة الجانبية، التبويبات، والنموذج 9
+   ملف: assets/css/student.css
+   الوصف: تنسيقات ملف الطالب + النموذج 9 (الخطة التربوية الذكية)
    ============================================================ */
 
 :root {
@@ -14,21 +14,22 @@
     --warning-color: #f39c12;
 }
 
+/* --- 1. التنسيقات العامة للصفحة --- */
 body {
     background-color: var(--bg-color);
     font-family: 'Tajawal', sans-serif;
     margin: 0;
     padding: 0;
     direction: rtl;
+    color: var(--text-color);
 }
 
-/* --- تخطيط الصفحة (Layout) --- */
 .student-profile-wrapper {
     display: flex;
     min-height: 100vh;
 }
 
-/* --- القائمة الجانبية (Sidebar) --- */
+/* --- 2. القائمة الجانبية (Sidebar) --- */
 .profile-sidebar {
     width: 280px;
     background: #fff;
@@ -38,6 +39,10 @@ body {
     flex-direction: column;
     align-items: center;
     box-shadow: 2px 0 5px rgba(0,0,0,0.05);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
 }
 
 .student-avatar-large {
@@ -52,12 +57,15 @@ body {
     font-size: 2.5rem;
     font-weight: bold;
     margin-bottom: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
 }
 
 .student-info-box {
     text-align: center;
     margin-bottom: 30px;
     width: 100%;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 20px;
 }
 
 .student-info-box h3 {
@@ -75,18 +83,20 @@ body {
     width: 100%;
     list-style: none;
     padding: 0;
+    margin: 0;
 }
 
 .sidebar-menu li {
-    margin-bottom: 5px;
+    margin-bottom: 8px;
 }
 
 .sidebar-menu .nav-link {
-    display: block;
+    display: flex;
+    align-items: center;
     padding: 12px 15px;
     color: #555;
     text-decoration: none;
-    border-radius: 6px;
+    border-radius: 8px;
     transition: all 0.3s ease;
     cursor: pointer;
     font-weight: 500;
@@ -95,19 +105,22 @@ body {
 .sidebar-menu .nav-link:hover {
     background-color: #f0f2f5;
     color: var(--primary-color);
+    transform: translateX(-5px);
 }
 
 .sidebar-menu .nav-link.active {
     background-color: #e3f2fd;
     color: var(--primary-color);
-    border-right: 4px solid var(--primary-color);
+    font-weight: bold;
 }
 
 .sidebar-menu .nav-link i {
-    margin-left: 10px;
+    margin-left: 12px;
+    width: 20px;
+    text-align: center;
 }
 
-/* --- منطقة المحتوى (Content Area) --- */
+/* --- 3. منطقة المحتوى (Content Area) --- */
 .profile-content {
     flex: 1;
     padding: 30px;
@@ -115,12 +128,12 @@ body {
 }
 
 .content-section {
-    display: none; /* إخفاء الأقسام افتراضياً */
+    display: none;
     animation: fadeIn 0.4s ease;
 }
 
 .content-section.active {
-    display: block; /* إظهار القسم النشط */
+    display: block;
 }
 
 @keyframes fadeIn {
@@ -128,67 +141,65 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* --- البطاقات والعناصر العامة --- */
+/* البطاقات (Cards) */
 .card {
     background: #fff;
-    border-radius: 8px;
-    padding: 20px;
+    border-radius: 10px;
+    padding: 25px;
     border: 1px solid var(--border-color);
     margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
 }
 
 .badge {
-    padding: 5px 10px;
-    border-radius: 12px;
-    font-size: 0.8rem;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
     font-weight: bold;
+    display: inline-block;
 }
 .badge-success { background: #d4edda; color: #155724; }
 .badge-warning { background: #fff3cd; color: #856404; }
 .badge-danger { background: #f8d7da; color: #721c24; }
 .badge-secondary { background: #e2e3e5; color: #383d41; }
+.badge-info { background: #d1ecf1; color: #0c5460; }
 
 .empty-state {
     text-align: center;
-    padding: 40px;
+    padding: 50px;
     color: #999;
     border: 2px dashed #ddd;
-    border-radius: 8px;
+    border-radius: 10px;
     background: #fafafa;
 }
 
-.empty-icon {
-    font-size: 3rem;
-    margin-bottom: 10px;
-    display: block;
-}
-
 /* ============================================================
-   تنسيقات نموذج 9 الجديد (الخطة التربوية الذكية)
+   4. تنسيقات نموذج 9 الجديد (الخطة التربوية الذكية) - هام جداً
    ============================================================ */
+
 .iep-word-model {
     background: #fff;
-    padding: 40px; /* زيادة الهوامش لتناسب الطباعة */
-    border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    padding: 40px;
+    border-radius: 5px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1); /* ظل خفيف مثل الورقة */
     direction: rtl;
     max-width: 1000px;
     margin: 0 auto;
     font-family: 'Tajawal', sans-serif;
-    border: 1px solid #e0e0e0;
+    border: 1px solid #ddd;
 }
 
+/* الجداول بستايل Word */
 .word-table {
     width: 100%;
     border-collapse: collapse;
-    margin-bottom: 20px;
-    font-size: 0.95rem;
-    border: 2px solid #000; /* حدود سوداء واضحة مثل الوورد */
+    margin-bottom: 25px;
+    font-size: 1rem;
+    border: 2px solid #000; /* حدود خارجية سوداء */
 }
 
 .word-table th, .word-table td {
-    border: 1px solid #000;
+    border: 1px solid #000; /* حدود داخلية سوداء */
     padding: 8px 10px;
     vertical-align: middle;
 }
@@ -198,9 +209,9 @@ body {
     font-weight: 700;
     color: #000;
     text-align: center;
-    white-space: nowrap;
 }
 
+/* الحقول داخل الجدول لتبدو كجزء من الورقة */
 .word-table input[type="text"], 
 .word-table input[type="number"], 
 .word-table input[type="date"], 
@@ -214,7 +225,7 @@ body {
     text-align: center;
     color: #000;
     font-weight: 500;
-    outline: none;
+    outline: none; /* إزالة الوهج الأزرق عند الضغط */
 }
 
 .word-table textarea {
@@ -224,7 +235,7 @@ body {
     line-height: 1.5;
 }
 
-/* تنسيقات القوائم (نقاط القوة والاحتياج) */
+/* قوائم نقاط القوة والاحتياج */
 .points-list {
     list-style: none;
     padding: 0;
@@ -234,25 +245,20 @@ body {
 
 .point-item {
     display: flex;
-    align-items: flex-start;
-    margin-bottom: 8px;
+    align-items: center;
+    margin-bottom: 5px;
     padding: 5px;
     border-bottom: 1px dashed #eee;
 }
 
 .point-bullet {
     margin-left: 8px;
-    color: #27ae60;
+    color: #27ae60; /* لون أخضر للنقطة */
     font-weight: bold;
     font-size: 1.2rem;
-    line-height: 1.2;
 }
 
-.point-item input {
-    text-align: right !important;
-}
-
-/* صندوق الهدف بعيد المدى */
+/* مربع الهدف بعيد المدى */
 .long-term-goal-box {
     border: 2px solid #000;
     padding: 15px;
@@ -266,23 +272,23 @@ body {
     text-decoration: underline;
 }
 
-/* وحدات الأهداف (Blocks) */
+/* وحدات الأهداف القصيرة (Blocks) */
 .goal-unit {
-    border: 2px solid #444;
+    border: 2px solid #555;
     margin-bottom: 30px;
-    padding: 15px;
+    padding: 20px;
     background-color: #fff;
     border-radius: 8px;
     position: relative;
     box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    page-break-inside: avoid; /* منع قص الوحدة عند الطباعة */
+    page-break-inside: avoid; /* منع قص الوحدة في الطباعة */
 }
 
 .short-goal-header {
     background-color: #e3f2fd;
     padding: 15px;
     margin-bottom: 15px;
-    border: 1px solid #bbdefb;
+    border: 1px solid #90caf9;
     border-radius: 6px;
 }
 
@@ -294,7 +300,7 @@ body {
     text-align: right;
 }
 
-/* أزرار التحكم بالنموذج */
+/* أزرار الإجراءات داخل النموذج */
 .btn-iep {
     padding: 8px 15px;
     border-radius: 4px;
@@ -302,8 +308,7 @@ body {
     font-weight: bold;
     border: none;
     font-family: 'Tajawal', sans-serif;
-    transition: 0.3s;
-    display: inline-block;
+    transition: 0.2s;
 }
 
 .btn-add-main {
@@ -314,7 +319,6 @@ body {
     font-size: 1rem;
     margin-top: 20px;
 }
-
 .btn-add-main:hover { background-color: #1a252f; }
 
 .btn-add-sub {
@@ -322,6 +326,10 @@ body {
     color: white;
     font-size: 0.85rem;
     margin-top: 10px;
+    border-radius: 4px;
+    padding: 5px 10px;
+    border: none;
+    cursor: pointer;
 }
 
 .btn-delete-row {
@@ -340,19 +348,25 @@ body {
     color: white;
     font-size: 0.8rem;
     float: left;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
 }
 
-/* --- تحسينات الطباعة (Print Styles) --- */
+/* --- 5. تحسينات الطباعة (Print Styles) --- */
 @media print {
     body {
         background: #fff;
+        font-size: 12pt; /* حجم خط مناسب للورق */
     }
     
-    /* إخفاء القائمة الجانبية والأزرار عند الطباعة */
+    /* إخفاء كل العناصر غير الضرورية للخطة */
     .profile-sidebar, 
     .btn, 
     .btn-iep,
     .btn-delete-row,
+    .btn-add-sub,
     .no-print {
         display: none !important;
     }
@@ -360,6 +374,11 @@ body {
     .profile-content {
         padding: 0;
         margin: 0;
+        width: 100%;
+    }
+
+    .student-profile-wrapper {
+        display: block; /* إلغاء الفليكس عند الطباعة */
     }
 
     .iep-word-model {
@@ -372,18 +391,14 @@ body {
     }
 
     .goal-unit {
-        border: 2px solid #000;
+        border: 2px solid #000; /* تأكيد الحدود السوداء في الطباعة */
         box-shadow: none;
+        margin-bottom: 20px;
     }
 
-    /* ضمان ظهور ألوان الخلفية في الطباعة */
-    .word-table th {
-        background-color: #e9ecef !important;
-        -webkit-print-color-adjust: exact;
-    }
-    
-    .short-goal-header {
-        background-color: #f0f8ff !important;
-        border: 1px solid #ccc !important;
+    /* إجبار المتصفح على طباعة ألوان الخلفية (للجداول والعناوين) */
+    .word-table th, .short-goal-header {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
     }
 }

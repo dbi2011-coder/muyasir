@@ -73,23 +73,26 @@
                 <div id="section-iep" class="content-section">
                     <div class="content-header"><h1>الخطة التربوية</h1><button class="btn btn-info" onclick="window.print()">طباعة</button></div>
                     
-                    <div class="iep-word-model">
+                    <div id="iepContent">
+                        </div>
+
+                    <div class="iep-word-model" style="display:none;">
                         <h3 style="text-align: center; margin-bottom: 15px; color: #000;">الخطة التربوية الفردية</h3>
                         
                         <table class="word-table">
                             <tr>
                                 <th width="15%">اسم الطالب</th>
-                                <td><input type="text" value="نايف"></td>
+                                <td id="iep-student-name">...</td>
                                 <th width="15%">المادة</th>
-                                <td><input type="text" value="لغتي"></td>
+                                <td id="iep-subject">...</td>
                                 <th width="10%">الصف</th>
-                                <td><input type="text" value="الأول"></td>
-                                <th width="15%">المستوى الفعلي</th>
-                                <td><input type="text"></td>
+                                <td id="iep-grade">...</td>
+                                <th width="15%">تاريخ الخطة</th>
+                                <td id="iep-date">...</td>
                             </tr>
                         </table>
 
-                        <table class="word-table">
+                        <table class="word-table" style="margin-top: 15px;">
                             <thead>
                                 <tr>
                                     <th>اليوم</th>
@@ -101,99 +104,51 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
+                                <tr id="iep-schedule-row">
                                     <td><strong>الحصة</strong></td>
-                                    <td><input type="checkbox"></td>
-                                    <td><input type="checkbox"></td>
-                                    <td><input type="checkbox"></td>
-                                    <td><input type="checkbox"></td>
-                                    <td><input type="checkbox"></td>
+                                    <td id="day-sunday"></td>
+                                    <td id="day-monday"></td>
+                                    <td id="day-tuesday"></td>
+                                    <td id="day-wednesday"></td>
+                                    <td id="day-thursday"></td>
                                 </tr>
                             </tbody>
                         </table>
 
-                        <table class="word-table">
+                        <table class="word-table" style="margin-top: 15px;">
                             <thead>
                                 <tr>
-                                    <th width="5%">م</th>
-                                    <th width="45%">نقاط القوة</th>
-                                    <th width="5%">م</th>
-                                    <th width="45%">نقاط الاحتياج</th>
+                                    <th width="50%">نقاط القوة (ما أتقنه الطالب)</th>
+                                    <th width="50%">نقاط الاحتياج (ما يحتاج لتدريسه)</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td>1</td>
-                                    <td><textarea rows="2" class="text-right"></textarea></td>
-                                    <td>1</td>
-                                    <td><textarea rows="2" class="text-right"></textarea></td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td><textarea rows="2" class="text-right"></textarea></td>
-                                    <td>2</td>
-                                    <td><textarea rows="2" class="text-right"></textarea></td>
+                                <tr style="vertical-align: top;">
+                                    <td style="padding: 10px;">
+                                        <ul id="iep-strengths-list" style="list-style-type: disc; padding-right: 20px; margin: 0;"></ul>
+                                    </td>
+                                    <td style="padding: 10px;">
+                                        <ul id="iep-needs-list" style="list-style-type: disc; padding-right: 20px; margin: 0;"></ul>
+                                    </td>
                                 </tr>
                             </tbody>
                         </table>
 
-                        <div class="long-term-goal-box">
-                            <strong>الهدف بعيد المدى:</strong>
-                            <textarea rows="2" class="text-right" style="width: 100%; border: none; resize: none;" placeholder="أن يتقن التلميذ مهارات..."></textarea>
-                            <div style="margin-top: 10px; text-align: center;">
-                                <span>الفترة الزمنية المتوقعة: من <input type="date" style="border: 1px solid #ccc;"></span>
-                                <span style="margin-right: 20px;">إلى <input type="date" style="border: 1px solid #ccc;"></span>
-                            </div>
+                        <div style="margin-top: 20px;">
+                            <h4>الأهداف التدريسية للخطة:</h4>
+                            <table class="word-table">
+                                <thead>
+                                    <tr>
+                                        <th width="5%">م</th>
+                                        <th width="75%">الهدف التدريسي</th>
+                                        <th width="20%">تاريخ التحقق</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="iep-objectives-body">
+                                    </tbody>
+                            </table>
                         </div>
-
-                        <table class="word-table">
-                            <thead>
-                                <tr>
-                                    <th width="5%">م</th>
-                                    <th width="75%">الأهداف التدريسية</th>
-                                    <th width="20%">تاريخ التحقق</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr style="background-color: #f9f9f9;">
-                                    <td><strong>1</strong></td>
-                                    <td class="text-right" colspan="2">
-                                        <strong>الهدف قصير المدى (1):</strong> 
-                                        <input type="text" style="width: 60%; border-bottom: 1px solid #ccc;" placeholder="اكتب الهدف القصير هنا">
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>1</td>
-                                    <td><textarea rows="1" class="text-right" placeholder="الهدف التدريسي.."></textarea></td>
-                                    <td><input type="date"></td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td><textarea rows="1" class="text-right" placeholder="الهدف التدريسي.."></textarea></td>
-                                    <td><input type="date"></td>
-                                </tr>
-                                <tr style="background-color: #f9f9f9;">
-                                    <td><strong>2</strong></td>
-                                    <td class="text-right" colspan="2">
-                                        <strong>الهدف قصير المدى (2):</strong> 
-                                        <input type="text" style="width: 60%; border-bottom: 1px solid #ccc;" placeholder="اكتب الهدف القصير هنا">
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>1</td>
-                                    <td><textarea rows="1" class="text-right" placeholder="الهدف التدريسي.."></textarea></td>
-                                    <td><input type="date"></td>
-                                </tr>
-                                <tr>
-                                    <td>2</td>
-                                    <td><textarea rows="1" class="text-right" placeholder="الهدف التدريسي.."></textarea></td>
-                                    <td><input type="date"></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <button class="add-row-btn">+ إضافة هدف قصير مدى جديد</button>
                     </div>
-                    <div id="iepContent" style="display:none;"></div>
                 </div>
 
                 <div id="section-lessons" class="content-section"><div class="content-header"><h1>الدروس</h1><button class="btn btn-outline-primary" onclick="regenerateLessons()">تحديث</button></div><div class="content-grid" id="studentLessonsGrid"></div></div>

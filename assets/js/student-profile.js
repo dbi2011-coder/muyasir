@@ -150,7 +150,7 @@ function assignTest() {
 }
 
 // ==========================================
-// 2. منطق المراجعة والتصحيح (الجديد)
+// 2. منطق المراجعة والتصحيح
 // ==========================================
 function openReviewModal(assignmentId) {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
@@ -168,7 +168,6 @@ function openReviewModal(assignmentId) {
         const studentAnsObj = assignment.answers?.find(a => a.questionId === q.id);
         const studentAns = studentAnsObj ? studentAnsObj.answer : 'لم يجب';
         
-        // الدرجة الحالية (إما المخزنة أو الافتراضية)
         const currentScore = studentAnsObj?.score !== undefined ? studentAnsObj.score : (q.passingScore || 5);
         const teacherNote = studentAnsObj?.teacherNote || '';
 
@@ -222,7 +221,6 @@ function saveTestReview() {
         const newScore = parseInt(scoreInput.value) || 0;
         const newNote = noteInput.value;
 
-        // تحديث أو إضافة الإجابة
         const ansIndex = studentTests[index].answers.findIndex(a => a.questionId === q.id);
         if(ansIndex !== -1) {
             studentTests[index].answers[ansIndex].score = newScore;
@@ -266,68 +264,158 @@ function returnTestForResubmission() {
 }
 
 // ==========================================
-// 3. قسم الخطة التربوية (IEP)
+// 3. قسم الخطة التربوية (IEP) - النسخة الذكية
 // ==========================================
 function loadIEPTab() {
     const iepContent = document.getElementById('iepContent');
+    
+    // 1. جلب البيانات اللازمة
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    const completedDiagnostic = studentTests.find(t => t.studentId === currentStudentId && t.type === 'diagnostic' && t.status === 'completed');
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
 
-    // إذا لم يكمل الاختبار، نعرض رسالة
+    // البحث عن آخر اختبار تشخيصي *مكتمل* للطالب
+    const completedDiagnostic = studentTests
+        .filter(t => t.studentId === currentStudentId && t.type === 'diagnostic' && t.status === 'completed')
+        .sort((a, b) => new Date(b.assignedDate) - new Date(a.assignedDate))[0];
+
+    // إذا لم يجد اختبار مكتمل
     if (!completedDiagnostic) {
+        document.querySelector('.iep-word-model').style.display = 'none';
         iepContent.innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">📊</div>
                 <h3>الخطة غير جاهزة</h3>
-                <p>يجب أن يكمل الطالب الاختبار التشخيصي ويتم تصحيحه أولاً لتوليد الخطة.</p>
+                <p>يجب على الطالب إكمال اختبار تشخيصي وتصحيحه أولاً ليتمكن النظام من تحليل نقاط القوة والاحتياج.</p>
             </div>`;
         return;
     }
 
-    // توليد بيانات وهمية للخطة (يمكن استبدالها ببيانات حقيقية مستقبلاً)
-    const teacherName = JSON.parse(sessionStorage.getItem('currentUser'))?.user?.name || 'المعلم';
-    const schedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
-    const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+    // إظهار قالب الخطة وتنظيف رسالة الخطأ
+    document.querySelector('.iep-word-model').style.display = 'block';
+    if(iepContent.querySelector('.empty-state')) iepContent.innerHTML = '';
+
+    const originalTest = allTests.find(t => t.id === completedDiagnostic.testId);
+
+    // 2. تعبئة البيانات الأساسية
+    document.getElementById('iep-student-name').textContent = currentStudent.name;
+    document.getElementById('iep-subject').textContent = originalTest ? originalTest.subject : 'غير محدد';
+    document.getElementById('iep-grade').textContent = currentStudent.grade;
+    document.getElementById('iep-date').textContent = new Date().toLocaleDateString('ar-SA');
+
+    // 3. تعبئة الجدول الدراسي
+    fillScheduleTable();
+
+    // 4. تحليل نقاط القوة والاحتياج
+    const strengthsList = document.getElementById('iep-strengths-list');
+    const needsList = document.getElementById('iep-needs-list');
+    const objectivesBody = document.getElementById('iep-objectives-body');
+
+    strengthsList.innerHTML = '';
+    needsList.innerHTML = '';
+    objectivesBody.innerHTML = '';
+
+    let identifiedStrengths = new Set();
+    let identifiedNeeds = new Set();
+    let needsObjects = [];
+
+    if (originalTest && originalTest.questions) {
+        originalTest.questions.forEach(question => {
+            const studentAnswerObj = completedDiagnostic.answers.find(a => a.questionId === question.id);
+            
+            if (question.linkedGoalId) {
+                const objective = allObjectives.find(o => o.id === question.linkedGoalId);
+                if (objective) {
+                    const studentScore = studentAnswerObj ? (studentAnswerObj.score || 0) : 0;
+                    const passingScore = question.passingScore || 1;
+
+                    if (studentScore >= passingScore) {
+                        identifiedStrengths.add(objective.shortTermGoal);
+                    } else {
+                        if (!identifiedNeeds.has(objective.id)) {
+                            identifiedNeeds.add(objective.id);
+                            needsObjects.push(objective);
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // عرض نقاط القوة
+    if (identifiedStrengths.size > 0) {
+        identifiedStrengths.forEach(goalText => {
+            strengthsList.innerHTML += `<li>${goalText}</li>`;
+        });
+    } else {
+        strengthsList.innerHTML = '<li>لا توجد نقاط قوة واضحة في المهارات المختبرة.</li>';
+    }
+
+    // عرض نقاط الاحتياج وجدول الأهداف
+    let objectiveCounter = 1;
+    if (needsObjects.length > 0) {
+        needsObjects.forEach(obj => {
+            // إضافة لنقاط الاحتياج
+            needsList.innerHTML += `<li>${obj.shortTermGoal}</li>`;
+
+            // إضافة للجدول
+            const headerRow = `
+                <tr style="background-color: #e9ecef;">
+                    <td style="font-weight:bold; text-align:center;">*</td>
+                    <td colspan="2"><strong>هدف قصير المدى:</strong> ${obj.shortTermGoal}</td>
+                </tr>
+            `;
+            objectivesBody.insertAdjacentHTML('beforeend', headerRow);
+
+            if (obj.instructionalGoals && obj.instructionalGoals.length > 0) {
+                obj.instructionalGoals.forEach(iGoal => {
+                    const row = `
+                        <tr>
+                            <td style="text-align:center;">${objectiveCounter++}</td>
+                            <td>${iGoal}</td>
+                            <td><input type="date" class="form-control" style="border:none; background:transparent;"></td>
+                        </tr>
+                    `;
+                    objectivesBody.insertAdjacentHTML('beforeend', row);
+                });
+            } else {
+                objectivesBody.insertAdjacentHTML('beforeend', `<tr><td>-</td><td class="text-muted">لا توجد أهداف تدريسية مسجلة لهذا الهدف</td><td></td></tr>`);
+            }
+        });
+    } else {
+        needsList.innerHTML = '<li>لم يتم رصد نقاط احتياج.</li>';
+        objectivesBody.innerHTML = '<tr><td colspan="3" class="text-center">لا توجد أهداف تدريسية مطلوبة.</td></tr>';
+    }
+}
+
+// دالة مساعدة لتعبئة الجدول
+function fillScheduleTable() {
+    const daysMap = { 'sunday': 'day-sunday', 'monday': 'day-monday', 'tuesday': 'day-tuesday', 'wednesday': 'day-wednesday', 'thursday': 'day-thursday' };
+    const schedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]'); 
     
-    // حساب جدول الطالب بناءً على جدول المعلم
-    const studentSchedule = days.map(day => {
-        const hasSession = schedule.some(s => s.students && s.students.includes(currentStudentId) && s.day === dayMap(day)); 
-        return { day, hasSession };
+    Object.values(daysMap).forEach(id => {
+        const el = document.getElementById(id);
+        if(el) el.innerHTML = '';
     });
 
-    const strengths = ["قراءة الحروف", "نسخ الكلمات"]; 
-    const needs = ["التمييز بين المدود", "الإملاء المنظور"]; 
-    
-    const html = `
-    <div class="iep-page">
-        <div class="iep-header"><h2>الخطة التربوية الفردية</h2></div>
-        <table class="iep-table">
-            <tr><th>الاسم</th><td>${currentStudent.name}</td><th>الصف</th><td>${currentStudent.grade}</td></tr>
-        </table>
-        
-        <h4>جدول الحصص</h4>
-        <table class="iep-table">
-            <tr>${studentSchedule.map(s => `<th class="${s.hasSession ? 'shaded-day' : ''}">${s.day}</th>`).join('')}</tr>
-            <tr>${studentSchedule.map(s => `<td class="${s.hasSession ? 'shaded-day' : ''}">${s.hasSession ? '✓' : ''}</td>`).join('')}</tr>
-        </table>
-        
-        <table class="iep-table" style="margin-top:20px;">
-            <tr><th width="50%">نقاط القوة</th><th>نقاط الاحتياج</th></tr>
-            <tr>
-                <td><ul>${strengths.map(s => `<li>${s}</li>`).join('')}</ul></td>
-                <td><ul>${needs.map(n => `<li>${n}</li>`).join('')}</ul></td>
-            </tr>
-        </table>
-    </div>`;
-
-    iepContent.innerHTML = html;
+    schedule.forEach(session => {
+        if (session.students && session.students.includes(currentStudentId)) {
+            const cellId = daysMap[session.day];
+            if (cellId && document.getElementById(cellId)) {
+                document.getElementById(cellId).innerHTML = `
+                    <div style="background:#28a745; color:white; padding:5px; border-radius:4px; text-align:center;">
+                        حصة ${session.period || 1}
+                    </div>
+                `;
+            }
+        }
+    });
 }
 
 // ==========================================
 // 4. قسم الدروس
 // ==========================================
 function loadLessonsTab() {
-    // نجلب الدروس المسندة للطالب (من جدول studentLessons)
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const myList = studentLessons.filter(l => l.studentId === currentStudentId);
     const container = document.getElementById('studentLessonsGrid');
@@ -359,7 +447,6 @@ function loadLessonsTab() {
 
 function regenerateLessons() {
     alert('جاري تحديث قائمة الدروس بناءً على نقاط الاحتياج...');
-    // هنا يمكن إضافة منطق لإضافة دروس جديدة
     loadLessonsTab();
 }
 
@@ -398,11 +485,9 @@ function loadAssignmentsTab() {
 }
 
 function showAssignHomeworkModal() {
-    // تعبئة القوائم
-    const assignmentsLib = JSON.parse(localStorage.getItem('assignments') || '[]'); // نفترض وجود مكتبة واجبات
+    const assignmentsLib = JSON.parse(localStorage.getItem('assignments') || '[]');
     const select = document.getElementById('homeworkSelect');
     
-    // إضافة خيار افتراضي للتجربة
     if(assignmentsLib.length === 0) {
          select.innerHTML = '<option value="1">واجب تجريبي: كتابة الحروف</option>';
     } else {

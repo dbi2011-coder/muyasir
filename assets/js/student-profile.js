@@ -1,5 +1,5 @@
 // ============================================
-// 📁 المسار: assets/js/student-profile.js
+// 📁 المسار: assets/js/student-profile.js (كاملة)
 // ============================================
 
 let currentStudentId = null;
@@ -41,20 +41,17 @@ function loadStudentData() {
 
 // التنقل بين الأقسام
 function switchSection(sectionId) {
-    // تحديث القائمة الجانبية
     document.querySelectorAll('.sidebar-menu .nav-link').forEach(link => {
         link.classList.remove('active');
     });
     const activeLink = document.getElementById(`link-${sectionId}`);
     if(activeLink) activeLink.classList.add('active');
 
-    // إظهار القسم المطلوب
     document.querySelectorAll('.content-section').forEach(section => {
         section.classList.remove('active');
     });
     document.getElementById(`section-${sectionId}`).classList.add('active');
 
-    // تشغيل دالة التحميل الخاصة بالقسم
     if (sectionId === 'diagnostic') loadDiagnosticTab();
     if (sectionId === 'iep') loadIEPTab();
     if (sectionId === 'lessons') loadLessonsTab();
@@ -67,7 +64,6 @@ function switchSection(sectionId) {
 // ==========================================
 function loadDiagnosticTab() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    // نبحث عن أحدث اختبار تشخيصي
     const assignedTest = studentTests.find(t => t.studentId === currentStudentId && t.type === 'diagnostic');
     
     if (assignedTest) {
@@ -91,13 +87,13 @@ function loadDiagnosticTab() {
                 </div>`;
         } else if (assignedTest.status === 'returned') {
             statusBadge = '<span class="badge badge-warning" style="background:#ffc107; color:#000;">معاد للتعديل</span>';
-            actionContent = `<div class="alert alert-warning mt-3">تم إعادة الاختبار للطالب لتعديل الإجابات بناءً على الملاحظات. بانتظار التسليم الجديد.</div>`;
+            actionContent = `<div class="alert alert-warning mt-3">تم إعادة الاختبار للطالب لتعديل الإجابات.</div>`;
         } else if (assignedTest.status === 'in-progress') {
             statusBadge = '<span class="badge badge-info">قيد التنفيذ</span>';
-            actionContent = `<div class="alert alert-info mt-3">الطالب بدأ بحل الاختبار ولم يسلمه بعد.</div>`;
+            actionContent = `<div class="alert alert-info mt-3">الطالب بدأ بحل الاختبار.</div>`;
         } else {
             statusBadge = '<span class="badge badge-secondary">لم يبدأ</span>';
-            actionContent = `<div class="alert alert-secondary mt-3">بانتظار دخول الطالب للاختبار.</div>`;
+            actionContent = `<div class="alert alert-secondary mt-3">بانتظار دخول الطالب.</div>`;
         }
 
         detailsDiv.innerHTML = `
@@ -131,8 +127,9 @@ function assignTest() {
     if(!testId) return;
     
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    const exists = studentTests.some(t => t.studentId === currentStudentId && t.type === 'diagnostic');
-    if(exists) { alert('يوجد اختبار تشخيصي معين مسبقاً'); return; }
+    if(studentTests.some(t => t.studentId === currentStudentId && t.type === 'diagnostic')) {
+        alert('يوجد اختبار تشخيصي معين مسبقاً'); return;
+    }
 
     studentTests.push({
         id: Date.now(),
@@ -149,9 +146,6 @@ function assignTest() {
     alert('تم تعيين الاختبار بنجاح');
 }
 
-// ==========================================
-// 2. منطق المراجعة والتصحيح
-// ==========================================
 function openReviewModal(assignmentId) {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const assignment = studentTests.find(t => t.id === assignmentId);
@@ -167,14 +161,11 @@ function openReviewModal(assignmentId) {
     originalTest.questions.forEach((q, index) => {
         const studentAnsObj = assignment.answers?.find(a => a.questionId === q.id);
         const studentAns = studentAnsObj ? studentAnsObj.answer : 'لم يجب';
-        
         const currentScore = studentAnsObj?.score !== undefined ? studentAnsObj.score : (q.passingScore || 5);
         const teacherNote = studentAnsObj?.teacherNote || '';
 
         let displayAnswer = studentAns;
         if(q.type.includes('multiple-choice') && q.choices) displayAnswer = q.choices[studentAns] || studentAns;
-        if(studentAns && String(studentAns).startsWith('data:image')) displayAnswer = `<br><img src="${studentAns}" style="max-height:100px; border:1px solid #ccc;">`;
-        if(q.type.includes('reading')) displayAnswer = `(نص مسجل): ${studentAns}`;
 
         const item = document.createElement('div');
         item.className = 'review-question-item';
@@ -184,15 +175,13 @@ function openReviewModal(assignmentId) {
                 <div>
                     <label>الدرجة:</label>
                     <input type="number" class="score-input" name="score_${q.id}" value="${currentScore}" max="${q.passingScore || 10}">
-                    <span class="text-muted"> / ${q.passingScore || 5}</span>
                 </div>
             </div>
             <div class="student-answer-box">
                 <strong>إجابة الطالب:</strong> ${displayAnswer}
             </div>
             <div class="teacher-feedback-box">
-                <label>ملاحظات المعلم:</label>
-                <textarea name="note_${q.id}" placeholder="اكتب تغذية راجعة للطالب هنا...">${teacherNote}</textarea>
+                <textarea name="note_${q.id}" placeholder="ملاحظات المعلم...">${teacherNote}</textarea>
             </div>
         `;
         container.appendChild(item);
@@ -207,9 +196,7 @@ function saveTestReview() {
     const index = studentTests.findIndex(t => t.id === assignmentId);
     if(index === -1) return;
 
-    let totalScore = 0;
-    let maxScore = 0;
-    
+    let totalScore = 0, maxScore = 0;
     const container = document.getElementById('reviewQuestionsContainer');
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const originalTest = allTests.find(t => t.id === studentTests[index].testId);
@@ -226,21 +213,14 @@ function saveTestReview() {
             studentTests[index].answers[ansIndex].score = newScore;
             studentTests[index].answers[ansIndex].teacherNote = newNote;
         } else {
-            studentTests[index].answers.push({
-                questionId: q.id,
-                answer: null,
-                score: newScore,
-                teacherNote: newNote
-            });
+            studentTests[index].answers.push({ questionId: q.id, answer: null, score: newScore, teacherNote: newNote });
         }
-        
         totalScore += newScore;
         maxScore += (q.passingScore || 5);
     });
 
     const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
     studentTests[index].score = percentage;
-    
     localStorage.setItem('studentTests', JSON.stringify(studentTests));
     
     alert('تم حفظ الملاحظات والدرجات');
@@ -249,7 +229,7 @@ function saveTestReview() {
 }
 
 function returnTestForResubmission() {
-    if(!confirm('إعادة الاختبار للطالب للتعديل؟')) return;
+    if(!confirm('إعادة الاختبار للطالب؟')) return;
     const assignmentId = parseInt(document.getElementById('reviewAssignmentId').value);
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const index = studentTests.findIndex(t => t.id === assignmentId);
@@ -264,65 +244,62 @@ function returnTestForResubmission() {
 }
 
 // ==========================================
-// 3. قسم الخطة التربوية (IEP) - النسخة الذكية
+// 2. قسم الخطة التربوية (IEP) - النسخة الذكية والمرنة
 // ==========================================
 function loadIEPTab() {
-    const iepContent = document.getElementById('iepContent');
-    
-    // 1. جلب البيانات اللازمة
+    // 1. التحقق من وجود نسخة محفوظة يدوياً
+    const savedIEPKey = `iep_data_${currentStudentId}`;
+    const savedData = localStorage.getItem(savedIEPKey);
+
+    if (savedData) {
+        renderIEPFromData(JSON.parse(savedData));
+    } else {
+        generateIEPFromTest(false);
+    }
+}
+
+// التوليد الآلي من الاختبار
+function generateIEPFromTest(forceRegenerate = false) {
+    if(forceRegenerate && !confirm('هل أنت متأكد؟ سيتم حذف أي تعديلات يدوية قمت بها واستعادة البيانات من نتائج الاختبار.')) return;
+
+    if(forceRegenerate) {
+        localStorage.removeItem(`iep_data_${currentStudentId}`);
+    }
+
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
 
-    // البحث عن آخر اختبار تشخيصي *مكتمل* للطالب
     const completedDiagnostic = studentTests
         .filter(t => t.studentId === currentStudentId && t.type === 'diagnostic' && t.status === 'completed')
         .sort((a, b) => new Date(b.assignedDate) - new Date(a.assignedDate))[0];
 
-    // إذا لم يجد اختبار مكتمل
+    const iepContent = document.getElementById('iepContent');
+    const modelContainer = document.querySelector('.iep-word-model');
+
     if (!completedDiagnostic) {
-        document.querySelector('.iep-word-model').style.display = 'none';
+        modelContainer.style.display = 'none';
         iepContent.innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">📊</div>
                 <h3>الخطة غير جاهزة</h3>
-                <p>يجب على الطالب إكمال اختبار تشخيصي وتصحيحه أولاً ليتمكن النظام من تحليل نقاط القوة والاحتياج.</p>
+                <p>يجب على الطالب إكمال اختبار تشخيصي وتصحيحه أولاً.</p>
             </div>`;
         return;
     }
 
-    // إظهار قالب الخطة وتنظيف رسالة الخطأ
-    document.querySelector('.iep-word-model').style.display = 'block';
-    if(iepContent.querySelector('.empty-state')) iepContent.innerHTML = '';
-
+    // إظهار النموذج
+    modelContainer.style.display = 'block';
+    iepContent.innerHTML = '';
     const originalTest = allTests.find(t => t.id === completedDiagnostic.testId);
 
-    // 2. تعبئة البيانات الأساسية
-    document.getElementById('iep-student-name').textContent = currentStudent.name;
-    document.getElementById('iep-subject').textContent = originalTest ? originalTest.subject : 'غير محدد';
-    document.getElementById('iep-grade').textContent = currentStudent.grade;
-    document.getElementById('iep-date').textContent = new Date().toLocaleDateString('ar-SA');
-
-    // 3. تعبئة الجدول الدراسي
-    fillScheduleTable();
-
-    // 4. تحليل نقاط القوة والاحتياج
-    const strengthsList = document.getElementById('iep-strengths-list');
-    const needsList = document.getElementById('iep-needs-list');
-    const objectivesBody = document.getElementById('iep-objectives-body');
-
-    strengthsList.innerHTML = '';
-    needsList.innerHTML = '';
-    objectivesBody.innerHTML = '';
-
-    let identifiedStrengths = new Set();
-    let identifiedNeeds = new Set();
-    let needsObjects = [];
+    // تحليل البيانات
+    let strengths = [];
+    let needs = []; 
 
     if (originalTest && originalTest.questions) {
         originalTest.questions.forEach(question => {
             const studentAnswerObj = completedDiagnostic.answers.find(a => a.questionId === question.id);
-            
             if (question.linkedGoalId) {
                 const objective = allObjectives.find(o => o.id === question.linkedGoalId);
                 if (objective) {
@@ -330,11 +307,14 @@ function loadIEPTab() {
                     const passingScore = question.passingScore || 1;
 
                     if (studentScore >= passingScore) {
-                        identifiedStrengths.add(objective.shortTermGoal);
+                        if(!strengths.includes(objective.shortTermGoal)) strengths.push(objective.shortTermGoal);
                     } else {
-                        if (!identifiedNeeds.has(objective.id)) {
-                            identifiedNeeds.add(objective.id);
-                            needsObjects.push(objective);
+                        if (!needs.some(n => n.id === objective.id)) {
+                            needs.push({
+                                id: objective.id,
+                                text: objective.shortTermGoal,
+                                instructionalGoals: objective.instructionalGoals || []
+                            });
                         }
                     }
                 }
@@ -342,53 +322,79 @@ function loadIEPTab() {
         });
     }
 
-    // عرض نقاط القوة
-    if (identifiedStrengths.size > 0) {
-        identifiedStrengths.forEach(goalText => {
-            strengthsList.innerHTML += `<li>${goalText}</li>`;
+    if (strengths.length === 0) strengths.push('لا توجد نقاط قوة واضحة');
+    if (needs.length === 0) needs.push({ id:0, text: 'لا توجد نقاط احتياج', instructionalGoals: [] });
+
+    // تجميع البيانات
+    const iepData = {
+        studentName: currentStudent.name,
+        subject: originalTest ? originalTest.subject : 'غير محدد',
+        grade: currentStudent.grade,
+        date: new Date().toLocaleDateString('ar-SA'),
+        strengths: strengths,
+        needs: needs
+    };
+
+    renderIEPFromData(iepData);
+}
+
+// دالة الرسم (Rendering Function)
+function renderIEPFromData(data) {
+    document.querySelector('.iep-word-model').style.display = 'block';
+    document.getElementById('iepContent').innerHTML = '';
+
+    // 1. البيانات الأساسية
+    document.getElementById('iep-student-name').textContent = data.studentName;
+    document.getElementById('iep-subject').textContent = data.subject;
+    document.getElementById('iep-grade').textContent = data.grade;
+    document.getElementById('iep-date').textContent = data.date;
+
+    // 2. الجدول الدراسي (دائماً من المصدر لضمان التحديث)
+    fillScheduleTable();
+
+    // 3. نقاط القوة
+    const sList = document.getElementById('iep-strengths-list');
+    sList.innerHTML = '';
+    data.strengths.forEach(txt => addListItem('iep-strengths-list', txt));
+
+    // 4. نقاط الاحتياج
+    const nList = document.getElementById('iep-needs-list');
+    nList.innerHTML = '';
+    
+    // التعامل مع البيانات القديمة أو الجديدة
+    const needsArray = data.needs || [];
+    needsArray.forEach(n => {
+        const text = typeof n === 'object' ? n.text : n;
+        addListItem('iep-needs-list', text);
+    });
+
+    // 5. جدول الأهداف
+    const tBody = document.getElementById('iep-objectives-body');
+    tBody.innerHTML = '';
+    
+    // إذا كانت البيانات محفوظة يدوياً (مصفوفة)
+    if (data.objectivesList) {
+        data.objectivesList.forEach(item => {
+            if(item.type === 'header') addObjectiveHeaderRow(item.text);
+            else addObjectiveRow(item.index, item.text, item.date);
         });
-    } else {
-        strengthsList.innerHTML = '<li>لا توجد نقاط قوة واضحة في المهارات المختبرة.</li>';
     }
-
-    // عرض نقاط الاحتياج وجدول الأهداف
-    let objectiveCounter = 1;
-    if (needsObjects.length > 0) {
-        needsObjects.forEach(obj => {
-            // إضافة لنقاط الاحتياج
-            needsList.innerHTML += `<li>${obj.shortTermGoal}</li>`;
-
-            // إضافة للجدول
-            const headerRow = `
-                <tr style="background-color: #e9ecef;">
-                    <td style="font-weight:bold; text-align:center;">*</td>
-                    <td colspan="2"><strong>هدف قصير المدى:</strong> ${obj.shortTermGoal}</td>
-                </tr>
-            `;
-            objectivesBody.insertAdjacentHTML('beforeend', headerRow);
-
-            if (obj.instructionalGoals && obj.instructionalGoals.length > 0) {
-                obj.instructionalGoals.forEach(iGoal => {
-                    const row = `
-                        <tr>
-                            <td style="text-align:center;">${objectiveCounter++}</td>
-                            <td>${iGoal}</td>
-                            <td><input type="date" class="form-control" style="border:none; background:transparent;"></td>
-                        </tr>
-                    `;
-                    objectivesBody.insertAdjacentHTML('beforeend', row);
-                });
+    // إذا كانت من التوليد الآلي (Objects)
+    else if (needsArray.length > 0 && typeof needsArray[0] === 'object') {
+        let counter = 1;
+        needsArray.forEach(needObj => {
+            addObjectiveHeaderRow(needObj.text);
+            if (needObj.instructionalGoals && needObj.instructionalGoals.length > 0) {
+                needObj.instructionalGoals.forEach(g => addObjectiveRow(counter++, g));
             } else {
-                objectivesBody.insertAdjacentHTML('beforeend', `<tr><td>-</td><td class="text-muted">لا توجد أهداف تدريسية مسجلة لهذا الهدف</td><td></td></tr>`);
+                addObjectiveRow(counter++, '');
             }
         });
-    } else {
-        needsList.innerHTML = '<li>لم يتم رصد نقاط احتياج.</li>';
-        objectivesBody.innerHTML = '<tr><td colspan="3" class="text-center">لا توجد أهداف تدريسية مطلوبة.</td></tr>';
     }
 }
 
-// دالة مساعدة لتعبئة الجدول
+// أدوات الجدول والمرونة (Helpers)
+
 function fillScheduleTable() {
     const daysMap = { 'sunday': 'day-sunday', 'monday': 'day-monday', 'tuesday': 'day-tuesday', 'wednesday': 'day-wednesday', 'thursday': 'day-thursday' };
     const schedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]'); 
@@ -402,18 +408,103 @@ function fillScheduleTable() {
         if (session.students && session.students.includes(currentStudentId)) {
             const cellId = daysMap[session.day];
             if (cellId && document.getElementById(cellId)) {
-                document.getElementById(cellId).innerHTML = `
-                    <div style="background:#28a745; color:white; padding:5px; border-radius:4px; text-align:center;">
-                        حصة ${session.period || 1}
-                    </div>
+                // وضع رقم الحصة داخل دائرة خضراء
+                document.getElementById(cellId).innerHTML += `
+                    <span class="period-badge" title="حصة ${session.period}">${session.period}</span>
                 `;
             }
         }
     });
 }
 
+function addListItem(listId, text = '') {
+    const list = document.getElementById(listId);
+    const li = document.createElement('li');
+    li.className = 'iep-list-item';
+    li.innerHTML = `
+        <span style="font-size:1.2rem; margin-left:5px;">•</span>
+        <input type="text" class="iep-input" value="${text}" placeholder="اكتب هنا...">
+        <button class="btn-action-small text-danger" onclick="this.parentElement.remove()">×</button>
+    `;
+    list.appendChild(li);
+}
+
+function addObjectiveHeaderRow(text = '') {
+    const tbody = document.getElementById('iep-objectives-body');
+    const tr = document.createElement('tr');
+    tr.className = 'obj-header-row';
+    tr.innerHTML = `
+        <td style="font-weight:bold; text-align:center;">*</td>
+        <td colspan="2">
+            <strong>هدف قصير المدى:</strong>
+            <input type="text" class="iep-input" value="${text}" style="width:70%; font-weight:bold;">
+        </td>
+        <td><button class="btn-action-small text-danger" onclick="this.closest('tr').remove()">×</button></td>
+    `;
+    tbody.appendChild(tr);
+}
+
+function addObjectiveRow(index, text = '', date = '') {
+    const tbody = document.getElementById('iep-objectives-body');
+    const tr = document.createElement('tr');
+    tr.className = 'obj-data-row';
+    tr.innerHTML = `
+        <td style="text-align:center;"><input type="text" class="iep-input" value="${index}" style="text-align:center; width:30px;"></td>
+        <td><input type="text" class="iep-input" value="${text}" placeholder="هدف تدريسي..."></td>
+        <td><input type="date" class="form-control" value="${date}" style="border:none; background:transparent; font-size:0.9rem;"></td>
+        <td><button class="btn-action-small text-danger" onclick="this.closest('tr').remove()">×</button></td>
+    `;
+    tbody.appendChild(tr);
+}
+
+function addNewObjectiveBlock() {
+    addObjectiveHeaderRow('هدف جديد...');
+    addObjectiveRow(1, '');
+}
+
+function saveIEPManualChanges() {
+    // تجميع البيانات من المدخلات للحفظ
+    const strengths = [];
+    document.querySelectorAll('#iep-strengths-list input').forEach(i => strengths.push(i.value));
+
+    const needsTexts = [];
+    document.querySelectorAll('#iep-needs-list input').forEach(i => needsTexts.push(i.value));
+
+    const objectivesList = [];
+    const rows = document.getElementById('iep-objectives-body').children;
+    for (let row of rows) {
+        if (row.classList.contains('obj-header-row')) {
+            objectivesList.push({
+                type: 'header',
+                text: row.querySelector('input').value
+            });
+        } else if (row.classList.contains('obj-data-row')) {
+            const inputs = row.querySelectorAll('input');
+            objectivesList.push({
+                type: 'row',
+                index: inputs[0].value,
+                text: inputs[1].value,
+                date: inputs[2].value
+            });
+        }
+    }
+
+    const dataToSave = {
+        studentName: document.getElementById('iep-student-name').textContent,
+        subject: document.getElementById('iep-subject').textContent,
+        grade: document.getElementById('iep-grade').textContent,
+        date: document.getElementById('iep-date').textContent,
+        strengths: strengths,
+        needs: needsTexts, 
+        objectivesList: objectivesList
+    };
+
+    localStorage.setItem(`iep_data_${currentStudentId}`, JSON.stringify(dataToSave));
+    alert('تم حفظ الخطة بنجاح! يمكنك الآن الطباعة أو العودة لاحقاً.');
+}
+
 // ==========================================
-// 4. قسم الدروس
+// 3. قسم الدروس
 // ==========================================
 function loadLessonsTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
@@ -461,7 +552,7 @@ function completeLesson(id) {
 }
 
 // ==========================================
-// 5. قسم الواجبات
+// 4. قسم الواجبات
 // ==========================================
 function loadAssignmentsTab() {
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId === currentStudentId);
@@ -493,7 +584,6 @@ function showAssignHomeworkModal() {
     } else {
         select.innerHTML = assignmentsLib.map(a => `<option value="${a.id}">${a.title}</option>`).join('');
     }
-    
     document.getElementById('assignHomeworkModal').classList.add('show');
 }
 
@@ -528,7 +618,7 @@ function deleteAssignment(id) {
 }
 
 // ==========================================
-// 6. قسم التقدم
+// 5. قسم التقدم
 // ==========================================
 function loadProgressTab() {
     const lessons = JSON.parse(localStorage.getItem('studentLessons') || '[]').filter(l => l.studentId === currentStudentId);

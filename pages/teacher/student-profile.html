@@ -18,12 +18,31 @@
         .sidebar-student-name { color: white; font-weight: bold; margin-bottom: 5px; }
         .sidebar-student-grade { color: rgba(255, 255, 255, 0.7); font-size: 0.85rem; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
         /* أنماط نافذة التصحيح */
         .review-question-item { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; background: #fff; }
         .review-q-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: #f9f9f9; padding: 10px; border-radius: 5px; }
         .student-answer-box { padding: 10px; background: #e3f2fd; border-radius: 5px; margin-bottom: 10px; border-right: 4px solid #2196f3; }
         .teacher-feedback-box textarea { width: 100%; border: 1px solid #ccc; border-radius: 5px; padding: 8px; min-height: 60px; margin-top: 5px; }
         .score-input { width: 70px; text-align: center; font-weight: bold; }
+        
+        /* أنماط الخطة المعدلة والمرنة */
+        .iep-input { width: 100%; border: 1px solid transparent; background: transparent; padding: 5px; font-family: inherit; font-size: inherit; }
+        .iep-input:focus { border-bottom: 1px solid var(--primary-color); background: #f9f9f9; outline: none; }
+        .period-badge { display: inline-block; width: 30px; height: 30px; line-height: 30px; border-radius: 50%; background: #28a745; color: white; text-align: center; font-weight: bold; margin: 2px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-action-small { padding: 2px 8px; font-size: 0.8rem; margin-right: 5px; cursor: pointer; border: none; background: #eee; border-radius: 4px; color: #555; transition: 0.2s; }
+        .btn-action-small:hover { background: #ddd; color: #000; }
+        .iep-list-item { display: flex; align-items: center; margin-bottom: 5px; }
+        .obj-header-row { background-color: #e9ecef; }
+        
+        /* إخفاء الأزرار عند الطباعة */
+        @media print {
+            .btn, .btn-action-small, .sidebar, .dashboard-header { display: none !important; }
+            .dashboard-container { display: block; }
+            .main-content-dashboard { width: 100%; margin: 0; padding: 0; }
+            .iep-input { border: none !important; background: transparent !important; }
+            .period-badge { border: 1px solid #000; color: #000; background: #fff; }
+        }
     </style>
 </head>
 <body>
@@ -71,7 +90,14 @@
                 </div>
 
                 <div id="section-iep" class="content-section">
-                    <div class="content-header"><h1>الخطة التربوية</h1><button class="btn btn-info" onclick="window.print()">طباعة</button></div>
+                    <div class="content-header">
+                        <h1>الخطة التربوية</h1>
+                        <div class="btn-group">
+                            <button class="btn btn-outline-primary" onclick="generateIEPFromTest(true)" title="سيمسح التعديلات اليدوية ويعيد التوليد">🔄 توليد من الاختبار</button>
+                            <button class="btn btn-success" onclick="saveIEPManualChanges()">💾 حفظ التعديلات</button>
+                            <button class="btn btn-info" onclick="window.print()">🖨️ طباعة</button>
+                        </div>
+                    </div>
                     
                     <div id="iepContent">
                         </div>
@@ -105,12 +131,12 @@
                             </thead>
                             <tbody>
                                 <tr id="iep-schedule-row">
-                                    <td><strong>الحصة</strong></td>
-                                    <td id="day-sunday"></td>
-                                    <td id="day-monday"></td>
-                                    <td id="day-tuesday"></td>
-                                    <td id="day-wednesday"></td>
-                                    <td id="day-thursday"></td>
+                                    <td><strong>رقم الحصة</strong></td>
+                                    <td id="day-sunday" style="text-align: center; vertical-align: middle; height: 50px;"></td>
+                                    <td id="day-monday" style="text-align: center; vertical-align: middle;"></td>
+                                    <td id="day-tuesday" style="text-align: center; vertical-align: middle;"></td>
+                                    <td id="day-wednesday" style="text-align: center; vertical-align: middle;"></td>
+                                    <td id="day-thursday" style="text-align: center; vertical-align: middle;"></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -118,30 +144,40 @@
                         <table class="word-table" style="margin-top: 15px;">
                             <thead>
                                 <tr>
-                                    <th width="50%">نقاط القوة (ما أتقنه الطالب)</th>
-                                    <th width="50%">نقاط الاحتياج (ما يحتاج لتدريسه)</th>
+                                    <th width="50%">
+                                        نقاط القوة
+                                        <button class="btn-action-small" onclick="addListItem('iep-strengths-list')" title="إضافة نقطة">+</button>
+                                    </th>
+                                    <th width="50%">
+                                        نقاط الاحتياج
+                                        <button class="btn-action-small" onclick="addListItem('iep-needs-list')" title="إضافة نقطة">+</button>
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr style="vertical-align: top;">
                                     <td style="padding: 10px;">
-                                        <ul id="iep-strengths-list" style="list-style-type: disc; padding-right: 20px; margin: 0;"></ul>
+                                        <ul id="iep-strengths-list" style="list-style-type: none; padding: 0; margin: 0;"></ul>
                                     </td>
                                     <td style="padding: 10px;">
-                                        <ul id="iep-needs-list" style="list-style-type: disc; padding-right: 20px; margin: 0;"></ul>
+                                        <ul id="iep-needs-list" style="list-style-type: none; padding: 0; margin: 0;"></ul>
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
 
                         <div style="margin-top: 20px;">
-                            <h4>الأهداف التدريسية للخطة:</h4>
-                            <table class="word-table">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                                <h4>الأهداف التدريسية للخطة:</h4>
+                                <button class="btn-action-small" onclick="addNewObjectiveBlock()">+ إضافة هدف قصير مدى جديد</button>
+                            </div>
+                            <table class="word-table" id="iep-objectives-table">
                                 <thead>
                                     <tr>
                                         <th width="5%">م</th>
                                         <th width="75%">الهدف التدريسي</th>
-                                        <th width="20%">تاريخ التحقق</th>
+                                        <th width="15%">تاريخ التحقق</th>
+                                        <th width="5%"></th>
                                     </tr>
                                 </thead>
                                 <tbody id="iep-objectives-body">
@@ -165,9 +201,11 @@
             <div class="modal-footer"><button class="btn btn-success" onclick="assignTest()">حفظ</button></div>
         </div>
     </div>
+    
     <div id="assignHomeworkModal" class="modal">
         <div class="modal-content"><div class="modal-header"><h3>إسناد واجب</h3><button class="modal-close" onclick="closeModal('assignHomeworkModal')">×</button></div><div class="modal-body"><select id="homeworkLessonSelect" class="form-control mb-2"></select><select id="homeworkSelect" class="form-control mb-2"></select><input type="date" id="homeworkDueDate" class="form-control"></div><div class="modal-footer"><button class="btn btn-success" onclick="assignHomework()">حفظ</button></div></div>
     </div>
+    
     <div id="reviewTestModal" class="modal">
         <div class="modal-content large" style="max-width: 900px;">
             <div class="modal-header">

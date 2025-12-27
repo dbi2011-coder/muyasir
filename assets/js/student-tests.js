@@ -1,12 +1,17 @@
 // ============================================
 // 📁 المسار: assets/js/student-tests.js
-// الوصف: محرك عرض الاختبارات (يدعم جميع أنواع الأسئلة)
+// الوصف: محرك عرض الاختبارات (يدعم التسجيل الصوتي والكتابة اليدوية)
 // ============================================
 
 let currentTest = null;
 let currentAssignment = null;
 let currentQuestionIndex = 0;
 let userAnswers = [];
+
+// متغيرات التسجيل الصوتي
+let mediaRecorder = null;
+let audioChunks = [];
+let activeRecordingId = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     loadMyTests();
@@ -86,7 +91,7 @@ function startActualTest() {
     showQuestion(0);
 }
 
-// 3. محرك عرض الأسئلة (النسخة المطورة)
+// 3. محرك عرض الأسئلة (المطور)
 function renderAllQuestions() {
     const container = document.getElementById('testQuestionsContainer');
     container.innerHTML = '';
@@ -101,14 +106,11 @@ function renderAllQuestions() {
                 <h3 class="question-text">${q.text || 'سؤال'}</h3>
         `;
 
-        // عرض المرفق (الصورة)
         if (q.attachment) {
             qHtml += `<div class="text-center mb-3"><img src="${q.attachment}" style="max-height:200px; border-radius:8px; border:1px solid #ddd;"></div>`;
         }
 
-        // --- معالجة الأنواع المختلفة --- //
-        
-        // أ) اختيار من متعدد (MCQ)
+        // أ) اختيار من متعدد
         if (q.type.includes('mcq')) {
             qHtml += `<div class="options-list">`;
             (q.choices || []).forEach((choice, i) => {
@@ -120,70 +122,80 @@ function renderAllQuestions() {
             qHtml += `</div>`;
         }
 
-        // ب) الحرف الناقص (Missing Character)
+        // ب) الحرف الناقص (كتابة يدوية) ✍️
         else if (q.type === 'missing-char') {
             qHtml += `<div class="paragraphs-container">`;
             (q.paragraphs || []).forEach((p, pIdx) => {
-                // نبحث عن إجابة محفوظة لهذه الفقرة
-                let val = '';
-                if(ansValue && ansValue[`p_${pIdx}`]) val = ansValue[`p_${pIdx}`];
-                
                 qHtml += `
-                    <div class="mb-4 p-3" style="background:#f9f9f9; border-radius:10px; border:1px solid #eee;">
-                        <h4 style="letter-spacing:2px; color:#555; margin-bottom:15px; font-size:1.5rem; text-align:center;">${p.missing || p.text}</h4>
-                        <div class="form-group">
-                            <label>اكتب الكلمة كاملة:</label>
-                            <input type="text" class="form-control" 
-                                   onchange="saveInputAnswer(${index}, 'p_${pIdx}', this.value)" 
-                                   value="${val}" placeholder="الإجابة هنا...">
+                    <div class="mb-5 p-3 text-center" style="background:#f9f9f9; border-radius:10px; border:1px solid #eee;">
+                        <h4 style="font-size:2.5rem; letter-spacing:3px; color:#333; margin-bottom:20px;">${p.missing || p.text}</h4>
+                        <div class="handwriting-area">
+                            <p class="text-muted small">اكتب الحرف الناقص بخط يدك في المربع:</p>
+                            <canvas id="canvas-${q.id}-${pIdx}" class="drawing-canvas missing-char-canvas" width="200" height="150" 
+                                style="border:3px dashed #2196f3; background:#fff; cursor:crosshair; border-radius:10px; box-shadow:0 4px 6px rgba(0,0,0,0.05);"></canvas>
+                            <br>
+                            <button class="btn btn-sm btn-outline-danger mt-2" onclick="clearCanvas('${q.id}-${pIdx}')"><i class="fas fa-eraser"></i> مسح</button>
                         </div>
                     </div>`;
             });
             qHtml += `</div>`;
         }
 
-        // ج) القراءة (Reading)
+        // ج) القراءة (تسجيل صوتي حقيقي) 🎤
         else if (q.type.includes('reading')) {
             qHtml += `<div class="paragraphs-container">`;
             (q.paragraphs || []).forEach((p, pIdx) => {
+                // البحث عن تسجيل محفوظ
+                let audioSrc = '';
+                if(ansValue && ansValue[`p_${pIdx}`]) audioSrc = ansValue[`p_${pIdx}`];
+
                 qHtml += `
                     <div class="reading-box p-4 mb-3" style="background:#fff3e0; border-right:5px solid #ff9800; border-radius:5px;">
-                        <p style="font-size:1.4rem; line-height:1.8;">${p.text}</p>
+                        <p style="font-size:1.8rem; line-height:2; text-align:center; font-family:'Tajawal', sans-serif;">${p.text}</p>
                     </div>
-                    <div class="text-center mb-4">
-                        <button class="btn btn-outline-primary"><i class="fas fa-microphone"></i> اضغط للتسجيل (محاكاة)</button>
+                    
+                    <div class="recording-area text-center mb-4 p-3" style="background:#f8f9fa; border-radius:10px;">
+                        <div id="recorder-controls-${q.id}-${pIdx}">
+                            ${audioSrc ? 
+                                `<audio controls src="${audioSrc}" class="mb-2 w-100"></audio>
+                                 <button class="btn btn-warning btn-sm" onclick="resetRecording('${q.id}', '${pIdx}')">إعادة التسجيل</button>` 
+                                : 
+                                `<button class="btn btn-danger btn-lg pulse-animation" id="btn-record-${q.id}-${pIdx}" onclick="toggleRecording(this, '${q.id}', '${pIdx}')">
+                                    <i class="fas fa-microphone"></i> اضغط للتسجيل
+                                 </button>
+                                 <p class="text-muted mt-2 small status-text">جاهز للتسجيل...</p>`
+                            }
+                        </div>
                     </div>`;
             });
             qHtml += `</div>`;
         }
 
-        // د) الإملاء (Spelling - Drawing)
+        // د) الإملاء (رسم)
         else if (q.type.includes('spelling')) {
             qHtml += `<div class="paragraphs-container">`;
             (q.paragraphs || []).forEach((p, pIdx) => {
-                // لا نعرض النص الأصلي للطالب في الإملاء!
                 qHtml += `
                     <div class="mb-4 text-center">
-                        <button class="btn btn-info mb-2" onclick="playAudio('${p.text}')">🔊 استمع للكلمة</button>
-                        <p class="text-muted small">ارسم الكلمة التي سمعتها في الأسفل</p>
-                        <canvas id="canvas-${q.id}-${pIdx}" class="drawing-canvas" width="500" height="200" style="border:2px dashed #ccc; background:#fff; cursor:crosshair;"></canvas>
-                        <button class="btn btn-sm btn-secondary mt-1" onclick="clearCanvas('${q.id}-${pIdx}')">مسح</button>
+                        <button class="btn btn-info btn-lg mb-3" onclick="playAudio('${p.text}')"><i class="fas fa-volume-up"></i> استمع للكلمة</button>
+                        <div style="background:#fff; padding:10px; border-radius:10px; border:1px solid #ddd;">
+                            <canvas id="canvas-${q.id}-${pIdx}" class="drawing-canvas" width="600" height="250" style="border:2px dashed #ccc; background:#fff; cursor:crosshair; width:100%;"></canvas>
+                        </div>
+                        <button class="btn btn-sm btn-secondary mt-2" onclick="clearCanvas('${q.id}-${pIdx}')">مسح اللوحة</button>
                     </div>`;
             });
             qHtml += `</div>`;
         }
 
-        // هـ) السحب والإفلات (Drag Drop)
+        // هـ) السحب والإفلات
         else if (q.type === 'drag-drop') {
             (q.paragraphs || []).forEach((p, pIdx) => {
                 let processedText = p.text;
                 let draggables = [];
                 if (p.gaps) {
                     p.gaps.forEach((g, gIdx) => {
-                        // استرجاع الإجابة
                         let saved = '';
                         if(ansValue && ansValue[`p_${pIdx}_g_${gIdx}`]) saved = ansValue[`p_${pIdx}_g_${gIdx}`];
-
                         const dropId = `drop-${q.id}-${pIdx}-${gIdx}`;
                         processedText = processedText.replace(g.dragItem, `<span class="drop-zone" id="${dropId}" ondrop="drop(event)" ondragover="allowDrop(event)" data-qid="${index}" data-pid="${pIdx}" data-gid="${gIdx}">${saved}</span>`);
                         draggables.push(g.dragItem);
@@ -197,20 +209,19 @@ function renderAllQuestions() {
                 `;
             });
         }
-
-        // و) سؤال مفتوح
+        
         else if (q.type === 'open-ended') {
             qHtml += `<textarea class="form-control" rows="4" placeholder="اكتب إجابتك هنا..." onchange="saveSimpleAnswer(${index}, this.value)">${ansValue || ''}</textarea>`;
         }
 
-        qHtml += `</div>`; // إغلاق البطاقة
+        qHtml += `</div>`;
         container.insertAdjacentHTML('beforeend', qHtml);
     });
 
     updateNavigationButtons();
 }
 
-// 4. التنقل والتحكم
+// 4. التنقل والتهيئة
 function showQuestion(index) {
     document.querySelectorAll('.question-card').forEach(c => c.classList.remove('active'));
     const card = document.getElementById(`q-card-${index}`);
@@ -220,16 +231,16 @@ function showQuestion(index) {
         document.getElementById('questionCounter').textContent = `سؤال ${index + 1} من ${currentTest.questions.length}`;
         updateNavigationButtons();
         
-        // تهيئة الكانفاس إذا وجد في السؤال الحالي
+        // تهيئة الكانفاس (للرسم أو الحرف الناقص)
         const q = currentTest.questions[index];
-        if (q.type.includes('spelling')) {
+        if (q.type.includes('spelling') || q.type === 'missing-char') {
             (q.paragraphs || []).forEach((p, pIdx) => initCanvas(`${q.id}-${pIdx}`));
         }
     }
 }
 
 function nextQuestion() {
-    saveCurrentCanvas(); // حفظ الرسم قبل الانتقال
+    saveCurrentCanvas(); 
     if (currentQuestionIndex < currentTest.questions.length - 1) showQuestion(currentQuestionIndex + 1);
 }
 function prevQuestion() {
@@ -238,75 +249,215 @@ function prevQuestion() {
 }
 
 function updateNavigationButtons() {
-    const isFirst = currentQuestionIndex === 0;
     const isLast = currentQuestionIndex === currentTest.questions.length - 1;
     document.getElementById('testFooterControls').innerHTML = `
-        <button class="btn-nav btn-prev" onclick="prevQuestion()" ${isFirst ? 'disabled' : ''}>السابق</button>
+        <button class="btn-nav btn-prev" onclick="prevQuestion()" ${currentQuestionIndex === 0 ? 'disabled' : ''}>السابق</button>
         <div>
             <button class="btn-nav btn-save" onclick="saveTestProgress(false)">حفظ مؤقت</button>
             ${isLast ? '<button class="btn-nav btn-submit" onclick="finishTest()">تسليم الاختبار</button>' : '<button class="btn-nav btn-next" onclick="nextQuestion()">التالي</button>'}
         </div>`;
 }
 
-// 5. حفظ الإجابات
-// حفظ الاختيار من متعدد
+// ==========================================
+// 5. منطق التسجيل الصوتي الحقيقي 🎤
+// ==========================================
+async function toggleRecording(btn, qId, pIdx) {
+    if (!activeRecordingId) {
+        // بدء التسجيل
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+            activeRecordingId = `${qId}-${pIdx}`;
+
+            mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+            
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const reader = new FileReader();
+                reader.readAsDataURL(audioBlob);
+                reader.onloadend = () => {
+                    const base64Audio = reader.result;
+                    saveInputAnswerByQId(qId, `p_${pIdx}`, base64Audio); // حفظ
+                    
+                    // تحديث الواجهة للمشغل
+                    const container = document.getElementById(`recorder-controls-${qId}-${pIdx}`);
+                    container.innerHTML = `
+                        <audio controls src="${base64Audio}" class="mb-2 w-100"></audio>
+                        <button class="btn btn-warning btn-sm" onclick="resetRecording('${qId}', '${pIdx}')">إعادة التسجيل</button>
+                        <div class="alert alert-success mt-2 p-1"><small>تم حفظ التسجيل!</small></div>
+                    `;
+                };
+                
+                // إيقاف استخدام الميكروفون
+                stream.getTracks().forEach(track => track.stop());
+                activeRecordingId = null;
+            };
+
+            mediaRecorder.start();
+            btn.classList.add('recording');
+            btn.innerHTML = '<i class="fas fa-stop"></i> إيقاف التسجيل';
+            btn.classList.remove('btn-danger');
+            btn.classList.add('btn-dark');
+            btn.nextElementSibling.textContent = 'جاري التسجيل...';
+
+        } catch (err) {
+            console.error(err);
+            alert('تعذر الوصول للميكروفون. يرجى السماح بالصلاحيات.');
+        }
+    } else {
+        // إيقاف التسجيل
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+    }
+}
+
+function resetRecording(qId, pIdx) {
+    const container = document.getElementById(`recorder-controls-${qId}-${pIdx}`);
+    container.innerHTML = `
+        <button class="btn btn-danger btn-lg pulse-animation" id="btn-record-${qId}-${pIdx}" onclick="toggleRecording(this, '${qId}', '${pIdx}')">
+            <i class="fas fa-microphone"></i> اضغط للتسجيل
+        </button>
+        <p class="text-muted mt-2 small status-text">جاهز للتسجيل...</p>
+    `;
+    // مسح الإجابة القديمة
+    saveInputAnswerByQId(qId, `p_${pIdx}`, null);
+}
+
+
+// ==========================================
+// 6. أدوات الرسم (مشتركة للإملاء والحرف الناقص)
+// ==========================================
+let isDrawing = false;
+let ctx = null;
+
+function initCanvas(id) {
+    const canvas = document.getElementById(`canvas-${id}`);
+    if(!canvas) return;
+    
+    const context = canvas.getContext('2d');
+    context.lineWidth = 4;
+    context.lineCap = 'round';
+    context.strokeStyle = '#212529'; // لون القلم
+    
+    // دعم الماوس واللمس
+    const startDraw = (e) => {
+        isDrawing = true; 
+        ctx = context; 
+        ctx.beginPath();
+        const pos = getPos(canvas, e);
+        ctx.moveTo(pos.x, pos.y);
+    };
+    
+    const moveDraw = (e) => {
+        if(!isDrawing) return;
+        e.preventDefault();
+        const pos = getPos(canvas, e);
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+    };
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('touchstart', startDraw);
+    
+    canvas.addEventListener('mousemove', moveDraw);
+    canvas.addEventListener('touchmove', moveDraw);
+    
+    canvas.addEventListener('mouseup', () => isDrawing = false);
+    canvas.addEventListener('touchend', () => isDrawing = false);
+
+    // استرجاع الرسم القديم
+    // ملاحظة: استرجاع الرسم يحتاج كود إضافي هنا إذا أردت عرضه عند العودة للسؤال
+    // سنقوم برسم الصورة المحفوظة إذا وجدت
+    const qId = id.split('-')[0];
+    const pIdx = id.split('-')[1];
+    const savedEntry = userAnswers.find(a => a.questionId == qId);
+    if(savedEntry && savedEntry.answer && savedEntry.answer[`p_${pIdx}`]) {
+        const img = new Image();
+        img.onload = () => context.drawImage(img, 0, 0);
+        img.src = savedEntry.answer[`p_${pIdx}`];
+    }
+}
+
+function getPos(canvas, e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+    };
+}
+
+function clearCanvas(id) {
+    const cvs = document.getElementById(`canvas-${id}`);
+    const cx = cvs.getContext('2d');
+    cx.clearRect(0,0, cvs.width, cvs.height);
+}
+
+
+// ==========================================
+// 7. دوال الحفظ المساعدة
+// ==========================================
 function selectOption(el, qIdx, choiceIdx) {
     const card = document.getElementById(`q-card-${qIdx}`);
     card.querySelectorAll('.answer-option').forEach(e => e.classList.remove('selected'));
     el.classList.add('selected');
     el.querySelector('input').checked = true;
-    
-    // حفظ في المصفوفة
-    const qId = currentTest.questions[qIdx].id;
-    updateUserAnswer(qId, choiceIdx);
+    updateUserAnswer(currentTest.questions[qIdx].id, choiceIdx);
 }
 
-// حفظ الحقول النصية (الحرف الناقص / المفتوح)
-function saveInputAnswer(qIdx, key, val) {
-    const qId = currentTest.questions[qIdx].id;
-    let entry = userAnswers.find(a => a.questionId === qId);
+function saveSimpleAnswer(qIdx, val) {
+    updateUserAnswer(currentTest.questions[qIdx].id, val);
+}
+
+// دالة حفظ خاصة تستقبل ID السؤال مباشرة (للاستخدام داخل الـ Callbacks)
+function saveInputAnswerByQId(qId, key, val) {
+    let entry = userAnswers.find(a => a.questionId == qId);
     if (!entry) {
         entry = { questionId: qId, answer: {} };
         userAnswers.push(entry);
     }
-    // إذا كان الجواب كائن (للفقرات المتعددة) أو قيمة مفردة
-    if (typeof entry.answer !== 'object') entry.answer = {}; 
+    if (typeof entry.answer !== 'object' || entry.answer === null) entry.answer = {}; 
     entry.answer[key] = val;
 }
 
-function saveSimpleAnswer(qIdx, val) {
-    const qId = currentTest.questions[qIdx].id;
-    updateUserAnswer(qId, val);
+function saveInputAnswer(qIdx, key, val) {
+    saveInputAnswerByQId(currentTest.questions[qIdx].id, key, val);
+}
+
+function saveCurrentCanvas() {
+    const q = currentTest.questions[currentQuestionIndex];
+    if (q.type.includes('spelling') || q.type === 'missing-char') {
+        let canvasAnswers = {};
+        // نحتاج لدمج الإجابات القديمة إن وجدت حتى لا نمسح إجابات الفقرات الأخرى
+        let entry = userAnswers.find(a => a.questionId == q.id);
+        if(entry && typeof entry.answer === 'object') canvasAnswers = entry.answer;
+
+        let hasNewDrawing = false;
+        (q.paragraphs || []).forEach((p, pIdx) => {
+            const cvs = document.getElementById(`canvas-${q.id}-${pIdx}`);
+            if(cvs) {
+                // التحقق هل الكانفاس فارغ أم لا (بسيط)
+                // الأفضل حفظه دائماً إذا كان موجوداً
+                canvasAnswers[`p_${pIdx}`] = cvs.toDataURL();
+                hasNewDrawing = true;
+            }
+        });
+
+        if(hasNewDrawing) updateUserAnswer(q.id, canvasAnswers);
+    }
 }
 
 function updateUserAnswer(qId, val) {
-    const idx = userAnswers.findIndex(a => a.questionId === qId);
+    const idx = userAnswers.findIndex(a => a.questionId == qId);
     if(idx !== -1) userAnswers[idx].answer = val;
     else userAnswers.push({ questionId: qId, answer: val });
 }
 
-// حفظ الرسم (Canvas)
-function saveCurrentCanvas() {
-    const q = currentTest.questions[currentQuestionIndex];
-    if (q.type.includes('spelling')) {
-        let canvasAnswers = {};
-        let hasDrawing = false;
-        
-        (q.paragraphs || []).forEach((p, pIdx) => {
-            const cvs = document.getElementById(`canvas-${q.id}-${pIdx}`);
-            if(cvs) {
-                canvasAnswers[`p_${pIdx}`] = cvs.toDataURL();
-                hasDrawing = true;
-            }
-        });
-
-        if(hasDrawing) updateUserAnswer(q.id, canvasAnswers);
-    }
-}
-
-// الحفظ النهائي
 function saveTestProgress(submit = false) {
-    saveCurrentCanvas(); // تأكد من الحفظ الأخير
+    saveCurrentCanvas(); 
     
     const allAssignments = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const idx = allAssignments.findIndex(a => a.id === currentAssignment.id);
@@ -315,7 +466,6 @@ function saveTestProgress(submit = false) {
         if(submit) {
             allAssignments[idx].status = 'completed';
             allAssignments[idx].completedDate = new Date().toISOString();
-            // هنا يمكن إضافة منطق التصحيح التلقائي البسيط للأسئلة النصية
         } else {
             allAssignments[idx].status = 'in-progress';
         }
@@ -335,51 +485,12 @@ function finishTest() {
     if(confirm('هل أنت متأكد من التسليم النهائي؟')) saveTestProgress(true);
 }
 
-// ==========================================
-// 6. أدوات الرسم (Canvas)
-// ==========================================
-let isDrawing = false;
-let ctx = null;
-
-function initCanvas(id) {
-    const canvas = document.getElementById(`canvas-${id}`);
-    if(!canvas) return;
-    
-    const context = canvas.getContext('2d');
-    context.lineWidth = 3;
-    context.lineCap = 'round';
-    context.strokeStyle = '#333';
-    
-    canvas.onmousedown = (e) => { isDrawing = true; ctx = context; draw(e, canvas); };
-    canvas.onmousemove = (e) => { if(isDrawing) draw(e, canvas); };
-    canvas.onmouseup = () => { isDrawing = false; ctx.beginPath(); };
-    
-    // استرجاع الرسم القديم
-    const qId = id.split('-')[0]; // تقريبية، نحتاج منطق أدق لاستخراج ID السؤال
-    // (المنطق هنا مبسط، في التطبيق الفعلي يجب ربط ID بدقة)
-}
-
-function draw(e, canvas) {
-    const rect = canvas.getBoundingClientRect();
-    ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
-}
-
-function clearCanvas(id) {
-    const cvs = document.getElementById(`canvas-${id}`);
-    const cx = cvs.getContext('2d');
-    cx.clearRect(0,0, cvs.width, cvs.height);
-}
-
+// أدوات مساعدة أخرى
 function playAudio(text) {
     const speech = new SpeechSynthesisUtterance(text);
     speech.lang = 'ar-SA';
     window.speechSynthesis.speak(speech);
 }
-
-// 7. أدوات السحب والإفلات
 function allowDrop(ev) { ev.preventDefault(); }
 function drag(ev) { ev.dataTransfer.setData("text", ev.target.innerText); ev.dataTransfer.setData("id", ev.target.id); }
 function drop(ev) {
@@ -390,13 +501,9 @@ function drop(ev) {
         ev.target.innerText = data;
         ev.target.style.background = '#e3f2fd';
         document.getElementById(elId).style.display = 'none';
-        
-        // حفظ الإجابة
         const qIdx = ev.target.dataset.qid;
         const pIdx = ev.target.dataset.pid;
         const gIdx = ev.target.dataset.gid;
-        
-        // نحتاج منطق لحفظ الإجابة في الهيكل المعقد (يمكن تبسيطه)
         saveInputAnswer(qIdx, `p_${pIdx}_g_${gIdx}`, data);
     }
 }

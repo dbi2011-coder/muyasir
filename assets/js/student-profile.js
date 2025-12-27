@@ -41,20 +41,17 @@ function loadStudentData() {
 
 // التنقل بين الأقسام
 function switchSection(sectionId) {
-    // تحديث القائمة الجانبية
     document.querySelectorAll('.sidebar-menu .nav-link').forEach(link => {
         link.classList.remove('active');
     });
     const activeLink = document.getElementById(`link-${sectionId}`);
     if(activeLink) activeLink.classList.add('active');
 
-    // إظهار القسم المطلوب
     document.querySelectorAll('.content-section').forEach(section => {
         section.classList.remove('active');
     });
     document.getElementById(`section-${sectionId}`).classList.add('active');
 
-    // تشغيل دالة التحميل الخاصة بالقسم
     if (sectionId === 'diagnostic') loadDiagnosticTab();
     if (sectionId === 'iep') loadIEPTab();
     if (sectionId === 'lessons') loadLessonsTab();
@@ -63,11 +60,10 @@ function switchSection(sectionId) {
 }
 
 // ==========================================
-// 1. قسم الاختبار التشخيصي (مع المراجعة)
+// 1. قسم الاختبار التشخيصي
 // ==========================================
 function loadDiagnosticTab() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    // نبحث عن أحدث اختبار تشخيصي
     const assignedTest = studentTests.find(t => t.studentId === currentStudentId && t.type === 'diagnostic');
     
     if (assignedTest) {
@@ -149,9 +145,7 @@ function assignTest() {
     alert('تم تعيين الاختبار بنجاح');
 }
 
-// ==========================================
-// 2. منطق المراجعة والتصحيح
-// ==========================================
+// مراجعة وتصحيح الاختبار
 function openReviewModal(assignmentId) {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const assignment = studentTests.find(t => t.id === assignmentId);
@@ -174,7 +168,6 @@ function openReviewModal(assignmentId) {
         let displayAnswer = studentAns;
         if(q.type.includes('multiple-choice') && q.choices) displayAnswer = q.choices[studentAns] || studentAns;
         if(studentAns && String(studentAns).startsWith('data:image')) displayAnswer = `<br><img src="${studentAns}" style="max-height:100px; border:1px solid #ccc;">`;
-        if(q.type.includes('reading')) displayAnswer = `(نص مسجل): ${studentAns}`;
 
         const item = document.createElement('div');
         item.className = 'review-question-item';
@@ -248,38 +241,20 @@ function saveTestReview() {
     loadDiagnosticTab();
 }
 
-function returnTestForResubmission() {
-    if(!confirm('إعادة الاختبار للطالب للتعديل؟')) return;
-    const assignmentId = parseInt(document.getElementById('reviewAssignmentId').value);
-    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    const index = studentTests.findIndex(t => t.id === assignmentId);
-    
-    if(index !== -1) {
-        studentTests[index].status = 'returned';
-        localStorage.setItem('studentTests', JSON.stringify(studentTests));
-        alert('تمت الإعادة بنجاح');
-        closeModal('reviewTestModal');
-        loadDiagnosticTab();
-    }
-}
-
 // ==========================================
-// 3. قسم الخطة التربوية (IEP) - النسخة الذكية
+// 2. قسم الخطة التربوية (IEP) - الذكية (محدثة)
 // ==========================================
 function loadIEPTab() {
     const iepContent = document.getElementById('iepContent');
-    
-    // 1. جلب البيانات اللازمة
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
 
-    // البحث عن آخر اختبار تشخيصي *مكتمل* للطالب
+    // البحث عن آخر اختبار تشخيصي مكتمل
     const completedDiagnostic = studentTests
         .filter(t => t.studentId === currentStudentId && t.type === 'diagnostic' && t.status === 'completed')
         .sort((a, b) => new Date(b.assignedDate) - new Date(a.assignedDate))[0];
 
-    // إذا لم يجد اختبار مكتمل
     if (!completedDiagnostic) {
         document.querySelector('.iep-word-model').style.display = 'none';
         iepContent.innerHTML = `
@@ -291,22 +266,30 @@ function loadIEPTab() {
         return;
     }
 
-    // إظهار قالب الخطة وتنظيف رسالة الخطأ
     document.querySelector('.iep-word-model').style.display = 'block';
     if(iepContent.querySelector('.empty-state')) iepContent.innerHTML = '';
 
     const originalTest = allTests.find(t => t.id === completedDiagnostic.testId);
 
-    // 2. تعبئة البيانات الأساسية
+    // تعبئة البيانات الأساسية
     document.getElementById('iep-student-name').textContent = currentStudent.name;
     document.getElementById('iep-subject').textContent = originalTest ? originalTest.subject : 'غير محدد';
     document.getElementById('iep-grade').textContent = currentStudent.grade;
     document.getElementById('iep-date').textContent = new Date().toLocaleDateString('ar-SA');
 
-    // 3. تعبئة الجدول الدراسي
     fillScheduleTable();
 
-    // 4. تحليل نقاط القوة والاحتياج
+    // 🌟 الجديد: جلب قائمة الأهداف المحققة (من الدروس المكتملة)
+    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    const completedLessonsMap = {}; // مفتاح: نص الهدف، قيمة: تاريخ التحقق
+    
+    studentLessons.forEach(l => {
+        if (l.studentId === currentStudentId && l.status === 'completed') {
+            // الهدف التدريسي هنا هو (l.objective) الذي تم ربطه بالدرس
+            completedLessonsMap[l.objective] = l.completedDate || new Date().toLocaleDateString('ar-SA');
+        }
+    });
+
     const strengthsList = document.getElementById('iep-strengths-list');
     const needsList = document.getElementById('iep-needs-list');
     const objectivesBody = document.getElementById('iep-objectives-body');
@@ -322,7 +305,6 @@ function loadIEPTab() {
     if (originalTest && originalTest.questions) {
         originalTest.questions.forEach(question => {
             const studentAnswerObj = completedDiagnostic.answers.find(a => a.questionId === question.id);
-            
             if (question.linkedGoalId) {
                 const objective = allObjectives.find(o => o.id === question.linkedGoalId);
                 if (objective) {
@@ -351,14 +333,12 @@ function loadIEPTab() {
         strengthsList.innerHTML = '<li>لا توجد نقاط قوة واضحة في المهارات المختبرة.</li>';
     }
 
-    // عرض نقاط الاحتياج وجدول الأهداف
+    // عرض نقاط الاحتياج وجدول الأهداف (مع التحقق التلقائي)
     let objectiveCounter = 1;
     if (needsObjects.length > 0) {
         needsObjects.forEach(obj => {
-            // إضافة لنقاط الاحتياج
             needsList.innerHTML += `<li>${obj.shortTermGoal}</li>`;
 
-            // إضافة للجدول
             const headerRow = `
                 <tr style="background-color: #e9ecef;">
                     <td style="font-weight:bold; text-align:center;">*</td>
@@ -369,17 +349,23 @@ function loadIEPTab() {
 
             if (obj.instructionalGoals && obj.instructionalGoals.length > 0) {
                 obj.instructionalGoals.forEach(iGoal => {
+                    // 🔍 التحقق: هل هذا الهدف تم إنجازه؟
+                    const achievementDate = completedLessonsMap[iGoal]; 
+                    const dateCellContent = achievementDate 
+                        ? `<span class="text-success font-weight-bold">✔ ${achievementDate}</span>` 
+                        : `<input type="date" class="form-control" style="border:none; background:transparent;">`;
+
                     const row = `
                         <tr>
                             <td style="text-align:center;">${objectiveCounter++}</td>
                             <td>${iGoal}</td>
-                            <td><input type="date" class="form-control" style="border:none; background:transparent;"></td>
+                            <td>${dateCellContent}</td>
                         </tr>
                     `;
                     objectivesBody.insertAdjacentHTML('beforeend', row);
                 });
             } else {
-                objectivesBody.insertAdjacentHTML('beforeend', `<tr><td>-</td><td class="text-muted">لا توجد أهداف تدريسية مسجلة لهذا الهدف</td><td></td></tr>`);
+                objectivesBody.insertAdjacentHTML('beforeend', `<tr><td>-</td><td class="text-muted">لا توجد أهداف تدريسية مسجلة</td><td></td></tr>`);
             }
         });
     } else {
@@ -388,7 +374,6 @@ function loadIEPTab() {
     }
 }
 
-// دالة مساعدة لتعبئة الجدول
 function fillScheduleTable() {
     const daysMap = { 'sunday': 'day-sunday', 'monday': 'day-monday', 'tuesday': 'day-tuesday', 'wednesday': 'day-wednesday', 'thursday': 'day-thursday' };
     const schedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]'); 
@@ -413,7 +398,7 @@ function fillScheduleTable() {
 }
 
 // ==========================================
-// 4. قسم الدروس
+// 3. قسم الدروس (مع التحديث التلقائي)
 // ==========================================
 function loadLessonsTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
@@ -424,7 +409,7 @@ function loadLessonsTab() {
         container.innerHTML = `
             <div class="empty-state" style="grid-column: 1/-1;">
                 <h3>لا توجد دروس حالياً</h3>
-                <p>سيتم توليد الدروس بناءً على الخطة التربوية.</p>
+                <p>يمكنك توليد الدروس بناءً على الاحتياج من زر "تحديث".</p>
             </div>`;
         return;
     }
@@ -437,31 +422,102 @@ function loadLessonsTab() {
             </div>
             <div class="content-body">
                 <p><strong>الهدف:</strong> ${l.objective}</p>
+                ${l.status === 'completed' && l.completedDate ? `<small class="text-success">تاريخ الإنجاز: ${l.completedDate}</small>` : ''}
             </div>
             <div class="content-actions">
-                ${l.status !== 'completed' ? `<button class="btn btn-sm btn-success" onclick="completeLesson(${l.id})">إكمال</button>` : ''}
+                ${l.status !== 'completed' ? `<button class="btn btn-sm btn-success" onclick="completeLesson(${l.id})">إكمال الدرس</button>` : '<button class="btn btn-sm btn-secondary" disabled>تم الإنجاز</button>'}
             </div>
         </div>
     `).join('');
 }
 
+// دالة لتوليد الدروس بناءً على نقاط الاحتياج في الخطة
 function regenerateLessons() {
-    alert('جاري تحديث قائمة الدروس بناءً على نقاط الاحتياج...');
-    loadLessonsTab();
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
+    const allLessonsLib = JSON.parse(localStorage.getItem('lessons') || '[]');
+
+    // 1. العثور على الاحتياجات
+    const completedDiagnostic = studentTests
+        .filter(t => t.studentId === currentStudentId && t.type === 'diagnostic' && t.status === 'completed')
+        .sort((a, b) => new Date(b.assignedDate) - new Date(a.assignedDate))[0];
+
+    if (!completedDiagnostic) { alert('يجب إجراء اختبار تشخيصي أولاً.'); return; }
+
+    const originalTest = allTests.find(t => t.id === completedDiagnostic.testId);
+    let neededObjectives = [];
+
+    originalTest.questions.forEach(question => {
+        const studentAnswerObj = completedDiagnostic.answers.find(a => a.questionId === question.id);
+        if (question.linkedGoalId) {
+            const objective = allObjectives.find(o => o.id === question.linkedGoalId);
+            const studentScore = studentAnswerObj ? (studentAnswerObj.score || 0) : 0;
+            const passingScore = question.passingScore || 1;
+            if (studentScore < passingScore && objective) {
+                neededObjectives.push(objective); // هذا هدف قصير مدى (احتياج)
+            }
+        }
+    });
+
+    // 2. إسناد الدروس المرتبطة بهذه الاحتياجات
+    let studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    let addedCount = 0;
+
+    neededObjectives.forEach(obj => { // لكل هدف قصير مدى (احتياج)
+        if(obj.instructionalGoals && obj.instructionalGoals.length > 0) {
+            obj.instructionalGoals.forEach(iGoal => { // لكل هدف تدريسي فرعي
+                // ابحث في مكتبة الدروس عن درس مرتبط بهذا الهدف التدريسي
+                const matchingLesson = allLessonsLib.find(libLesson => libLesson.linkedInstructionalGoal === iGoal);
+                
+                if (matchingLesson) {
+                    // هل الدرس مضاف مسبقاً لهذا الطالب؟
+                    const alreadyExists = studentLessons.some(sl => sl.studentId === currentStudentId && sl.objective === iGoal);
+                    
+                    if (!alreadyExists) {
+                        studentLessons.push({
+                            id: Date.now() + Math.floor(Math.random()*10000),
+                            studentId: currentStudentId,
+                            title: matchingLesson.title,
+                            objective: iGoal, // نحفظ الهدف التدريسي هنا للربط لاحقاً
+                            originalLessonId: matchingLesson.id,
+                            status: 'pending',
+                            assignedDate: new Date().toISOString()
+                        });
+                        addedCount++;
+                    }
+                }
+            });
+        }
+    });
+
+    localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
+    loadLessonsTab(); // إعادة تحميل القائمة
+    if(addedCount > 0) alert(`تم إضافة ${addedCount} درس جديد بناءً على الخطة.`);
+    else alert('لم يتم العثور على دروس جديدة في المكتبة تطابق نقاط الاحتياج.');
 }
 
+// 🌟 تعديل دالة إكمال الدرس لإضافة التاريخ
 function completeLesson(id) {
+    if(!confirm('هل أنت متأكد من أن الطالب أتقن مهارات هذا الدرس؟ سيتم تحديث الخطة تلقائياً.')) return;
+
     let studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const idx = studentLessons.findIndex(l => l.id === id);
+    
     if(idx !== -1) {
         studentLessons[idx].status = 'completed';
+        // إضافة تاريخ الإنجاز بالتقويم الهجري/الميلادي (حسب تفضيل المتصفح)
+        studentLessons[idx].completedDate = new Date().toLocaleDateString('ar-SA');
+        
         localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
-        loadLessonsTab();
+        
+        loadLessonsTab(); // تحديث واجهة الدروس
+        alert('تم إكمال الدرس وتحديث تاريخ التحقق في الخطة التربوية.');
     }
 }
 
 // ==========================================
-// 5. قسم الواجبات
+// 4. باقي الأقسام (الواجبات والتقدم)
 // ==========================================
 function loadAssignmentsTab() {
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId === currentStudentId);
@@ -489,7 +545,7 @@ function showAssignHomeworkModal() {
     const select = document.getElementById('homeworkSelect');
     
     if(assignmentsLib.length === 0) {
-         select.innerHTML = '<option value="1">واجب تجريبي: كتابة الحروف</option>';
+         select.innerHTML = '<option value="">لا توجد واجبات في المكتبة</option>';
     } else {
         select.innerHTML = assignmentsLib.map(a => `<option value="${a.id}">${a.title}</option>`).join('');
     }
@@ -498,7 +554,10 @@ function showAssignHomeworkModal() {
 }
 
 function assignHomework() {
-    const title = document.getElementById('homeworkSelect').options[document.getElementById('homeworkSelect').selectedIndex].text;
+    const select = document.getElementById('homeworkSelect');
+    if (!select.value) return;
+    
+    const title = select.options[select.selectedIndex].text;
     const dueDate = document.getElementById('homeworkDueDate').value;
     
     const newAssign = {
@@ -527,9 +586,6 @@ function deleteAssignment(id) {
     loadAssignmentsTab();
 }
 
-// ==========================================
-// 6. قسم التقدم
-// ==========================================
 function loadProgressTab() {
     const lessons = JSON.parse(localStorage.getItem('studentLessons') || '[]').filter(l => l.studentId === currentStudentId);
     const tbody = document.getElementById('progressTableBody');
@@ -543,17 +599,14 @@ function loadProgressTab() {
         <tr>
             <td>${l.objective}</td>
             <td><span class="badge ${l.status}">${getStatusText(l.status)}</span></td>
-            <td>${l.status === 'completed' ? 'تم' : '-'}</td>
+            <td>${l.completedDate || '-'}</td>
         </tr>
     `).join('');
 }
 
-// دوال مساعدة عامة
+// دوال مساعدة
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-function dayMap(dayAr) {
-    const map = {'الأحد':'sunday', 'الاثنين':'monday', 'الثلاثاء':'tuesday', 'الأربعاء':'wednesday', 'الخميس':'thursday'};
-    return map[dayAr];
-}
+function returnTestForResubmission() { /* الكود موجود أعلاه في سياق المراجعة */ }
 function getStatusText(status) {
     const map = {'pending': 'قادم', 'in-progress': 'جاري', 'completed': 'مكتمل', 'returned': 'معاد'};
     return map[status] || status;

@@ -60,7 +60,7 @@ function switchSection(sectionId) {
 }
 
 // ==========================================
-// 1. قسم الاختبار التشخيصي
+// 1. قسم الاختبار التشخيصي (معدل)
 // ==========================================
 function loadDiagnosticTab() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
@@ -96,11 +96,17 @@ function loadDiagnosticTab() {
             actionContent = `<div class="alert alert-secondary mt-3">بانتظار دخول الطالب للاختبار.</div>`;
         }
 
+        // تم التعديل هنا لإضافة زر الحذف
         detailsDiv.innerHTML = `
             <div class="card">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h3>${originalTest ? originalTest.title : 'اختبار (محذوف)'}</h3>
-                    ${statusBadge}
+                    <div style="display:flex; align-items:center; gap: 10px;">
+                        ${statusBadge}
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAssignedTest(${assignedTest.id})" title="حذف التعيين">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
                 </div>
                 <p class="text-muted">تاريخ التعيين: ${new Date(assignedTest.assignedDate).toLocaleDateString('ar-SA')}</p>
                 ${actionContent}
@@ -110,6 +116,20 @@ function loadDiagnosticTab() {
         document.getElementById('noDiagnosticTest').style.display = 'block';
         document.getElementById('diagnosticTestDetails').style.display = 'none';
     }
+}
+
+// دالة جديدة لحذف الاختبار المعين
+function deleteAssignedTest(assignmentId) {
+    if(!confirm('هل أنت متأكد من حذف هذا الاختبار؟ سيؤدي هذا إلى حذف أي إجابات قام بها الطالب، وستتمكن من تعيين اختبار جديد.')) return;
+
+    let studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    // فلترة المصفوفة لإزالة الاختبار المحدد
+    studentTests = studentTests.filter(t => t.id !== assignmentId);
+    
+    localStorage.setItem('studentTests', JSON.stringify(studentTests));
+    
+    alert('تم حذف الاختبار بنجاح.');
+    loadDiagnosticTab(); // إعادة تحميل القسم لتحديث الواجهة
 }
 
 function showAssignTestModal() {

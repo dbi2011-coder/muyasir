@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-tests.js
-// الوصف: محرك عرض الاختبارات (يدعم التسجيل الصوتي والكتابة اليدوية)
+// الوصف: محرك عرض الاختبارات (مع دمج النص داخل الرسم للحرف الناقص)
 // ============================================
 
 let currentTest = null;
@@ -91,7 +91,7 @@ function startActualTest() {
     showQuestion(0);
 }
 
-// 3. محرك عرض الأسئلة (المطور)
+// 3. محرك عرض الأسئلة
 function renderAllQuestions() {
     const container = document.getElementById('testQuestionsContainer');
     container.innerHTML = '';
@@ -122,19 +122,23 @@ function renderAllQuestions() {
             qHtml += `</div>`;
         }
 
-        // ب) الحرف الناقص (كتابة يدوية) ✍️
+        // ب) الحرف الناقص (دمج النص داخل الكانفاس) ✍️
         else if (q.type === 'missing-char') {
             qHtml += `<div class="paragraphs-container">`;
             (q.paragraphs || []).forEach((p, pIdx) => {
+                // نمرر النص عبر data-text ليتم رسمه في initCanvas
                 qHtml += `
                     <div class="mb-5 p-3 text-center" style="background:#f9f9f9; border-radius:10px; border:1px solid #eee;">
-                        <h4 style="font-size:2.5rem; letter-spacing:3px; color:#333; margin-bottom:20px;">${p.missing || p.text}</h4>
                         <div class="handwriting-area">
-                            <p class="text-muted small">اكتب الحرف الناقص بخط يدك في المربع:</p>
-                            <canvas id="canvas-${q.id}-${pIdx}" class="drawing-canvas missing-char-canvas" width="200" height="150" 
-                                style="border:3px dashed #2196f3; background:#fff; cursor:crosshair; border-radius:10px; box-shadow:0 4px 6px rgba(0,0,0,0.05);"></canvas>
+                            <p class="text-muted small mb-2">أكمل الحرف الناقص داخل المربع:</p>
+                            <canvas id="canvas-${q.id}-${pIdx}" 
+                                    class="drawing-canvas missing-char-canvas" 
+                                    width="300" height="150" 
+                                    data-text="${p.missing || p.text}"
+                                    style="border:2px solid #333; background:#fff; cursor:crosshair; border-radius:10px; touch-action: none;">
+                            </canvas>
                             <br>
-                            <button class="btn btn-sm btn-outline-danger mt-2" onclick="clearCanvas('${q.id}-${pIdx}')"><i class="fas fa-eraser"></i> مسح</button>
+                            <button class="btn btn-sm btn-outline-danger mt-2" onclick="clearCanvas('${q.id}-${pIdx}')"><i class="fas fa-eraser"></i> مسح وإعادة المحاولة</button>
                         </div>
                     </div>`;
             });
@@ -145,7 +149,6 @@ function renderAllQuestions() {
         else if (q.type.includes('reading')) {
             qHtml += `<div class="paragraphs-container">`;
             (q.paragraphs || []).forEach((p, pIdx) => {
-                // البحث عن تسجيل محفوظ
                 let audioSrc = '';
                 if(ansValue && ansValue[`p_${pIdx}`]) audioSrc = ansValue[`p_${pIdx}`];
 
@@ -179,7 +182,7 @@ function renderAllQuestions() {
                     <div class="mb-4 text-center">
                         <button class="btn btn-info btn-lg mb-3" onclick="playAudio('${p.text}')"><i class="fas fa-volume-up"></i> استمع للكلمة</button>
                         <div style="background:#fff; padding:10px; border-radius:10px; border:1px solid #ddd;">
-                            <canvas id="canvas-${q.id}-${pIdx}" class="drawing-canvas" width="600" height="250" style="border:2px dashed #ccc; background:#fff; cursor:crosshair; width:100%;"></canvas>
+                            <canvas id="canvas-${q.id}-${pIdx}" class="drawing-canvas" width="600" height="250" style="border:2px dashed #ccc; background:#fff; cursor:crosshair; width:100%; touch-action: none;"></canvas>
                         </div>
                         <button class="btn btn-sm btn-secondary mt-2" onclick="clearCanvas('${q.id}-${pIdx}')">مسح اللوحة</button>
                     </div>`;
@@ -280,7 +283,6 @@ async function toggleRecording(btn, qId, pIdx) {
                     const base64Audio = reader.result;
                     saveInputAnswerByQId(qId, `p_${pIdx}`, base64Audio); // حفظ
                     
-                    // تحديث الواجهة للمشغل
                     const container = document.getElementById(`recorder-controls-${qId}-${pIdx}`);
                     container.innerHTML = `
                         <audio controls src="${base64Audio}" class="mb-2 w-100"></audio>
@@ -288,8 +290,6 @@ async function toggleRecording(btn, qId, pIdx) {
                         <div class="alert alert-success mt-2 p-1"><small>تم حفظ التسجيل!</small></div>
                     `;
                 };
-                
-                // إيقاف استخدام الميكروفون
                 stream.getTracks().forEach(track => track.stop());
                 activeRecordingId = null;
             };
@@ -303,10 +303,9 @@ async function toggleRecording(btn, qId, pIdx) {
 
         } catch (err) {
             console.error(err);
-            alert('تعذر الوصول للميكروفون. يرجى السماح بالصلاحيات.');
+            alert('تعذر الوصول للميكروفون. يرجى التأكد من السماح بالصلاحيات.');
         }
     } else {
-        // إيقاف التسجيل
         if (mediaRecorder && mediaRecorder.state !== 'inactive') {
             mediaRecorder.stop();
         }
@@ -321,13 +320,11 @@ function resetRecording(qId, pIdx) {
         </button>
         <p class="text-muted mt-2 small status-text">جاهز للتسجيل...</p>
     `;
-    // مسح الإجابة القديمة
     saveInputAnswerByQId(qId, `p_${pIdx}`, null);
 }
 
-
 // ==========================================
-// 6. أدوات الرسم (مشتركة للإملاء والحرف الناقص)
+// 6. أدوات الرسم (مع رسم النص في الخلفية) 🎨
 // ==========================================
 let isDrawing = false;
 let ctx = null;
@@ -339,7 +336,13 @@ function initCanvas(id) {
     const context = canvas.getContext('2d');
     context.lineWidth = 4;
     context.lineCap = 'round';
-    context.strokeStyle = '#212529'; // لون القلم
+    context.strokeStyle = '#d32f2f'; // لون قلم الطالب (أحمر مثلاً للتمييز)
+    
+    // رسم النص الخلفي (للحرف الناقص) إذا وجد
+    const bgText = canvas.dataset.text;
+    if (bgText) {
+        drawTextBackground(canvas, bgText);
+    }
     
     // دعم الماوس واللمس
     const startDraw = (e) => {
@@ -360,24 +363,34 @@ function initCanvas(id) {
 
     canvas.addEventListener('mousedown', startDraw);
     canvas.addEventListener('touchstart', startDraw);
-    
     canvas.addEventListener('mousemove', moveDraw);
     canvas.addEventListener('touchmove', moveDraw);
-    
     canvas.addEventListener('mouseup', () => isDrawing = false);
     canvas.addEventListener('touchend', () => isDrawing = false);
 
-    // استرجاع الرسم القديم
-    // ملاحظة: استرجاع الرسم يحتاج كود إضافي هنا إذا أردت عرضه عند العودة للسؤال
-    // سنقوم برسم الصورة المحفوظة إذا وجدت
+    // استرجاع الرسم القديم (فوق النص)
     const qId = id.split('-')[0];
     const pIdx = id.split('-')[1];
     const savedEntry = userAnswers.find(a => a.questionId == qId);
+    
     if(savedEntry && savedEntry.answer && savedEntry.answer[`p_${pIdx}`]) {
         const img = new Image();
         img.onload = () => context.drawImage(img, 0, 0);
         img.src = savedEntry.answer[`p_${pIdx}`];
     }
+}
+
+// دالة رسم النص في وسط الكانفاس
+function drawTextBackground(canvas, text) {
+    const context = canvas.getContext('2d');
+    // إعداد الخط
+    context.font = "bold 50px 'Tajawal', sans-serif";
+    context.fillStyle = "#212529"; // لون النص (رمادي غامق)
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    
+    // رسم النص في المنتصف
+    context.fillText(text, canvas.width / 2, canvas.height / 2);
 }
 
 function getPos(canvas, e) {
@@ -393,9 +406,15 @@ function getPos(canvas, e) {
 function clearCanvas(id) {
     const cvs = document.getElementById(`canvas-${id}`);
     const cx = cvs.getContext('2d');
+    // مسح كل شيء
     cx.clearRect(0,0, cvs.width, cvs.height);
+    
+    // إعادة رسم النص الخلفي فوراً
+    const bgText = cvs.dataset.text;
+    if (bgText) {
+        drawTextBackground(cvs, bgText);
+    }
 }
-
 
 // ==========================================
 // 7. دوال الحفظ المساعدة
@@ -412,7 +431,6 @@ function saveSimpleAnswer(qIdx, val) {
     updateUserAnswer(currentTest.questions[qIdx].id, val);
 }
 
-// دالة حفظ خاصة تستقبل ID السؤال مباشرة (للاستخدام داخل الـ Callbacks)
 function saveInputAnswerByQId(qId, key, val) {
     let entry = userAnswers.find(a => a.questionId == qId);
     if (!entry) {
@@ -431,7 +449,6 @@ function saveCurrentCanvas() {
     const q = currentTest.questions[currentQuestionIndex];
     if (q.type.includes('spelling') || q.type === 'missing-char') {
         let canvasAnswers = {};
-        // نحتاج لدمج الإجابات القديمة إن وجدت حتى لا نمسح إجابات الفقرات الأخرى
         let entry = userAnswers.find(a => a.questionId == q.id);
         if(entry && typeof entry.answer === 'object') canvasAnswers = entry.answer;
 
@@ -439,8 +456,7 @@ function saveCurrentCanvas() {
         (q.paragraphs || []).forEach((p, pIdx) => {
             const cvs = document.getElementById(`canvas-${q.id}-${pIdx}`);
             if(cvs) {
-                // التحقق هل الكانفاس فارغ أم لا (بسيط)
-                // الأفضل حفظه دائماً إذا كان موجوداً
+                // حفظ صورة الكانفاس كاملة (النص + كتابة الطالب)
                 canvasAnswers[`p_${pIdx}`] = cvs.toDataURL();
                 hasNewDrawing = true;
             }
@@ -485,7 +501,6 @@ function finishTest() {
     if(confirm('هل أنت متأكد من التسليم النهائي؟')) saveTestProgress(true);
 }
 
-// أدوات مساعدة أخرى
 function playAudio(text) {
     const speech = new SpeechSynthesisUtterance(text);
     speech.lang = 'ar-SA';

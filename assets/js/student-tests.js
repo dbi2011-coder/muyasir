@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-tests.js
-// الوصف: محرك عرض الاختبارات (مع دمج النص داخل الرسم للحرف الناقص)
+// الوصف: محرك عرض الاختبارات (مع تحديث رسم الحرف الناقص كنقاط)
 // ============================================
 
 let currentTest = null;
@@ -324,7 +324,7 @@ function resetRecording(qId, pIdx) {
 }
 
 // ==========================================
-// 6. أدوات الرسم (مع رسم النص في الخلفية) 🎨
+// 6. أدوات الرسم (مع رسم النص كنقاط في الخلفية) 🎨
 // ==========================================
 let isDrawing = false;
 let ctx = null;
@@ -336,7 +336,7 @@ function initCanvas(id) {
     const context = canvas.getContext('2d');
     context.lineWidth = 4;
     context.lineCap = 'round';
-    context.strokeStyle = '#d32f2f'; // لون قلم الطالب (أحمر مثلاً للتمييز)
+    context.strokeStyle = '#d32f2f'; // لون قلم الطالب (أحمر)
     
     // رسم النص الخلفي (للحرف الناقص) إذا وجد
     const bgText = canvas.dataset.text;
@@ -380,17 +380,20 @@ function initCanvas(id) {
     }
 }
 
-// دالة رسم النص في وسط الكانفاس
+// دالة رسم النص في وسط الكانفاس (مع تحويل الشرطة لنقاط)
 function drawTextBackground(canvas, text) {
     const context = canvas.getContext('2d');
     // إعداد الخط
     context.font = "bold 50px 'Tajawal', sans-serif";
-    context.fillStyle = "#212529"; // لون النص (رمادي غامق)
+    context.fillStyle = "#212529"; 
     context.textAlign = "center";
     context.textBaseline = "middle";
     
+    // ✅ استبدال أي شرطة (سفلية أو عادية) بنقاط صغيرة
+    const displayText = text.replace(/[_\-]/g, '......');
+    
     // رسم النص في المنتصف
-    context.fillText(text, canvas.width / 2, canvas.height / 2);
+    context.fillText(displayText, canvas.width / 2, canvas.height / 2);
 }
 
 function getPos(canvas, e) {
@@ -409,7 +412,7 @@ function clearCanvas(id) {
     // مسح كل شيء
     cx.clearRect(0,0, cvs.width, cvs.height);
     
-    // إعادة رسم النص الخلفي فوراً
+    // إعادة رسم النص الخلفي (النقاط) فوراً
     const bgText = cvs.dataset.text;
     if (bgText) {
         drawTextBackground(cvs, bgText);

@@ -1,5 +1,6 @@
 // ============================================
-// 📁 المسار: assets/js/content-library.js (النسخة النهائية متعددة الفقرات)
+// 📁 المسار: assets/js/content-library.js
+// الوصف: إدارة مكتبة المحتوى (مع دعم الصور الحقيقي)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -16,11 +17,8 @@ function loadContentLibrary() {
 }
 
 // ==========================================
-// 1. دوال العرض (البطاقات الملونة)
+// 1. دوال العرض
 // ==========================================
-// ... (دوال loadTests, loadLessons, loadObjectives, loadHomeworks تبقى كما هي تماماً من الرد السابق) ...
-// (اختصاراً للمساحة، سأكتب فقط دوال بناء الأسئلة الجديدة أدناه، ولكن تأكد من إبقاء دوال العرض السابقة في الملف)
-
 function loadTests() {
     const grid = document.getElementById('testsGrid'); if(!grid) return;
     const tests = JSON.parse(localStorage.getItem('tests') || '[]').filter(t => t.teacherId === getCurrentUser().id);
@@ -132,23 +130,19 @@ function renderQuestionInputs(selectElem, idx, data = null) {
 
     area.innerHTML = ''; // Clear previous inputs
 
-    // 1. إذا كان نوع السؤال يدعم الفقرات المتعددة
+    // 1. متعدد الفقرات
     const multiTypes = ['drag-drop', 'ai-reading', 'ai-spelling', 'manual-reading', 'manual-spelling', 'missing-char'];
     
     if (multiTypes.includes(type)) {
-        // عنوان رئيسي للسؤال (اختياري)
         area.innerHTML += `<div class="form-group mb-3"><label class="q-label">عنوان السؤال الرئيسي</label><input type="text" class="form-control q-text" value="${data?.text || ''}" placeholder="مثال: أكمل الفراغات التالية..."></div>`;
-        
-        // حاوية الفقرات
         area.innerHTML += `<div id="paragraphs-container-${idx}" class="paragraphs-list"></div>`;
         area.innerHTML += `<button class="btn btn-sm btn-outline-primary mt-2" onclick="addParagraphInput(${idx}, '${type}')"><i class="fas fa-plus"></i> إضافة فقرة</button>`;
         
-        // إضافة الفقرات الموجودة مسبقاً (أو فقرة واحدة فارغة)
         const items = data?.paragraphs || [];
         if (items.length > 0) {
             items.forEach(item => addParagraphInput(idx, type, item));
         } else {
-            addParagraphInput(idx, type); // فقرة أولى افتراضية
+            addParagraphInput(idx, type);
         }
 
     } 
@@ -158,7 +152,14 @@ function renderQuestionInputs(selectElem, idx, data = null) {
         if (type === 'mcq' || type === 'mcq-media') {
             html += `<div class="form-group mb-3"><label class="q-label">نص السؤال</label><input type="text" class="form-control q-text" value="${data?.text || ''}" placeholder="اكتب السؤال هنا..."></div>`;
             if (type === 'mcq-media') {
-                html += `<div class="form-group mb-3 p-2 bg-light border rounded"><label class="q-label"><i class="fas fa-paperclip"></i> مرفق (صورة/فيديو/صوت)</label><input type="file" class="form-control-file q-attachment">${data?.attachment ? `<div class="attachment-preview">ملف حالي: ${data.attachment}</div>` : ''}</div>`;
+                // تعديل هنا: إضافة حقل مخفي لتخزين الصورة القديمة وعرض معاينة
+                const existingFile = data?.attachment || '';
+                html += `<div class="form-group mb-3 p-2 bg-light border rounded">
+                            <label class="q-label"><i class="fas fa-paperclip"></i> مرفق (صورة/فيديو/صوت)</label>
+                            <input type="file" class="form-control-file q-attachment">
+                            <input type="hidden" class="q-existing-attachment" value="${existingFile}">
+                            ${existingFile ? `<div class="attachment-preview mt-2"><img src="${existingFile}" style="max-height:80px; border:1px solid #ddd;"> (صورة محفوظة)</div>` : ''}
+                        </div>`;
             }
             html += `<label class="q-label">الخيارات (حدد الإجابة الصحيحة)</label><div class="choices-container" id="choices-${idx}">`;
             const choices = data?.choices || ['خيار 1', 'خيار 2'];
@@ -174,10 +175,9 @@ function renderQuestionInputs(selectElem, idx, data = null) {
     }
 }
 
-// دالة إضافة فقرة جديدة (لأي نوع)
 function addParagraphInput(qIdx, type, itemData = null) {
     const container = document.getElementById(`paragraphs-container-${qIdx}`);
-    const pIdx = Date.now() + Math.floor(Math.random() * 1000); // Unique Paragraph ID
+    const pIdx = Date.now() + Math.floor(Math.random() * 1000); 
     
     let innerHtml = '';
 
@@ -192,7 +192,6 @@ function addParagraphInput(qIdx, type, itemData = null) {
             <div id="highlighter-area-${qIdx}-${pIdx}" class="highlight-area" style="display:none;"></div>
             <input type="hidden" class="p-gaps-data" id="gaps-data-${qIdx}-${pIdx}" value='${itemData?.gaps ? JSON.stringify(itemData.gaps) : ''}'>
         `;
-        // إذا كانت البيانات موجودة، شغل الهايلات
         if (text && itemData?.gaps) { setTimeout(() => initDragHighlighter(qIdx, pIdx, itemData.gaps), 100); }
 
     } else if (type === 'ai-reading' || type === 'manual-reading') {
@@ -216,9 +215,7 @@ function addParagraphInput(qIdx, type, itemData = null) {
     container.appendChild(div);
 }
 
-// ==========================================
-// منطق السحب والإفلات (لكل فقرة بشكل مستقل)
-// ==========================================
+// منطق السحب والإفلات
 function initDragHighlighter(qIdx, pIdx, savedGaps = null) {
     const sourceInput = document.getElementById(`drag-source-${qIdx}-${pIdx}`);
     const area = document.getElementById(`highlighter-area-${qIdx}-${pIdx}`);
@@ -272,29 +269,52 @@ function addChoiceInput(idx) {
 }
 
 // ==========================================
-// تجميع البيانات (Data Collection)
+// 🌟 أداة قراءة الملفات وتحويلها (Base64)
 // ==========================================
-function collectQuestionsFromContainer(id) {
+function readFileAsBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+    });
+}
+
+// ==========================================
+// تجميع البيانات (Data Collection) - Async
+// ==========================================
+async function collectQuestionsFromContainer(id) {
+    const cards = document.querySelectorAll(`#${id} .question-card`);
     const qs = [];
-    document.querySelectorAll(`#${id} .question-card`).forEach(card => {
+    
+    for (const card of cards) {
         const type = card.querySelector('select').value;
         const score = card.querySelector('.passing-score').value;
         const qData = { id: Date.now() + Math.random(), type: type, passingScore: score };
         
-        // إذا كان MCQ أو OpenEnded (نص واحد)
         if (type === 'mcq' || type === 'mcq-media' || type === 'open-ended') {
             qData.text = card.querySelector('.q-text')?.value || '';
             if (type.includes('mcq')) {
                 qData.choices = Array.from(card.querySelectorAll('.q-choice')).map(c => c.value);
                 card.querySelectorAll('input[type="radio"]').forEach((r, i) => { if(r.checked) qData.correctAnswer = i; });
-                if(card.querySelector('.q-attachment')?.files[0]) qData.attachment = card.querySelector('.q-attachment').files[0].name;
+                
+                // معالجة المرفق (الصورة)
+                const fileInput = card.querySelector('.q-attachment');
+                const existingFile = card.querySelector('.q-existing-attachment')?.value;
+                
+                if (fileInput && fileInput.files[0]) {
+                    // إذا تم رفع ملف جديد، حوله إلى Base64
+                    qData.attachment = await readFileAsBase64(fileInput.files[0]);
+                } else if (existingFile) {
+                    // إذا لم يتم رفع جديد، استخدم الموجود مسبقاً
+                    qData.attachment = existingFile;
+                }
             } else {
                 qData.modelAnswer = card.querySelector('.q-model-answer').value;
             }
         } 
-        // إذا كان متعدد الفقرات (Multi-paragraph)
         else {
-            qData.text = card.querySelector('.q-text')?.value || ''; // العنوان الرئيسي
+            qData.text = card.querySelector('.q-text')?.value || '';
             qData.paragraphs = [];
             card.querySelectorAll('.paragraph-item').forEach(pItem => {
                 const pData = { id: Date.now() + Math.random() };
@@ -312,12 +332,12 @@ function collectQuestionsFromContainer(id) {
             });
         }
         qs.push(qData);
-    });
+    }
     return qs;
 }
 
 // ==========================================
-// 📥 الدوال الأساسية (الربط، التصدير، الاستيراد، المودالات) - كما هي
+// 📥 الدوال الأساسية (تم تعديل دوال الحفظ لتكون Async)
 // ==========================================
 function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser')).user; }
 function getAllObjectives() { return JSON.parse(localStorage.getItem('objectives') || '[]').filter(o => o.teacherId === getCurrentUser().id); }
@@ -329,17 +349,61 @@ function toggleGlobalSelect(checkbox) { document.querySelectorAll('.export-check
 function executeExport() { const exportData = { tests: [], lessons: [], objectives: [], assignments: [], version: "1.0", exportedAt: new Date().toISOString() }; const tests = JSON.parse(localStorage.getItem('tests') || '[]'); document.querySelectorAll('.tests-item:checked').forEach(cb => { const item = tests.find(t => t.id == cb.value); if(item) { const clean = JSON.parse(JSON.stringify(item)); if(clean.questions) clean.questions.forEach(q => delete q.linkedGoalId); exportData.tests.push(clean); } }); const lessons = JSON.parse(localStorage.getItem('lessons') || '[]'); document.querySelectorAll('.lessons-item:checked').forEach(cb => { const item = lessons.find(l => l.id == cb.value); if(item) { const clean = JSON.parse(JSON.stringify(item)); delete clean.linkedInstructionalGoal; exportData.lessons.push(clean); } }); const objectives = JSON.parse(localStorage.getItem('objectives') || '[]'); document.querySelectorAll('.objectives-item:checked').forEach(cb => { const item = objectives.find(o => o.id == cb.value); if(item) exportData.objectives.push(item); }); const homeworks = JSON.parse(localStorage.getItem('assignments') || '[]'); document.querySelectorAll('.homeworks-item:checked').forEach(cb => { const item = homeworks.find(h => h.id == cb.value); if(item) { const clean = JSON.parse(JSON.stringify(item)); delete clean.linkedInstructionalGoal; exportData.assignments.push(clean); } }); const totalCount = exportData.tests.length + exportData.lessons.length + exportData.objectives.length + exportData.assignments.length; if(totalCount === 0) { alert('لم تقم بتحديد أي عنصر للتصدير.'); return; } const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `ContentLibrary_Export_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); document.getElementById('exportContentModal').classList.remove('show'); }
 function importContent(input) { const file = input.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(e) { try { const data = JSON.parse(e.target.result); const teacherId = getCurrentUser().id; let count = 0; const addItem = (key, item) => { const arr = JSON.parse(localStorage.getItem(key) || '[]'); item.id = Date.now() + Math.floor(Math.random() * 1000); item.teacherId = teacherId; if(item.questions) item.questions.forEach(q => delete q.linkedGoalId); delete item.linkedInstructionalGoal; arr.push(item); localStorage.setItem(key, JSON.stringify(arr)); count++; }; if (data.version && (data.tests || data.lessons || data.objectives || data.assignments)) { if(data.tests) data.tests.forEach(i => addItem('tests', i)); if(data.lessons) data.lessons.forEach(i => addItem('lessons', i)); if(data.objectives) data.objectives.forEach(i => addItem('objectives', i)); if(data.assignments) data.assignments.forEach(i => addItem('assignments', i)); } else if (data.contentType) { if (data.contentType === 'test') addItem('tests', data); else if (data.contentType === 'lesson') addItem('lessons', data); else if (data.contentType === 'homework') addItem('assignments', data); else if (data.contentType === 'objective') addItem('objectives', data); } else { const type = guessContentType(data); if(type === 'objective') addItem('objectives', data); else if(type === 'lesson') addItem('lessons', data); else if(type === 'test') addItem('tests', data); else if(type === 'homework') addItem('assignments', data); else { alert('تعذر التعرف على نوع الملف.'); return; } } alert(`تم استيراد ${count} عنصر بنجاح!`); loadContentLibrary(); } catch (err) { console.error(err); alert('حدث خطأ أثناء قراءة الملف.'); } input.value = ''; }; reader.readAsText(file); }
 function guessContentType(data) { if (data.shortTermGoal) return 'objective'; if (data.intro) return 'lesson'; if (data.questions && data.description !== undefined && !data.intro) return 'test'; if (data.questions && !data.intro) return 'homework'; return null; }
+
 function showCreateTestModal() { document.getElementById('editTestId').value=''; document.getElementById('testTitle').value=''; document.getElementById('testSubject').value='لغتي'; document.getElementById('testDescription').value=''; document.getElementById('questionsContainer').innerHTML=''; addQuestion(); document.getElementById('createTestModal').classList.add('show'); }
-function saveTest() { const t=document.getElementById('testTitle').value; if(!t)return; const qs=collectQuestionsFromContainer('questionsContainer'); const ts=JSON.parse(localStorage.getItem('tests')||'[]'); const id=document.getElementById('editTestId').value; const d={id:id?parseInt(id):Date.now(), teacherId:getCurrentUser().id, title:t, subject:document.getElementById('testSubject').value, description:document.getElementById('testDescription').value, questions:qs, createdAt:new Date().toISOString()}; if(id){const i=ts.findIndex(x=>x.id==id); if(i!==-1)ts[i]=d;}else ts.push(d); localStorage.setItem('tests',JSON.stringify(ts)); document.getElementById('createTestModal').classList.remove('show'); loadTests(); }
+
+// async لتخزين الصور
+async function saveTest() { 
+    const t=document.getElementById('testTitle').value; if(!t)return; 
+    const qs = await collectQuestionsFromContainer('questionsContainer'); 
+    const ts=JSON.parse(localStorage.getItem('tests')||'[]'); 
+    const id=document.getElementById('editTestId').value; 
+    const d={id:id?parseInt(id):Date.now(), teacherId:getCurrentUser().id, title:t, subject:document.getElementById('testSubject').value, description:document.getElementById('testDescription').value, questions:qs, createdAt:new Date().toISOString()}; 
+    if(id){const i=ts.findIndex(x=>x.id==id); if(i!==-1)ts[i]=d;}else ts.push(d); 
+    localStorage.setItem('tests',JSON.stringify(ts)); 
+    document.getElementById('createTestModal').classList.remove('show'); 
+    loadTests(); 
+}
+
 function editTest(id) { const t=JSON.parse(localStorage.getItem('tests')).find(x=>x.id===id); if(!t)return; document.getElementById('editTestId').value=t.id; document.getElementById('testTitle').value=t.title; document.getElementById('testSubject').value=t.subject; document.getElementById('testDescription').value=t.description; const c=document.getElementById('questionsContainer'); c.innerHTML=''; (t.questions||[]).forEach(q=>addQuestionToContainer(c,'سؤال',q)); document.getElementById('createTestModal').classList.add('show'); }
 function deleteTest(id) { if(confirm('حذف؟')){const t=JSON.parse(localStorage.getItem('tests')).filter(x=>x.id!==id); localStorage.setItem('tests',JSON.stringify(t)); loadTests();} }
+
 function showCreateHomeworkModal() { document.getElementById('editHomeworkId').value=''; document.getElementById('homeworkTitle').value=''; document.getElementById('homeworkDescription').value=''; document.getElementById('homeworkQuestionsContainer').innerHTML=''; addHomeworkQuestion(); document.getElementById('createHomeworkModal').classList.add('show'); }
-function saveHomework() { const id=document.getElementById('editHomeworkId').value; const t=document.getElementById('homeworkTitle').value; if(!t)return; const qs=collectQuestionsFromContainer('homeworkQuestionsContainer'); const hws=JSON.parse(localStorage.getItem('assignments')||'[]'); const d={id:id?parseInt(id):Date.now(), teacherId:getCurrentUser().id, title:t, subject:document.getElementById('homeworkSubject').value, description:document.getElementById('homeworkDescription').value, questions:qs, createdAt:new Date().toISOString()}; if(id){const i=hws.findIndex(x=>x.id==id); if(i!==-1)hws[i]=d;}else hws.push(d); localStorage.setItem('assignments',JSON.stringify(hws)); document.getElementById('createHomeworkModal').classList.remove('show'); loadHomeworks(); }
+
+// async لتخزين الصور
+async function saveHomework() { 
+    const id=document.getElementById('editHomeworkId').value; 
+    const t=document.getElementById('homeworkTitle').value; if(!t)return; 
+    const qs = await collectQuestionsFromContainer('homeworkQuestionsContainer'); 
+    const hws=JSON.parse(localStorage.getItem('assignments')||'[]'); 
+    const d={id:id?parseInt(id):Date.now(), teacherId:getCurrentUser().id, title:t, subject:document.getElementById('homeworkSubject').value, description:document.getElementById('homeworkDescription').value, questions:qs, createdAt:new Date().toISOString()}; 
+    if(id){const i=hws.findIndex(x=>x.id==id); if(i!==-1)hws[i]=d;}else hws.push(d); 
+    localStorage.setItem('assignments',JSON.stringify(hws)); 
+    document.getElementById('createHomeworkModal').classList.remove('show'); 
+    loadHomeworks(); 
+}
+
 function editHomework(id) { const h=JSON.parse(localStorage.getItem('assignments')).find(x=>x.id===id); if(!h)return; document.getElementById('editHomeworkId').value=h.id; document.getElementById('homeworkTitle').value=h.title; document.getElementById('homeworkSubject').value=h.subject; document.getElementById('homeworkDescription').value=h.description; const c=document.getElementById('homeworkQuestionsContainer'); c.innerHTML=''; (h.questions||[]).forEach(q=>addQuestionToContainer(c,'سؤال',q)); document.getElementById('createHomeworkModal').classList.add('show'); }
 function deleteHomework(id) { if(confirm('حذف؟')){const h=JSON.parse(localStorage.getItem('assignments')).filter(x=>x.id!==id); localStorage.setItem('assignments',JSON.stringify(h)); loadHomeworks();} }
+
 function showCreateLessonModal() { document.getElementById('editLessonId').value=''; document.getElementById('lessonTitle').value=''; document.getElementById('introUrl').value=''; document.getElementById('introText').value=''; document.getElementById('exercisesContainer').innerHTML=''; document.getElementById('assessmentContainer').innerHTML=''; addLessonQuestion('exercisesContainer'); addLessonQuestion('assessmentContainer'); switchLessonStep('intro'); document.getElementById('createLessonModal').classList.add('show'); }
 function editLesson(id) { const l=JSON.parse(localStorage.getItem('lessons')).find(x=>x.id===id); if(!l)return; document.getElementById('editLessonId').value=l.id; document.getElementById('lessonTitle').value=l.title; document.getElementById('lessonSubject').value=l.subject; if(l.intro){document.getElementById('introType').value=l.intro.type; document.getElementById('introUrl').value=l.intro.url; document.getElementById('introText').value=l.intro.text; toggleIntroInputs();} document.getElementById('exercisesPassScore').value=l.exercises?.passScore||80; const ec=document.getElementById('exercisesContainer'); ec.innerHTML=''; (l.exercises?.questions||[]).forEach(q=>addQuestionToContainer(ec,'سؤال',q)); const ac=document.getElementById('assessmentContainer'); ac.innerHTML=''; (l.assessment?.questions||[]).forEach(q=>addQuestionToContainer(ac,'سؤال',q)); switchLessonStep('intro'); document.getElementById('createLessonModal').classList.add('show'); }
-function saveLesson() { const id=document.getElementById('editLessonId').value; const t=document.getElementById('lessonTitle').value; if(!t)return; const intro={type:document.getElementById('introType').value, url:document.getElementById('introUrl').value, text:document.getElementById('introText').value}; const ex={passScore:document.getElementById('exercisesPassScore').value, questions:collectQuestionsFromContainer('exercisesContainer')}; const as={questions:collectQuestionsFromContainer('assessmentContainer')}; const ls=JSON.parse(localStorage.getItem('lessons')||'[]'); const d={id:id?parseInt(id):Date.now(), teacherId:getCurrentUser().id, title:t, subject:document.getElementById('lessonSubject').value, intro, exercises:ex, assessment:as, createdAt:new Date().toISOString()}; if(id){const i=ls.findIndex(x=>x.id==id); if(i!==-1)ls[i]=d;}else ls.push(d); localStorage.setItem('lessons',JSON.stringify(ls)); document.getElementById('createLessonModal').classList.remove('show'); loadLessons(); }
+
+// async لتخزين الصور
+async function saveLesson() { 
+    const id=document.getElementById('editLessonId').value; 
+    const t=document.getElementById('lessonTitle').value; if(!t)return; 
+    const intro={type:document.getElementById('introType').value, url:document.getElementById('introUrl').value, text:document.getElementById('introText').value}; 
+    const ex={passScore:document.getElementById('exercisesPassScore').value, questions: await collectQuestionsFromContainer('exercisesContainer')}; 
+    const as={questions: await collectQuestionsFromContainer('assessmentContainer')}; 
+    const ls=JSON.parse(localStorage.getItem('lessons')||'[]'); 
+    const d={id:id?parseInt(id):Date.now(), teacherId:getCurrentUser().id, title:t, subject:document.getElementById('lessonSubject').value, intro, exercises:ex, assessment:as, createdAt:new Date().toISOString()}; 
+    if(id){const i=ls.findIndex(x=>x.id==id); if(i!==-1)ls[i]=d;}else ls.push(d); 
+    localStorage.setItem('lessons',JSON.stringify(ls)); 
+    document.getElementById('createLessonModal').classList.remove('show'); 
+    loadLessons(); 
+}
+
 function deleteLesson(id) { if(confirm('حذف؟')){const l=JSON.parse(localStorage.getItem('lessons')).filter(x=>x.id!==id); localStorage.setItem('lessons',JSON.stringify(l)); loadLessons();} }
 function toggleIntroInputs() { const t=document.getElementById('introType').value; const u=document.getElementById('introUrl'); u.placeholder=t==='video'?'رابط يوتيوب':(t==='image'?'رابط الصورة':'رابط'); }
 function showCreateObjectiveModal() { document.getElementById('editObjectiveId').value=''; document.getElementById('shortTermGoal').value=''; document.getElementById('instructionalGoalsContainer').innerHTML=''; addInstructionalGoalInput(); document.getElementById('createObjectiveModal').classList.add('show'); }

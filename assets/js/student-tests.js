@@ -1,247 +1,490 @@
 // ============================================
 // 📁 المسار: assets/js/student-tests.js
+// الوصف: إدارة وعرض اختبارات الطالب
 // ============================================
 
-let currentTestId = null;
-let currentOriginalTest = null;
-let canvases = {};
+let currentTest = null;      // بيانات الاختبار الأصلي
+let currentAssignment = null; // بيانات تعيين الطالب (الإجابات والحالة)
 let currentQuestionIndex = 0;
-let selectedWord = null; 
+let userAnswers = []; // لتخزين الإجابات المؤقتة
 
 document.addEventListener('DOMContentLoaded', function() {
-    if (document.getElementById('allTestsList')) loadAllTests();
+    loadMyTests();
 });
 
-function loadAllTests() {
+// 1. عرض قائمة الاختبارات في الصفحة الرئيسية
+function loadMyTests() {
     const container = document.getElementById('allTestsList');
     if(!container) return;
-    const currentStudent = getCurrentUser();
-    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
-    let myTests = studentTests.filter(t => t.studentId === currentStudent.id);
-    
-    if (myTests.length === 0) { container.innerHTML = `<div class="empty-state"><h3>لا توجد اختبارات</h3></div>`; return; }
-    
-    // الترتيب: المعاد > الجاري > الجديد > المنجز
-    myTests.sort((a, b) => {
-        const p = { 'returned': 1, 'in-progress': 2, 'pending': 3, 'completed': 4 };
-        return p[a.status] - p[b.status];
-    });
+
+    const currentUser = JSON.parse(sessionStorage.getItem('currentUser') || '{}').user;
+    if (!currentUser) return;
+
+    // جلب الاختبارات المسندة لهذا الطالب
+    const allAssignments = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const allTestsLib = JSON.parse(localStorage.getItem('tests') || '[]');
+
+    // تصفية اختبارات الطالب الحالي
+    const myTests = allAssignments.filter(t => t.studentId === currentUser.id);
+
+    if (myTests.length === 0) {
+        container.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #777;">
+                <div style="font-size: 3rem; margin-bottom: 10px;">📝</div>
+                <h3>لا توجد اختبارات متاحة حالياً</h3>
+                <p>أنت بطل! لقد أنهيت جميع مهامك، أو لم يقم المعلم بإسناد اختبارات بعد.</p>
+            </div>
+        `;
+        return;
+    }
 
     container.innerHTML = myTests.map(assignment => {
-        const tDetails = allTests.find(t => t.id === assignment.testId);
-        if (!tDetails) return '';
-        
-        let status = 'جديد', badge = 'status-new', btn = '🚀 ابدأ';
-        if(assignment.status==='in-progress') { status='جاري'; badge='status-progress'; btn='🔄 استكمال'; }
-        if(assignment.status==='returned') { status='معاد'; badge='status-returned'; btn='✏️ تعديل'; }
-        if(assignment.status==='completed') { status='منجز'; badge='status-completed'; btn='👁️ عرض'; }
+        const originalTest = allTestsLib.find(t => t.id === assignment.testId);
+        if (!originalTest) return ''; // تخطي إذا كان الاختبار الأصلي محذوفاً
 
-        let action = assignment.status === 'completed' ? 
-            `<button class="btn btn-primary btn-block" onclick="viewCompletedTest(${assignment.id})">${btn}</button>` :
-            `<button class="btn btn-success btn-block" onclick="openTestFocusMode(${assignment.id})">${btn}</button>`;
+        // تحديد الحالة واللون
+        let statusText = 'جديد';
+        let statusClass = 'status-new';
+        let btnText = 'بدء الاختبار';
+        let btnClass = 'btn-primary';
+
+        if (assignment.status === 'in-progress') {
+            statusText = 'جاري الحل';
+            statusClass = 'status-progress';
+            btnText = 'متابعة';
+            btnClass = 'btn-warning';
+        } else if (assignment.status === 'completed') {
+            statusText = 'مكتمل';
+            statusClass = 'status-completed';
+            btnText = 'مراجعة';
+            btnClass = 'btn-success';
+        } else if (assignment.status === 'returned') {
+            statusText = 'معاد للتصحيح';
+            statusClass = 'status-returned';
+            btnText = 'تعديل الإجابات';
+            btnClass = 'btn-danger';
+        }
 
         return `
             <div class="test-card">
-                <div class="card-header"><h3 class="card-title">${tDetails.title}</h3><span class="card-status ${badge}">${status}</span></div>
-                <div class="card-meta"><span>${tDetails.questions?.length||0} أسئلة</span></div>
-                <div class="card-actions">${action}</div>
-            </div>`;
+                <div class="card-header">
+                    <span class="card-status ${statusClass}">${statusText}</span>
+                    <small class="text-muted">${new Date(assignment.assignedDate).toLocaleDateString('ar-SA')}</small>
+                </div>
+                <h3>${originalTest.title}</h3>
+                <p class="text-muted small">${originalTest.description || 'لا يوجد وصف'}</p>
+                <div style="margin-top: 15px; display: flex; justify-content: space-between; align-items: center;">
+                    <span class="badge badge-secondary">${originalTest.questions ? originalTest.questions.length : 0} أسئلة</span>
+                    <button class="btn btn-sm ${btnClass}" onclick="openTestMode(${assignment.id})">
+                        ${btnText}
+                    </button>
+                </div>
+            </div>
+        `;
     }).join('');
 }
 
-function openTestFocusMode(assignmentId) {
-    const assignment = JSON.parse(localStorage.getItem('studentTests')).find(t => t.id === assignmentId);
-    const test = JSON.parse(localStorage.getItem('tests')).find(t => t.id === assignment.testId);
+// ==========================================
+// 2. منطق وضع الاختبار (Focus Mode)
+// ==========================================
+
+function openTestMode(assignmentId) {
+    const allAssignments = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const allTestsLib = JSON.parse(localStorage.getItem('tests') || '[]');
     
-    currentTestId = assignmentId; currentOriginalTest = test; currentQuestionIndex = 0;
-    
-    document.getElementById('focusTestTitle').textContent = test.title;
+    currentAssignment = allAssignments.find(a => a.id === assignmentId);
+    if (!currentAssignment) return;
+
+    currentTest = allTestsLib.find(t => t.id === currentAssignment.testId);
+    if (!currentTest) return;
+
+    // تحميل الإجابات السابقة إن وجدت
+    userAnswers = currentAssignment.answers || [];
+
+    // إعداد الواجهة
+    document.getElementById('focusTestTitle').textContent = currentTest.title;
+    document.getElementById('testFocusMode').style.display = 'flex';
+    document.body.style.overflow = 'hidden'; // منع التمرير في الخلفية
+
+    // إذا كان مكتمل، اعرض النتائج فقط (Read Only) أو اسمح بالمراجعة حسب المنطق
+    if (currentAssignment.status === 'completed') {
+        alert('هذا الاختبار مكتمل. سيتم عرضه للمراجعة فقط.');
+    }
+
+    // إظهار شاشة البدء أولاً
     document.getElementById('testStartScreen').style.display = 'block';
     document.getElementById('testQuestionsContainer').style.display = 'none';
     document.getElementById('testFooterControls').style.display = 'none';
-    document.getElementById('testFocusMode').style.display = 'flex';
 }
 
 function startActualTest() {
     document.getElementById('testStartScreen').style.display = 'none';
     document.getElementById('testQuestionsContainer').style.display = 'block';
     document.getElementById('testFooterControls').style.display = 'flex';
-    document.getElementById('testFooterControls').innerHTML = `
-        <button id="btnPrev" class="btn-nav btn-prev" onclick="navigateQuestion(-1)">السابق</button>
-        <button id="btnSave" class="btn-nav btn-save" onclick="saveTestProgress()">حفظ</button>
-        <button id="btnNext" class="btn-nav btn-next" onclick="navigateQuestion(1)">التالي</button>
-        <button id="btnSubmit" class="btn-nav btn-submit" style="display:none;" onclick="submitTestAnswers()">تسليم</button>
-    `;
-    renderQuestions(false);
+    
+    renderAllQuestions();
     showQuestion(0);
 }
 
-function viewCompletedTest(assignmentId) {
-    openTestFocusMode(assignmentId);
-    document.getElementById('testStartScreen').style.display = 'none';
-    document.getElementById('testQuestionsContainer').style.display = 'block';
-    document.getElementById('testFooterControls').style.display = 'flex';
-    document.getElementById('testFooterControls').innerHTML = `<button class="btn-nav btn-submit" onclick="closeTestFocusMode()">خروج</button>`;
-    renderQuestions(true);
-    showQuestion(0);
+function closeTestMode() {
+    if (confirm('هل تريد الخروج؟ سيتم حفظ تقدمك.')) {
+        saveTestProgress(false); // حفظ دون تسليم
+        document.getElementById('testFocusMode').style.display = 'none';
+        document.body.style.overflow = 'auto';
+        loadMyTests(); // تحديث القائمة
+    }
 }
 
-function renderQuestions(isReadOnly = false) {
+// 3. عرض الأسئلة
+function renderAllQuestions() {
     const container = document.getElementById('testQuestionsContainer');
     container.innerHTML = '';
-    const assignment = JSON.parse(localStorage.getItem('studentTests')).find(t => t.id === currentTestId);
-    const answers = assignment.status === 'completed' ? assignment.answers : (assignment.savedAnswers || []);
 
-    currentOriginalTest.questions.forEach((q, index) => {
-        const savedAns = answers.find(a => a.questionId === q.id)?.answer;
-        const note = answers.find(a => a.questionId === q.id)?.teacherNote;
-        
-        const card = document.createElement('div');
-        card.className = 'question-card';
-        card.id = `card_q_${index}`;
-        
-        let html = `<div class="question-number">سؤال ${index+1}</div>`;
-        if(note) html += `<div class="alert alert-warning">📝 ملاحظة: ${note}</div>`;
-        
-        // --- Drag & Drop Type ---
-        if (q.type === 'drag-drop') {
-            const regex = /\{([^}]+)\}/g;
-            let matches = [...q.text.matchAll(regex)].map(m => m[1]);
-            let savedMap = savedAns ? (typeof savedAns==='string'?JSON.parse(savedAns):savedAns) : {};
+    currentTest.questions.forEach((q, index) => {
+        // البحث عن إجابة سابقة
+        const savedAns = userAnswers.find(a => a.questionId === q.id);
+        const ansValue = savedAns ? savedAns.answer : null;
 
-            if(!isReadOnly) {
-                let wordsPool = matches.filter(w => !Object.values(savedMap).includes(w));
-                wordsPool.sort(()=>Math.random()-0.5);
-                html += `<div class="word-bank" id="bank_${index}">`;
-                wordsPool.forEach(w => html += createDraggableItem(w, index));
-                html += `</div>`;
+        let questionHtml = `
+            <div class="question-card" id="q-card-${index}">
+                <div class="question-number">سؤال ${index + 1} من ${currentTest.questions.length}</div>
+                <h3 class="question-text">${q.text}</h3>
+        `;
+
+        // === نوع السؤال: اختيار من متعدد ===
+        if (q.type.includes('mcq')) {
+            if (q.choices) {
+                questionHtml += `<div class="options-list">`;
+                q.choices.forEach((choice, i) => {
+                    const isSelected = (ansValue == i) ? 'selected' : ''; // مقارنة مرنة
+                    const isChecked = (ansValue == i) ? 'checked' : '';
+                    
+                    questionHtml += `
+                        <label class="answer-option ${isSelected}" onclick="selectOption(this, ${index}, ${i})">
+                            <input type="radio" name="q_${q.id}" value="${i}" ${isChecked}>
+                            ${choice}
+                        </label>
+                    `;
+                });
+                questionHtml += `</div>`;
             }
+        }
+        
+        // === نوع السؤال: سحب وإفلات (Drag & Drop) ===
+        else if (q.type === 'drag-drop') {
+             // نفترض أن السؤال يحتوي على فقرات (paragraphs) وكل فقرة بها فراغات
+             if (q.paragraphs) {
+                q.paragraphs.forEach((p, pIdx) => {
+                    // معالجة النص لاستبدال الفراغات بمناطق الإسقاط
+                    let processedText = p.text;
+                    let draggableWords = [];
+                    
+                    if (p.gaps) {
+                        p.gaps.forEach((gap, gIdx) => {
+                            // استبدال النص الأصلي بمنطقة إسقاط
+                            // نستخدم gap.original للبحث والاستبدال
+                            const dropZoneId = `drop-${q.id}-${pIdx}-${gIdx}`;
+                            // إذا كانت هناك إجابة محفوظة لهذا الفراغ
+                            let savedWord = '';
+                            if (ansValue && ansValue[`p_${pIdx}_g_${gIdx}`]) {
+                                savedWord = ansValue[`p_${pIdx}_g_${gIdx}`];
+                            }
 
-            html += `<div class="sentence-area">`;
-            let gapCounter = 0;
-            html += q.text.replace(/\{([^}]+)\}/g, (m, w) => {
-                const zoneId = `zone_${index}_${gapCounter++}`;
-                const filled = savedMap[zoneId] || '';
-                const content = filled ? createDraggableItem(filled, index, true) : '';
-                // إضافة الأحداث (Events) للفراغ
-                return `<span class="drop-zone" id="${zoneId}" 
-                        ondragover="allowDrop(event)" 
-                        ondrop="handleDrop(event, ${index})" 
-                        onclick="handleClickDrop('${zoneId}', ${index})">${content}</span>`;
-            });
-            html += `</div><input type="hidden" id="input_q_${index}" value='${JSON.stringify(savedMap)}'>`;
-        } 
-        // --- Other Types ---
-        else if (q.type.includes('multiple-choice')) {
-            html += `<h3 class="question-text">${q.text}</h3>`;
-            q.choices?.forEach((c, i) => {
-                const checked = savedAns == i ? 'checked' : '';
-                html += `<label class="answer-option ${checked?'selected':''}" onclick="${!isReadOnly?'selectOption(this)':''}"><input type="radio" name="q_${index}" value="${i}" ${checked} ${isReadOnly?'disabled':''}> ${c}</label>`;
-            });
+                            const dropZoneHtml = `<span class="drop-zone" id="${dropZoneId}" ondrop="drop(event)" ondragover="allowDrop(event)">${savedWord}</span>`;
+                            processedText = processedText.replace(gap.dragItem, dropZoneHtml); // أو gap.original حسب تخزينك
+                            draggableWords.push(gap.dragItem);
+                        });
+                    }
+
+                    questionHtml += `
+                        <div class="word-bank" id="bank-${q.id}-${pIdx}">
+                            ${draggableWords.sort(() => Math.random() - 0.5).map(word => 
+                                `<div class="draggable-word" draggable="true" ondragstart="drag(event)" id="word-${q.id}-${pIdx}-${word}">${word}</div>`
+                            ).join('')}
+                        </div>
+                        <div class="sentence-area">
+                            ${processedText}
+                        </div>
+                    `;
+                });
+            }
         }
-        else {
-             html += `<h3 class="question-text">${q.text}</h3><textarea class="form-control" name="q_${index}" ${isReadOnly?'disabled':''}>${savedAns||''}</textarea>`;
+
+        // === نوع السؤال: رسم/إملاء (Drawing) ===
+        else if (q.type.includes('spelling') || q.type.includes('drawing')) {
+            questionHtml += `
+                <div style="text-align: center;">
+                    <canvas id="canvas-${q.id}" class="drawing-canvas" width="600" height="300"></canvas>
+                    <div style="margin-top: 10px;">
+                        <button class="btn btn-sm btn-secondary" onclick="clearCanvas('${q.id}')">مسح الرسم</button>
+                    </div>
+                    ${ansValue ? `<div class="mt-2 text-success">تم حفظ رسم سابق</div>` : ''}
+                </div>
+            `;
+            // ملاحظة: تهيئة الكانفاس تتم بعد عرض السؤال (في دالة showQuestion)
         }
-        card.innerHTML = html;
-        container.appendChild(card);
+
+        questionHtml += `</div>`; // إغلاق البطاقة
+        container.insertAdjacentHTML('beforeend', questionHtml);
     });
+
+    updateNavigationButtons();
 }
 
-// --- Drag & Drop Helpers ---
-function createDraggableItem(word, qIndex, placed=false) {
-    return `<span class="draggable-word" draggable="true" ondragstart="handleDragStart(event, '${word}', ${qIndex})" onclick="handleClickWord(this, '${word}', ${qIndex})">${word}</span>`;
-}
-function handleDragStart(ev, word, qIndex) { ev.dataTransfer.setData("text", word); ev.dataTransfer.setData("qIndex", qIndex); }
-function allowDrop(ev) { ev.preventDefault(); ev.target.closest('.drop-zone').classList.add('drag-over'); }
-function handleDrop(ev, qIndex) {
-    ev.preventDefault();
-    const zone = ev.target.closest('.drop-zone');
-    zone.classList.remove('drag-over');
-    const word = ev.dataTransfer.getData("text");
-    if(ev.dataTransfer.getData("qIndex") != qIndex) return;
+// 4. التنقل بين الأسئلة
+function showQuestion(index) {
+    // إخفاء الكل
+    document.querySelectorAll('.question-card').forEach(c => c.classList.remove('active'));
     
-    // إذا الفراغ ممتلئ، أعد الكلمة القديمة
-    const bank = document.getElementById(`bank_${qIndex}`);
-    if(zone.children.length > 0) bank.innerHTML += createDraggableItem(zone.innerText, qIndex);
-    
-    zone.innerHTML = createDraggableItem(word, qIndex, true);
-    
-    // حذف من المصدر (البنك)
-    const bankItems = bank.querySelectorAll('.draggable-word');
-    bankItems.forEach(i => { if(i.innerText === word) i.remove(); });
-    
-    updateDragData(qIndex);
-}
-// Mobile Click Logic
-function handleClickWord(el, word, qIndex) {
-    if(selectedWord && selectedWord.el === el) { el.classList.remove('selected-word'); selectedWord=null; return; }
-    document.querySelectorAll('.selected-word').forEach(x=>x.classList.remove('selected-word'));
-    el.classList.add('selected-word'); selectedWord = {el, word, qIndex};
-}
-function handleClickDrop(zoneId, qIndex) {
-    if(!selectedWord || selectedWord.qIndex !== qIndex) return;
-    const zone = document.getElementById(zoneId);
-    const bank = document.getElementById(`bank_${qIndex}`);
-    
-    if(zone.children.length > 0) bank.innerHTML += createDraggableItem(zone.innerText, qIndex);
-    zone.innerHTML = createDraggableItem(selectedWord.word, qIndex, true);
-    selectedWord.el.remove();
-    selectedWord = null;
-    updateDragData(qIndex);
-}
-function updateDragData(idx) {
-    const zones = document.getElementById(`card_q_${idx}`).querySelectorAll('.drop-zone');
-    let d = {}; zones.forEach(z => { if(z.innerText) d[z.id]=z.innerText; });
-    document.getElementById(`input_q_${idx}`).value = JSON.stringify(d);
-}
+    // إظهار الحالي
+    const currentCard = document.getElementById(`q-card-${index}`);
+    if (currentCard) {
+        currentCard.classList.add('active');
+        currentQuestionIndex = index;
+        
+        // تحديث العداد
+        document.getElementById('questionCounter').textContent = `سؤال ${index + 1} من ${currentTest.questions.length}`;
+        
+        updateNavigationButtons();
 
-// --- Common ---
-function showQuestion(i) {
-    document.querySelectorAll('.question-card').forEach(c=>c.classList.remove('active'));
-    document.getElementById(`card_q_${i}`).classList.add('active');
-    document.getElementById('questionCounter').textContent = `س${i+1}`;
-    const tot = currentOriginalTest.questions.length;
-    document.getElementById('btnPrev').disabled = i===0;
-    if(i===tot-1) { 
-        if(document.getElementById('btnNext')) document.getElementById('btnNext').style.display='none';
-        if(document.getElementById('btnSubmit')) document.getElementById('btnSubmit').style.display='inline-block';
-    } else {
-        if(document.getElementById('btnNext')) document.getElementById('btnNext').style.display='inline-block';
-        if(document.getElementById('btnSubmit')) document.getElementById('btnSubmit').style.display='none';
+        // تهيئة الكانفاس إذا كان السؤال الحالي سؤال رسم
+        const q = currentTest.questions[index];
+        if (q.type.includes('spelling') || q.type.includes('drawing')) {
+            initCanvas(q.id);
+        }
     }
-    currentQuestionIndex = i;
 }
-function navigateQuestion(d) { showQuestion(currentQuestionIndex+d); }
-function selectOption(l) { l.parentElement.querySelectorAll('.answer-option').forEach(x=>x.classList.remove('selected')); l.classList.add('selected'); l.querySelector('input').checked=true; }
-function collectAnswers() {
-    // Save last drag drop
-    if(currentOriginalTest.questions[currentQuestionIndex].type === 'drag-drop') updateDragData(currentQuestionIndex);
+
+function nextQuestion() {
+    saveCurrentAnswer(); // حفظ إجابة السؤال الحالي قبل الانتقال
+    if (currentQuestionIndex < currentTest.questions.length - 1) {
+        showQuestion(currentQuestionIndex + 1);
+    }
+}
+
+function prevQuestion() {
+    saveCurrentAnswer();
+    if (currentQuestionIndex > 0) {
+        showQuestion(currentQuestionIndex - 1);
+    }
+}
+
+function updateNavigationButtons() {
+    const footer = document.getElementById('testFooterControls');
+    const isLast = currentQuestionIndex === currentTest.questions.length - 1;
+    const isFirst = currentQuestionIndex === 0;
+
+    footer.innerHTML = `
+        <button class="btn-nav btn-prev" onclick="prevQuestion()" ${isFirst ? 'disabled' : ''} style="opacity: ${isFirst ? 0.5 : 1}">السابق</button>
+        
+        <div>
+            <button class="btn-nav btn-save" onclick="saveTestProgress(false)">حفظ ومتابعة لاحقاً</button>
+            ${isLast ? `<button class="btn-nav btn-submit" onclick="finishTest()">تسليم الاختبار</button>` : `<button class="btn-nav btn-next" onclick="nextQuestion()">التالي</button>`}
+        </div>
+    `;
+}
+
+// 5. التعامل مع الإجابات
+
+// خيار متعدد
+function selectOption(element, qIndex, choiceIndex) {
+    // إزالة التحديد من الكل
+    const card = document.getElementById(`q-card-${qIndex}`);
+    card.querySelectorAll('.answer-option').forEach(el => el.classList.remove('selected'));
     
-    return currentOriginalTest.questions.map((q, i) => {
-        let v = null;
-        if(q.type==='drag-drop') v = document.getElementById(`input_q_${i}`)?.value;
-        else if(q.type.includes('multiple')) { const c=document.querySelector(`input[name="q_${i}"]:checked`); v=c?c.value:null; }
-        else v = document.querySelector(`[name="q_${i}"]`)?.value;
-        return { questionId: q.id, answer: v };
+    // تحديد الحالي
+    element.classList.add('selected');
+    element.querySelector('input').checked = true;
+}
+
+// حفظ إجابة السؤال الحالي في المصفوفة المؤقتة
+function saveCurrentAnswer() {
+    const q = currentTest.questions[currentQuestionIndex];
+    let answer = null;
+
+    if (q.type.includes('mcq')) {
+        const checked = document.querySelector(`input[name="q_${q.id}"]:checked`);
+        if (checked) answer = parseInt(checked.value);
+    } 
+    else if (q.type.includes('spelling')) {
+        const canvas = document.getElementById(`canvas-${q.id}`);
+        if (canvas) answer = canvas.toDataURL(); // حفظ الصورة كـ Base64
+    }
+    // السحب والإفلات يتم حفظه لحظياً عند الإفلات (يمكن تحسينه)
+
+    if (answer !== null) {
+        const existingIndex = userAnswers.findIndex(a => a.questionId === q.id);
+        if (existingIndex !== -1) {
+            userAnswers[existingIndex].answer = answer;
+        } else {
+            userAnswers.push({ questionId: q.id, answer: answer });
+        }
+    }
+}
+
+// حفظ التقدم العام (localStorage)
+function saveTestProgress(isSubmitting = false) {
+    saveCurrentAnswer(); // تأكد من حفظ آخر سؤال
+
+    const allAssignments = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const index = allAssignments.findIndex(a => a.id === currentAssignment.id);
+    
+    if (index !== -1) {
+        allAssignments[index].answers = userAnswers;
+        if (isSubmitting) {
+            allAssignments[index].status = 'completed';
+            allAssignments[index].completedDate = new Date().toISOString();
+            // هنا يمكن إضافة منطق التصحيح الآلي
+            gradeTest(allAssignments[index]); 
+        } else {
+            allAssignments[index].status = 'in-progress';
+        }
+        
+        localStorage.setItem('studentTests', JSON.stringify(allAssignments));
+        
+        if (!isSubmitting) {
+            alert('تم حفظ تقدمك بنجاح');
+            document.getElementById('testFocusMode').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            loadMyTests();
+        }
+    }
+}
+
+function finishTest() {
+    if (confirm('هل أنت متأكد من تسليم الاختبار؟ لا يمكن التعديل بعد ذلك.')) {
+        saveTestProgress(true); // true تعني تسليم نهائي
+        alert('تم تسليم الاختبار بنجاح! أحسنت يا بطل 🌟');
+        document.getElementById('testFocusMode').style.display = 'none';
+        document.body.style.overflow = 'auto';
+        loadMyTests();
+    }
+}
+
+// تصحيح آلي بسيط (للاختيار من متعدد)
+function gradeTest(assignment) {
+    let score = 0;
+    let maxScore = 0;
+    
+    currentTest.questions.forEach(q => {
+        const qMax = q.passingScore || 1;
+        maxScore += qMax;
+        
+        const studentAns = assignment.answers.find(a => a.questionId === q.id);
+        
+        if (q.type.includes('mcq') && studentAns) {
+            if (studentAns.answer == q.correctAnswer) {
+                studentAns.score = qMax;
+                score += qMax;
+            } else {
+                studentAns.score = 0;
+            }
+        } else {
+            // الأسئلة الأخرى تحتاج تصحيح يدوي أو منطق معقد
+            // نعتبرها 0 مبدئياً أو نتركها للمعلم
+        }
     });
+    
+    // إذا كان كله MCQ
+    const isAllMcq = currentTest.questions.every(q => q.type.includes('mcq'));
+    if (isAllMcq) {
+        assignment.score = Math.round((score / maxScore) * 100);
+    }
 }
-function saveTestProgress() {
-    const ans = collectAnswers();
-    const tests = JSON.parse(localStorage.getItem('studentTests'));
-    const t = tests.find(x=>x.id===currentTestId);
-    t.savedAnswers = ans; t.status = 'in-progress';
-    localStorage.setItem('studentTests', JSON.stringify(tests));
-    closeTestFocusMode(); loadAllTests();
+
+
+// ==========================================
+// 6. أدوات الرسم (Canvas Logic)
+// ==========================================
+let isDrawing = false;
+let ctx = null;
+
+function initCanvas(qId) {
+    const canvas = document.getElementById(`canvas-${qId}`);
+    if (!canvas) return;
+
+    ctx = canvas.getContext('2d');
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#000';
+
+    // دعم الماوس
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+    
+    // دعم اللمس (للموبايل)
+    canvas.addEventListener('touchstart', (e) => {
+        const touch = e.touches[0];
+        const mouseEvent = new MouseEvent("mousedown", {
+            clientX: touch.clientX, clientY: touch.clientY
+        });
+        canvas.dispatchEvent(mouseEvent);
+    }, false);
+    
+    // استرجاع الرسم القديم إذا وجد
+    const savedAns = userAnswers.find(a => a.questionId === qId);
+    if (savedAns && savedAns.answer) {
+        const img = new Image();
+        img.onload = function() { ctx.drawImage(img, 0, 0); };
+        img.src = savedAns.answer;
+    }
 }
-function submitTestAnswers() {
-    if(!confirm('تسليم؟')) return;
-    const ans = collectAnswers();
-    const tests = JSON.parse(localStorage.getItem('studentTests'));
-    const t = tests.find(x=>x.id===currentTestId);
-    t.answers = ans; t.status = 'completed'; t.completedAt = new Date().toISOString(); t.score=0;
-    localStorage.setItem('studentTests', JSON.stringify(tests));
-    closeTestFocusMode(); loadAllTests();
+
+function startDrawing(e) {
+    isDrawing = true;
+    draw(e);
 }
-function closeTestFocusMode() { document.getElementById('testFocusMode').style.display='none'; document.body.style.overflow='auto'; }
-function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser')).user; }
+
+function draw(e) {
+    if (!isDrawing) return;
+    const canvas = e.target;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+}
+
+function stopDrawing() {
+    isDrawing = false;
+    ctx.beginPath();
+}
+
+function clearCanvas(qId) {
+    const canvas = document.getElementById(`canvas-${qId}`);
+    const context = canvas.getContext('2d');
+    context.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+
+// ==========================================
+// 7. أدوات السحب والإفلات (Drag & Drop)
+// ==========================================
+function allowDrop(ev) {
+    ev.preventDefault();
+}
+
+function drag(ev) {
+    ev.dataTransfer.setData("text", ev.target.innerText);
+    ev.dataTransfer.setData("id", ev.target.id);
+}
+
+function drop(ev) {
+    ev.preventDefault();
+    var data = ev.dataTransfer.getData("text");
+    var elementId = ev.dataTransfer.getData("id");
+    
+    if (ev.target.classList.contains('drop-zone')) {
+        ev.target.innerText = data;
+        ev.target.style.background = '#e3f2fd';
+        ev.target.style.borderColor = '#2196f3';
+        
+        // إخفاء الكلمة من البنك
+        document.getElementById(elementId).style.visibility = 'hidden';
+    }
+}

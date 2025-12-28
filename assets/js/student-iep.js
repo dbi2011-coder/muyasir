@@ -1,4 +1,4 @@
-// إدارة الخطة التربوية الفردية للطالب - نسخة مصححة
+// إدارة الخطة التربوية الفردية للطالب - نسخة مطابقة للمعلم
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('my-iep.html')) {
         loadStudentIEP();
@@ -9,298 +9,201 @@ function loadStudentIEP() {
     const iepContainer = document.getElementById('iepContainer');
     const currentStudent = getCurrentUser();
     
-    // جلب بيانات الخطة
+    // جلب بيانات الخطة من التخزين المحلي
     const studentIEP = getStudentIEP(currentStudent.id);
     
-    // في حال عدم وجود خطة
+    // تصحيح: التحقق من وجود بيانات فعلية
     if (!studentIEP) {
         iepContainer.innerHTML = `
             <div class="empty-state">
-                <div class="empty-icon">📊</div>
-                <h3>لا توجد خطة تربوية فردية معتمدة بعد</h3>
-                <p>سقوم معلمك بإنشاء الخطة بعد الاطلاع على نتائج الاختبار التشخيصي.</p>
+                <div class="empty-icon">⏳</div>
+                <h3>لم يتم اعتماد الخطة بعد</h3>
+                <p>جاري العمل على إعداد خطتك التربوية من قبل المعلم.</p>
             </div>
         `;
         return;
     }
-    
-    // طباعة البيانات في الكونسول للتأكد (لأغراض التصحيح)
-    console.log("تم تحميل الخطة:", studentIEP);
+
+    console.log("عرض الخطة للطالب:", studentIEP); // للفحص في الكونسول
 
     iepContainer.innerHTML = `
         <div class="iep-section">
-            <h3>البيانات الأساسية</h3>
-            <table class="student-info-table">
-                <tr>
-                    <th>اسم الطالب</th>
-                    <td>${currentStudent.name}</td>
-                    <th>تاريخ الإنشاء</th>
-                    <td>${formatDate(studentIEP.createdAt)}</td>
-                </tr>
-                <tr>
-                    <th>الصف</th>
-                    <td>${studentIEP.grade || 'غير محدد'}</td>
-                    <th>المادة</th>
-                    <td>${studentIEP.subject || 'غير محدد'}</td>
-                </tr>
-                <tr>
-                    <th>المعلم</th>
-                    <td colspan="3">${studentIEP.teacherName || 'غير محدد'}</td>
-                </tr>
-            </table>
-        </div>
-
-        <div class="iep-section">
-            <h3>نقاط القوة والاحتياج</h3>
-            <table class="strengths-needs-table">
-                <thead>
-                    <tr>
-                        <th style="width: 50%">نقاط القوة</th>
-                        <th style="width: 50%">نقاط الاحتياج</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="strength-cell">
-                            <ul>
-                                ${studentIEP.strengths && studentIEP.strengths.length > 0 
-                                    ? studentIEP.strengths.map(strength => `<li>${strength}</li>`).join('') 
-                                    : '<li>لا توجد بيانات</li>'}
-                            </ul>
-                        </td>
-                        <td class="needs-cell">
-                            <ul>
-                                ${studentIEP.needs && studentIEP.needs.length > 0 
-                                    ? studentIEP.needs.map(need => `<li>${need}</li>`).join('') 
-                                    : '<li>لا توجد بيانات</li>'}
-                            </ul>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-
-        <div class="iep-section">
-            <h3>الهدف العام (البعيد)</h3>
-            <div class="goal-section long-term-box">
-                <p>${studentIEP.longTermGoal || 'لم يتم تحديد هدف بعيد المدى بعد.'}</p>
+            <h3>📋 البيانات الأساسية</h3>
+            <div class="info-grid">
+                <div class="info-item">
+                    <span class="label">الطالب:</span>
+                    <span class="value">${currentStudent.name}</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">الصف:</span>
+                    <span class="value">${studentIEP.grade || '---'}</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">المادة:</span>
+                    <span class="value">${studentIEP.subject || '---'}</span>
+                </div>
+                <div class="info-item">
+                    <span class="label">تاريخ الخطة:</span>
+                    <span class="value">${formatDate(studentIEP.createdAt)}</span>
+                </div>
             </div>
         </div>
 
         <div class="iep-section">
-            <h3>الأهداف التفصيلية</h3>
-            <table class="goals-table">
-                <thead>
-                    <tr>
-                        <th style="width: 30%">الهدف قصير المدى</th>
-                        <th style="width: 50%">الهدف التدريسي</th>
-                        <th style="width: 20%">الحالة / التاريخ</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${studentIEP.goals && studentIEP.goals.length > 0 ? studentIEP.goals.map(goal => `
+            <div class="row">
+                <div class="col-6">
+                    <div class="card-box strength-box">
+                        <h3>💪 نقاط القوة</h3>
+                        <ul>
+                            ${renderList(studentIEP.strengths)}
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="card-box needs-box">
+                        <h3>🎯 نقاط الاحتياج</h3>
+                        <ul>
+                            ${renderList(studentIEP.needs)}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="iep-section">
+            <h3>🌟 الهدف العام (بعيد المدى)</h3>
+            <div class="long-term-goal-box">
+                ${studentIEP.longTermGoal || 'لم يتم تحديد هدف عام بعد.'}
+            </div>
+        </div>
+
+        <div class="iep-section">
+            <h3>📝 الأهداف التدريسية</h3>
+            <div class="table-responsive">
+                <table class="goals-table full-width">
+                    <thead>
                         <tr>
-                            <td><strong>${goal.shortTermGoal || goal.shortTerm || '---'}</strong></td>
-                            <td>${goal.instructionalGoal || goal.instructional || '---'}</td>
-                            <td>
-                                ${goal.achievedDate 
-                                    ? `<span class="badge badge-success">تحقق في ${formatDate(goal.achievedDate)}</span>` 
-                                    : '<span class="badge badge-warning">جاري العمل</span>'}
-                            </td>
+                            <th width="25%">الهدف قصير المدى</th>
+                            <th width="40%">الهدف التدريسي</th>
+                            <th width="20%">استراتيجية التقييم</th>
+                            <th width="15%">حالة الإتقان</th>
                         </tr>
-                    `).join('') : `
-                        <tr>
-                            <td colspan="3" style="text-align: center; padding: 20px;">لا توجد أهداف مضافة حالياً</td>
-                        </tr>
-                    `}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        ${renderGoalsRows(studentIEP.goals)}
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         ${studentIEP.notes ? `
         <div class="iep-section">
-            <h3>ملاحظات المعلم</h3>
-            <div class="notes-section">
-                <p>${studentIEP.notes}</p>
+            <h3>📌 ملاحظات وتوصيات</h3>
+            <div class="notes-box">
+                ${studentIEP.notes}
             </div>
         </div>
         ` : ''}
     `;
 }
 
-function printIEP() {
-    const currentStudent = getCurrentUser();
-    const studentIEP = getStudentIEP(currentStudent.id);
-
-    if(!studentIEP) {
-        alert('لا توجد خطة لطباعتها');
-        return;
-    }
-
-    showAuthNotification('جاري تحضير نسخة للطباعة...', 'info');
-    
-    setTimeout(() => {
-        const printWindow = window.open('', '_blank');
-        
-        printWindow.document.write(`
-            <!DOCTYPE html>
-            <html dir="rtl" lang="ar">
-            <head>
-                <meta charset="UTF-8">
-                <title>الخطة التربوية الفردية - ${currentStudent.name}</title>
-                <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;700&display=swap" rel="stylesheet">
-                <style>
-                    body { font-family: 'Tajawal', sans-serif; margin: 0; padding: 20px; line-height: 1.6; color: #333; }
-                    .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #4CAF50; padding-bottom: 20px; }
-                    .header h1 { margin: 0; color: #2c3e50; }
-                    .header p { color: #666; margin-top: 5px; }
-                    
-                    h3 { background-color: #f8f9fa; padding: 10px; border-right: 5px solid #4CAF50; margin-top: 30px; }
-                    
-                    table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; }
-                    th, td { border: 1px solid #ddd; padding: 12px; text-align: right; }
-                    th { background-color: #f1f8e9; color: #2e7d32; font-weight: bold; }
-                    
-                    .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #999; border-top: 1px solid #eee; padding-top: 20px; }
-                    
-                    @media print {
-                        body { -webkit-print-color-adjust: exact; }
-                        .no-print { display: none; }
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <h1>الخطة التربوية الفردية</h1>
-                    <h3>الطالب: ${currentStudent.name}</h3>
-                    <p>منصة ميسر التعلم - إشراف الأستاذ: صالح العجلان</p>
-                </div>
-                
-                <h3>1. البيانات الأساسية</h3>
-                <table>
-                    <tr>
-                        <th>الصف</th><td>${studentIEP.grade || '-'}</td>
-                        <th>المادة</th><td>${studentIEP.subject || '-'}</td>
-                        <th>تاريخ الخطة</th><td>${formatDate(studentIEP.createdAt)}</td>
-                    </tr>
-                </table>
-                
-                <h3>2. مستوى الأداء الحالي</h3>
-                <table>
-                    <tr>
-                        <th width="50%">نقاط القوة</th>
-                        <th width="50%">الاحتياجات</th>
-                    </tr>
-                    <tr>
-                        <td valign="top">${studentIEP.strengths ? studentIEP.strengths.map(s => `• ${s}`).join('<br>') : 'لا توجد'}</td>
-                        <td valign="top">${studentIEP.needs ? studentIEP.needs.map(n => `• ${n}`).join('<br>') : 'لا توجد'}</td>
-                    </tr>
-                </table>
-
-                 <h3>3. الهدف بعيد المدى</h3>
-                 <div style="border: 1px solid #ddd; padding: 15px; background: #fff;">
-                    ${studentIEP.longTermGoal || '---'}
-                 </div>
-                
-                <h3>4. الأهداف التدريسية</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>الهدف قصير المدى</th>
-                            <th>الهدف التدريسي</th>
-                            <th>حالة التحقق</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    ${studentIEP.goals && studentIEP.goals.length > 0 ? studentIEP.goals.map(goal => `
-                        <tr>
-                            <td>${goal.shortTermGoal || goal.shortTerm || ''}</td>
-                            <td>${goal.instructionalGoal || goal.instructional || ''}</td>
-                            <td>${goal.achievedDate ? '✅ تم (' + formatDate(goal.achievedDate) + ')' : '⏳ جاري العمل'}</td>
-                        </tr>
-                    `).join('') : '<tr><td colspan="3">لا توجد أهداف</td></tr>'}
-                    </tbody>
-                </table>
-                
-                <div class="footer">
-                    <p>تم استخراج هذا التقرير بتاريخ ${new Date().toLocaleDateString('ar-SA')}</p>
-                </div>
-                
-                <script>
-                    window.onload = function() {
-                        window.print();
-                        // إغلاق النافذة تلقائياً بعد الطباعة (اختياري)
-                        // setTimeout(() => window.close(), 1000); 
-                    }
-                </script>
-            </body>
-            </html>
-        `);
-        
-        printWindow.document.close();
-    }, 1000);
+// دالة مساعدة لعرض القوائم (نقاط القوة/الاحتياج)
+function renderList(items) {
+    if (!items || items.length === 0) return '<li>لا توجد بيانات مسجلة</li>';
+    // التأكد من أن المدخل مصفوفة
+    const list = Array.isArray(items) ? items : [items];
+    return list.map(item => `<li>${item}</li>`).join('');
 }
 
-// دالة مساعدة لجلب الخطة (تحاكي قاعدة البيانات)
+// دالة مساعدة ذكية لعرض صفوف الأهداف (تحل مشكلة اختلاف التسميات)
+function renderGoalsRows(goals) {
+    if (!goals || goals.length === 0) {
+        return `<tr><td colspan="4" style="text-align:center">لا توجد أهداف مسجلة حالياً</td></tr>`;
+    }
+
+    return goals.map(goal => {
+        // 1. محاولة قراءة الهدف القصير بجميع التسميات المحتملة
+        const shortTerm = goal.shortTermGoal || goal.shortTerm || goal.goalName || '---';
+        
+        // 2. محاولة قراءة الهدف التدريسي بجميع التسميات المحتملة
+        const instructional = goal.instructionalGoal || goal.instructional || goal.objective || '---';
+        
+        // 3. محاولة قراءة التقييم
+        const evaluation = goal.evaluationStrategy || goal.evaluation || 'الملاحظة';
+
+        // 4. حالة التحقق
+        let statusBadge = '';
+        if (goal.achievedDate || goal.status === 'completed' || goal.achieved === true) {
+            const date = goal.achievedDate ? formatDate(goal.achievedDate) : '';
+            statusBadge = `<span class="status-badge success">✅ تم الإتقان <br><small>${date}</small></span>`;
+        } else {
+            statusBadge = `<span class="status-badge pending">⏳ جاري العمل</span>`;
+        }
+
+        return `
+            <tr>
+                <td class="font-bold">${shortTerm}</td>
+                <td>${instructional}</td>
+                <td>${evaluation}</td>
+                <td class="text-center">${statusBadge}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
 function getStudentIEP(studentId) {
-    // 1. محاولة الجلب من التخزين المحلي (البيانات الحقيقية)
+    // محاولة الجلب من التخزين المحلي (البيانات الحقيقية التي حفظها المعلم)
     const storedData = localStorage.getItem('studentIEPs');
-    let studentIEPs = [];
+    let studentIEP = null;
     
     if (storedData) {
         try {
-            studentIEPs = JSON.parse(storedData);
+            const allPlans = JSON.parse(storedData);
+            // البحث عن خطة الطالب
+            studentIEP = allPlans.find(p => p.studentId == studentId);
         } catch (e) {
-            console.error("خطأ في قراءة البيانات", e);
+            console.error("خطأ في قراءة ملف الخطط", e);
         }
     }
     
-    let iep = studentIEPs.find(iep => iep.studentId === studentId);
-    
-    // 2. إذا لم توجد خطة، ننشئ بيانات وهمية للعرض (لغرض التجربة فقط)
-    // ملاحظة: في التطبيق النهائي، يفضل إرجاع null إذا لم يكن للمعلم خطة
-    if (!iep) {
-        console.log("جاري إنشاء بيانات وهمية للتجربة...");
-        iep = {
+    // إذا لم نجد خطة (لأغراض الاختبار فقط إذا كنت تريد رؤية شكل الصفحة)
+    // يمكنك حذف هذا الجزء لاحقاً ليكون الكود "نظيفاً"
+    if (!studentIEP) {
+        // إعادة null تعني أن الطالب سيرى شاشة "لا توجد خطة"
+        // لكن سأضع بيانات وهمية *مؤقتاً* لتتأكد من أن التصميم يعمل
+        return {
             studentId: studentId,
-            grade: 'الرابع الابتدائي',
+            grade: 'الرابع',
             subject: 'لغتي',
-            teacherName: 'أ/ صالح العجلان',
-            createdAt: new Date().toISOString(),
-            strengths: [
-                'يستطيع تمييز الحروف الهجائية',
-                'يتفاعل جيداً مع الأنشطة البصرية',
-                'لديه دافعية للتعلم'
-            ],
-            needs: [
-                'قراءة الكلمات الثلاثية بالحركات',
-                'التمييز بين المدود',
-                'تحسين الخط'
-            ],
-            longTermGoal: 'أن يتقن التلميذ مهارات القراءة والكتابة الأساسية بنسبة إتقان 80%',
+            createdAt: new Date(),
+            strengths: ['الدافعية للتعلم', 'التعاون مع الزملاء'],
+            needs: ['التمييز بين الحركات', 'القراءة المسترسلة'],
+            longTermGoal: 'أن يتقن الطالب مهارات القراءة الأساسية بنسبة 80%',
             goals: [
                 {
-                    // لاحظ هنا استخدمنا الأسماء الصحيحة
-                    shortTermGoal: 'قراءة كلمات ثلاثية',
-                    instructionalGoal: 'أن يقرأ الطالب 10 كلمات ثلاثية بحركة الفتح',
+                    shortTermGoal: 'قراءة الكلمات الثلاثية', // هذا الاسم يطابق المعلم
+                    instructionalGoal: 'أن يقرأ الطالب كلمات ثلاثية بحركة الفتح',
+                    evaluationStrategy: 'الملاحظة المباشرة',
                     achievedDate: null
                 },
                 {
-                    shortTermGoal: 'التمييز بين المدود',
-                    instructionalGoal: 'أن يستخرج الطالب حرف المد من 5 كلمات معروضة عليه',
-                    achievedDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() // تحقق قبل 3 أيام
+                    shortTermGoal: 'التمييز السمعي',
+                    instructionalGoal: 'أن يميز الطالب صوت الحرف الأول',
+                    evaluationStrategy: 'الاختبار الشفهي',
+                    achievedDate: new Date()
                 }
             ],
-            notes: 'يرجى متابعة الطالب في المنزل في قراءة القصة المصورة.'
+            notes: 'أرجو متابعة الواجبات المنزلية.'
         };
-        
-        // حفظ هذه البيانات الوهمية مؤقتاً لنراها
-        // studentIEPs.push(iep);
-        // localStorage.setItem('studentIEPs', JSON.stringify(studentIEPs));
     }
     
-    return iep;
+    return studentIEP;
 }
 
-// تصدير الدوال للاستخدام
+// دالة الطباعة المحدثة (لتطابق العرض)
+function printIEP() {
+    window.print();
+}
+
+// تصدير الدوال
 window.printIEP = printIEP;

@@ -1,172 +1,145 @@
-// ============================================
-// 📁 المسار: assets/js/student-lessons.js
-// ============================================
-
-let currentLesson = null;
-
+// إدارة دروس الطالب - نظام المسار المتسلسل (Sequential Learning Path)
 document.addEventListener('DOMContentLoaded', function() {
-    loadMyLessons();
+    if (window.location.pathname.includes('my-lessons.html')) {
+        loadStudentLessons();
+    }
 });
 
-function loadMyLessons() {
-    const grid = document.getElementById('lessonsGrid');
-    if(!grid) return;
-
-    // بما أن الدروس لا يتم تعيينها للطالب فردياً (افتراضاً متاحة للكل)، نجلب دروس المعلم
-    // في النظام الحقيقي يجب أن يكون هناك جدول assignments للدروس، هنا سنعرض كل الدروس المتاحة
-    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const currentUser = getCurrentUser();
-    // عرض كل الدروس (أو فلترتها حسب معلم الطالب)
+function loadStudentLessons() {
+    const container = document.getElementById('lessonsContainer');
+    const currentStudent = getCurrentUser(); // من auth.js
     
-    if(lessons.length === 0) {
-        grid.innerHTML = '<div class="empty-state"><h3>لا توجد دروس متاحة</h3></div>';
+    // 1. جلب الدروس المسندة للطالب من LocalStorage (نفس مصدر المعلم)
+    // studentLessons يحتوي على {studentId, objective, status, ...}
+    const allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    
+    // تصفية الدروس الخاصة بالطالب الحالي فقط
+    let myLessons = allStudentLessons.filter(l => l.studentId === currentStudent.id);
+
+    // التحقق من وجود دروس
+    if (myLessons.length === 0) {
+        container.innerHTML = `
+            <div class="empty-state" style="grid-column: 1/-1; text-align: center; padding: 50px;">
+                <div style="font-size: 3rem; margin-bottom: 15px;">📚</div>
+                <h3>لا توجد دروس مسندة حالياً</h3>
+                <p>لم يقم المعلم بإدراج دروس في خطتك بعد. يرجى الانتظار.</p>
+            </div>
+        `;
         return;
     }
 
-    grid.innerHTML = lessons.map(l => `
-        <div class="test-card">
-            <div class="card-header">
-                <h3>${l.title}</h3>
-                <span class="card-status status-new">درس</span>
-            </div>
-            <div class="card-meta">
-                <span>${l.subject}</span>
-                <span>${l.exercises?.questions?.length || 0} تمارين</span>
-            </div>
-            <div class="card-actions">
-                <button class="btn btn-success btn-block" onclick="openLesson(${l.id})">ابدأ الدرس</button>
-            </div>
-        </div>
-    `).join('');
-}
+    // 2. ترتيب الدروس (مهم جداً للتسلسل)
+    // نرتبها حسب تاريخ الإسناد أو المعرف لضمان تسلسل منطقي (الدرس 1 ثم 2 ثم 3)
+    myLessons.sort((a, b) => {
+        return new Date(a.assignedDate || 0) - new Date(b.assignedDate || 0) || a.id - b.id;
+    });
 
-function openLesson(id) {
-    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    currentLesson = lessons.find(l => l.id === id);
-    if(!currentLesson) return;
+    container.innerHTML = ''; // مسح رسالة التحميل
 
-    document.getElementById('lessonFocusTitle').textContent = currentLesson.title;
-    document.getElementById('reqScore').textContent = currentLesson.exercises?.passScore || 50;
-    
-    // إعداد التمهيد
-    renderIntro();
-    
-    // إعداد التمارين (رسمها ولكن إخفاؤها)
-    renderQuestions(currentLesson.exercises?.questions || [], 'exercisesList');
-    
-    // إعداد التقييم
-    renderQuestions(currentLesson.assessment?.questions || [], 'assessmentList');
+    // 3. حلقة التكرار لبناء البطاقات وتحديد القفل (The Locking Logic)
+    myLessons.forEach((lesson, index) => {
+        let isLocked = false;
+        let prevLessonCompleted = true; // نفترض أن السابق مكتمل للدرس الأول
 
-    // إعادة تعيين الواجهة
-    document.querySelectorAll('.lesson-stage').forEach(s => s.classList.remove('active'));
-    document.getElementById('stage-intro').classList.add('active');
-    updateProgress(1);
-
-    document.getElementById('lessonFocusMode').style.display = 'flex';
-}
-
-function renderIntro() {
-    const container = document.getElementById('introContent');
-    const textDiv = document.getElementById('introTextDisplay');
-    const intro = currentLesson.intro;
-    
-    textDiv.textContent = intro.text || '';
-    
-    if(intro.type === 'video') {
-        // تحويل رابط يوتيوب العادي إلى embed
-        let videoId = intro.url.split('v=')[1];
-        if(!videoId && intro.url.includes('youtu.be')) videoId = intro.url.split('/').pop();
-        const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}` : intro.url;
-        
-        container.innerHTML = `<iframe width="100%" height="400" src="${embedUrl}" frameborder="0" allowfullscreen style="border-radius:10px;"></iframe>`;
-    } else if (intro.type === 'image') {
-        container.innerHTML = `<img src="${intro.url}" class="intro-media">`;
-    } else {
-        container.innerHTML = `<a href="${intro.url}" target="_blank" class="btn btn-outline-primary btn-lg">🔗 فتح الرابط الخارجي</a>`;
-    }
-}
-
-function goToExercises() {
-    document.getElementById('stage-intro').classList.remove('active');
-    document.getElementById('stage-exercises').classList.add('active');
-    updateProgress(2);
-}
-
-function submitExercises() {
-    // حساب الدرجة (محاكاة بسيطة للتصحيح الآلي)
-    const questions = currentLesson.exercises?.questions || [];
-    let correctCount = 0;
-    
-    questions.forEach((q, i) => {
-        // هنا يجب إضافة منطق تصحيح حقيقي بناء على نوع السؤال
-        // للتبسيط: نفترض أن الطالب أجاب (أي قام بتغيير القيمة) نعتبرها صحيحة
-        // في الواقع يجب مقارنة value مع الإجابة الصحيحة المخزنة
-        const input = document.querySelector(`#exercisesList [name="q_${i}"]`);
-        const radio = document.querySelector(`#exercisesList [name="q_${i}"]:checked`);
-        const hidden = document.querySelector(`#exercisesList #input_q_${i}`); // للسحب والافلات
-        
-        if( (input && input.value) || radio || (hidden && hidden.value && hidden.value !== '{}') ) {
-            correctCount++; 
+        // إذا لم يكن الدرس الأول، نتحقق من حالة الدرس السابق
+        if (index > 0) {
+            const prevLesson = myLessons[index - 1];
+            // الشرط: يفتح الدرس إذا كان الدرس السابق مكتمل
+            if (prevLesson.status !== 'completed') {
+                prevLessonCompleted = false;
+            }
         }
-    });
 
-    const score = (correctCount / questions.length) * 100;
-    const passScore = currentLesson.exercises?.passScore || 50;
+        // تحديد القفل:
+        // الدرس يُقفل إذا:
+        // 1. لم يكتمل الدرس السابق.
+        // 2. والدرس الحالي نفسه ليس مكتمل (لأن المعلم قد يكمل درس متقدم يدوياً)
+        if (!prevLessonCompleted && lesson.status !== 'completed') {
+            isLocked = true;
+        }
 
-    if (score >= passScore) {
-        alert(`أحسنت! درجتك ${Math.round(score)}%. انتقل للتقييم النهائي.`);
-        document.getElementById('stage-exercises').classList.remove('active');
-        document.getElementById('stage-assessment').classList.add('active');
-        updateProgress(3);
-    } else {
-        alert(`للاسف، درجتك ${Math.round(score)}%. المطلوبة ${passScore}%. حاول حل التمارين مرة أخرى بتركيز.`);
-        // إعادة التمارين (يمكن مسح الإجابات هنا)
-    }
-}
+        // تحديد المظهر بناءً على الحالة
+        let cardClass = '';
+        let btnText = '';
+        let btnClass = '';
+        let statusBadge = '';
+        let lockOverlay = '';
+        let actionFunction = '';
 
-function submitAssessment() {
-    alert('تم إنهاء الدرس بنجاح! سيتم تسجيل إنجازك.');
-    closeLessonMode();
-    // هنا يمكن حفظ النتيجة في localStorage
-}
-
-function closeLessonMode() {
-    document.getElementById('lessonFocusMode').style.display = 'none';
-}
-
-function updateProgress(step) {
-    document.querySelectorAll('.progress-step').forEach((el, idx) => {
-        if(idx + 1 < step) el.className = 'progress-step completed';
-        else if(idx + 1 === step) el.className = 'progress-step active';
-        else el.className = 'progress-step';
-    });
-}
-
-// دالة مساعدة لرسم الأسئلة (نسخة مبسطة من renderQuestions في الاختبارات)
-// يجب أن تدعم السحب والإفلات بنفس الكود السابق (تأكد من نسخ دوال السحب والإفلات هنا أيضاً)
-function renderQuestions(questions, containerId) {
-    const container = document.getElementById(containerId);
-    container.innerHTML = questions.map((q, i) => {
-        let inputHtml = '';
-        
-        if(q.type === 'multiple-choice') {
-            inputHtml = q.choices.map((c, idx) => `<label class="d-block"><input type="radio" name="q_${i}" value="${idx}"> ${c}</label>`).join('');
-        } else if (q.type === 'drag-drop') {
-             // هنا يجب وضع كود السحب والافلات الكامل (word bank + sentence)
-             // للاختصار في العرض:
-             inputHtml = `<div class="alert alert-info">سؤال سحب وإفلات: ${q.text} (يتطلب نسخ دوال السحب للملف)</div><input type="hidden" id="input_q_${i}" value="solved">`;
+        if (lesson.status === 'completed') {
+            // حالة: مكتمل
+            cardClass = 'completed';
+            btnText = 'مراجعة الدرس';
+            btnClass = 'btn-outline-primary';
+            statusBadge = `<div class="completed-badge">✅ تم الإنجاز (${formatDateShort(lesson.completedDate)})</div>`;
+            actionFunction = `goToLessonPage(${lesson.originalLessonId || lesson.id}, 'review')`;
+        } else if (isLocked) {
+            // حالة: مغلق
+            cardClass = 'locked';
+            btnText = 'مغلق';
+            btnClass = 'btn-secondary';
+            statusBadge = `<div style="color: #7f8c8d; font-size: 0.8rem;">🔒 يتطلب إكمال الدرس السابق</div>`;
+            lockOverlay = `
+                <div class="lock-overlay">
+                    <span class="lock-icon">🔒</span>
+                </div>
+            `;
+            actionFunction = ''; // لا يوجد إجراء
         } else {
-            inputHtml = `<input type="text" class="form-control" name="q_${i}">`;
+            // حالة: مفتوح (الحالي)
+            cardClass = 'active';
+            btnText = 'ابدأ الدرس الآن';
+            btnClass = 'btn-success';
+            statusBadge = `<div style="color: #2ecc71; font-weight: bold;">🔓 متاح للدراسة</div>`;
+            actionFunction = `goToLessonPage(${lesson.originalLessonId || lesson.id}, 'start')`;
         }
 
-        return `
-            <div class="question-card">
-                <h5>س${i+1}: ${q.text}</h5>
-                ${q.mediaUrl ? `<img src="${q.mediaUrl}" style="max-width:100%">` : ''}
-                <div class="mt-2">${inputHtml}</div>
+        // 4. إنشاء HTML البطاقة
+        const cardHTML = `
+            <div class="lesson-card ${cardClass}">
+                ${lockOverlay}
+                <div class="card-body">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <span style="background:#eee; padding:2px 8px; border-radius:4px; font-size:0.8rem;">درس ${index + 1}</span>
+                        ${statusBadge}
+                    </div>
+                    <h3 class="lesson-title">${lesson.title}</h3>
+                    <p class="lesson-objective">
+                        <strong>الهدف:</strong> ${lesson.objective || 'غير محدد'}
+                    </p>
+                </div>
+                <div class="card-footer">
+                    <button class="btn btn-start ${btnClass}" 
+                            onclick="${actionFunction}" 
+                            ${isLocked ? 'disabled' : ''}>
+                        ${btnText}
+                    </button>
+                </div>
             </div>
         `;
-    }).join('');
+
+        container.insertAdjacentHTML('beforeend', cardHTML);
+    });
 }
 
-function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser')).user; }
+// دالة الانتقال لصفحة الدرس الفعلية
+function goToLessonPage(lessonId, mode) {
+    // =========================================================
+    // ⚠️ هام جداً: قم بتعديل هذا الرابط لاسم صفحة الدرس لديك
+    // =========================================================
+    
+    // مثال: الانتقال لصفحة عرض الدرس مع تمرير المعرف
+    // mode يمكن استخدامه لفتح الدرس في وضع "المراجعة" أو "الحل"
+    
+    console.log(`Navigating to lesson ID: ${lessonId}, Mode: ${mode}`);
+    
+    // استبدل 'lesson-view.html' باسم ملفك الحقيقي
+    window.location.href = `lesson-view.html?id=${lessonId}&mode=${mode}`;
+}
+
+// دالة مساعدة لتنسيق التاريخ
+function formatDateShort(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('ar-SA');
+}

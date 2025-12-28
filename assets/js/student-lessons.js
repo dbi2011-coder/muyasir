@@ -20,15 +20,17 @@ function loadStudentLessons() {
 
     const currentStudent = getCurrentUser();
     
+    // تصحيح الخطأ هنا: إذا لم يكن الطالب مسجلاً، وجهه لصفحة الدخول في المسار الصحيح
     if (!currentStudent || !currentStudent.id) {
-        window.location.href = '../login.html'; // توجيه لتسجيل الدخول
+        // نستخدم ../../ للعودة للمجلد الرئيسي حيث توجد صفحة login.html عادة
+        window.location.href = '../../login.html'; 
         return;
     }
 
     // 1. جلب البيانات
     const allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     
-    // 2. تصفية دروس الطالب الحالي (استخدام == لضمان تطابق النص والرقم)
+    // 2. تصفية دروس الطالب الحالي
     let myLessons = allStudentLessons.filter(l => l.studentId == currentStudent.id);
 
     // حالة عدم وجود دروس
@@ -77,7 +79,6 @@ function loadStudentLessons() {
             btnText = 'مراجعة الدرس';
             btnClass = 'btn-outline-primary';
             statusBadge = `<div class="completed-badge">✅ مكتمل</div>`;
-            // عند المراجعة نرسل وضع review
             actionOnClick = `goToLessonPage(${lesson.originalLessonId || lesson.id}, 'review')`;
             
         } else if (isLocked) {
@@ -95,7 +96,6 @@ function loadStudentLessons() {
             btnText = 'ابدأ الدرس الآن';
             btnClass = 'btn-success';
             statusBadge = `<div style="color: #2ecc71; font-weight: bold;">🔓 متاح</div>`;
-            // عند البدء نرسل وضع start
             actionOnClick = `goToLessonPage(${lesson.originalLessonId || lesson.id}, 'start')`;
         }
 
@@ -130,10 +130,6 @@ function loadStudentLessons() {
 // دالة الانتقال لصفحة الدرس
 function goToLessonPage(lessonId, mode) {
     console.log(`Navigating to lesson: ${lessonId}, Mode: ${mode}`);
-    
-    // =======================================================
-    // ⚠️ هام: تم ضبط الرابط هنا على "lesson.html"
-    // تأكد أن ملف الدرس الخاص بك اسمه "lesson.html" وموجود بجانب هذا الملف
-    // =======================================================
+    // تأكد أن ملف الدرس اسمه lesson.html وموجود بجانب ملف my-lessons.html
     window.location.href = `lesson.html?id=${lessonId}&mode=${mode}`;
 }

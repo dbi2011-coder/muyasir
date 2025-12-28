@@ -1,4 +1,4 @@
-// إدارة الخطة التربوية الفردية للطالب - نسخة مطابقة للمعلم تماماً
+// إدارة الخطة التربوية الفردية للطالب - نسخة مطابقة تماماً لمنطق المعلم
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('my-iep.html')) {
         loadStudentIEP();
@@ -7,45 +7,48 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function loadStudentIEP() {
     const iepContainer = document.getElementById('iepContainer');
-    const currentStudent = getCurrentUser(); // دالة مفترضة في auth.js
+    const currentStudent = getCurrentUser(); // دالة من auth.js
     
-    // 1. جلب البيانات اللازمة (نفس مصادر بيانات المعلم)
+    // 1. جلب البيانات من LocalStorage (نفس المصادر التي يستخدمها المعلم)
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
     const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
 
-    // 2. البحث عن الاختبار التشخيصي المكتمل لهذا الطالب
+    // 2. البحث عن أحدث اختبار تشخيصي مكتمل لهذا الطالب
+    // المعلم يعتمد الخطة بناءً على نتائج التشخيصي
     const completedDiagnostic = studentTests
         .filter(t => t.studentId === currentStudent.id && t.type === 'diagnostic' && t.status === 'completed')
         .sort((a, b) => new Date(b.assignedDate) - new Date(a.assignedDate))[0];
 
-    // حالة عدم وجود خطة (لم يكمل الاختبار)
+    // في حال لم يقم الطالب بالاختبار بعد أو لم يكتمل
     if (!completedDiagnostic) {
         iepContainer.innerHTML = `
             <div class="empty-state">
                 <div class="empty-icon">⏳</div>
                 <h3>الخطة غير جاهزة بعد</h3>
-                <p>سيتم إنشاء خطتك التربوية تلقائياً بعد إكمال وتصحيح الاختبار التشخيصي.</p>
+                <p>يجب إكمال الاختبار التشخيصي وتصحيحه من قبل المعلم لتظهر خطتك هنا.</p>
+                <a href="my-tests.html" class="btn btn-primary" style="margin-top:15px;">الذهاب للاختبارات</a>
             </div>
         `;
         return;
     }
 
-    // جلب بيانات الاختبار الأصلي لمعرفة المادة
+    // جلب بيانات الاختبار الأصلي لمعرفة تفاصيل المادة والأسئلة
     const originalTest = allTests.find(t => t.id === completedDiagnostic.testId);
 
-    // 3. تحليل نقاط القوة والاحتياج (نفس منطق المعلم)
-    let strengthsHTML = '';
-    let needsHTML = '';
-    let needsObjects = []; // لتخزين الأهداف المطلوبة
+    // 3. تحليل نقاط القوة والاحتياج (نفس خوارزمية المعلم)
+    let strengthsItems = [];
+    let needsItems = [];
+    let needsObjects = []; // تخزين كائنات الأهداف لبناء الجدول السفلي
 
     if (originalTest && originalTest.questions) {
         originalTest.questions.forEach(question => {
+            // البحث عن إجابة الطالب لهذا السؤال
             const studentAnswerObj = completedDiagnostic.answers.find(a => a.questionId === question.id);
             
-            // الربط بالأهداف
+            // إذا كان السؤال مرتبطاً بهدف
             if (question.linkedGoalId) {
                 const objective = allObjectives.find(o => o.id === question.linkedGoalId);
                 if (objective) {
@@ -53,15 +56,15 @@ function loadStudentIEP() {
                     const passingScore = question.passingScore || 1;
 
                     if (studentScore >= passingScore) {
-                        // نقطة قوة
-                        if (!strengthsHTML.includes(objective.shortTermGoal)) {
-                            strengthsHTML += `<li>${objective.shortTermGoal}</li>`;
+                        // نقطة قوة (أتقن المهارة)
+                        if (!strengthsItems.includes(objective.shortTermGoal)) {
+                            strengthsItems.push(objective.shortTermGoal);
                         }
                     } else {
-                        // نقطة احتياج
+                        // نقطة احتياج (لم يتقن المهارة)
                         if (!needsObjects.find(o => o.id === objective.id)) {
                             needsObjects.push(objective);
-                            needsHTML += `<li>${objective.shortTermGoal}</li>`;
+                            needsItems.push(objective.shortTermGoal);
                         }
                     }
                 }
@@ -69,31 +72,36 @@ function loadStudentIEP() {
         });
     }
 
-    if (!strengthsHTML) strengthsHTML = '<li>لا توجد نقاط قوة مسجلة</li>';
-    if (!needsHTML) needsHTML = '<li>لا توجد نقاط احتياج مسجلة</li>';
+    // تحويل القوائم إلى HTML
+    const strengthsHTML = strengthsItems.length > 0 
+        ? strengthsItems.map(s => `<li>${s}</li>`).join('') 
+        : '<li>لا توجد نقاط قوة مسجلة</li>';
+    
+    const needsHTML = needsItems.length > 0 
+        ? needsItems.map(n => `<li>${n}</li>`).join('') 
+        : '<li>لا توجد نقاط احتياج مسجلة</li>';
 
-    // 4. بناء جدول الجدول الدراسي (Schedule)
+    // 4. بناء جدول الجدول الدراسي (من جدول المعلم)
     const daysMap = { 'sunday': 'الأحد', 'monday': 'الاثنين', 'tuesday': 'الثلاثاء', 'wednesday': 'الأربعاء', 'thursday': 'الخميس' };
     let scheduleCells = '';
     
-    // ترتيب الأيام
     ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'].forEach(dayKey => {
-        // البحث في جدول المعلم عن حصص لهذا الطالب في هذا اليوم
         const session = teacherSchedule.find(s => s.day === dayKey && s.students && s.students.includes(currentStudent.id));
         if (session) {
-            scheduleCells += `<td style="background:#e8f5e9; text-align:center;">حصة ${session.period || 1}</td>`;
+            scheduleCells += `<td style="background:#e8f5e9; text-align:center; font-weight:bold; color:#2e7d32;">حصة ${session.period || 1}</td>`;
         } else {
             scheduleCells += `<td></td>`;
         }
     });
 
-    // 5. بناء جدول الأهداف (الاحتياجات)
+    // 5. بناء جدول الأهداف التدريسية (الخطة العلاجية)
     let objectivesRows = '';
+    
     if (needsObjects.length === 0) {
-        objectivesRows = '<tr><td colspan="3" style="text-align:center">جميع الأهداف محققة، لا توجد خطة علاجية حالياً.</td></tr>';
+        objectivesRows = '<tr><td colspan="3" style="text-align:center; padding: 20px;">جميع الأهداف محققة، لا توجد خطة علاجية مطلوبة حالياً.</td></tr>';
     } else {
         let counter = 1;
-        // خريطة الدروس المكتملة لمعرفة تواريخ التحقق
+        // خريطة لتحديد ما تم إنجازه من الدروس
         const completedLessonsMap = {};
         studentLessons.forEach(l => {
             if (l.studentId === currentStudent.id && l.status === 'completed') {
@@ -102,21 +110,22 @@ function loadStudentIEP() {
         });
 
         needsObjects.forEach(obj => {
-            // صف العنوان للهدف القصير
+            // الصف الرئيسي للهدف قصير المدى
             objectivesRows += `
                 <tr style="background-color: #f8f9fa;">
-                    <td style="font-weight:bold; text-align:center;">*</td>
-                    <td colspan="2"><strong>هدف قصير المدى:</strong> ${obj.shortTermGoal}</td>
+                    <td style="font-weight:bold; text-align:center; background-color: #eee;">*</td>
+                    <td colspan="2" style="background-color: #f9f9f9;"><strong>هدف قصير المدى:</strong> ${obj.shortTermGoal}</td>
                 </tr>
             `;
 
-            // صفوف الأهداف التدريسية
+            // الصفوف الفرعية للأهداف التدريسية
             if (obj.instructionalGoals && obj.instructionalGoals.length > 0) {
                 obj.instructionalGoals.forEach(iGoal => {
                     const achievedDate = completedLessonsMap[iGoal];
+                    // علامة الصح أو الانتظار
                     const statusContent = achievedDate 
-                        ? `<span style="color:#28a745; font-weight:bold;">✔ تم (${achievedDate})</span>` 
-                        : `<span style="color:#999;">جاري العمل</span>`;
+                        ? `<span style="color:#28a745; font-weight:bold; font-size:1.1em;">✔ تم (${achievedDate})</span>` 
+                        : `<span style="color:#999; font-size:0.9em;">⏳ جاري العمل</span>`;
 
                     objectivesRows += `
                         <tr>
@@ -126,14 +135,16 @@ function loadStudentIEP() {
                         </tr>
                     `;
                 });
+            } else {
+                objectivesRows += `<tr><td>-</td><td class="text-muted">لا توجد أهداف تدريسية مسجلة</td><td></td></tr>`;
             }
         });
     }
 
-    // 6. تجميع HTML النهائي (مطابق لهيكلية المعلم)
+    // 6. حقن الـ HTML النهائي داخل الصفحة
     iepContainer.innerHTML = `
         <div class="iep-word-model">
-            <h3 style="text-align: center; margin-bottom: 20px; color: #000;">الخطة التربوية الفردية</h3>
+            <h2 style="text-align: center; margin-bottom: 25px; color: #000; font-size: 24px;">الخطة التربوية الفردية</h2>
             
             <table class="word-table">
                 <tr>
@@ -150,7 +161,8 @@ function loadStudentIEP() {
                 </tr>
             </table>
 
-            <table class="word-table" style="margin-top: 20px;">
+            <h4 style="margin-bottom:10px; font-size:16px;">الجدول الدراسي:</h4>
+            <table class="word-table">
                 <thead>
                     <tr>
                         <th width="10%">اليوم</th>
@@ -163,13 +175,14 @@ function loadStudentIEP() {
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="font-weight:bold;">الحصة</td>
+                        <td style="font-weight:bold; background-color:#f9f9f9;">الحصة</td>
                         ${scheduleCells}
                     </tr>
                 </tbody>
             </table>
 
-            <table class="word-table" style="margin-top: 20px;">
+            <h4 style="margin-bottom:10px; font-size:16px;">مستوى الأداء الحالي:</h4>
+            <table class="word-table">
                 <thead>
                     <tr>
                         <th width="50%">نقاط القوة</th>
@@ -178,24 +191,24 @@ function loadStudentIEP() {
                 </thead>
                 <tbody>
                     <tr style="vertical-align: top;">
-                        <td style="padding: 15px;">
+                        <td style="padding: 15px; background-color: #fff;">
                             <ul>${strengthsHTML}</ul>
                         </td>
-                        <td style="padding: 15px;">
+                        <td style="padding: 15px; background-color: #fff;">
                             <ul>${needsHTML}</ul>
                         </td>
                     </tr>
                 </tbody>
             </table>
 
-            <div style="margin-top: 25px;">
-                <h4 style="margin-bottom: 10px;">الأهداف التدريسية للخطة:</h4>
+            <div style="margin-top: 30px;">
+                <h4 style="margin-bottom: 10px; font-size:16px;">الأهداف التدريسية للخطة:</h4>
                 <table class="word-table">
                     <thead>
                         <tr>
                             <th width="5%">م</th>
                             <th width="75%">الهدف التدريسي</th>
-                            <th width="20%">تاريخ التحقق</th>
+                            <th width="20%">حالة التحقق</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -203,14 +216,10 @@ function loadStudentIEP() {
                     </tbody>
                 </table>
             </div>
+            
+            <div class="footer-note" style="margin-top: 30px; text-align: center; font-size: 12px; color: #666;">
+                <p>تم اعتماد هذه الخطة بناءً على نتائج التشخيص والملاحظة | منصة ميسر التعلم</p>
+            </div>
         </div>
     `;
 }
-
-// دالة الطباعة
-function printIEP() {
-    window.print();
-}
-
-// تصدير
-window.printIEP = printIEP;

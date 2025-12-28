@@ -1,6 +1,6 @@
 // ==========================================
 // 📁 المسار: assets/js/student-lessons.js
-// الوصف: إدارة مسار التعلم التسلسلي (القفل والفتح)
+// الوصف: إدارة مسار التعلم (القفل والفتح) مع تصحيح مسار تسجيل الدخول
 // ==========================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function loadStudentLessons() {
     const container = document.getElementById('lessonsContainer');
     
-    // التحقق من نظام التوثيق
+    // التحقق من أن ملف auth.js مرتبط
     if (typeof getCurrentUser !== 'function') {
         container.innerHTML = '<div class="alert alert-danger">خطأ: ملف auth.js غير مرتبط بالصفحة.</div>';
         return;
@@ -20,17 +20,21 @@ function loadStudentLessons() {
 
     const currentStudent = getCurrentUser();
     
-    // تصحيح الخطأ هنا: إذا لم يكن الطالب مسجلاً، وجهه لصفحة الدخول في المسار الصحيح
+    // 🔴 تصحيح مسار تسجيل الدخول 🔴
+    // إذا لم يكن الطالب مسجلاً، أعد توجيهه للصفحة الرئيسية
     if (!currentStudent || !currentStudent.id) {
-        // نستخدم ../../ للعودة للمجلد الرئيسي حيث توجد صفحة login.html عادة
+        console.log("غير مسجل دخول - جاري التوجيه لصفحة الدخول...");
+        
+        // المحاولة 1: الرجوع للمجلد الرئيسي (Root)
+        // هذا يفترض أن login.html بجانب مجلد assets ومجلد pages
         window.location.href = '../../login.html'; 
         return;
     }
 
-    // 1. جلب البيانات
+    // 1. جلب البيانات من LocalStorage
     const allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     
-    // 2. تصفية دروس الطالب الحالي
+    // 2. تصفية دروس الطالب الحالي (باستخدام == للمرونة في أنواع البيانات)
     let myLessons = allStudentLessons.filter(l => l.studentId == currentStudent.id);
 
     // حالة عدم وجود دروس
@@ -39,25 +43,25 @@ function loadStudentLessons() {
             <div class="empty-state" style="grid-column: 1/-1; text-align: center; padding: 50px;">
                 <div style="font-size: 3rem; margin-bottom: 15px;">📭</div>
                 <h3>لا توجد دروس حالياً</h3>
-                <p>لم يقم المعلم بنشر الدروس في خطتك بعد.</p>
+                <p>لم يقم المعلم بنشر الدروس في خطتك بعد، أو تحتاج لتحديث الصفحة.</p>
                 <button onclick="location.reload()" class="btn btn-sm btn-primary" style="margin-top:10px;">تحديث الصفحة</button>
             </div>
         `;
         return;
     }
 
-    // ترتيب الدروس لضمان التسلسل المنطقي
+    // ترتيب الدروس لضمان التسلسل (الأقدم أولاً)
     myLessons.sort((a, b) => {
         return new Date(a.assignedDate || 0) - new Date(b.assignedDate || 0) || a.id - b.id;
     });
 
     container.innerHTML = ''; // تنظيف الحاوية
 
-    // 3. بناء البطاقات ومنطق القفل
+    // 3. بناء البطاقات ومنطق القفل (Sequential Logic)
     myLessons.forEach((lesson, index) => {
         let isLocked = false;
         
-        // الدرس يُقفل إذا كان الدرس السابق غير مكتمل، والدرس الحالي نفسه غير مكتمل
+        // قاعدة القفل: يُقفل الدرس إذا كان الدرس السابق غير مكتمل، والدرس الحالي نفسه غير مكتمل
         if (index > 0) {
             const prevLesson = myLessons[index - 1];
             if (prevLesson.status !== 'completed' && lesson.status !== 'completed') {
@@ -79,6 +83,7 @@ function loadStudentLessons() {
             btnText = 'مراجعة الدرس';
             btnClass = 'btn-outline-primary';
             statusBadge = `<div class="completed-badge">✅ مكتمل</div>`;
+            // نرسل وضع review
             actionOnClick = `goToLessonPage(${lesson.originalLessonId || lesson.id}, 'review')`;
             
         } else if (isLocked) {
@@ -86,7 +91,7 @@ function loadStudentLessons() {
             cardClass = 'locked';
             btnText = 'مغلق';
             btnClass = 'btn-secondary';
-            statusBadge = `<div style="color: #95a5a6; font-size: 0.85rem;"><i class="fas fa-lock"></i> مقفل</div>`;
+            statusBadge = `<div style="color: #95a5a6; font-size: 0.85rem;">🔒 مقفل</div>`;
             lockOverlay = `<div class="lock-overlay"><span class="lock-icon">🔒</span></div>`;
             actionOnClick = `alert('يجب إكمال الدرس السابق (${myLessons[index-1].title}) أولاً!')`;
             
@@ -96,10 +101,11 @@ function loadStudentLessons() {
             btnText = 'ابدأ الدرس الآن';
             btnClass = 'btn-success';
             statusBadge = `<div style="color: #2ecc71; font-weight: bold;">🔓 متاح</div>`;
+            // نرسل وضع start
             actionOnClick = `goToLessonPage(${lesson.originalLessonId || lesson.id}, 'start')`;
         }
 
-        // إنشاء HTML البطاقة
+        // HTML البطاقة
         const cardHTML = `
             <div class="lesson-card ${cardClass}">
                 ${lockOverlay}
@@ -130,6 +136,9 @@ function loadStudentLessons() {
 // دالة الانتقال لصفحة الدرس
 function goToLessonPage(lessonId, mode) {
     console.log(`Navigating to lesson: ${lessonId}, Mode: ${mode}`);
-    // تأكد أن ملف الدرس اسمه lesson.html وموجود بجانب ملف my-lessons.html
+    
+    // =======================================================
+    // تأكد أن ملف الدرس اسمه "lesson.html" وموجود في نفس المجلد
+    // =======================================================
     window.location.href = `lesson.html?id=${lessonId}&mode=${mode}`;
 }

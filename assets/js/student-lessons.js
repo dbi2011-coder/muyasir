@@ -1,5 +1,7 @@
-// إدارة دروس الطالب - نظام المسار المتسلسل (Sequential Learning Path)
-// تم التحديث: إصلاح مشكلة عدم ظهور الدروس ومطابقة معرف الطالب
+// ==========================================
+// 📁 المسار: assets/js/student-lessons.js
+// الوصف: إدارة مسار التعلم التسلسلي (القفل والفتح)
+// ==========================================
 
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('my-lessons.html')) {
@@ -10,109 +12,100 @@ document.addEventListener('DOMContentLoaded', function() {
 function loadStudentLessons() {
     const container = document.getElementById('lessonsContainer');
     
-    // تأكد من وجود دالة جلب المستخدم
+    // التحقق من نظام التوثيق
     if (typeof getCurrentUser !== 'function') {
-        console.error("خطأ: دالة getCurrentUser غير موجودة. تأكد من ربط ملف auth.js");
-        container.innerHTML = '<div style="padding:20px; color:red;">خطأ في النظام: لم يتم التعرف على المستخدم.</div>';
+        container.innerHTML = '<div class="alert alert-danger">خطأ: ملف auth.js غير مرتبط بالصفحة.</div>';
         return;
     }
 
     const currentStudent = getCurrentUser();
     
     if (!currentStudent || !currentStudent.id) {
-        console.error("لا يوجد طالب مسجل دخول");
-        window.location.href = 'login.html'; // إعادة توجيه إذا لم يكن مسجلاً
+        window.location.href = '../login.html'; // توجيه لتسجيل الدخول
         return;
     }
-    
-    console.log("الطالب الحالي:", currentStudent.id, currentStudent.name);
 
-    // 1. جلب الدروس من LocalStorage
+    // 1. جلب البيانات
     const allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    console.log("جميع الدروس في النظام:", allStudentLessons.length);
-
-    // 2. تصفية الدروس الخاصة بالطالب الحالي (باستخدام == بدلاً من === لتجاهل الفرق بين النص والرقم)
+    
+    // 2. تصفية دروس الطالب الحالي (استخدام == لضمان تطابق النص والرقم)
     let myLessons = allStudentLessons.filter(l => l.studentId == currentStudent.id);
-    console.log("دروس هذا الطالب بعد التصفية:", myLessons.length);
 
-    // التحقق من وجود دروس
+    // حالة عدم وجود دروس
     if (myLessons.length === 0) {
         container.innerHTML = `
             <div class="empty-state" style="grid-column: 1/-1; text-align: center; padding: 50px;">
-                <div style="font-size: 3rem; margin-bottom: 15px;">📂</div>
-                <h3>لا توجد دروس مسندة حالياً</h3>
-                <p>لم يقم المعلم بإسناد دروس لك بعد، أو لم يقم بالضغط على زر "تحديث" في لوحته.</p>
-                <button onclick="location.reload()" class="btn btn-sm btn-outline-primary" style="margin-top:10px;">تحديث الصفحة</button>
+                <div style="font-size: 3rem; margin-bottom: 15px;">📭</div>
+                <h3>لا توجد دروس حالياً</h3>
+                <p>لم يقم المعلم بنشر الدروس في خطتك بعد.</p>
+                <button onclick="location.reload()" class="btn btn-sm btn-primary" style="margin-top:10px;">تحديث الصفحة</button>
             </div>
         `;
         return;
     }
 
-    // ترتيب الدروس حسب التاريخ لضمان التسلسل
+    // ترتيب الدروس لضمان التسلسل المنطقي
     myLessons.sort((a, b) => {
         return new Date(a.assignedDate || 0) - new Date(b.assignedDate || 0) || a.id - b.id;
     });
 
-    container.innerHTML = ''; // مسح رسالة التحميل
+    container.innerHTML = ''; // تنظيف الحاوية
 
     // 3. بناء البطاقات ومنطق القفل
     myLessons.forEach((lesson, index) => {
         let isLocked = false;
-        let prevLessonCompleted = true; 
-
-        // التحقق من الدرس السابق (إذا لم يكن الأول)
+        
+        // الدرس يُقفل إذا كان الدرس السابق غير مكتمل، والدرس الحالي نفسه غير مكتمل
         if (index > 0) {
             const prevLesson = myLessons[index - 1];
-            if (prevLesson.status !== 'completed') {
-                prevLessonCompleted = false;
+            if (prevLesson.status !== 'completed' && lesson.status !== 'completed') {
+                isLocked = true;
             }
         }
 
-        // قفل الدرس إذا لم يكتمل سابقه، وإذا لم يكن الدرس الحالي مكتملًا بالفعل
-        if (!prevLessonCompleted && lesson.status !== 'completed') {
-            isLocked = true;
-        }
-
-        // تحديد المظهر والنصوص
+        // إعداد متغيرات العرض
         let cardClass = '';
         let btnText = '';
         let btnClass = '';
         let statusBadge = '';
         let lockOverlay = '';
-        let actionFunction = '';
+        let actionOnClick = '';
 
         if (lesson.status === 'completed') {
-            // حالة: مكتمل
+            // ✅ حالة: مكتمل
             cardClass = 'completed';
             btnText = 'مراجعة الدرس';
             btnClass = 'btn-outline-primary';
-            statusBadge = `<div class="completed-badge">✅ تم الإنجاز</div>`;
-            // لاحظ: هنا نستخدم الرابط الافتراضي، غيره حسب حاجتك
-            actionFunction = `goToLessonPage(${lesson.originalLessonId || lesson.id}, 'review')`;
+            statusBadge = `<div class="completed-badge">✅ مكتمل</div>`;
+            // عند المراجعة نرسل وضع review
+            actionOnClick = `goToLessonPage(${lesson.originalLessonId || lesson.id}, 'review')`;
+            
         } else if (isLocked) {
-            // حالة: مغلق
+            // 🔒 حالة: مغلق
             cardClass = 'locked';
             btnText = 'مغلق';
             btnClass = 'btn-secondary';
-            statusBadge = `<div style="color: #7f8c8d; font-size: 0.8rem;">🔒 يتطلب إكمال السابق</div>`;
+            statusBadge = `<div style="color: #95a5a6; font-size: 0.85rem;"><i class="fas fa-lock"></i> مقفل</div>`;
             lockOverlay = `<div class="lock-overlay"><span class="lock-icon">🔒</span></div>`;
-            actionFunction = '';
+            actionOnClick = `alert('يجب إكمال الدرس السابق (${myLessons[index-1].title}) أولاً!')`;
+            
         } else {
-            // حالة: مفتوح (الحالي)
+            // 🔓 حالة: مفتوح (الدرس الحالي)
             cardClass = 'active';
             btnText = 'ابدأ الدرس الآن';
             btnClass = 'btn-success';
-            statusBadge = `<div style="color: #2ecc71; font-weight: bold;">🔓 متاح للدراسة</div>`;
-            actionFunction = `goToLessonPage(${lesson.originalLessonId || lesson.id}, 'start')`;
+            statusBadge = `<div style="color: #2ecc71; font-weight: bold;">🔓 متاح</div>`;
+            // عند البدء نرسل وضع start
+            actionOnClick = `goToLessonPage(${lesson.originalLessonId || lesson.id}, 'start')`;
         }
 
-        // HTML البطاقة
+        // إنشاء HTML البطاقة
         const cardHTML = `
             <div class="lesson-card ${cardClass}">
                 ${lockOverlay}
                 <div class="card-body">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                        <span style="background:#eee; padding:2px 8px; border-radius:4px; font-size:0.8rem;">درس ${index + 1}</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <span class="lesson-number">درس ${index + 1}</span>
                         ${statusBadge}
                     </div>
                     <h3 class="lesson-title">${lesson.title}</h3>
@@ -122,7 +115,7 @@ function loadStudentLessons() {
                 </div>
                 <div class="card-footer">
                     <button class="btn btn-start ${btnClass}" 
-                            onclick="${actionFunction}" 
+                            onclick="${actionOnClick}" 
                             ${isLocked ? 'disabled' : ''}>
                         ${btnText}
                     </button>
@@ -134,9 +127,13 @@ function loadStudentLessons() {
     });
 }
 
+// دالة الانتقال لصفحة الدرس
 function goToLessonPage(lessonId, mode) {
-    // توجيه الطالب لصفحة عرض الدرس
-    // تأكد أن لديك ملف باسم lesson-view.html أو غير الاسم هنا
-    console.log(`Open Lesson: ${lessonId}, Mode: ${mode}`);
-    window.location.href = `lesson-view.html?id=${lessonId}&mode=${mode}`;
+    console.log(`Navigating to lesson: ${lessonId}, Mode: ${mode}`);
+    
+    // =======================================================
+    // ⚠️ هام: تم ضبط الرابط هنا على "lesson.html"
+    // تأكد أن ملف الدرس الخاص بك اسمه "lesson.html" وموجود بجانب هذا الملف
+    // =======================================================
+    window.location.href = `lesson.html?id=${lessonId}&mode=${mode}`;
 }

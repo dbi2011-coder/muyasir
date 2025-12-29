@@ -1,4 +1,8 @@
-// إدارة الخطة التربوية الفردية للطالب - نسخة مطابقة تماماً لمنطق المعلم
+// ============================================
+// 📁 المسار: assets/js/student-iep.js
+// الوصف: إدارة الخطة التربوية (واجهة الطالب) - نسخة مصححة التاريخ
+// ============================================
+
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('my-iep.html')) {
         loadStudentIEP();
@@ -7,219 +11,260 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function loadStudentIEP() {
     const iepContainer = document.getElementById('iepContainer');
-    const currentStudent = getCurrentUser(); // دالة من auth.js
+    // التحقق من وجود دالة جلب المستخدم
+    if (typeof getCurrentUser !== 'function') return;
     
-    // 1. جلب البيانات من LocalStorage (نفس المصادر التي يستخدمها المعلم)
-    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
-    const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
-    const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
-    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-
-    // 2. البحث عن أحدث اختبار تشخيصي مكتمل لهذا الطالب
-    // المعلم يعتمد الخطة بناءً على نتائج التشخيصي
-    const completedDiagnostic = studentTests
-        .filter(t => t.studentId === currentStudent.id && t.type === 'diagnostic' && t.status === 'completed')
-        .sort((a, b) => new Date(b.assignedDate) - new Date(a.assignedDate))[0];
-
-    // في حال لم يقم الطالب بالاختبار بعد أو لم يكتمل
-    if (!completedDiagnostic) {
+    const currentStudent = getCurrentUser();
+    
+    // جلب بيانات الخطة من التخزين المحلي
+    const studentIEP = getStudentIEP(currentStudent.id);
+    
+    if (!studentIEP) {
         iepContainer.innerHTML = `
             <div class="empty-state">
-                <div class="empty-icon">⏳</div>
-                <h3>الخطة غير جاهزة بعد</h3>
-                <p>يجب إكمال الاختبار التشخيصي وتصحيحه من قبل المعلم لتظهر خطتك هنا.</p>
-                <a href="my-tests.html" class="btn btn-primary" style="margin-top:15px;">الذهاب للاختبارات</a>
+                <div class="empty-icon">📊</div>
+                <h3>لا توجد خطة تربوية فردية</h3>
+                <p>سيتم إنشاء الخطة التربوية الفردية بعد إكمال وتصحيح الاختبار التشخيصي.</p>
             </div>
         `;
         return;
     }
-
-    // جلب بيانات الاختبار الأصلي لمعرفة تفاصيل المادة والأسئلة
-    const originalTest = allTests.find(t => t.id === completedDiagnostic.testId);
-
-    // 3. تحليل نقاط القوة والاحتياج (نفس خوارزمية المعلم)
-    let strengthsItems = [];
-    let needsItems = [];
-    let needsObjects = []; // تخزين كائنات الأهداف لبناء الجدول السفلي
-
-    if (originalTest && originalTest.questions) {
-        originalTest.questions.forEach(question => {
-            // البحث عن إجابة الطالب لهذا السؤال
-            const studentAnswerObj = completedDiagnostic.answers.find(a => a.questionId === question.id);
-            
-            // إذا كان السؤال مرتبطاً بهدف
-            if (question.linkedGoalId) {
-                const objective = allObjectives.find(o => o.id === question.linkedGoalId);
-                if (objective) {
-                    const studentScore = studentAnswerObj ? (studentAnswerObj.score || 0) : 0;
-                    const passingScore = question.passingScore || 1;
-
-                    if (studentScore >= passingScore) {
-                        // نقطة قوة (أتقن المهارة)
-                        if (!strengthsItems.includes(objective.shortTermGoal)) {
-                            strengthsItems.push(objective.shortTermGoal);
-                        }
-                    } else {
-                        // نقطة احتياج (لم يتقن المهارة)
-                        if (!needsObjects.find(o => o.id === objective.id)) {
-                            needsObjects.push(objective);
-                            needsItems.push(objective.shortTermGoal);
-                        }
-                    }
-                }
-            }
-        });
-    }
-
-    // تحويل القوائم إلى HTML
-    const strengthsHTML = strengthsItems.length > 0 
-        ? strengthsItems.map(s => `<li>${s}</li>`).join('') 
-        : '<li>لا توجد نقاط قوة مسجلة</li>';
     
-    const needsHTML = needsItems.length > 0 
-        ? needsItems.map(n => `<li>${n}</li>`).join('') 
-        : '<li>لا توجد نقاط احتياج مسجلة</li>';
+    // تنسيق تاريخ الإنشاء
+    const createdDate = studentIEP.createdAt 
+        ? new Date(studentIEP.createdAt).toLocaleDateString('ar-SA') 
+        : '---';
 
-    // 4. بناء جدول الجدول الدراسي (من جدول المعلم)
-    const daysMap = { 'sunday': 'الأحد', 'monday': 'الاثنين', 'tuesday': 'الثلاثاء', 'wednesday': 'الأربعاء', 'thursday': 'الخميس' };
-    let scheduleCells = '';
-    
-    ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'].forEach(dayKey => {
-        const session = teacherSchedule.find(s => s.day === dayKey && s.students && s.students.includes(currentStudent.id));
-        if (session) {
-            scheduleCells += `<td style="background:#e8f5e9; text-align:center; font-weight:bold; color:#2e7d32;">حصة ${session.period || 1}</td>`;
-        } else {
-            scheduleCells += `<td></td>`;
-        }
-    });
-
-    // 5. بناء جدول الأهداف التدريسية (الخطة العلاجية)
-    let objectivesRows = '';
-    
-    if (needsObjects.length === 0) {
-        objectivesRows = '<tr><td colspan="3" style="text-align:center; padding: 20px;">جميع الأهداف محققة، لا توجد خطة علاجية مطلوبة حالياً.</td></tr>';
-    } else {
-        let counter = 1;
-        // خريطة لتحديد ما تم إنجازه من الدروس
-        const completedLessonsMap = {};
-        studentLessons.forEach(l => {
-            if (l.studentId === currentStudent.id && l.status === 'completed') {
-                completedLessonsMap[l.objective] = l.completedDate || 'تم';
-            }
-        });
-
-        needsObjects.forEach(obj => {
-            // الصف الرئيسي للهدف قصير المدى
-            objectivesRows += `
-                <tr style="background-color: #f8f9fa;">
-                    <td style="font-weight:bold; text-align:center; background-color: #eee;">*</td>
-                    <td colspan="2" style="background-color: #f9f9f9;"><strong>هدف قصير المدى:</strong> ${obj.shortTermGoal}</td>
-                </tr>
-            `;
-
-            // الصفوف الفرعية للأهداف التدريسية
-            if (obj.instructionalGoals && obj.instructionalGoals.length > 0) {
-                obj.instructionalGoals.forEach(iGoal => {
-                    const achievedDate = completedLessonsMap[iGoal];
-                    // علامة الصح أو الانتظار
-                    const statusContent = achievedDate 
-                        ? `<span style="color:#28a745; font-weight:bold; font-size:1.1em;">✔ تم (${achievedDate})</span>` 
-                        : `<span style="color:#999; font-size:0.9em;">⏳ جاري العمل</span>`;
-
-                    objectivesRows += `
-                        <tr>
-                            <td style="text-align:center;">${counter++}</td>
-                            <td>${iGoal}</td>
-                            <td style="text-align:center;">${statusContent}</td>
-                        </tr>
-                    `;
-                });
-            } else {
-                objectivesRows += `<tr><td>-</td><td class="text-muted">لا توجد أهداف تدريسية مسجلة</td><td></td></tr>`;
-            }
-        });
-    }
-
-    // 6. حقن الـ HTML النهائي داخل الصفحة
     iepContainer.innerHTML = `
-        <div class="iep-word-model">
-            <h2 style="text-align: center; margin-bottom: 25px; color: #000; font-size: 24px;">الخطة التربوية الفردية</h2>
-            
-            <table class="word-table">
+        <div class="iep-section">
+            <h3>البيانات الأساسية</h3>
+            <table class="student-info-table">
                 <tr>
-                    <th width="15%">اسم الطالب</th>
-                    <td width="35%">${currentStudent.name}</td>
-                    <th width="15%">المادة</th>
-                    <td width="35%">${originalTest ? originalTest.subject : 'عام'}</td>
+                    <th>اسم الطالب</th>
+                    <td>${currentStudent.name}</td>
+                    <th>تاريخ الإنشاء</th>
+                    <td>${createdDate}</td>
                 </tr>
                 <tr>
                     <th>الصف</th>
-                    <td>${currentStudent.grade || 'غير محدد'}</td>
-                    <th>تاريخ الخطة</th>
-                    <td>${new Date(completedDiagnostic.assignedDate).toLocaleDateString('ar-SA')}</td>
+                    <td>${studentIEP.grade || 'غير محدد'}</td>
+                    <th>المادة</th>
+                    <td>${studentIEP.subject || 'غير محدد'}</td>
+                </tr>
+                <tr>
+                    <th>المعلم</th>
+                    <td colspan="3">${studentIEP.teacherName || 'غير محدد'}</td>
                 </tr>
             </table>
+        </div>
 
-            <h4 style="margin-bottom:10px; font-size:16px;">الجدول الدراسي:</h4>
-            <table class="word-table">
+        <div class="iep-section">
+            <h3>نقاط القوة والاحتياج</h3>
+            <table class="strengths-needs-table">
                 <thead>
                     <tr>
-                        <th width="10%">اليوم</th>
-                        <th width="18%">الأحد</th>
-                        <th width="18%">الاثنين</th>
-                        <th width="18%">الثلاثاء</th>
-                        <th width="18%">الأربعاء</th>
-                        <th width="18%">الخميس</th>
+                        <th style="width:50%">نقاط القوة</th>
+                        <th style="width:50%">نقاط الاحتياج</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
-                        <td style="font-weight:bold; background-color:#f9f9f9;">الحصة</td>
-                        ${scheduleCells}
-                    </tr>
-                </tbody>
-            </table>
-
-            <h4 style="margin-bottom:10px; font-size:16px;">مستوى الأداء الحالي:</h4>
-            <table class="word-table">
-                <thead>
-                    <tr>
-                        <th width="50%">نقاط القوة</th>
-                        <th width="50%">نقاط الاحتياج</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr style="vertical-align: top;">
-                        <td style="padding: 15px; background-color: #fff;">
-                            <ul>${strengthsHTML}</ul>
+                        <td class="strength-cell">
+                            <ul>
+                                ${studentIEP.strengths && studentIEP.strengths.length > 0 
+                                    ? studentIEP.strengths.map(s => `<li>${s}</li>`).join('') 
+                                    : '<li>لا توجد بيانات</li>'}
+                            </ul>
                         </td>
-                        <td style="padding: 15px; background-color: #fff;">
-                            <ul>${needsHTML}</ul>
+                        <td class="needs-cell">
+                            <ul>
+                                ${studentIEP.needs && studentIEP.needs.length > 0 
+                                    ? studentIEP.needs.map(n => `<li>${n}</li>`).join('') 
+                                    : '<li>لا توجد بيانات</li>'}
+                            </ul>
                         </td>
                     </tr>
                 </tbody>
             </table>
+        </div>
 
-            <div style="margin-top: 30px;">
-                <h4 style="margin-bottom: 10px; font-size:16px;">الأهداف التدريسية للخطة:</h4>
-                <table class="word-table">
-                    <thead>
-                        <tr>
-                            <th width="5%">م</th>
-                            <th width="75%">الهدف التدريسي</th>
-                            <th width="20%">حالة التحقق</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${objectivesRows}
-                    </tbody>
-                </table>
-            </div>
-            
-            <div class="footer-note" style="margin-top: 30px; text-align: center; font-size: 12px; color: #666;">
-                <p>تم اعتماد هذه الخطة بناءً على نتائج التشخيص والملاحظة | منصة ميسر التعلم</p>
+        <div class="iep-section">
+            <h3>الهدف العام (البعيد)</h3>
+            <div class="goal-section long-term-box">
+                <p>${studentIEP.longTermGoal || 'لم يتم تحديد هدف بعيد المدى بعد.'}</p>
             </div>
         </div>
+
+        <div class="iep-section">
+            <h3>الأهداف التفصيلية</h3>
+            <table class="goals-table">
+                <thead>
+                    <tr>
+                        <th>الهدف قصير المدى</th>
+                        <th>الهدف التدريسي</th>
+                        <th>تاريخ التحقق</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${renderGoalsRows(studentIEP.goals)}
+                </tbody>
+            </table>
+        </div>
+
+        ${studentIEP.notes ? `
+        <div class="iep-section">
+            <h3>ملاحظات المعلم</h3>
+            <div class="notes-section">
+                <p>${studentIEP.notes}</p>
+            </div>
+        </div>
+        ` : ''}
     `;
 }
+
+// دالة مساعدة لرسم صفوف الأهداف مع تنسيق التاريخ الصحيح
+function renderGoalsRows(goals) {
+    if (!goals || goals.length === 0) {
+        return `<tr><td colspan="3" style="text-align: center; padding: 20px;">لا توجد أهداف مضافة حالياً</td></tr>`;
+    }
+
+    return goals.map(goal => {
+        // التعامل مع اختلاف المسميات المحتمل
+        const shortTerm = goal.shortTermGoal || goal.shortTerm || '---';
+        const instructional = goal.instructionalGoal || goal.instructional || '---';
+        
+        // 🔴 التعديل هنا: تنسيق التاريخ ليظهر (يوم/شهر/سنة) فقط 🔴
+        let dateContent = '<span class="badge badge-warning">جاري العمل</span>';
+        
+        if (goal.achievedDate) {
+            const dateObj = new Date(goal.achievedDate);
+            // التأكد من أن التاريخ صالح
+            if (!isNaN(dateObj.getTime())) {
+                const dateStr = dateObj.toLocaleDateString('ar-SA');
+                dateContent = `<span class="badge badge-success">✔ ${dateStr}</span>`;
+            }
+        }
+
+        return `
+            <tr>
+                <td><strong>${shortTerm}</strong></td>
+                <td>${instructional}</td>
+                <td>${dateContent}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// دالة الطباعة (مع إصلاح التنسيق فيها أيضاً)
+function printIEP() {
+    const currentStudent = getCurrentUser();
+    const studentIEP = getStudentIEP(currentStudent.id);
+
+    if(!studentIEP) {
+        alert('لا توجد خطة لطباعتها');
+        return;
+    }
+
+    const createdDate = studentIEP.createdAt ? new Date(studentIEP.createdAt).toLocaleDateString('ar-SA') : '---';
+
+    // نافذة الطباعة
+    const printWindow = window.open('', '_blank');
+    
+    // تجهيز صفوف الأهداف للطباعة
+    const goalsRows = (studentIEP.goals || []).map(goal => {
+        const shortTerm = goal.shortTermGoal || goal.shortTerm || '';
+        const instructional = goal.instructionalGoal || goal.instructional || '';
+        
+        let dateStr = '---';
+        if (goal.achievedDate) {
+            const d = new Date(goal.achievedDate);
+            if (!isNaN(d.getTime())) dateStr = '✔ ' + d.toLocaleDateString('ar-SA');
+        }
+
+        return `
+            <tr>
+                <td>${shortTerm}</td>
+                <td>${instructional}</td>
+                <td>${dateStr}</td>
+            </tr>
+        `;
+    }).join('');
+
+    printWindow.document.write(`
+        <!DOCTYPE html>
+        <html dir="rtl" lang="ar">
+        <head>
+            <meta charset="UTF-8">
+            <title>الخطة التربوية - ${currentStudent.name}</title>
+            <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;700&display=swap" rel="stylesheet">
+            <style>
+                body { font-family: 'Tajawal', sans-serif; padding: 20px; color: #333; }
+                .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
+                h1 { margin: 0; color: #2c3e50; }
+                h3 { background: #f8f9fa; padding: 10px; border-right: 5px solid #28a745; margin-top: 30px; }
+                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 14px; }
+                th, td { border: 1px solid #ddd; padding: 10px; text-align: right; }
+                th { background-color: #f1f1f1; font-weight: bold; }
+                @media print { .no-print { display: none; } }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>الخطة التربوية الفردية</h1>
+                <p>الطالب: ${currentStudent.name}</p>
+            </div>
+            
+            <h3>1. البيانات الأساسية</h3>
+            <table>
+                <tr>
+                    <th>الصف</th><td>${studentIEP.grade || '-'}</td>
+                    <th>المادة</th><td>${studentIEP.subject || '-'}</td>
+                    <th>تاريخ الخطة</th><td>${createdDate}</td>
+                </tr>
+            </table>
+            
+            <h3>2. الأهداف التدريسية</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th width="30%">الهدف قصير المدى</th>
+                        <th width="50%">الهدف التدريسي</th>
+                        <th width="20%">تاريخ التحقق</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${goalsRows || '<tr><td colspan="3">لا توجد أهداف</td></tr>'}
+                </tbody>
+            </table>
+            
+            <div style="margin-top: 50px; text-align: center; font-size: 12px; color: #666;">
+                تم استخراج التقرير بتاريخ ${new Date().toLocaleDateString('ar-SA')}
+            </div>
+            
+            <script>
+                window.onload = function() { window.print(); }
+            </script>
+        </body>
+        </html>
+    `);
+    
+    printWindow.document.close();
+}
+
+// دالة مساعدة لجلب الخطة
+function getStudentIEP(studentId) {
+    // محاولة الجلب من التخزين المحلي (البيانات الحقيقية)
+    const storedData = localStorage.getItem('studentIEPs');
+    if (storedData) {
+        try {
+            const allPlans = JSON.parse(storedData);
+            return allPlans.find(p => p.studentId === studentId);
+        } catch (e) {
+            console.error("خطأ في قراءة البيانات", e);
+        }
+    }
+    return null;
+}
+
+// تصدير الدوال
+window.printIEP = printIEP;

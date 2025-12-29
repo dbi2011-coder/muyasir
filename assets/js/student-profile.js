@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (النسخة الكاملة والمدمجة)
+// الوصف: إدارة ملف الطالب (تم تعديل تنسيق التاريخ في الخطة)
 // ============================================
 
 let currentStudentId = null;
@@ -353,7 +353,7 @@ function loadIEPTab() {
     const completedLessonsMap = {};
     studentLessons.forEach(l => {
         if (l.studentId === currentStudentId && l.status === 'completed') {
-            completedLessonsMap[l.objective] = l.completedDate || new Date().toLocaleDateString('ar-SA');
+            completedLessonsMap[l.objective] = l.completedDate || new Date().toISOString();
         }
     });
 
@@ -400,9 +400,15 @@ function loadIEPTab() {
 
             if (obj.instructionalGoals && obj.instructionalGoals.length > 0) {
                 obj.instructionalGoals.forEach(iGoal => {
-                    const achievementDate = completedLessonsMap[iGoal]; 
+                    const achievementDate = completedLessonsMap[iGoal];
+                    
+                    // 🔴 التعديل هنا: تحويل التاريخ من ISO String إلى صيغة مقروءة 🔴
+                    const formattedDate = achievementDate 
+                        ? new Date(achievementDate).toLocaleDateString('ar-SA') 
+                        : '';
+
                     const dateCellContent = achievementDate 
-                        ? `<span class="text-success font-weight-bold">✔ ${achievementDate}</span>` 
+                        ? `<span class="text-success font-weight-bold">✔ ${formattedDate}</span>` 
                         : `<input type="date" class="form-control" style="border:none; background:transparent;">`;
 
                     const row = `<tr><td style="text-align:center;">${objectiveCounter++}</td><td>${iGoal}</td><td>${dateCellContent}</td></tr>`;
@@ -448,7 +454,7 @@ function loadLessonsTab() {
             <div class="content-header"><h4>${l.title}</h4><span class="status-badge ${l.status}">${getStatusText(l.status)}</span></div>
             <div class="content-body">
                 <p><strong>الهدف:</strong> ${l.objective}</p>
-                ${l.status === 'completed' && l.completedDate ? `<small class="text-success">إنجاز: ${l.completedDate}</small>` : ''}
+                ${l.status === 'completed' && l.completedDate ? `<small class="text-success">إنجاز: ${new Date(l.completedDate).toLocaleDateString('ar-SA')}</small>` : ''}
             </div>
             <div class="content-actions">
                 ${l.status !== 'completed' ? `<button class="btn btn-sm btn-success" onclick="completeLesson(${l.id})">إكمال الدرس</button>` : '<button class="btn btn-sm btn-secondary" disabled>تم الإنجاز</button>'}
@@ -467,13 +473,9 @@ function regenerateLessons() {
 
     if (!completedDiagnostic) { alert('يجب إجراء اختبار تشخيصي أولاً.'); return; }
     
-    // منطق بسيط لجلب الأهداف غير المحققة (يمكن تحسينه بناءً على الدرجات)
-    // هنا سنفترض التوليد بناءً على أي هدف تدريسي مرتبط باحتياج
+    // منطق بسيط لجلب الأهداف غير المحققة
     let addedCount = 0;
     let studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-
-    // (يمكن تكرار منطق تحديد الاحتياج من loadIEPTab هنا لدقة أكبر)
-    // للاختصار، سنبحث في جميع الدروس المرتبطة بأهداف هذا الطالب
     
     allLessonsLib.forEach(libLesson => {
         if(libLesson.linkedInstructionalGoal) {
@@ -504,7 +506,8 @@ function completeLesson(id) {
     const idx = studentLessons.findIndex(l => l.id === id);
     if(idx !== -1) {
         studentLessons[idx].status = 'completed';
-        studentLessons[idx].completedDate = new Date().toLocaleDateString('ar-SA');
+        // حفظ التاريخ بتنسيق كامل للحفظ، وسيتم تنسيقه عند العرض
+        studentLessons[idx].completedDate = new Date().toISOString();
         localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
         loadLessonsTab();
     }

@@ -18,15 +18,59 @@
         .sidebar-student-name { color: white; font-weight: bold; margin-bottom: 5px; }
         .sidebar-student-grade { color: rgba(255, 255, 255, 0.7); font-size: 0.85rem; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        /* أنماط نافذة التصحيح */
+        
+        /* --- تنسيقات نافذة المراجعة --- */
         .review-question-item { border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; background: #fff; }
         .review-q-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: #f9f9f9; padding: 10px; border-radius: 5px; }
         .student-answer-box { padding: 10px; background: #e3f2fd; border-radius: 5px; margin-bottom: 10px; border-right: 4px solid #2196f3; }
         .teacher-feedback-box textarea { width: 100%; border: 1px solid #ccc; border-radius: 5px; padding: 8px; min-height: 60px; margin-top: 5px; }
         .score-input { width: 70px; text-align: center; font-weight: bold; }
-        /* أنماط أزرار الدروس */
-        .lesson-controls { display: flex; gap: 5px; margin-top: 10px; }
-        .lesson-controls button { font-size: 0.8rem; padding: 5px 10px; }
+
+        /* --- تنسيقات سحب وإفلات الدروس (الجديدة) --- */
+        .content-grid {
+            display: grid;
+            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        }
+
+        .content-card.draggable {
+            cursor: grab;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .content-card.draggable:active {
+            cursor: grabbing;
+        }
+
+        .content-card.dragging {
+            opacity: 0.5;
+            border: 2px dashed #007bff;
+            background: #f0f8ff;
+        }
+
+        .drag-handle {
+            cursor: grab;
+            color: #999;
+            margin-left: 10px;
+            font-size: 1.2rem;
+        }
+
+        .drag-handle:hover {
+            color: #333;
+        }
+
+        /* تنسيقات أزرار التحكم بالدرس */
+        .lesson-controls { 
+            display: flex; 
+            gap: 5px; 
+            margin-top: 15px; 
+            border-top: 1px solid #eee; 
+            padding-top: 10px; 
+        }
+        .lesson-controls button { 
+            font-size: 0.8rem; 
+            padding: 4px 8px; 
+        }
     </style>
 </head>
 <body>
@@ -75,21 +119,27 @@
 
                 <div id="section-iep" class="content-section">
                     <div class="content-header"><h1>الخطة التربوية</h1><button class="btn btn-info" onclick="window.print()">طباعة</button></div>
-                    <div id="iepContent"></div>
+                    
+                    <div id="iepContent">
+                        </div>
+
+                    <div class="iep-word-model" style="display:none;">
+                        </div>
                 </div>
 
                 <div id="section-lessons" class="content-section">
                     <div class="content-header">
                         <h1>الدروس</h1>
                         <div class="btn-group">
-                            <button class="btn btn-outline-primary" onclick="regenerateLessons()">تحديث من الخطة</button>
-                            <button class="btn btn-success" onclick="showAssignLibraryLessonModal()">+ درس إضافي</button>
+                            <button class="btn btn-outline-primary" onclick="regenerateLessons()">🔄 تحديث من الخطة</button>
+                            <button class="btn btn-success" onclick="showAssignLibraryLessonModal()">+ إسناد درس إضافي</button>
                         </div>
                     </div>
                     <div class="content-grid" id="studentLessonsGrid"></div>
                 </div>
 
                 <div id="section-assignments" class="content-section"><div class="content-header"><h1>الواجبات</h1><button class="btn btn-primary" onclick="showAssignHomeworkModal()">+ واجب</button></div><div class="content-grid" id="studentAssignmentsGrid"></div></div>
+                
                 <div id="section-progress" class="content-section"><div class="content-header"><h1>التقدم</h1></div><div class="card"><table class="table"><thead><tr><th>الهدف</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody id="progressTableBody"></tbody></table></div></div>
             </div>
         </main>
@@ -110,7 +160,7 @@
     <div id="reviewTestModal" class="modal">
         <div class="modal-content large" style="max-width: 900px;">
             <div class="modal-header">
-                <h3>مراجعة إجابات الطالب</h3>
+                <h3>مراجعة إجابات الطالب وتصحيحها</h3>
                 <button class="modal-close" onclick="closeModal('reviewTestModal')">×</button>
             </div>
             <div class="modal-body">
@@ -118,8 +168,13 @@
                 <div id="reviewQuestionsContainer" style="max-height: 60vh; overflow-y: auto; padding: 10px;"></div>
             </div>
             <div class="modal-footer" style="justify-content: space-between;">
-                <div><button class="btn btn-warning" onclick="returnTestForResubmission()">↩️ إعادة الاختبار</button></div>
-                <div><button class="btn btn-secondary" onclick="closeModal('reviewTestModal')">إغلاق</button><button class="btn btn-success" onclick="saveTestReview()">💾 حفظ</button></div>
+                <div>
+                    <button class="btn btn-warning" onclick="returnTestForResubmission()">↩️ إعادة الاختبار للطالب للتعديل</button>
+                </div>
+                <div>
+                    <button class="btn btn-secondary" onclick="closeModal('reviewTestModal')">إلغاء</button>
+                    <button class="btn btn-success" onclick="saveTestReview()">💾 حفظ التعديلات والملاحظات</button>
+                </div>
             </div>
         </div>
     </div>

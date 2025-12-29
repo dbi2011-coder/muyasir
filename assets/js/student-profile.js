@@ -1,11 +1,10 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (التحكم بالدروس + السحب والإفلات للترتيب)
+// الوصف: ملف الطالب - تحكم بالدروس + ترتيب رقمي
 // ============================================
 
 let currentStudentId = null;
 let currentStudent = null;
-let dragSrcEl = null; // متغير لتخزين العنصر المسحوب
 
 document.addEventListener('DOMContentLoaded', function() {
     const params = new URLSearchParams(window.location.search);
@@ -54,9 +53,7 @@ function switchSection(sectionId) {
     if (sectionId === 'progress') loadProgressTab();
 }
 
-// ---------------------------------------------------------
 // 1. الاختبار التشخيصي
-// ---------------------------------------------------------
 function loadDiagnosticTab() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const assignedTest = studentTests.find(t => t.studentId === currentStudentId && t.type === 'diagnostic');
@@ -96,9 +93,7 @@ function loadDiagnosticTab() {
     }
 }
 
-// ---------------------------------------------------------
 // 2. الخطة التربوية
-// ---------------------------------------------------------
 function loadIEPTab() {
     const iepContent = document.getElementById('iepContent');
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
@@ -115,6 +110,8 @@ function loadIEPTab() {
     }
 
     const originalTest = allTests.find(t => t.id === completedDiagnostic.testId);
+    
+    // جلب تواريخ الإنجاز
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const completedLessonsMap = {};
     studentLessons.forEach(l => {
@@ -167,7 +164,7 @@ function loadIEPTab() {
 }
 
 // ---------------------------------------------------------
-// 3. الدروس (الترتيب + السحب والإفلات + التحكم)
+// 3. الدروس (الترتيب الرقمي + التحكم الكامل)
 // ---------------------------------------------------------
 function loadLessonsTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
@@ -179,18 +176,19 @@ function loadLessonsTab() {
         return;
     }
 
-    // الترتيب بناءً على خاصية orderIndex إذا وجدت، أو حسب التاريخ
+    // 1. الترتيب بناءً على orderIndex (الرقمي)
+    // إذا لم يكن هناك ترتيب، نستخدم التاريخ
     myList.sort((a, b) => {
-        if (a.orderIndex !== undefined && b.orderIndex !== undefined) {
-            return a.orderIndex - b.orderIndex;
-        }
-        return new Date(a.assignedDate) - new Date(b.assignedDate);
+        const orderA = a.orderIndex !== undefined ? a.orderIndex : 9999;
+        const orderB = b.orderIndex !== undefined ? b.orderIndex : 9999;
+        return orderA - orderB || new Date(a.assignedDate) - new Date(b.assignedDate);
     });
 
     container.innerHTML = myList.map((l, index) => {
         let controls = '';
         let statusDisplay = '';
 
+        // تحديد الحالة
         if(l.status === 'completed') {
             statusDisplay = `<span class="badge badge-success">مكتمل (${new Date(l.completedDate).toLocaleDateString('ar-SA')})</span>`;
             controls = `
@@ -204,107 +202,39 @@ function loadLessonsTab() {
                 : `<button class="btn btn-secondary" onclick="toggleLessonLock(${l.id}, true)">🔒 قفل</button>`;
         }
 
-        // إضافة خاصية draggable و data-id
+        // تحديد رقم الترتيب الافتراضي
+        const displayOrder = l.orderIndex !== undefined ? l.orderIndex : index + 1;
+
         return `
-        <div class="content-card draggable" draggable="true" data-id="${l.id}">
-            <div class="content-header">
-                <div style="display:flex; align-items:center;">
-                    <i class="fas fa-grip-vertical drag-handle" title="اسحب للترتيب"></i>
-                    <h4 style="margin-right:10px;">${l.title}</h4>
-                </div>
+        <div class="content-card">
+            <div class="order-badge">
+                <span>ترتيب:</span>
+                <input type="number" class="order-input" value="${displayOrder}" onchange="updateLessonOrder(${l.id}, this.value)">
+            </div>
+
+            <div class="content-header" style="margin-top: 15px;">
+                <h4>${l.title}</h4>
                 ${statusDisplay}
             </div>
+            
             <div class="content-body">
                 <p><strong>الهدف:</strong> ${l.objective || 'إثرائي / إضافي'}</p>
             </div>
+            
             <div class="lesson-controls">${controls}</div>
         </div>`;
     }).join('');
-
-    // تفعيل السحب والإفلات بعد رسم العناصر
-    setupDragAndDrop();
 }
 
-// إعداد أحداث السحب والإفلات
-function setupDragAndDrop() {
-    const cards = document.querySelectorAll('.content-card.draggable');
-    
-    cards.forEach(card => {
-        card.addEventListener('dragstart', handleDragStart);
-        card.addEventListener('dragenter', handleDragEnter);
-        card.addEventListener('dragover', handleDragOver);
-        card.addEventListener('dragleave', handleDragLeave);
-        card.addEventListener('drop', handleDrop);
-        card.addEventListener('dragend', handleDragEnd);
-    });
-}
-
-function handleDragStart(e) {
-    this.style.opacity = '0.4';
-    dragSrcEl = this;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', this.innerHTML);
-}
-
-function handleDragOver(e) {
-    if (e.preventDefault) e.preventDefault();
-    return false;
-}
-
-function handleDragEnter(e) {
-    this.classList.add('over');
-}
-
-function handleDragLeave(e) {
-    this.classList.remove('over');
-}
-
-function handleDrop(e) {
-    if (e.stopPropagation) e.stopPropagation();
-
-    if (dragSrcEl !== this) {
-        // التبديل في الواجهة (DOM)
-        // الطريقة الأسهل: إعادة ترتيب المصفوفة وحفظها
-        saveNewOrder(dragSrcEl.getAttribute('data-id'), this.getAttribute('data-id'));
-    }
-    return false;
-}
-
-function handleDragEnd(e) {
-    this.style.opacity = '1';
-    document.querySelectorAll('.content-card.draggable').forEach(card => card.classList.remove('over'));
-}
-
-// حفظ الترتيب الجديد في LocalStorage
-function saveNewOrder(draggedId, targetId) {
+// دالة تحديث الترتيب الرقمي
+function updateLessonOrder(lessonId, newOrder) {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    const idx = studentLessons.findIndex(l => l.id === lessonId);
     
-    // استخراج دروس الطالب الحالي فقط لترتيبها
-    let myLessons = studentLessons.filter(l => l.studentId === currentStudentId);
-    
-    // ترتيبهم كما كانوا ظاهرين قبل السحب
-    myLessons.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
-
-    // العثور على المؤشرات
-    const draggedIdx = myLessons.findIndex(l => l.id == draggedId);
-    const targetIdx = myLessons.findIndex(l => l.id == targetId);
-
-    // نقل العنصر في المصفوفة
-    if (draggedIdx > -1 && targetIdx > -1) {
-        const [movedItem] = myLessons.splice(draggedIdx, 1);
-        myLessons.splice(targetIdx, 0, movedItem);
-        
-        // تحديث orderIndex للجميع بناءً على الترتيب الجديد
-        myLessons.forEach((l, index) => {
-            l.orderIndex = index;
-            // تحديث العنصر الأصلي في المصفوفة الكبيرة
-            const mainIdx = studentLessons.findIndex(sl => sl.id === l.id);
-            if(mainIdx !== -1) studentLessons[mainIdx].orderIndex = index;
-        });
-
+    if (idx !== -1) {
+        studentLessons[idx].orderIndex = parseInt(newOrder);
         localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
-        
-        // إعادة التحميل لإظهار الترتيب الجديد
+        // إعادة التحميل لترتيب العناصر من جديد
         loadLessonsTab();
     }
 }
@@ -373,7 +303,7 @@ function assignLibraryLesson() {
     const originalLesson = allLessons.find(l => l.id === lessonId);
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     
-    // حساب أعلى orderIndex لوضع الدرس الجديد في النهاية
+    // حساب الترتيب التلقائي (آخر رقم + 1)
     const myLessons = studentLessons.filter(l => l.studentId === currentStudentId);
     const maxOrder = myLessons.length > 0 ? Math.max(...myLessons.map(l => l.orderIndex || 0)) : 0;
 
@@ -402,9 +332,8 @@ function regenerateLessons() {
     const allLessonsLib = JSON.parse(localStorage.getItem('lessons') || '[]');
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     
-    // حساب الترتيب الحالي
     const myLessons = studentLessons.filter(l => l.studentId === currentStudentId);
-    let nextOrder = myLessons.length > 0 ? Math.max(...myLessons.map(l => l.orderIndex || 0)) + 1 : 0;
+    let nextOrder = myLessons.length > 0 ? Math.max(...myLessons.map(l => l.orderIndex || 0)) + 1 : 1;
     
     let addedCount = 0;
     allLessonsLib.forEach(libLesson => {

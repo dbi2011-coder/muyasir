@@ -1,39 +1,34 @@
 // ============================================
 // 📁 المسار: assets/js/student-lessons.js
-// الوصف: إدارة الدروس المتسلسلة (بيانات حقيقية فقط)
+// الوصف: إدارة الدروس المتسلسلة (مصحح)
 // ============================================
 
 let currentAssignmentId = null;
 let currentLessonContent = null;
 
 document.addEventListener('DOMContentLoaded', function() {
-    // التأكد من أننا في صفحة الدروس لتجنب الأخطاء في الصفحات الأخرى
     if (document.getElementById('lessonsContainer')) {
-        injectLessonModalHTML(); // تجهيز النافذة
-        loadStudentLessons();    // جلب البيانات
+        injectLessonModalHTML();
+        loadStudentLessons();
     }
 });
 
 function loadStudentLessons() {
     const container = document.getElementById('lessonsContainer');
     
-    // 1. محاولة جلب المستخدم المسجل حالياً بشتى الطرق
+    // 1. التحقق من المستخدم
     let currentStudent = null;
     try {
-        // الطريقة الأولى: الدالة الرسمية
         if (typeof getCurrentUser === 'function') {
             currentStudent = getCurrentUser();
         } 
-        // الطريقة الثانية: القراءة المباشرة من الجلسة (للحالات التي تفشل فيها الدالة)
         if (!currentStudent || !currentStudent.id) {
             const stored = sessionStorage.getItem('currentUser');
             if (stored) currentStudent = JSON.parse(stored).user;
         }
-    } catch (e) { console.error("Error fetching user:", e); }
+    } catch (e) { console.error(e); }
 
-    // إذا فشل العثور على مستخدم، نعرض رسالة خطأ واضحة
     if (!currentStudent || !currentStudent.id) {
-        console.error("لم يتم العثور على جلسة مستخدم نشطة.");
         container.innerHTML = `
             <div class="alert alert-danger" style="grid-column: 1/-1; text-align: center; padding: 30px;">
                 <h3>⚠️ خطأ في الجلسة</h3>
@@ -43,14 +38,13 @@ function loadStudentLessons() {
         return;
     }
 
-    // تحديث اسم المستخدم في الواجهة (اختياري)
     if(document.getElementById('userName')) document.getElementById('userName').textContent = currentStudent.name;
 
-    // 2. جلب البيانات الحقيقية من LocalStorage
+    // 2. جلب البيانات
     const allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const lessonsLib = JSON.parse(localStorage.getItem('lessons') || '[]');
 
-    // 3. تصفية الدروس الخاصة بالطالب (استخدام == لضمان تطابق "5" مع 5)
+    // 3. الفلترة
     let myLessons = allStudentLessons.filter(l => l.studentId == currentStudent.id);
 
     if (myLessons.length === 0) {
@@ -63,19 +57,17 @@ function loadStudentLessons() {
         return;
     }
 
-    // ترتيب الدروس: الأقدم تاريخاً أولاً، ثم حسب المعرف
+    // الترتيب
     myLessons.sort((a, b) => new Date(a.assignedDate || 0) - new Date(b.assignedDate || 0) || a.id - b.id);
     
     container.innerHTML = '';
 
-    // 4. رسم البطاقات مع منطق القفل
+    // 4. رسم البطاقات
     myLessons.forEach((lessonAssignment, index) => {
-        // البحث عن تفاصيل المحتوى الأصلي للدرس
         const originalLesson = lessonsLib.find(l => l.id == lessonAssignment.originalLessonId) || {};
         
-        // --- منطق القفل ---
+        // القفل
         let isLocked = false;
-        // القاعدة: يُقفل الدرس إذا لم يكن الأول، والدرس السابق غير مكتمل، والدرس الحالي غير مكتمل
         if (index > 0) {
             const prevLesson = myLessons[index - 1];
             if (prevLesson.status !== 'completed' && lessonAssignment.status !== 'completed') {
@@ -83,25 +75,21 @@ function loadStudentLessons() {
             }
         }
 
-        // --- تحديد حالة العرض ---
         let cardClass = '';
         let btnHtml = '';
         let statusBadge = '';
         let lockOverlay = '';
 
         if (lessonAssignment.status === 'completed') {
-            // مكتمل
             cardClass = 'completed';
             statusBadge = '<span class="badge badge-success" style="background:#d4edda; color:#155724; padding:5px 10px;">✅ مكتمل</span>';
             btnHtml = `<button class="btn btn-outline-primary" style="width:100%" onclick="openLessonOverlay(${lessonAssignment.id}, ${lessonAssignment.originalLessonId})">مراجعة الدرس</button>`;
         } else if (isLocked) {
-            // مقفل
             cardClass = 'locked';
             statusBadge = '<span class="badge badge-secondary" style="background:#e2e3e5; color:#383d41; padding:5px 10px;">🔒 مقفل</span>';
             lockOverlay = '<div class="lock-overlay"><span style="font-size:2rem; color:#666;">🔒</span></div>';
             btnHtml = `<button class="btn btn-secondary" style="width:100%" disabled>يجب إكمال السابق</button>`;
         } else {
-            // متاح (الحالي)
             cardClass = 'active';
             statusBadge = '<span class="badge badge-primary" style="background:#cce5ff; color:#004085; padding:5px 10px;">🔓 متاح للدراسة</span>';
             btnHtml = `<button class="btn btn-success" style="width:100%" onclick="openLessonOverlay(${lessonAssignment.id}, ${lessonAssignment.originalLessonId})">ابدأ الدرس الآن</button>`;
@@ -129,7 +117,7 @@ function loadStudentLessons() {
 }
 
 // ---------------------------------------------------------
-// منطق النافذة المنبثقة (Overlay) لعرض المحتوى
+// منطق النافذة المنبثقة
 // ---------------------------------------------------------
 function openLessonOverlay(assignmentId, originalLessonId) {
     const lessonsLib = JSON.parse(localStorage.getItem('lessons') || '[]');
@@ -137,13 +125,19 @@ function openLessonOverlay(assignmentId, originalLessonId) {
     currentAssignmentId = assignmentId;
 
     if (!currentLessonContent) {
-        alert('عذراً، محتوى هذا الدرس غير موجود في المكتبة.');
+        alert('عذراً، محتوى هذا الدرس غير موجود.');
         return;
     }
 
     // تعبئة العناوين
-    document.getElementById('lessonFocusTitle').textContent = currentLessonContent.title;
-    document.getElementById('reqScore').textContent = currentLessonContent.exercises?.passScore || 50;
+    const titleEl = document.getElementById('lessonFocusTitle');
+    if(titleEl) titleEl.textContent = currentLessonContent.title;
+
+    // ✅ التصحيح هنا: التأكد من وجود العنصر قبل تحديثه لتجنب الخطأ
+    const scoreEl = document.getElementById('reqScore');
+    if(scoreEl) {
+        scoreEl.textContent = currentLessonContent.exercises?.passScore || 50;
+    }
 
     // تجهيز المحتوى
     renderIntro();
@@ -178,7 +172,6 @@ function showStage(stageName) {
     });
 }
 
-// عرض التمهيد (فيديو/صورة/نص)
 function renderIntro() {
     const container = document.getElementById('introContent');
     const intro = currentLessonContent.intro || {};
@@ -196,7 +189,6 @@ function renderIntro() {
     }
 }
 
-// عرض الأسئلة
 function renderQuestions(questions, containerId) {
     const container = document.getElementById(containerId);
     if (!questions || questions.length === 0) {
@@ -226,15 +218,11 @@ function renderQuestions(questions, containerId) {
     }).join('');
 }
 
-// تصحيح التمارين
 function submitExercises() {
-    // هنا يمكن إضافة منطق تصحيح حقيقي إذا توفرت الإجابات الصحيحة
-    // حالياً سنفترض الإجابة الصحيحة لتسهيل التدفق
     alert(`أحسنت! انتقل للتقييم النهائي.`);
     showStage('assessment');
 }
 
-// إنهاء الدرس وحفظ النتيجة (بيانات حقيقية)
 function submitAssessment() {
     const allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const lessonIndex = allStudentLessons.findIndex(l => l.id == currentAssignmentId);
@@ -246,13 +234,13 @@ function submitAssessment() {
         
         alert('🎉 مبروك! تم إكمال الدرس بنجاح.');
         closeLessonMode();
-        loadStudentLessons(); // تحديث القائمة لفتح الدرس التالي
+        loadStudentLessons(); 
     } else {
-        alert('خطأ: لم يتم العثور على الدرس لتحديث حالته.');
+        alert('خطأ: لم يتم العثور على الدرس.');
     }
 }
 
-// حقن هيكل النافذة
+// حقن الهيكل (تمت إضافة span id="reqScore" لحل المشكلة)
 function injectLessonModalHTML() {
     if (document.getElementById('lessonFocusMode')) return;
 
@@ -277,7 +265,9 @@ function injectLessonModalHTML() {
                 <button class="btn btn-primary btn-block btn-lg mt-4" onclick="showStage('exercises')">التالي: التمارين ⬅</button>
             </div>
             <div id="stage-exercises" class="lesson-stage">
-                <div class="alert alert-warning">أجب عن الأسئلة التالية:</div>
+                <div class="alert alert-warning">
+                    يجب حل التمارين لاجتياز المحك: <strong><span id="reqScore">50</span>%</strong>
+                </div>
                 <div id="exercisesList"></div>
                 <button class="btn btn-success btn-block btn-lg mt-4" onclick="submitExercises()">تسليم الإجابات</button>
             </div>

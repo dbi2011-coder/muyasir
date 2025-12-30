@@ -11,7 +11,6 @@
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- الشريط الجانبي -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
@@ -31,9 +30,7 @@
             </ul>
         </aside>
 
-        <!-- المحتوى الرئيسي -->
         <main class="main-content-dashboard">
-            <!-- رأس اللوحة -->
             <header class="dashboard-header">
                 <button class="mobile-menu-btn">☰</button>
                 <div class="user-info">
@@ -48,19 +45,17 @@
                 </div>
             </header>
 
-            <!-- محتوى اللوحة -->
             <div class="dashboard-content">
                 <div class="content-header">
                     <h1>خطتي التربوية الفردية</h1>
                     <p>عرض الخطة التربوية الفردية المخصصة لك</p>
                     <div class="header-actions">
-                        <button class="btn btn-success" onclick="printIEP()">🖨️ طباعة الخطة</button>
+                        <button class="btn btn-success" onclick="window.print()">🖨️ طباعة الخطة</button>
                     </div>
                 </div>
 
                 <div class="iep-container" id="iepContainer">
-                    <!-- سيتم تعبئته بواسطة JavaScript -->
-                </div>
+                    </div>
             </div>
         </main>
     </div>

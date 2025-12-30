@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إعدادات النظام - ميسر التعلم</title>
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <link rel="stylesheet" href="../../assets/css/admin.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- الشريط الجانبي -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    <h2>ميسر التعلم</h2>
+                </div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><i class="fas fa-home"></i> لوحة التحكم</a></li>
+                <li><a href="teachers.html"><i class="fas fa-chalkboard-teacher"></i> إدارة المعلمين</a></li>
+                <li><a href="students.html"><i class="fas fa-user-graduate"></i> إدارة الطلاب</a></li>
+                <li><a href="reports.html"><i class="fas fa-chart-bar"></i> التقارير</a></li>
+                <li><a href="settings.html" class="active"><i class="fas fa-cog"></i> الإعدادات</a></li>
+                <li><a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a></li>
+            </ul>
+        </aside>
+
+        <!-- المحتوى الرئيسي -->
+        <main class="main-content-dashboard">
+            <!-- رأس لوحة التحكم -->
+            <header class="dashboard-header">
+                <div class="user-info">
+                    <div class="user-welcome">
+                        <div class="welcome-text">مرحباً</div>
+                        <div class="user-name" id="userName">مدير النظام</div>
+                    </div>
+                    <div class="user-avatar" id="userAvatar">م</div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="showNotifications()">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge" id="notificationCount">0</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- محتوى لوحة التحكم -->
+            <div class="dashboard-content">
+                <div class="content-header">
+                    <h1><i class="fas fa-cog"></i> إعدادات النظام</h1>
+                </div>
+
+                <!-- تبويبات الإعدادات -->
+                <div class="settings-tabs">
+                    <button class="settings-tab active" data-tab="general" onclick="switchSettingsTab('general')">
+                        <i class="fas fa-sliders-h"></i> الإعدادات العامة
+                    </button>
+                    <button class="settings-tab" data-tab="backup" onclick="switchSettingsTab('backup')">
+                        <i class="fas fa-database"></i> النسخ الاحتياطي
+                    </button>
+                    <button class="settings-tab" data-tab="logs" onclick="switchSettingsTab('logs')">
+                        <i class="fas fa-clipboard-list"></i> سجلات النظام
+                    </button>
+                    <button class="settings-tab" data-tab="security" onclick="switchSettingsTab('security')">
+                        <i class="fas fa-shield-alt"></i> الأمان
+                    </button>
+                </div>
+
+                <!-- الإعدادات العامة -->
+                <div id="general-tab" class="settings-section">
+                    <h3><i class="fas fa-sliders-h"></i> الإعدادات العامة للنظام</h3>
+                    <form id="systemSettingsForm">
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label for="systemName">اسم النظام *</label>
+                                <input type="text" id="systemName" class="form-control" required>
+                            </div>
+                            <div class="setting-item">
+                                <label for="systemEmail">البريد الإلكتروني للنظام</label>
+                                <input type="email" id="systemEmail" class="form-control">
+                            </div>
+                            <div class="setting-item">
+                                <label for="sessionTimeout">مهلة الجلسة (دقائق) *</label>
+                                <input type="number" id="sessionTimeout" class="form-control" min="5" max="480" value="60" required>
+                                <small class="text-muted">الوقت قبل انتهاء الجلسة تلقائياً (5-480 دقيقة)</small>
+                            </div>
+                            <div class="setting-item">
+                                <label for="maxLoginAttempts">أقصى محاولات تسجيل دخول *</label>
+                                <input type="number" id="maxLoginAttempts" class="form-control" min="1" max="10" value="5" required>
+                                <small class="text-muted">عدد المحاولات المسموح بها قبل تعليق الحساب</small>
+                            </div>
+                            <div class="setting-item">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enableNotifications" class="form-check" checked>
+                                    <span>تفعيل الإشعارات</span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="enableAutoBackup" class="form-check">
+                                    <span>النسخ الاحتياطي التلقائي</span>
+                                </label>
+                            </div>
+                            <div class="setting-item">
+                                <label for="backupFrequency">تكرار النسخ الاحتياطي</label>
+                                <select id="backupFrequency" class="form-control">
+                                    <option value="daily">يومي</option>
+                                    <option value="weekly">أسبوعي</option>
+                                    <option value="monthly">شهري</option>
+                                </select>
+                            </div>
+                            <div class="setting-item">
+                                <label for="defaultLanguage">اللغة الافتراضية</label>
+                                <select id="defaultLanguage" class="form-control">
+                                    <option value="ar" selected>العربية</option>
+                                    <option value="en">English</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="setting-actions">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> حفظ الإعدادات
+                            </button>
+                            <button type="button" class="btn btn-warning" onclick="resetSettings()">
+                                <i class="fas fa-undo"></i> إعادة التعيين
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- النسخ الاحتياطي -->
+                <div id="backup-tab" class="settings-section" style="display: none;">
+                    <h3><i class="fas fa-database"></i> إدارة النسخ الاحتياطي</h3>
+                    
+                    <div class="backup-info">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            النسخ الاحتياطي يحفظ جميع بيانات النظام بما في ذلك المستخدمين والاختبارات والدروس.
+                        </div>
+                    </div>
+
+                    <div class="backup-stats">
+                        <div class="stat-box">
+                            <div class="stat-value-box" id="totalBackups">0</div>
+                            <div class="stat-label-box">إجمالي النسخ</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value-box" id="lastBackup">-</div>
+                            <div class="stat-label-box">آخر نسخة</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value-box" id="backupSize">0</div>
+                            <div class="stat-label-box">الحجم الإجمالي</div>
+                        </div>
+                    </div>
+
+                    <div class="setting-actions">
+                        <button class="btn btn-success" onclick="createBackup()">
+                            <i class="fas fa-plus"></i> إنشاء نسخة احتياطية
+                        </button>
+                        <button class="btn btn-info" onclick="importBackup()">
+                            <i class="fas fa-file-import"></i> استيراد نسخة احتياطية
+                        </button>
+                    </div>
+
+                    <h4>سجل النسخ الاحتياطية</h4>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>التاريخ</th>
+                                    <th>النوع</th>
+                                    <th>الحجم</th>
+                                    <th>الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody id="backupList">
+                                <!-- سيتم تعبئته بالجافاسكريبت -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- سجلات النظام -->
+                <div id="logs-tab" class="settings-section" style="display: none;">
+                    <h3><i class="fas fa-clipboard-list"></i> سجلات النظام</h3>
+                    
+                    <div class="log-filters">
+                        <div class="filter-group">
+                            <label for="logFilter">تصفية حسب النوع:</label>
+                            <select id="logFilter" class="form-control" onchange="filterLogs()">
+                                <option value="all">الجميع</option>
+                                <option value="info">معلومات</option>
+                                <option value="warning">تحذير</option>
+                                <option value="error">خطأ</option>
+                                <option value="success">نجاح</option>
+                                <option value="settings">إعدادات</option>
+                                <option value="backup">نسخ احتياطي</option>
+                                <option value="security">أمان</option>
+                            </select>
+                        </div>
+                        <div class="log-search-box">
+                            <input type="text" id="logSearch" class="form-control" placeholder="بحث في السجلات..." onkeyup="filterLogs()">
+                            <button class="btn btn-secondary" onclick="clearSearch()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>التاريخ والوقت</th>
+                                    <th>النوع</th>
+                                    <th>الرسالة</th>
+                                    <th>المستخدم</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logsList">
+                                <!-- سيتم تعبئته بالجافاسكريبت -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="log-actions">
+                        <button class="btn btn-warning" onclick="clearLogs()">
+                            <i class="fas fa-trash"></i> مسح السجلات
+                        </button>
+                        <button class="btn btn-info" onclick="exportLogs()">
+                            <i class="fas fa-download"></i> تصدير السجلات
+                        </button>
+                    </div>
+                </div>
+
+                <!-- الأمان -->
+                <div id="security-tab" class="settings-section" style="display: none;">
+                    <h3><i class="fas fa-shield-alt"></i> إعدادات الأمان</h3>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        هذه الإعدادات حساسة. يرجى الحذر عند التعديل.
+                    </div>
+
+                    <form id="securitySettingsForm">
+                        <div class="settings-grid">
+                            <div class="setting-item">
+                                <label>
+                                    <input type="checkbox" id="enableTwoFactor" class="form-check">
+                                    تفعيل المصادقة الثنائية
+                                </label>
+                                <small class="text-muted">تتطلب التحقق الإضافي عند تسجيل الدخول</small>
+                            </div>
+                            <div class="setting-item">
+                                <label>
+                                    <input type="checkbox" id="forcePasswordChange" class="form-check">
+                                    إجبار تغيير كلمة المرور
+                                </label>
+                                <small class="text-muted">إجبار المستخدمين على تغيير كلمات المرور كل 90 يوم</small>
+                            </div>
+                            <div class="setting-item">
+                                <label>
+                                    <input type="checkbox" id="logAllActivities" class="form-check" checked>
+                                    تسجيل جميع الأنشطة
+                                </label>
+                                <small class="text-muted">تسجيل جميع أنشطة المستخدمين في سجلات النظام</small>
+                            </div>
+                            <div class="setting-item">
+                                <label for="passwordMinLength">الحد الأدنى لكلمة المرور</label>
+                                <input type="number" id="passwordMinLength" class="form-control" min="6" max="20" value="8">
+                                <small class="text-muted">الحد الأدنى لطول كلمة المرور (6-20 حرف)</small>
+                            </div>
+                            <div class="setting-item">
+                                <label for="sessionInactivity">مهلة عدم النشاط (دقائق)</label>
+                                <input type="number" id="sessionInactivity" class="form-control" min="1" max="60" value="15">
+                                <small class="text-muted">مهلة انتهاء الجلسة عند عدم النشاط</small>
+                            </div>
+                        </div>
+                        
+                        <div class="setting-actions">
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save"></i> حفظ إعدادات الأمان
+                            </button>
+                            <button type="button" class="btn btn-danger" onclick="resetSecuritySettings()">
+                                <i class="fas fa-redo"></i> إعادة التعيين
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="security-stats" style="margin-top: 30px;">
+                        <h4>إحصائيات الأمان</h4>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <div class="stat-header">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-user-shield"></i>
+                                    </div>
+                                </div>
+                                <div class="stat-number" id="activeSessions">0</div>
+                                <div class="stat-label">جلسات نشطة</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-header">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-lock"></i>
+                                    </div>
+                                </div>
+                                <div class="stat-number" id="failedLogins">0</div>
+                                <div class="stat-label">محاولات فاشلة</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-header">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-ban"></i>
+                                    </div>
+                                </div>
+                                <div class="stat-number" id="blockedAccounts">0</div>
+                                <div class="stat-label">حسابات محظورة</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- نموذج استيراد النسخ الاحتياطية -->
+    <div class="modal" id="importBackupModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>استيراد نسخة احتياطية</h3>
+                <button class="modal-close" onclick="closeImportBackupModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">اختر ملف النسخة الاحتياطية</label>
+                    <input type="file" id="backupFile" class="form-control" accept=".json,.txt">
+                    <small class="text-muted">يجب أن يكون الملف بصيغة JSON أو TXT</small>
+                </div>
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="replaceExisting" class="form-check">
+                        <span>استبدال البيانات الحالية</span>
+                    </label>
+                    <small class="text-muted">تحذير: هذا سيحذف جميع البيانات الحالية ويستبدلها ببيانات النسخة الاحتياطية</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeImportBackupModal()">إلغاء</button>
+                <button class="btn btn-success" onclick="processBackupImport()">استيراد</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- إضافة الجافاسكريبت -->
+    <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/admin.js"></script>
+    
+    <script>
+        // دالة لتبديل تبويبات الإعدادات
+        function switchSettingsTab(tabName) {
+            // إزالة النشاط من جميع الأزرار
+            document.querySelectorAll('.settings-tab').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // إخفاء جميع الأقسام
+            document.getElementById('general-tab').style.display = 'none';
+            document.getElementById('backup-tab').style.display = 'none';
+            document.getElementById('logs-tab').style.display = 'none';
+            document.getElementById('security-tab').style.display = 'none';
+            
+            // إضافة النشاط للزر المحدد
+            document.querySelector(`.settings-tab[data-tab="${tabName}"]`).classList.add('active');
+            
+            // إظهار القسم المحدد
+            document.getElementById(`${tabName}-tab`).style.display = 'block';
+        }
+
+        // تحميل إعدادات النظام
+        function loadSystemSettings() {
+            const settings = JSON.parse(localStorage.getItem('systemSettings') || '{}');
+            
+            if (Object.keys(settings).length === 0) {
+                // إعدادات افتراضية
+                const defaultSettings = {
+                    systemName: 'ميسر التعلم',
+                    systemEmail: '',
+                    sessionTimeout: 60,
+                    maxLoginAttempts: 5,
+                    enableNotifications: true,
+                    enableAutoBackup: false,
+                    backupFrequency: 'daily',
+                    defaultLanguage: 'ar'
+                };
+                localStorage.setItem('systemSettings', JSON.stringify(defaultSettings));
+                loadSystemSettings();
+                return;
+            }
+            
+            document.getElementById('systemName').value = settings.systemName || 'ميسر التعلم';
+            document.getElementById('systemEmail').value = settings.systemEmail || '';
+            document.getElementById('sessionTimeout').value = settings.sessionTimeout || 60;
+            document.getElementById('maxLoginAttempts').value = settings.maxLoginAttempts || 5;
+            document.getElementById('enableNotifications').checked = settings.enableNotifications !== false;
+            document.getElementById('enableAutoBackup').checked = settings.enableAutoBackup || false;
+            document.getElementById('backupFrequency').value = settings.backupFrequency || 'daily';
+            document.getElementById('defaultLanguage').value = settings.defaultLanguage || 'ar';
+        }
+
+        // حفظ إعدادات النظام
+        function saveSystemSettings() {
+            const settings = {
+                systemName: document.getElementById('systemName').value.trim(),
+                systemEmail: document.getElementById('systemEmail').value.trim(),
+                sessionTimeout: parseInt(document.getElementById('sessionTimeout').value),
+                maxLoginAttempts: parseInt(document.getElementById('maxLoginAttempts').value),
+                enableNotifications: document.getElementById('enableNotifications').checked,
+                enableAutoBackup: document.getElementById('enableAutoBackup').checked,
+                backupFrequency: document.getElementById('backupFrequency').value,
+                defaultLanguage: document.getElementById('defaultLanguage').value,
+                lastUpdated: new Date().toISOString()
+            };
+
+            if (!settings.systemName) {
+                alert('يرجى إدخال اسم النظام');
+                return;
+            }
+
+            localStorage.setItem('systemSettings', JSON.stringify(settings));
+            
+            // إضافة سجل
+            addSystemLog('تم تحديث إعدادات النظام', 'settings');
+            
+            alert('تم حفظ الإعدادات بنجاح');
+        }
+
+        // إعادة تعيين الإعدادات
+        function resetSettings() {
+            if (!confirm('هل أنت متأكد من إعادة تعيين الإعدادات إلى القيم الافتراضية؟')) {
+                return;
+            }
+            
+            const defaultSettings = {
+                systemName: 'ميسر التعلم',
+                systemEmail: '',
+                sessionTimeout: 60,
+                maxLoginAttempts: 5,
+                enableNotifications: true,
+                enableAutoBackup: false,
+                backupFrequency: 'daily',
+                defaultLanguage: 'ar',
+                lastUpdated: new Date().toISOString()
+            };
+            
+            localStorage.setItem('systemSettings', JSON.stringify(defaultSettings));
+            loadSystemSettings();
+            
+            // إضافة سجل
+            addSystemLog('تم إعادة تعيين إعدادات النظام', 'settings');
+            
+            alert('تم إعادة تعيين الإعدادات بنجاح');
+        }
+
+        // دوال النسخ الاحتياطي
+        function loadBackupHistory() {
+            const backups = JSON.parse(localStorage.getItem('systemBackups') || '[]');
+            const backupList = document.getElementById('backupList');
+            
+            document.getElementById('totalBackups').textContent = backups.length;
+            document.getElementById('backupSize').textContent = backups.length > 0 ? 'متاح' : '0';
+            
+            if (backups.length > 0) {
+                const lastBackup = new Date(backups[backups.length - 1].createdAt);
+                document.getElementById('lastBackup').textContent = formatDateShort(lastBackup);
+            } else {
+                document.getElementById('lastBackup').textContent = '-';
+            }
+            
+            if (backups.length === 0) {
+                backupList.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center">
+                            <div class="empty-state">
+                                <div class="empty-icon">💾</div>
+                                <p>لا توجد نسخ احتياطية</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            backupList.innerHTML = backups.map((backup, index) => {
+                const date = new Date(backup.createdAt);
+                const type = backup.type === 'manual' ? 'يدوي' : 'تلقائي';
+                
+                return `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${formatDate(date)}</td>
+                        <td><span class="badge ${backup.type === 'manual' ? 'badge-primary' : 'badge-info'}">${type}</span></td>
+                        <td>${backup.size || 'غير معروف'}</td>
+                        <td>
+                            <button class="btn btn-sm btn-primary" onclick="downloadBackup(${index})">تحميل</button>
+                            <button class="btn btn-sm btn-warning" onclick="restoreBackup(${index})">استعادة</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function createBackup() {
+            if (!confirm('هل تريد إنشاء نسخة احتياطية جديدة؟')) {
+                return;
+            }
+            
+            // جمع البيانات من localStorage
+            const backupData = {};
+            const keys = Object.keys(localStorage);
+            
+            keys.forEach(key => {
+                try {
+                    backupData[key] = JSON.parse(localStorage.getItem(key));
+                } catch (e) {
+                    backupData[key] = localStorage.getItem(key);
+                }
+            });
+            
+            // حفظ النسخة الاحتياطية
+            const backups = JSON.parse(localStorage.getItem('systemBackups') || '[]');
+            const backup = {
+                id: Date.now(),
+                createdAt: new Date().toISOString(),
+                type: 'manual',
+                data: backupData,
+                size: JSON.stringify(backupData).length + ' bytes'
+            };
+            
+            backups.push(backup);
+            localStorage.setItem('systemBackups', JSON.stringify(backups));
+            
+            // تحميل الملف للتنزيل
+            const blob = new Blob([JSON.stringify(backupData, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup-muyasir-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            // إضافة سجل
+            addSystemLog('تم إنشاء نسخة احتياطية', 'backup');
+            
+            alert('تم إنشاء النسخة الاحتياطية بنجاح');
+            loadBackupHistory();
+        }
+
+        function importBackup() {
+            document.getElementById('importBackupModal').classList.add('show');
+        }
+
+        function closeImportBackupModal() {
+            document.getElementById('importBackupModal').classList.remove('show');
+            document.getElementById('backupFile').value = '';
+        }
+
+        function processBackupImport() {
+            const fileInput = document.getElementById('backupFile');
+            const replaceExisting = document.getElementById('replaceExisting').checked;
+            
+            if (!fileInput.files[0]) {
+                alert('يرجى اختيار ملف النسخة الاحتياطية');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const backupData = JSON.parse(e.target.result);
+                    
+                    if (!replaceExisting) {
+                        // دمج البيانات الجديدة مع الحالية
+                        Object.keys(backupData).forEach(key => {
+                            try {
+                                const currentData = JSON.parse(localStorage.getItem(key) || 'null');
+                                if (Array.isArray(currentData) && Array.isArray(backupData[key])) {
+                                    // دمج المصفوفات
+                                    localStorage.setItem(key, JSON.stringify([...currentData, ...backupData[key]]));
+                                } else if (currentData && typeof currentData === 'object' && backupData[key] && typeof backupData[key] === 'object') {
+                                    // دمج الكائنات
+                                    localStorage.setItem(key, JSON.stringify({...currentData, ...backupData[key]}));
+                                } else {
+                                    // استبدال
+                                    localStorage.setItem(key, JSON.stringify(backupData[key]));
+                                }
+                            } catch (err) {
+                                localStorage.setItem(key, JSON.stringify(backupData[key]));
+                            }
+                        });
+                    } else {
+                        // مسح جميع البيانات الحالية واستبدالها
+                        localStorage.clear();
+                        Object.keys(backupData).forEach(key => {
+                            localStorage.setItem(key, JSON.stringify(backupData[key]));
+                        });
+                    }
+                    
+                    // إضافة سجل
+                    addSystemLog('تم استيراد نسخة احتياطية', 'backup');
+                    
+                    alert('تم استيراد النسخة الاحتياطية بنجاح');
+                    closeImportBackupModal();
+                    loadBackupHistory();
+                    
+                    if (replaceExisting) {
+                        setTimeout(() => {
+                            if (confirm('تم استيراد البيانات بنجاح. هل تريد إعادة تحميل الصفحة؟')) {
+                                location.reload();
+                            }
+                        }, 1000);
+                    }
+                } catch (error) {
+                    alert('خطأ في قراءة ملف النسخة الاحتياطية: ' + error.message);
+                }
+            };
+            
+            reader.readAsText(fileInput.files[0]);
+        }
+
+        function downloadBackup(index) {
+            const backups = JSON.parse(localStorage.getItem('systemBackups') || '[]');
+            const backup = backups[index];
+            
+            if (!backup) {
+                alert('النسخة الاحتياطية غير موجودة');
+                return;
+            }
+            
+            const blob = new Blob([JSON.stringify(backup.data, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup-muyasir-${index + 1}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            // إضافة سجل
+            addSystemLog(`تم تحميل النسخة الاحتياطية ${index + 1}`, 'backup');
+        }
+
+        function restoreBackup(index) {
+            if (!confirm('⚠️ تحذير: استعادة النسخة الاحتياطية ستحل محل البيانات الحالية. هل أنت متأكد؟')) {
+                return;
+            }
+            
+            const backups = JSON.parse(localStorage.getItem('systemBackups') || '[]');
+            const backup = backups[index];
+            
+            if (!backup) {
+                alert('النسخة الاحتياطية غير موجودة');
+                return;
+            }
+            
+            // مسح جميع البيانات الحالية
+            localStorage.clear();
+            
+            // استعادة البيانات
+            Object.keys(backup.data).forEach(key => {
+                localStorage.setItem(key, JSON.stringify(backup.data[key]));
+            });
+            
+            // إضافة سجل
+            addSystemLog(`تم استعادة النسخة الاحتياطية ${index + 1}`, 'backup');
+            
+            alert('تم استعادة النسخة الاحتياطية بنجاح');
+            
+            setTimeout(() => {
+                if (confirm('تمت الاستعادة بنجاح. هل تريد إعادة تحميل الصفحة؟')) {
+                    location.reload();
+                }
+            }, 1000);
+        }
+
+        // دوال سجلات النظام
+        function loadSystemLogs() {
+            const logs = JSON.parse(localStorage.getItem('systemLogs') || '[]');
+            const logsList = document.getElementById('logsList');
+            
+            if (logs.length === 0) {
+                logsList.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center">
+                            <div class="empty-state">
+                                <p>لا توجد سجلات نظام</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // ترتيب من الأحدث إلى الأقدم
+            logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            
+            logsList.innerHTML = logs.map(log => {
+                const date = new Date(log.timestamp);
+                const typeClass = getLogTypeClass(log.type);
+                
+                return `
+                    <tr>
+                        <td>${formatDate(date)}</td>
+                        <td><span class="badge ${typeClass}">${getLogTypeText(log.type)}</span></td>
+                        <td>${log.message}</td>
+                        <td>${log.user || 'النظام'}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function getLogTypeClass(type) {
+            const classes = {
+                'info': 'badge-info',
+                'warning': 'badge-warning',
+                'error': 'badge-danger',
+                'success': 'badge-success',
+                'settings': 'badge-primary',
+                'backup': 'badge-secondary',
+                'security': 'badge-dark'
+            };
+            return classes[type] || 'badge-light';
+        }
+
+        function getLogTypeText(type) {
+            const texts = {
+                'info': 'معلومات',
+                'warning': 'تحذير',
+                'error': 'خطأ',
+                'success': 'نجاح',
+                'settings': 'إعدادات',
+                'backup': 'نسخ احتياطي',
+                'security': 'أمان'
+            };
+            return texts[type] || type;
+        }
+
+        function addSystemLog(message, type = 'info', user = null) {
+            const logs = JSON.parse(localStorage.getItem('systemLogs') || '[]');
+            const currentUser = getCurrentUser();
+            
+            logs.push({
+                timestamp: new Date().toISOString(),
+                type: type,
+                message: message,
+                user: user || (currentUser ? currentUser.name : 'النظام')
+            });
+            
+            // الاحتفاظ فقط بآخر 1000 سجل
+            if (logs.length > 1000) {
+                logs.splice(0, logs.length - 1000);
+            }
+            
+            localStorage.setItem('systemLogs', JSON.stringify(logs));
+            
+            // تحديث العرض إذا كانت صفحة السجلات مفتوحة
+            if (document.getElementById('logs-tab').style.display !== 'none') {
+                loadSystemLogs();
+            }
+        }
+
+        function filterLogs() {
+            const filterType = document.getElementById('logFilter').value;
+            const searchTerm = document.getElementById('logSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('#logsList tr');
+            
+            rows.forEach(row => {
+                if (row.cells.length < 4) return;
+                
+                const typeBadge = row.cells[1].querySelector('.badge');
+                const type = typeBadge ? typeBadge.textContent.toLowerCase() : '';
+                const message = row.cells[2].textContent.toLowerCase();
+                const user = row.cells[3].textContent.toLowerCase();
+                
+                let showRow = true;
+                
+                if (filterType !== 'all') {
+                    const filterText = getLogTypeText(filterType).toLowerCase();
+                    if (!type.includes(filterText)) {
+                        showRow = false;
+                    }
+                }
+                
+                if (searchTerm && !message.includes(searchTerm) && !user.includes(searchTerm)) {
+                    showRow = false;
+                }
+                
+                row.style.display = showRow ? '' : 'none';
+            });
+        }
+
+        function clearSearch() {
+            document.getElementById('logSearch').value = '';
+            filterLogs();
+        }
+
+        function clearLogs() {
+            if (!confirm('هل أنت متأكد من مسح جميع سجلات النظام؟ لا يمكن التراجع عن هذا الإجراء.')) {
+                return;
+            }
+            
+            localStorage.removeItem('systemLogs');
+            
+            // إضافة سجل للمسح نفسه
+            addSystemLog('تم مسح جميع سجلات النظام', 'warning');
+            
+            alert('تم مسح سجلات النظام بنجاح');
+            loadSystemLogs();
+        }
+
+        function exportLogs() {
+            const logs = JSON.parse(localStorage.getItem('systemLogs') || '[]');
+            
+            if (logs.length === 0) {
+                alert('لا توجد سجلات للتصدير');
+                return;
+            }
+            
+            const logText = logs.map(log => 
+                `${formatDate(new Date(log.timestamp))} - ${getLogTypeText(log.type)} - ${log.user || 'النظام'}: ${log.message}`
+            ).join('\n');
+            
+            const blob = new Blob([logText], {type: 'text/plain'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `system-logs-${new Date().toISOString().split('T')[0]}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            alert('تم تصدير سجلات النظام بنجاح');
+        }
+
+        // دوال إعدادات الأمان
+        function loadSecuritySettings() {
+            const settings = JSON.parse(localStorage.getItem('securitySettings') || '{}');
+            
+            document.getElementById('enableTwoFactor').checked = settings.enableTwoFactor || false;
+            document.getElementById('forcePasswordChange').checked = settings.forcePasswordChange || false;
+            document.getElementById('logAllActivities').checked = settings.logAllActivities !== false;
+            document.getElementById('passwordMinLength').value = settings.passwordMinLength || 8;
+            document.getElementById('sessionInactivity').value = settings.sessionInactivity || 15;
+            
+            // تحميل إحصائيات الأمان
+            loadSecurityStats();
+        }
+
+        function saveSecuritySettings() {
+            const settings = {
+                enableTwoFactor: document.getElementById('enableTwoFactor').checked,
+                forcePasswordChange: document.getElementById('forcePasswordChange').checked,
+                logAllActivities: document.getElementById('logAllActivities').checked,
+                passwordMinLength: parseInt(document.getElementById('passwordMinLength').value),
+                sessionInactivity: parseInt(document.getElementById('sessionInactivity').value),
+                lastUpdated: new Date().toISOString()
+            };
+            
+            localStorage.setItem('securitySettings', JSON.stringify(settings));
+            
+            // إضافة سجل
+            addSystemLog('تم تحديث إعدادات الأمان', 'security');
+            
+            alert('تم حفظ إعدادات الأمان بنجاح');
+        }
+
+        function resetSecuritySettings() {
+            if (!confirm('هل أنت متأكد من إعادة تعيين إعدادات الأمان إلى القيم الافتراضية؟')) {
+                return;
+            }
+            
+            const defaultSettings = {
+                enableTwoFactor: false,
+                forcePasswordChange: false,
+                logAllActivities: true,
+                passwordMinLength: 8,
+                sessionInactivity: 15,
+                lastUpdated: new Date().toISOString()
+            };
+            
+            localStorage.setItem('securitySettings', JSON.stringify(defaultSettings));
+            loadSecuritySettings();
+            
+            // إضافة سجل
+            addSystemLog('تم إعادة تعيين إعدادات الأمان', 'security');
+            
+            alert('تم إعادة تعيين إعدادات الأمان بنجاح');
+        }
+
+        function loadSecurityStats() {
+            // هذه إحصائيات تجريبية
+            document.getElementById('activeSessions').textContent = 1; // جلسة المدير الحالية
+            document.getElementById('failedLogins').textContent = 0;
+            document.getElementById('blockedAccounts').textContent = 0;
+        }
+
+        // دوال مساعدة
+        function formatDate(date) {
+            if (!date) return '';
+            return date.toLocaleDateString('ar-SA', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatDateShort(date) {
+            if (!date) return '';
+            return date.toLocaleDateString('ar-SA');
+        }
+
+        // تحميل البيانات عند بدء التشغيل
+        document.addEventListener('DOMContentLoaded', function() {
+            // تحميل بيانات المستخدم
+            const currentUser = getCurrentUser();
+            if (currentUser) {
+                document.getElementById('userName').textContent = currentUser.name;
+                document.getElementById('userAvatar').textContent = currentUser.name.charAt(0);
+            } else {
+                window.location.href = '../../index.html';
+                return;
+            }
+            
+            // تحميل جميع البيانات
+            loadSystemSettings();
+            loadBackupHistory();
+            loadSystemLogs();
+            loadSecuritySettings();
+            
+            // إعداد النماذج
+            document.getElementById('systemSettingsForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveSystemSettings();
+            });
+            
+            document.getElementById('securitySettingsForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                saveSecuritySettings();
+            });
+        });
+    </script>
+</body>
+</html>

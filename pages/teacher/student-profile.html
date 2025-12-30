@@ -39,10 +39,10 @@
             position: relative;
         }
 
-        /* إلغاء البهتان عن العناصر المكتملة */
+        /* ✅ إلغاء البهتان عن العناصر المكتملة وجعلها مميزة */
         .content-card.completed {
             opacity: 1 !important; 
-            background-color: #f8fff9;
+            background-color: #f0fff4; /* خلفية خضراء فاتحة جداً */
             border-right: 4px solid #28a745;
         }
 
@@ -120,7 +120,7 @@
             </div>
             <div class="sidebar-student-info">
                 <div class="sidebar-student-avatar" id="sideAvatar">ط</div>
-                <div class="sidebar-student-name" id="sideName">...</div>
+                <div class="sidebar-student-name" id="sideName">جار التحميل...</div>
                 <div class="sidebar-student-grade" id="sideGrade">...</div>
             </div>
             <ul class="sidebar-menu">
@@ -190,22 +190,11 @@
     </div>
 
     <div id="viewLessonAnswersModal" class="modal">
-        <div class="modal-content large">
-            <div class="modal-header"><h3>حل الطالب</h3><button class="modal-close" onclick="closeModal('viewLessonAnswersModal')">×</button></div>
-            <div class="modal-body" id="lessonAnswersBody" style="max-height: 60vh; overflow-y: auto;"></div>
-            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('viewLessonAnswersModal')">إغلاق</button></div>
-        </div>
+        <div class="modal-content large"><div class="modal-header"><h3>إجابات الدرس</h3><button class="modal-close" onclick="closeModal('viewLessonAnswersModal')">×</button></div><div class="modal-body" id="lessonAnswersBody" style="max-height: 60vh; overflow-y: auto;"></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('viewLessonAnswersModal')">إغلاق</button></div></div>
     </div>
 
     <div id="assignLibraryLessonModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header"><h3>إسناد درس من المكتبة</h3><button class="modal-close" onclick="closeModal('assignLibraryLessonModal')">×</button></div>
-            <div class="modal-body">
-                <p>اختر درساً لإضافته لقائمة الطالب فوراً:</p>
-                <select id="libraryLessonSelect" class="form-control"></select>
-            </div>
-            <div class="modal-footer"><button class="btn btn-success" onclick="assignLibraryLesson()">إسناد الدرس</button></div>
-        </div>
+        <div class="modal-content"><div class="modal-header"><h3>إسناد درس من المكتبة</h3><button class="modal-close" onclick="closeModal('assignLibraryLessonModal')">×</button></div><div class="modal-body"><p>اختر درساً لإضافته لقائمة الطالب:</p><select id="libraryLessonSelect" class="form-control"></select></div><div class="modal-footer"><button class="btn btn-success" onclick="assignLibraryLesson()">إسناد الدرس</button></div></div>
     </div>
 
     <script src="../assets/js/auth.js"></script>

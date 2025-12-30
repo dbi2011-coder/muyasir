@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-iep.js
-// الوصف: عرض الخطة للطالب (تم حذف زر الطباعة السفلي نهائياً)
+// الوصف: عرض الخطة للطالب (تذييل يظهر في الصفحة الأخيرة فقط + إزالة الأزرار الزائدة)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -157,19 +157,30 @@ function loadStudentIEP() {
         scheduleCells += `<td style="height:50px; vertical-align:middle;">${content}</td>`;
     });
 
-    // ستايل الطباعة + التذييل
+    // ✅ ستايل الطباعة المعدل (لإظهار التذييل في النهاية فقط)
     const printStyles = `
         <style>
             @media print {
                 body * { visibility: hidden; }
                 .iep-word-model-content, .iep-word-model-content * { visibility: visible; }
-                .iep-word-model-content { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; padding-bottom: 50px; border: none !important; }
+                .iep-word-model-content { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; border: none !important; }
                 * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
                 .no-print { display: none !important; }
-                .print-footer {
-                    position: fixed; bottom: 0; left: 0; width: 100%; text-align: center;
-                    font-size: 10px; color: #555; border-top: 1px solid #ccc; padding: 5px;
-                    background: #fff; display: block !important; font-family: 'Tajawal', sans-serif;
+                
+                /* تنسيق التذييل ليكون في نهاية المحتوى فقط وليس ثابتاً في كل صفحة */
+                .print-footer-container {
+                    margin-top: 50px;
+                    width: 100%;
+                    text-align: center;
+                    border-top: 1px solid #ccc;
+                    padding-top: 10px;
+                    display: block !important;
+                }
+                .print-footer-text {
+                    font-size: 11px;
+                    color: #555;
+                    font-weight: bold;
+                    font-family: 'Tajawal', sans-serif;
                 }
             }
         </style>
@@ -259,8 +270,10 @@ function loadStudentIEP() {
             </table>
         </div>
 
-        <div class="print-footer" style="display:none;">
-            تم طباعة الخطة التربوية الفردية من نظام ميسر التعلم لمعلم صعوبات التعلم أ/ صالح عبد العزيز العجلان
+        <div class="print-footer-container">
+            <p class="print-footer-text">
+                تم طباعة الخطة التربوية الفردية من نظام ميسر التعلم لمعلم صعوبات التعلم أ/ صالح عبد العزيز العجلان
+            </p>
         </div>
     </div>
     `;

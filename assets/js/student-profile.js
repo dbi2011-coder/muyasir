@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (إضافة جدول الهدف بعيد المدى في الخطة)
+// الوصف: إدارة ملف الطالب (ترقيم الأهداف القصيرة وتمييز خلفيتها)
 // ============================================
 
 let currentStudentId = null;
@@ -28,6 +28,7 @@ function loadStudentData() {
         return;
     }
     
+    // تحديث الواجهة
     if(document.getElementById('sideName')) document.getElementById('sideName').textContent = currentStudent.name;
     if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = currentStudent.name;
     if(document.getElementById('sideGrade')) document.getElementById('sideGrade').textContent = currentStudent.grade + ' - ' + (currentStudent.subject || 'عام');
@@ -102,7 +103,7 @@ function loadDiagnosticTab() {
 }
 
 // ---------------------------------------------------------
-// دالة تنسيق الإجابات
+// تنسيق الإجابات
 // ---------------------------------------------------------
 function formatAnswerDisplay(answerData) {
     if (!answerData) return '<span class="text-muted">لم يجب</span>';
@@ -228,7 +229,7 @@ function saveTestReview() {
 }
 
 // ============================================
-// 2. الخطة التربوية (إضافة جدول الهدف بعيد المدى)
+// 2. الخطة التربوية (التعديل: ترقيم الأهداف القصيرة + تمييز الخلفية)
 // ============================================
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
@@ -258,7 +259,6 @@ function loadIEPTab() {
         return;
     }
 
-    // تحليل الأهداف
     let needsObjects = [];
     let strengthHTML = '';
     let needsHTML = '';
@@ -293,7 +293,6 @@ function loadIEPTab() {
     if(!strengthHTML) strengthHTML = '<li>لا توجد نقاط مسجلة.</li>';
     if(!needsHTML) needsHTML = '<li>لا توجد نقاط احتياج مسجلة.</li>';
 
-    // تواريخ الدروس
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const completedLessonsMap = {};
     studentLessons.forEach(l => {
@@ -302,14 +301,20 @@ function loadIEPTab() {
         }
     });
 
-    // جدول الأهداف
+    // 🔴 بناء جدول الأهداف (مع الترقيم وتمييز الخلفية)
     let objectivesRows = '';
     if (needsObjects.length === 0) {
         objectivesRows = '<tr><td colspan="3" class="text-center">جميع الأهداف محققة.</td></tr>';
     } else {
-        let counter = 1;
+        let stgCounter = 1; // عداد الأهداف القصيرة
         needsObjects.forEach(obj => {
-            objectivesRows += `<tr style="background-color: #f9f9f9;"><td class="text-center"><strong>*</strong></td><td colspan="2"><strong>هدف قصير المدى:</strong> ${obj.shortTermGoal}</td></tr>`;
+            // صف الهدف القصير (خلفية زرقاء فاتحة + رقم تسلسلي)
+            objectivesRows += `
+                <tr style="background-color: #dbeeff; border-bottom: 2px solid #fff;">
+                    <td class="text-center" style="font-weight:bold; font-size:1.1rem; color:#0056b3;">${stgCounter++}</td>
+                    <td colspan="2" style="font-weight:bold; color:#0056b3; font-size:1.05rem;">هدف قصير المدى: ${obj.shortTermGoal}</td>
+                </tr>
+            `;
             
             if (obj.instructionalGoals && obj.instructionalGoals.length > 0) {
                 obj.instructionalGoals.forEach(iGoal => {
@@ -323,15 +328,20 @@ function loadIEPTab() {
                     } else {
                         dateDisplay = `<input type="date" class="form-control" style="border:none; background:transparent;" disabled>`;
                     }
-                    objectivesRows += `<tr><td class="text-center">${counter++}</td><td>${iGoal}</td><td>${dateDisplay}</td></tr>`;
+                    objectivesRows += `
+                        <tr>
+                            <td class="text-center" style="color:#666;">-</td>
+                            <td>${iGoal}</td>
+                            <td>${dateDisplay}</td>
+                        </tr>
+                    `;
                 });
             } else {
-                objectivesRows += `<tr><td>-</td><td class="text-muted">لا توجد أهداف تدريسية</td><td></td></tr>`;
+                objectivesRows += `<tr><td></td><td class="text-muted">لا توجد أهداف تدريسية</td><td></td></tr>`;
             }
         });
     }
 
-    // اسم المادة للهدف بعيد المدى
     const subjectName = originalTest.subject || 'المادة';
 
     const iepHTML = `
@@ -408,7 +418,7 @@ function loadIEPTab() {
 
         <h5 style="margin-bottom:10px; font-weight:bold;">الأهداف التدريسية:</h5>
         <div class="table-responsive">
-            <table class="table table-bordered table-striped" style="width:100%;">
+            <table class="table table-bordered" style="width:100%;">
                 <thead style="background:#333; color:#fff;">
                     <tr>
                         <th style="width:50px;">#</th>

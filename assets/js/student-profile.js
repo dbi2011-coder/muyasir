@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: ملف الطالب (أسهم الترتيب + إعادة فتح + خطة ثابتة)
+// الوصف: إدارة ملف الطالب (النسخة النهائية المصححة)
 // ============================================
 
 let currentStudentId = null;
@@ -53,7 +53,9 @@ function switchSection(sectionId) {
     if (sectionId === 'progress') loadProgressTab();
 }
 
-// 1. الاختبار التشخيصي
+// ---------------------------------------------------------
+// 1. قسم الاختبار التشخيصي
+// ---------------------------------------------------------
 function loadDiagnosticTab() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const assignedTest = studentTests.find(t => t.studentId === currentStudentId && t.type === 'diagnostic');
@@ -94,7 +96,9 @@ function loadDiagnosticTab() {
     }
 }
 
-// 2. الخطة التربوية (لم يتغير الهيكل، فقط تنسيق التاريخ)
+// ---------------------------------------------------------
+// 2. قسم الخطة التربوية (لم يتغير سوى التنسيق)
+// ---------------------------------------------------------
 function loadIEPTab() {
     const iepContent = document.getElementById('iepContent');
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
@@ -178,12 +182,12 @@ function loadIEPTab() {
                 obj.instructionalGoals.forEach(iGoal => {
                     const achievementDate = completedLessonsMap[iGoal];
                     
-                    // ✅ تنسيق التاريخ (يوم/شهر/سنة)
+                    // تنسيق التاريخ
                     const formattedDate = achievementDate 
                         ? new Date(achievementDate).toLocaleDateString('ar-SA') 
                         : '';
 
-                    // إذا كان هناك تاريخ (مكتمل) يظهر، وإلا يظهر حقل فارغ
+                    // عرض التاريخ إذا وجد، وإلا حقل فارغ
                     const dateCellContent = achievementDate 
                         ? `<span class="text-success font-weight-bold">✔ ${formattedDate}</span>` 
                         : `<input type="date" class="form-control" style="border:none; background:transparent;" disabled>`;
@@ -239,7 +243,7 @@ function loadLessonsTab() {
 
         if(l.status === 'completed') {
             statusDisplay = `<span class="badge badge-success">مكتمل (${new Date(l.completedDate).toLocaleDateString('ar-SA')})</span>`;
-            cardClass = 'completed'; // سيتم تنسيقها لتكون واضحة
+            cardClass = 'completed'; // سيتم تطبيق التنسيق الواضح عليها
             controls = `
                 <button class="btn btn-info" onclick="openLessonReview(${l.id})">👁️ الحل</button>
                 <button class="btn btn-warning" onclick="resetLesson(${l.id})">🔄 إعادة فتح</button>
@@ -298,7 +302,7 @@ function moveLesson(lessonId, direction) {
         myLessons[currentIndex + 1].orderIndex = temp;
     }
 
-    // حفظ التغييرات
+    // حفظ التغييرات في القائمة الرئيسية
     myLessons.forEach(l => {
         const mainIdx = studentLessons.findIndex(sl => sl.id === l.id);
         if (mainIdx !== -1) studentLessons[mainIdx].orderIndex = l.orderIndex;
@@ -309,14 +313,14 @@ function moveLesson(lessonId, direction) {
 }
 
 // ---------------------------------------------------------
-// دوال التحكم والإسناد
+// دوال التحكم بالدروس
 // ---------------------------------------------------------
 function openLessonReview(assignmentId) {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const lesson = studentLessons.find(l => l.id === assignmentId);
     const container = document.getElementById('lessonAnswersBody');
     if(!lesson || !lesson.answers) {
-        container.innerHTML = '<div class="alert alert-warning">لا توجد إجابات محفوظة.</div>';
+        container.innerHTML = '<div class="alert alert-warning">لا توجد إجابات محفوظة لهذا الدرس.</div>';
     } else {
         container.innerHTML = lesson.answers.map((ans, i) => `
             <div class="review-question-item">
@@ -329,13 +333,15 @@ function openLessonReview(assignmentId) {
 }
 
 function resetLesson(id) {
-    if(!confirm('تنبيه: سيتم إعادة فتح الدرس ومسح تاريخ الإنجاز. هل أنت متأكد؟')) return;
+    if(!confirm('تنبيه: سيتم إعادة فتح الدرس ومسح جميع إجابات الطالب وتاريخ الإنجاز. هل أنت متأكد؟')) return;
+    
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const idx = studentLessons.findIndex(l => l.id === id);
     if(idx !== -1) {
         studentLessons[idx].status = 'pending';
         delete studentLessons[idx].completedDate; // حذف التاريخ (سيختفي من الخطة)
-        delete studentLessons[idx].answers;
+        delete studentLessons[idx].answers; // حذف الإجابات
+        
         localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
         loadLessonsTab();
         loadIEPTab(); // تحديث الخطة

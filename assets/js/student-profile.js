@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (استعادة تصميم الخطة الرسمي "القديم" + إصلاحات الوسائط والترتيب)
+// الوصف: إدارة ملف الطالب (استعادة تصميم الخطة الكلاسيكي + الميزات الجديدة)
 // ============================================
 
 let currentStudentId = null;
@@ -28,7 +28,6 @@ function loadStudentData() {
         return;
     }
     
-    // تحديث الواجهة الجانبية
     if(document.getElementById('sideName')) document.getElementById('sideName').textContent = currentStudent.name;
     if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = currentStudent.name;
     if(document.getElementById('sideGrade')) document.getElementById('sideGrade').textContent = currentStudent.grade + ' - ' + (currentStudent.subject || 'عام');
@@ -54,9 +53,9 @@ function switchSection(sectionId) {
     if (sectionId === 'progress') loadProgressTab();
 }
 
-// ============================================
+// ---------------------------------------------------------
 // 1. قسم الاختبار التشخيصي
-// ============================================
+// ---------------------------------------------------------
 function loadDiagnosticTab() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const assignedTest = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic');
@@ -86,16 +85,12 @@ function loadDiagnosticTab() {
             statusBadge = '<span class="badge badge-secondary">قيد الانتظار</span>';
         }
 
-        const testTitle = originalTest ? originalTest.title : 'اختبار (محذوف)';
-
+        const title = originalTest ? originalTest.title : 'اختبار (محذوف)';
         detailsDiv.innerHTML = `
             <div class="card">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3>${testTitle}</h3>
-                    <div style="display:flex; gap:5px;">
-                        ${statusBadge}
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAssignedTest(${assignedTest.id})"><i class="fas fa-trash"></i></button>
-                    </div>
+                    <h3>${title}</h3>
+                    <div style="display:flex; gap:5px;">${statusBadge}<button class="btn btn-sm btn-outline-danger" onclick="deleteAssignedTest(${assignedTest.id})"><i class="fas fa-trash"></i></button></div>
                 </div>
                 <p class="text-muted">تاريخ التعيين: ${new Date(assignedTest.assignedDate).toLocaleDateString('ar-SA')}</p>
                 ${actionContent}
@@ -107,7 +102,7 @@ function loadDiagnosticTab() {
 }
 
 // ---------------------------------------------------------
-// دالة تنسيق الإجابات (صور، صوت، نصوص، قوائم)
+// دالة تنسيق الإجابات (صوت، صورة، نصوص، قوائم)
 // ---------------------------------------------------------
 function formatAnswerDisplay(answerData) {
     if (!answerData) return '<span class="text-muted">لم يجب</span>';
@@ -134,6 +129,7 @@ function formatAnswerDisplay(answerData) {
             const html = checkTypeAndReturnHTML(val);
             if (html) return html;
         }
+        // قائمة (ترتيب)
         let htmlList = '<ol style="padding-right: 20px; margin-bottom: 0;">';
         values.forEach(val => { if(val) htmlList += `<li>${val}</li>`; });
         htmlList += '</ol>';
@@ -160,8 +156,8 @@ function openReviewModal(assignmentId) {
         originalTest.questions.forEach((q, index) => {
             const studentAnsObj = assignment.answers ? assignment.answers.find(a => a.questionId == q.id) : null;
             let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
+            
             const formattedAnswer = formatAnswerDisplay(rawAnswer);
-
             const currentScore = studentAnsObj ? (studentAnsObj.score || 0) : 0;
             const teacherNote = studentAnsObj ? (studentAnsObj.teacherNote || '') : '';
             const maxScore = q.passingScore || 1;
@@ -186,8 +182,6 @@ function openReviewModal(assignmentId) {
             `;
             container.appendChild(item);
         });
-    } else {
-        container.innerHTML = '<p class="text-center text-muted">لا توجد أسئلة.</p>';
     }
     document.getElementById('reviewTestModal').classList.add('show');
 }
@@ -235,36 +229,43 @@ function saveTestReview() {
 }
 
 // ============================================
-// 2. الخطة التربوية (استعادة التصميم الرسمي الكامل)
+// 2. الخطة التربوية (استعادة التصميم القديم بالضبط)
 // ============================================
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
+    const wordModel = document.querySelector('.iep-word-model');
     if (!iepContainer) return;
 
+    // 1. البحث عن الاختبار المكتمل
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
 
-    // 1. البحث عن الاختبار المكتمل
     const completedDiagnostic = studentTests
         .filter(t => t.studentId == currentStudentId && t.type === 'diagnostic' && t.status === 'completed')
         .sort((a, b) => new Date(b.assignedDate) - new Date(a.assignedDate))[0];
 
+    // إخفاء/إظهار الحاوية
     if (!completedDiagnostic) {
+        if(wordModel) wordModel.style.display = 'none';
         iepContainer.innerHTML = `<div class="empty-state"><h3>الخطة غير جاهزة</h3><p>يجب إكمال وتصحيح اختبار تشخيصي أولاً.</p></div>`;
         return;
     }
 
+    // إذا وجدنا اختبار، نظهر النموذج ونمسح رسالة "فارغ"
+    if(wordModel) wordModel.style.display = 'block';
+    if(iepContainer.querySelector('.empty-state')) iepContainer.innerHTML = '';
+
     const originalTest = allTests.find(t => t.id == completedDiagnostic.testId);
     if (!originalTest) {
-        iepContainer.innerHTML = `<div class="alert alert-danger">خطأ: بيانات الاختبار الأصلي محذوفة.</div>`;
+        iepContainer.innerHTML = `<div class="alert alert-danger">بيانات الاختبار مفقودة.</div>`;
         return;
     }
 
     // 2. تحليل الأهداف (نقاط القوة والاحتياج)
     let needsObjects = [];
-    let strengthItemsHTML = '';
-    let needsItemsHTML = '';
+    let strengthHTML = '';
+    let needsHTML = '';
     
     if (originalTest.questions) {
         originalTest.questions.forEach(question => {
@@ -279,13 +280,13 @@ function loadIEPTab() {
                 if (objective) {
                     const passingScore = Number(question.passingScore) || 1;
                     if (studentScore >= passingScore) {
-                        if (!strengthItemsHTML.includes(objective.shortTermGoal)) {
-                            strengthItemsHTML += `<li>${objective.shortTermGoal}</li>`;
+                        if (!strengthHTML.includes(objective.shortTermGoal)) {
+                            strengthHTML += `<li>${objective.shortTermGoal}</li>`;
                         }
                     } else {
                         if (!needsObjects.find(o => o.id == objective.id)) {
                             needsObjects.push(objective);
-                            needsItemsHTML += `<li>${objective.shortTermGoal}</li>`;
+                            needsHTML += `<li>${objective.shortTermGoal}</li>`;
                         }
                     }
                 }
@@ -293,8 +294,8 @@ function loadIEPTab() {
         });
     }
 
-    if (!strengthItemsHTML) strengthItemsHTML = '<li>لا توجد نقاط مسجلة.</li>';
-    if (!needsItemsHTML) needsItemsHTML = '<li>لا توجد نقاط احتياج مسجلة.</li>';
+    if(!strengthHTML) strengthHTML = '<li>لا توجد نقاط مسجلة.</li>';
+    if(!needsHTML) needsHTML = '<li>لا توجد نقاط احتياج مسجلة.</li>';
 
     // 3. جلب تواريخ الدروس
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
@@ -308,11 +309,11 @@ function loadIEPTab() {
     // 4. بناء جدول الأهداف
     let objectivesRows = '';
     if (needsObjects.length === 0) {
-        objectivesRows = '<tr><td colspan="3" class="text-center">جميع الأهداف محققة (لا توجد نقاط احتياج).</td></tr>';
+        objectivesRows = '<tr><td colspan="3" class="text-center">جميع الأهداف محققة.</td></tr>';
     } else {
         let counter = 1;
         needsObjects.forEach(obj => {
-            objectivesRows += `<tr style="background-color: #e9ecef;"><td class="text-center"><strong>*</strong></td><td colspan="2"><strong>هدف قصير المدى:</strong> ${obj.shortTermGoal}</td></tr>`;
+            objectivesRows += `<tr style="background-color: #f9f9f9;"><td class="text-center"><strong>*</strong></td><td colspan="2"><strong>هدف قصير المدى:</strong> ${obj.shortTermGoal}</td></tr>`;
             
             if (obj.instructionalGoals && obj.instructionalGoals.length > 0) {
                 obj.instructionalGoals.forEach(iGoal => {
@@ -325,7 +326,7 @@ function loadIEPTab() {
                             dateDisplay = `<span class="text-success font-weight-bold">✔ ${d.toLocaleDateString('ar-SA')}</span>`;
                         } catch(e) {}
                     } else {
-                        // حقل تاريخ فارغ (محاكاة للتصميم القديم)
+                        // حقل تاريخ فارغ كلاسيكي
                         dateDisplay = `<input type="date" class="form-control" style="border:none; background:transparent;" disabled>`;
                     }
                     objectivesRows += `<tr><td class="text-center">${counter++}</td><td>${iGoal}</td><td>${dateDisplay}</td></tr>`;
@@ -336,98 +337,97 @@ function loadIEPTab() {
         });
     }
 
-    // 5. بناء قالب الخطة الرسمي الكامل (HTML Injection)
-    // هذا الكود يبني الجدول والترويسة ونقاط القوة والاحتياج بنفس الشكل القديم
+    // 5. بناء هيكل الخطة القديم (HTML Injection)
+    // هذا الكود يعيد بناء الشكل الرسمي السابق (جداول، ترويسات، مربعات)
     const iepHTML = `
-        <div class="iep-document" style="background:white; padding:20px; border:1px solid #ccc; box-shadow:0 0 10px rgba(0,0,0,0.05);">
-            <div class="text-center mb-4">
-                <h3 style="border-bottom: 2px solid #333; display:inline-block; padding-bottom:5px;">الخطة التربوية الفردية (IEP)</h3>
-            </div>
-            
-            <table class="table table-bordered mb-4" style="border-color:#999;">
-                <tr>
-                    <td style="background:#f0f0f0; width:15%; font-weight:bold;">اسم الطالب</td>
-                    <td style="width:35%;">${currentStudent.name}</td>
-                    <td style="background:#f0f0f0; width:15%; font-weight:bold;">الصف</td>
-                    <td style="width:35%;">${currentStudent.grade}</td>
-                </tr>
-                <tr>
-                    <td style="background:#f0f0f0; font-weight:bold;">المادة</td>
-                    <td>${originalTest.subject || 'عام'}</td>
-                    <td style="background:#f0f0f0; font-weight:bold;">تاريخ الخطة</td>
-                    <td>${new Date().toLocaleDateString('ar-SA')}</td>
-                </tr>
+    <div class="iep-word-model-content" style="background:#fff; padding:20px; border:1px solid #ccc; font-family:'Tajawal', sans-serif;">
+        
+        <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #333; padding-bottom:10px;">
+            <h3>الخطة التربوية الفردية</h3>
+        </div>
+
+        <table class="table table-bordered mb-4" style="width:100%;">
+            <tr>
+                <td style="background:#f5f5f5; width:15%; font-weight:bold;">اسم الطالب:</td>
+                <td style="width:35%;" id="iep-student-name">${currentStudent.name}</td>
+                <td style="background:#f5f5f5; width:15%; font-weight:bold;">الصف:</td>
+                <td style="width:35%;" id="iep-grade">${currentStudent.grade}</td>
+            </tr>
+            <tr>
+                <td style="background:#f5f5f5; font-weight:bold;">المادة:</td>
+                <td id="iep-subject">${originalTest.subject || 'عام'}</td>
+                <td style="background:#f5f5f5; font-weight:bold;">تاريخ الخطة:</td>
+                <td id="iep-date">${new Date().toLocaleDateString('ar-SA')}</td>
+            </tr>
+        </table>
+
+        <h5 style="margin-bottom:10px; font-weight:bold;">جدول الحصص:</h5>
+        <div class="table-responsive mb-4">
+            <table class="table table-bordered text-center" style="width:100%;">
+                <thead>
+                    <tr style="background:#f5f5f5;">
+                        <th>الأحد</th><th>الاثنين</th><th>الثلاثاء</th><th>الأربعاء</th><th>الخميس</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td id="day-sunday" style="height:50px; vertical-align:middle;"></td>
+                        <td id="day-monday" style="height:50px; vertical-align:middle;"></td>
+                        <td id="day-tuesday" style="height:50px; vertical-align:middle;"></td>
+                        <td id="day-wednesday" style="height:50px; vertical-align:middle;"></td>
+                        <td id="day-thursday" style="height:50px; vertical-align:middle;"></td>
+                    </tr>
+                </tbody>
             </table>
+        </div>
 
-            <h5 class="mb-2" style="font-weight:bold; color:#0056b3;">جدول الحصص:</h5>
-            <div class="table-responsive mb-4">
-                <table class="table table-bordered text-center" style="border-color:#999;">
-                    <thead>
-                        <tr style="background:#e9ecef;">
-                            <th>الأحد</th><th>الاثنين</th><th>الثلاثاء</th><th>الأربعاء</th><th>الخميس</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td id="day-sunday" style="height:50px; vertical-align:middle;"></td>
-                            <td id="day-monday" style="height:50px; vertical-align:middle;"></td>
-                            <td id="day-tuesday" style="height:50px; vertical-align:middle;"></td>
-                            <td id="day-wednesday" style="height:50px; vertical-align:middle;"></td>
-                            <td id="day-thursday" style="height:50px; vertical-align:middle;"></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="row mb-4">
-                <div class="col-md-6">
-                    <div class="card h-100" style="border:1px solid #28a745;">
-                        <div class="card-header text-white text-center" style="background-color:#28a745; font-weight:bold;">نـقـاط الـقـوة</div>
-                        <div class="card-body">
-                            <ul style="padding-right:20px; margin:0;">${strengthItemsHTML}</ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card h-100" style="border:1px solid #dc3545;">
-                        <div class="card-header text-white text-center" style="background-color:#dc3545; font-weight:bold;">نـقـاط الاحـتـيـاج</div>
-                        <div class="card-body">
-                            <ul style="padding-right:20px; margin:0;">${needsItemsHTML}</ul>
-                        </div>
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card h-100" style="border:1px solid #ddd;">
+                    <div class="card-header" style="background:#28a745; color:#fff; text-align:center;">نقاط القوة</div>
+                    <div class="card-body">
+                        <ul id="iep-strengths-list" style="padding-right:20px;">${strengthHTML}</ul>
                     </div>
                 </div>
             </div>
-
-            <h5 class="mb-2" style="font-weight:bold; color:#0056b3;">الأهداف التدريسية:</h5>
-            <div class="table-responsive">
-                <table class="table table-bordered" style="border-color:#999;">
-                    <thead style="background:#343a40; color:white;">
-                        <tr>
-                            <th style="width:50px;">#</th>
-                            <th>الهدف التدريسي</th>
-                            <th style="width:160px;">تاريخ التحقق</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${objectivesRows}
-                    </tbody>
-                </table>
+            <div class="col-md-6">
+                <div class="card h-100" style="border:1px solid #ddd;">
+                    <div class="card-header" style="background:#dc3545; color:#fff; text-align:center;">نقاط الاحتياج</div>
+                    <div class="card-body">
+                        <ul id="iep-needs-list" style="padding-right:20px;">${needsHTML}</ul>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <h5 style="margin-bottom:10px; font-weight:bold;">الأهداف التدريسية:</h5>
+        <div class="table-responsive">
+            <table class="table table-bordered table-striped" style="width:100%;">
+                <thead style="background:#333; color:#fff;">
+                    <tr>
+                        <th style="width:50px;">#</th>
+                        <th>الهدف التدريسي</th>
+                        <th style="width:150px;">تاريخ التحقق</th>
+                    </tr>
+                </thead>
+                <tbody id="iep-objectives-body">
+                    ${objectivesRows}
+                </tbody>
+            </table>
+        </div>
+    </div>
     `;
 
     iepContainer.innerHTML = iepHTML;
     
-    // استدعاء دالة تعبئة الجدول (التي تعتمد على العناصر التي تم إنشاؤها للتو)
+    // تعبئة الجدول (بعد رسم HTML)
     fillScheduleTable();
 }
 
 function fillScheduleTable() {
     const daysMap = { 'sunday': 'day-sunday', 'monday': 'day-monday', 'tuesday': 'day-tuesday', 'wednesday': 'day-wednesday', 'thursday': 'day-thursday' };
     const schedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]'); 
-    // تنظيف الخلايا
     Object.values(daysMap).forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = ''; });
-    
     schedule.forEach(session => {
         let hasStudent = false;
         if (session.students && session.students.includes(currentStudentId)) hasStudent = true;
@@ -436,14 +436,14 @@ function fillScheduleTable() {
         if (hasStudent) {
             const cellId = daysMap[session.day];
             if (cellId && document.getElementById(cellId)) {
-                document.getElementById(cellId).innerHTML += `<div style="background:#d4edda; color:#155724; padding:2px 5px; border-radius:4px; margin-bottom:2px; font-weight:bold; font-size:0.9rem;">حصة ${session.period || 1}</div>`;
+                document.getElementById(cellId).innerHTML += `<div style="background:#e2e6ea; padding:4px; margin-bottom:2px; border-radius:3px; font-size:0.9rem;">حصة ${session.period || 1}</div>`;
             }
         }
     });
 }
 
 // ============================================
-// 3. قسم الدروس (الأسهم والتحكم)
+// 3. قسم الدروس
 // ============================================
 function loadLessonsTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');

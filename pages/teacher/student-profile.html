@@ -36,6 +36,7 @@
             transition: transform 0.2s;
             display: flex;
             flex-direction: column;
+            position: relative;
         }
 
         .content-card:hover {
@@ -43,11 +44,11 @@
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
 
-        /* تنسيقات أزرار التحكم بالدرس */
+        /* تنسيقات أزرار التحكم بالدرس (بالأسفل) */
         .lesson-actions { 
             display: flex; 
             gap: 5px; 
-            margin-top: auto; /* دفع الأزرار للأسفل */
+            margin-top: auto; 
             border-top: 1px solid #eee; 
             padding-top: 10px; 
             flex-wrap: wrap;
@@ -59,29 +60,35 @@
             flex-grow: 1;
         }
 
-        /* تنسيقات أسهم الترتيب */
+        /* تنسيقات أسهم الترتيب (في الأعلى) */
         .order-controls {
+            position: absolute;
+            top: 10px;
+            left: 10px;
             display: flex;
-            justify-content: flex-end;
-            margin-bottom: 5px;
-            gap: 5px;
+            gap: 3px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 20px;
+            padding: 2px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
         .btn-order {
-            background: #f8f9fa;
-            border: 1px solid #ddd;
-            color: #555;
-            width: 30px;
-            height: 30px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
+            border: 1px solid #ddd;
+            background: #fff;
+            color: #333;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
+            font-size: 0.9rem;
             transition: all 0.2s;
         }
         .btn-order:hover {
-            background: #e9ecef;
-            color: #007bff;
+            background: #007bff;
+            color: #fff;
             border-color: #007bff;
         }
 
@@ -104,7 +111,7 @@
             </div>
             <div class="sidebar-student-info">
                 <div class="sidebar-student-avatar" id="sideAvatar">ط</div>
-                <div class="sidebar-student-name" id="sideName">جار التحميل...</div>
+                <div class="sidebar-student-name" id="sideName">...</div>
                 <div class="sidebar-student-grade" id="sideGrade">...</div>
             </div>
             <ul class="sidebar-menu">
@@ -140,8 +147,7 @@
                 <div id="section-iep" class="content-section">
                     <div class="content-header"><h1>الخطة التربوية</h1><button class="btn btn-info" onclick="window.print()">طباعة</button></div>
                     <div id="iepContent"></div>
-                    <div class="iep-word-model" style="display:none;">
-                        </div>
+                    <div class="iep-word-model" style="display:none;"></div>
                 </div>
 
                 <div id="section-lessons" class="content-section">
@@ -156,6 +162,7 @@
                 </div>
 
                 <div id="section-assignments" class="content-section"><div class="content-header"><h1>الواجبات</h1><button class="btn btn-primary" onclick="showAssignHomeworkModal()">+ واجب</button></div><div class="content-grid" id="studentAssignmentsGrid"></div></div>
+                
                 <div id="section-progress" class="content-section"><div class="content-header"><h1>التقدم</h1></div><div class="card"><table class="table"><thead><tr><th>الهدف</th><th>الحالة</th><th>التاريخ</th></tr></thead><tbody id="progressTableBody"></tbody></table></div></div>
             </div>
         </main>

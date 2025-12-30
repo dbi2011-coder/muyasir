@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (ترقيم الأهداف القصيرة وتمييز خلفيتها)
+// الوصف: إدارة ملف الطالب (تحسين الطباعة الاحترافية بالألوان + تذييل الصفحة)
 // ============================================
 
 let currentStudentId = null;
@@ -54,9 +54,9 @@ function switchSection(sectionId) {
     if (sectionId === 'progress') loadProgressTab();
 }
 
-// ============================================
+// ---------------------------------------------------------
 // 1. قسم الاختبار التشخيصي
-// ============================================
+// ---------------------------------------------------------
 function loadDiagnosticTab() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const assignedTest = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic');
@@ -229,7 +229,7 @@ function saveTestReview() {
 }
 
 // ============================================
-// 2. الخطة التربوية (التعديل: ترقيم الأهداف القصيرة + تمييز الخلفية)
+// 2. الخطة التربوية (طباعة احترافية ملونة + تذييل الصفحة)
 // ============================================
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
@@ -301,18 +301,16 @@ function loadIEPTab() {
         }
     });
 
-    // 🔴 بناء جدول الأهداف (مع الترقيم وتمييز الخلفية)
     let objectivesRows = '';
     if (needsObjects.length === 0) {
         objectivesRows = '<tr><td colspan="3" class="text-center">جميع الأهداف محققة.</td></tr>';
     } else {
-        let stgCounter = 1; // عداد الأهداف القصيرة
+        let stgCounter = 1;
         needsObjects.forEach(obj => {
-            // صف الهدف القصير (خلفية زرقاء فاتحة + رقم تسلسلي)
             objectivesRows += `
-                <tr style="background-color: #dbeeff; border-bottom: 2px solid #fff;">
+                <tr style="background-color: #dbeeff !important; -webkit-print-color-adjust: exact;">
                     <td class="text-center" style="font-weight:bold; font-size:1.1rem; color:#0056b3;">${stgCounter++}</td>
-                    <td colspan="2" style="font-weight:bold; color:#0056b3; font-size:1.05rem;">هدف قصير المدى: ${obj.shortTermGoal}</td>
+                    <td colspan="2" style="font-weight:bold; color:#0056b3; font-size:1.05rem;">الهدف قصير المدى: ${obj.shortTermGoal}</td>
                 </tr>
             `;
             
@@ -344,7 +342,50 @@ function loadIEPTab() {
 
     const subjectName = originalTest.subject || 'المادة';
 
+    // إضافة ستايل خاص للطباعة فقط
+    const printStyles = `
+        <style>
+            @media print {
+                body * {
+                    visibility: hidden;
+                }
+                .iep-word-model-content, .iep-word-model-content * {
+                    visibility: visible;
+                }
+                .iep-word-model-content {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    padding: 20px;
+                    border: none !important; /* إخفاء الحدود الخارجية عند الطباعة */
+                }
+                /* إجبار المتصفح على طباعة الألوان الخلفية */
+                * {
+                    -webkit-print-color-adjust: exact !important; 
+                    print-color-adjust: exact !important;
+                }
+                .no-print {
+                    display: none !important;
+                }
+                /* تذييل الصفحة */
+                .print-footer {
+                    position: fixed;
+                    bottom: 0;
+                    width: 100%;
+                    text-align: center;
+                    font-size: 10px;
+                    color: #555;
+                    border-top: 1px solid #ccc;
+                    padding-top: 5px;
+                    background: #fff;
+                }
+            }
+        </style>
+    `;
+
     const iepHTML = `
+    ${printStyles}
     <div class="iep-word-model-content" style="background:#fff; padding:20px; border:1px solid #ccc; font-family:'Tajawal', sans-serif;">
         
         <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #333; padding-bottom:10px;">
@@ -353,15 +394,15 @@ function loadIEPTab() {
 
         <table class="table table-bordered mb-4" style="width:100%;">
             <tr>
-                <td style="background:#f5f5f5; width:15%; font-weight:bold;">اسم الطالب:</td>
+                <td style="background:#f5f5f5 !important; width:15%; font-weight:bold;">اسم الطالب:</td>
                 <td style="width:35%;" id="iep-student-name">${currentStudent.name}</td>
-                <td style="background:#f5f5f5; width:15%; font-weight:bold;">الصف:</td>
+                <td style="background:#f5f5f5 !important; width:15%; font-weight:bold;">الصف:</td>
                 <td style="width:35%;" id="iep-grade">${currentStudent.grade}</td>
             </tr>
             <tr>
-                <td style="background:#f5f5f5; font-weight:bold;">المادة:</td>
+                <td style="background:#f5f5f5 !important; font-weight:bold;">المادة:</td>
                 <td id="iep-subject">${subjectName}</td>
-                <td style="background:#f5f5f5; font-weight:bold;">تاريخ الخطة:</td>
+                <td style="background:#f5f5f5 !important; font-weight:bold;">تاريخ الخطة:</td>
                 <td id="iep-date">${new Date().toLocaleDateString('ar-SA')}</td>
             </tr>
         </table>
@@ -370,7 +411,7 @@ function loadIEPTab() {
         <div class="table-responsive mb-4">
             <table class="table table-bordered text-center" style="width:100%;">
                 <thead>
-                    <tr style="background:#f5f5f5;">
+                    <tr style="background:#f5f5f5 !important;">
                         <th>الأحد</th><th>الاثنين</th><th>الثلاثاء</th><th>الأربعاء</th><th>الخميس</th>
                     </tr>
                 </thead>
@@ -389,7 +430,7 @@ function loadIEPTab() {
         <div style="display: flex; gap: 20px; margin-bottom: 20px;">
             <div style="flex: 1;">
                 <div class="card h-100" style="border:1px solid #ddd;">
-                    <div class="card-header" style="background:#28a745; color:#fff; text-align:center; padding: 10px; font-weight: bold;">نقاط القوة</div>
+                    <div class="card-header" style="background:#28a745 !important; color:#fff; text-align:center; padding: 10px; font-weight: bold;">نقاط القوة</div>
                     <div class="card-body" style="padding: 15px;">
                         <ul id="iep-strengths-list" style="padding-right:20px; margin:0;">${strengthHTML}</ul>
                     </div>
@@ -397,7 +438,7 @@ function loadIEPTab() {
             </div>
             <div style="flex: 1;">
                 <div class="card h-100" style="border:1px solid #ddd;">
-                    <div class="card-header" style="background:#dc3545; color:#fff; text-align:center; padding: 10px; font-weight: bold;">نقاط الاحتياج</div>
+                    <div class="card-header" style="background:#dc3545 !important; color:#fff; text-align:center; padding: 10px; font-weight: bold;">نقاط الاحتياج</div>
                     <div class="card-body" style="padding: 15px;">
                         <ul id="iep-needs-list" style="padding-right:20px; margin:0;">${needsHTML}</ul>
                     </div>
@@ -407,7 +448,7 @@ function loadIEPTab() {
 
         <table class="table table-bordered mb-4" style="width:100%; border-color:#999;">
             <tr>
-                <td style="background:#f0f0f0; font-weight:bold; text-align:center; padding:10px;">الهدف بعيد المدى</td>
+                <td style="background:#f0f0f0 !important; font-weight:bold; text-align:center; padding:10px;">الهدف بعيد المدى</td>
             </tr>
             <tr>
                 <td style="text-align:center; padding:15px; font-size:1.1rem;">
@@ -416,13 +457,13 @@ function loadIEPTab() {
             </tr>
         </table>
 
-        <h5 style="margin-bottom:10px; font-weight:bold;">الأهداف :</h5>
+        <h5 style="margin-bottom:10px; font-weight:bold;">الأهداف:</h5>
         <div class="table-responsive">
             <table class="table table-bordered" style="width:100%;">
-                <thead style="background:#333; color:#fff;">
+                <thead style="background:#333 !important; color:#fff;">
                     <tr>
                         <th style="width:50px;">#</th>
-                        <th>الأهداف قصيرة المدى</th>
+                        <th>الهدف</th>
                         <th style="width:150px;">تاريخ التحقق</th>
                     </tr>
                 </thead>
@@ -430,6 +471,10 @@ function loadIEPTab() {
                     ${objectivesRows}
                 </tbody>
             </table>
+        </div>
+
+        <div class="print-footer" style="display:none;">
+            تم طباعة الخطة التربوية الفردية من نظام ميسر التعلم لمعلم صعوبات التعلم أ/ صالح عبد العزيز العجلان
         </div>
     </div>
     `;
@@ -450,7 +495,8 @@ function fillScheduleTable() {
         if (hasStudent) {
             const cellId = daysMap[session.day];
             if (cellId && document.getElementById(cellId)) {
-                document.getElementById(cellId).innerHTML += `<div style="background:#e2e6ea; padding:4px; margin-bottom:2px; border-radius:3px; font-size:0.9rem;">حصة ${session.period || 1}</div>`;
+                // إضافة !important للخلفية لضمان الطباعة
+                document.getElementById(cellId).innerHTML += `<div style="background:#e2e6ea !important; padding:4px; margin-bottom:2px; border-radius:3px; font-size:0.9rem;">حصة ${session.period || 1}</div>`;
             }
         }
     });

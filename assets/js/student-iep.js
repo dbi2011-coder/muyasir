@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-iep.js
-// الوصف: عرض الخطة للطالب (نفس تصميم المعلم + الهدف بعيد المدى + التذييل)
+// الوصف: عرض الخطة للطالب (تم حذف زر الطباعة السفلي نهائياً)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -175,7 +175,7 @@ function loadStudentIEP() {
         </style>
     `;
 
-    // الهيكل النهائي (مطابق تماماً لنسخة المعلم)
+    // الهيكل النهائي
     const iepHTML = `
     ${printStyles}
     <div class="iep-word-model-content" style="background:#fff; padding:20px; border:1px solid #ccc; font-family:'Tajawal', sans-serif;">
@@ -261,10 +261,6 @@ function loadStudentIEP() {
 
         <div class="print-footer" style="display:none;">
             تم طباعة الخطة التربوية الفردية من نظام ميسر التعلم لمعلم صعوبات التعلم أ/ صالح عبد العزيز العجلان
-        </div>
-        
-        <div class="text-center mt-4 mb-4 no-print">
-            <button onclick="window.print()" class="btn btn-info btn-lg">🖨️ طباعة الخطة</button>
         </div>
     </div>
     `;

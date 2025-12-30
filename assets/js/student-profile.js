@@ -416,13 +416,13 @@ function loadIEPTab() {
             </tr>
         </table>
 
-        <h5 style="margin-bottom:10px; font-weight:bold;">الأهداف التدريسية:</h5>
+        <h5 style="margin-bottom:10px; font-weight:bold;">الأهداف :</h5>
         <div class="table-responsive">
             <table class="table table-bordered" style="width:100%;">
                 <thead style="background:#333; color:#fff;">
                     <tr>
                         <th style="width:50px;">#</th>
-                        <th>الهدف التدريسي</th>
+                        <th>الأهداف قصيرة المدى</th>
                         <th style="width:150px;">تاريخ التحقق</th>
                     </tr>
                 </thead>

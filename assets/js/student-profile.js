@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (تعديل تنسيق الخطة لتظهر نقاط القوة والاحتياج بجانب بعض)
+// الوصف: إدارة ملف الطالب (إضافة جدول الهدف بعيد المدى في الخطة)
 // ============================================
 
 let currentStudentId = null;
@@ -28,7 +28,6 @@ function loadStudentData() {
         return;
     }
     
-    // تحديث الواجهة
     if(document.getElementById('sideName')) document.getElementById('sideName').textContent = currentStudent.name;
     if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = currentStudent.name;
     if(document.getElementById('sideGrade')) document.getElementById('sideGrade').textContent = currentStudent.grade + ' - ' + (currentStudent.subject || 'عام');
@@ -103,7 +102,7 @@ function loadDiagnosticTab() {
 }
 
 // ---------------------------------------------------------
-// تنسيق الإجابات (صور، صوت، نصوص، قوائم)
+// دالة تنسيق الإجابات
 // ---------------------------------------------------------
 function formatAnswerDisplay(answerData) {
     if (!answerData) return '<span class="text-muted">لم يجب</span>';
@@ -229,7 +228,7 @@ function saveTestReview() {
 }
 
 // ============================================
-// 2. الخطة التربوية (التصميم القديم مع إصلاح المحاذاة)
+// 2. الخطة التربوية (إضافة جدول الهدف بعيد المدى)
 // ============================================
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
@@ -240,7 +239,6 @@ function loadIEPTab() {
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
 
-    // البحث عن الاختبار
     const completedDiagnostic = studentTests
         .filter(t => t.studentId == currentStudentId && t.type === 'diagnostic' && t.status === 'completed')
         .sort((a, b) => new Date(b.assignedDate) - new Date(a.assignedDate))[0];
@@ -333,7 +331,9 @@ function loadIEPTab() {
         });
     }
 
-    // ✅ بناء الهيكل (استخدام Flexbox لضمان المحاذاة الأفقية)
+    // اسم المادة للهدف بعيد المدى
+    const subjectName = originalTest.subject || 'المادة';
+
     const iepHTML = `
     <div class="iep-word-model-content" style="background:#fff; padding:20px; border:1px solid #ccc; font-family:'Tajawal', sans-serif;">
         
@@ -350,7 +350,7 @@ function loadIEPTab() {
             </tr>
             <tr>
                 <td style="background:#f5f5f5; font-weight:bold;">المادة:</td>
-                <td id="iep-subject">${originalTest.subject || 'عام'}</td>
+                <td id="iep-subject">${subjectName}</td>
                 <td style="background:#f5f5f5; font-weight:bold;">تاريخ الخطة:</td>
                 <td id="iep-date">${new Date().toLocaleDateString('ar-SA')}</td>
             </tr>
@@ -395,6 +395,17 @@ function loadIEPTab() {
             </div>
         </div>
 
+        <table class="table table-bordered mb-4" style="width:100%; border-color:#999;">
+            <tr>
+                <td style="background:#f0f0f0; font-weight:bold; text-align:center; padding:10px;">الهدف بعيد المدى</td>
+            </tr>
+            <tr>
+                <td style="text-align:center; padding:15px; font-size:1.1rem;">
+                    أن يتقن التلميذ مهارات مادة <strong>${subjectName}</strong> لذوي صعوبات التعلم حتى صفه الحالي وبنسبة لا تقل عن 80%
+                </td>
+            </tr>
+        </table>
+
         <h5 style="margin-bottom:10px; font-weight:bold;">الأهداف التدريسية:</h5>
         <div class="table-responsive">
             <table class="table table-bordered table-striped" style="width:100%;">
@@ -414,7 +425,6 @@ function loadIEPTab() {
     `;
 
     iepContainer.innerHTML = iepHTML;
-    
     fillScheduleTable();
 }
 

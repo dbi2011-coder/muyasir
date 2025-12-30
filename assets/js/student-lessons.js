@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-lessons.js
-// الوصف: إدارة الدروس المتسلسلة (مصحح مع حفظ الإجابات والترتيب الرقمي)
+// الوصف: إدارة الدروس (مصحح مع حفظ الإجابات والترتيب بالأسهم)
 // ============================================
 
 let currentAssignmentId = null;
@@ -39,7 +39,7 @@ function loadStudentLessons() {
         return;
     }
 
-    // 🔴 الترتيب: الاعتماد على orderIndex (ترتيب المعلم)
+    // 🔴 الترتيب: الاعتماد على orderIndex (الذي تحدده الأسهم)
     myLessons.sort((a, b) => {
         const orderA = a.orderIndex !== undefined ? a.orderIndex : 9999;
         const orderB = b.orderIndex !== undefined ? b.orderIndex : 9999;
@@ -188,17 +188,14 @@ function submitAssessment() {
     const lessonIndex = allStudentLessons.findIndex(l => l.id == currentAssignmentId);
 
     if (lessonIndex !== -1) {
-        // 1. تجميع الإجابات من الحقول
+        // 1. تجميع الإجابات
         const collectedAnswers = [];
         const questions = currentLessonContent.assessment?.questions || [];
         
         questions.forEach((q, i) => {
             let val = '';
-            // البحث عن إجابة نصية
             const textInput = document.querySelector(`input[name="assessmentList_q_${i}"][type="text"]`);
-            // البحث عن إجابة اختيار
             const radioInput = document.querySelector(`input[name="assessmentList_q_${i}"]:checked`);
-            
             if (textInput) val = textInput.value;
             if (radioInput) val = radioInput.value;
             
@@ -208,10 +205,10 @@ function submitAssessment() {
             });
         });
 
-        // 2. تحديث الحالة وحفظ الإجابات والتاريخ الجديد
+        // 2. الحفظ
         allStudentLessons[lessonIndex].status = 'completed';
         allStudentLessons[lessonIndex].completedDate = new Date().toISOString(); 
-        allStudentLessons[lessonIndex].answers = collectedAnswers; // حفظ الإجابات
+        allStudentLessons[lessonIndex].answers = collectedAnswers; 
         
         localStorage.setItem('studentLessons', JSON.stringify(allStudentLessons));
         

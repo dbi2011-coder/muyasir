@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (استعادة تصميم الخطة الأصلي + إصلاحات الاختبار)
+// الوصف: إدارة ملف الطالب (استعادة تصميم الخطة الرسمي "القديم" + إصلاحات الوسائط والترتيب)
 // ============================================
 
 let currentStudentId = null;
@@ -28,7 +28,7 @@ function loadStudentData() {
         return;
     }
     
-    // تحديث الواجهة
+    // تحديث الواجهة الجانبية
     if(document.getElementById('sideName')) document.getElementById('sideName').textContent = currentStudent.name;
     if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = currentStudent.name;
     if(document.getElementById('sideGrade')) document.getElementById('sideGrade').textContent = currentStudent.grade + ' - ' + (currentStudent.subject || 'عام');
@@ -92,7 +92,10 @@ function loadDiagnosticTab() {
             <div class="card">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h3>${testTitle}</h3>
-                    <div style="display:flex; gap:5px;">${statusBadge}<button class="btn btn-sm btn-outline-danger" onclick="deleteAssignedTest(${assignedTest.id})"><i class="fas fa-trash"></i></button></div>
+                    <div style="display:flex; gap:5px;">
+                        ${statusBadge}
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAssignedTest(${assignedTest.id})"><i class="fas fa-trash"></i></button>
+                    </div>
                 </div>
                 <p class="text-muted">تاريخ التعيين: ${new Date(assignedTest.assignedDate).toLocaleDateString('ar-SA')}</p>
                 ${actionContent}
@@ -232,7 +235,7 @@ function saveTestReview() {
 }
 
 // ============================================
-// 2. الخطة التربوية (استعادة التصميم السابق)
+// 2. الخطة التربوية (استعادة التصميم الرسمي الكامل)
 // ============================================
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
@@ -302,7 +305,7 @@ function loadIEPTab() {
         }
     });
 
-    // 4. بناء جدول الاحتياجات
+    // 4. بناء جدول الأهداف
     let objectivesRows = '';
     if (needsObjects.length === 0) {
         objectivesRows = '<tr><td colspan="3" class="text-center">جميع الأهداف محققة (لا توجد نقاط احتياج).</td></tr>';
@@ -333,43 +336,44 @@ function loadIEPTab() {
         });
     }
 
-    // 5. بناء قالب الخطة (استعادة التصميم الرسمي)
+    // 5. بناء قالب الخطة الرسمي الكامل (HTML Injection)
+    // هذا الكود يبني الجدول والترويسة ونقاط القوة والاحتياج بنفس الشكل القديم
     const iepHTML = `
-        <div class="iep-document" style="background:white; padding:30px; border:1px solid #ddd; border-radius:8px;">
+        <div class="iep-document" style="background:white; padding:20px; border:1px solid #ccc; box-shadow:0 0 10px rgba(0,0,0,0.05);">
             <div class="text-center mb-4">
-                <h3>الخطة التربوية الفردية (IEP)</h3>
+                <h3 style="border-bottom: 2px solid #333; display:inline-block; padding-bottom:5px;">الخطة التربوية الفردية (IEP)</h3>
             </div>
             
-            <table class="table table-bordered mb-4">
+            <table class="table table-bordered mb-4" style="border-color:#999;">
                 <tr>
-                    <td style="background:#f9f9f9; width:15%;"><strong>اسم الطالب:</strong></td>
+                    <td style="background:#f0f0f0; width:15%; font-weight:bold;">اسم الطالب</td>
                     <td style="width:35%;">${currentStudent.name}</td>
-                    <td style="background:#f9f9f9; width:15%;"><strong>الصف:</strong></td>
+                    <td style="background:#f0f0f0; width:15%; font-weight:bold;">الصف</td>
                     <td style="width:35%;">${currentStudent.grade}</td>
                 </tr>
                 <tr>
-                    <td style="background:#f9f9f9;"><strong>المادة:</strong></td>
+                    <td style="background:#f0f0f0; font-weight:bold;">المادة</td>
                     <td>${originalTest.subject || 'عام'}</td>
-                    <td style="background:#f9f9f9;"><strong>تاريخ الخطة:</strong></td>
+                    <td style="background:#f0f0f0; font-weight:bold;">تاريخ الخطة</td>
                     <td>${new Date().toLocaleDateString('ar-SA')}</td>
                 </tr>
             </table>
 
-            <h5 class="mb-3" style="border-right:4px solid #28a745; padding-right:10px;">جدول الحصص:</h5>
+            <h5 class="mb-2" style="font-weight:bold; color:#0056b3;">جدول الحصص:</h5>
             <div class="table-responsive mb-4">
-                <table class="table table-bordered text-center">
+                <table class="table table-bordered text-center" style="border-color:#999;">
                     <thead>
-                        <tr style="background:#eee;">
+                        <tr style="background:#e9ecef;">
                             <th>الأحد</th><th>الاثنين</th><th>الثلاثاء</th><th>الأربعاء</th><th>الخميس</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td id="day-sunday"></td>
-                            <td id="day-monday"></td>
-                            <td id="day-tuesday"></td>
-                            <td id="day-wednesday"></td>
-                            <td id="day-thursday"></td>
+                            <td id="day-sunday" style="height:50px; vertical-align:middle;"></td>
+                            <td id="day-monday" style="height:50px; vertical-align:middle;"></td>
+                            <td id="day-tuesday" style="height:50px; vertical-align:middle;"></td>
+                            <td id="day-wednesday" style="height:50px; vertical-align:middle;"></td>
+                            <td id="day-thursday" style="height:50px; vertical-align:middle;"></td>
                         </tr>
                     </tbody>
                 </table>
@@ -377,16 +381,16 @@ function loadIEPTab() {
 
             <div class="row mb-4">
                 <div class="col-md-6">
-                    <div class="card h-100">
-                        <div class="card-header bg-success text-white">نـقـاط الـقـوة</div>
+                    <div class="card h-100" style="border:1px solid #28a745;">
+                        <div class="card-header text-white text-center" style="background-color:#28a745; font-weight:bold;">نـقـاط الـقـوة</div>
                         <div class="card-body">
                             <ul style="padding-right:20px; margin:0;">${strengthItemsHTML}</ul>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <div class="card h-100">
-                        <div class="card-header bg-danger text-white">نـقـاط الاحـتـيـاج</div>
+                    <div class="card h-100" style="border:1px solid #dc3545;">
+                        <div class="card-header text-white text-center" style="background-color:#dc3545; font-weight:bold;">نـقـاط الاحـتـيـاج</div>
                         <div class="card-body">
                             <ul style="padding-right:20px; margin:0;">${needsItemsHTML}</ul>
                         </div>
@@ -394,14 +398,14 @@ function loadIEPTab() {
                 </div>
             </div>
 
-            <h5 class="mb-3" style="border-right:4px solid #007bff; padding-right:10px;">الأهداف التدريسية:</h5>
+            <h5 class="mb-2" style="font-weight:bold; color:#0056b3;">الأهداف التدريسية:</h5>
             <div class="table-responsive">
-                <table class="table table-bordered table-striped">
-                    <thead class="thead-dark">
+                <table class="table table-bordered" style="border-color:#999;">
+                    <thead style="background:#343a40; color:white;">
                         <tr>
                             <th style="width:50px;">#</th>
                             <th>الهدف التدريسي</th>
-                            <th style="width:150px;">تاريخ التحقق</th>
+                            <th style="width:160px;">تاريخ التحقق</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -414,7 +418,7 @@ function loadIEPTab() {
 
     iepContainer.innerHTML = iepHTML;
     
-    // استدعاء دالة تعبئة الجدول بعد رسم HTML
+    // استدعاء دالة تعبئة الجدول (التي تعتمد على العناصر التي تم إنشاؤها للتو)
     fillScheduleTable();
 }
 
@@ -425,8 +429,6 @@ function fillScheduleTable() {
     Object.values(daysMap).forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = ''; });
     
     schedule.forEach(session => {
-        // إذا كان هذا الطالب مضافاً للحصة
-        // ملاحظة: قد يكون الحقل students أو studentId حسب نسخة النظام، نتحقق من كليهما
         let hasStudent = false;
         if (session.students && session.students.includes(currentStudentId)) hasStudent = true;
         if (session.studentId == currentStudentId) hasStudent = true;
@@ -434,14 +436,14 @@ function fillScheduleTable() {
         if (hasStudent) {
             const cellId = daysMap[session.day];
             if (cellId && document.getElementById(cellId)) {
-                document.getElementById(cellId).innerHTML += `<div style="background:#d4edda; color:#155724; padding:5px; border-radius:4px; margin-bottom:2px; font-size:0.9rem;">حصة ${session.period || 1}</div>`;
+                document.getElementById(cellId).innerHTML += `<div style="background:#d4edda; color:#155724; padding:2px 5px; border-radius:4px; margin-bottom:2px; font-weight:bold; font-size:0.9rem;">حصة ${session.period || 1}</div>`;
             }
         }
     });
 }
 
 // ============================================
-// 3. قسم الدروس
+// 3. قسم الدروس (الأسهم والتحكم)
 // ============================================
 function loadLessonsTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');

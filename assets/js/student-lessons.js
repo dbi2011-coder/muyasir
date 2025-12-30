@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-lessons.js
-// الوصف: إدارة الدروس المتسلسلة (حفظ الإجابات + ترتيب بالأسهم)
+// الوصف: إدارة الدروس المتسلسلة (مصحح مع حفظ الإجابات والترتيب بالأسهم)
 // ============================================
 
 let currentAssignmentId = null;
@@ -39,7 +39,7 @@ function loadStudentLessons() {
         return;
     }
 
-    // الترتيب: الاعتماد على orderIndex (الذي تحدده الأسهم)
+    // 🔴 الترتيب: الاعتماد على orderIndex (الذي تحدده الأسهم)
     myLessons.sort((a, b) => {
         const orderA = a.orderIndex !== undefined ? a.orderIndex : 9999;
         const orderB = b.orderIndex !== undefined ? b.orderIndex : 9999;
@@ -53,12 +53,16 @@ function loadStudentLessons() {
         
         // --- منطق القفل ---
         let isLocked = false;
+        
+        // 1. القفل المتسلسل العادي (يجب إنهاء الدرس السابق)
         if (index > 0) {
             const prevLesson = myLessons[index - 1];
             if (prevLesson.status !== 'completed' && lessonAssignment.status !== 'completed') {
                 isLocked = true;
             }
         }
+
+        // 2. القفل اليدوي من المعلم (يتجاوز كل شيء)
         if (lessonAssignment.isManuallyLocked) {
             isLocked = true;
         }
@@ -184,6 +188,7 @@ function submitAssessment() {
     const lessonIndex = allStudentLessons.findIndex(l => l.id == currentAssignmentId);
 
     if (lessonIndex !== -1) {
+        // 1. تجميع الإجابات من الحقول
         const collectedAnswers = [];
         const questions = currentLessonContent.assessment?.questions || [];
         
@@ -200,6 +205,7 @@ function submitAssessment() {
             });
         });
 
+        // 2. تحديث الحالة وحفظ الإجابات والتاريخ الجديد
         allStudentLessons[lessonIndex].status = 'completed';
         allStudentLessons[lessonIndex].completedDate = new Date().toISOString(); 
         allStudentLessons[lessonIndex].answers = collectedAnswers; 

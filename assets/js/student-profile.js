@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (الطباعة الاحترافية + تذييل مخصص + إخفاء الرابط)
+// الوصف: إدارة ملف الطالب (تذييل يظهر في الصفحة الأخيرة فقط)
 // ============================================
 
 let currentStudentId = null;
@@ -228,7 +228,7 @@ function saveTestReview() {
 }
 
 // ============================================
-// 2. الخطة التربوية (طباعة احترافية + تذييل مخصص مكان الرابط)
+// 2. الخطة التربوية (طباعة احترافية + تذييل يظهر في النهاية فقط)
 // ============================================
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
@@ -341,6 +341,8 @@ function loadIEPTab() {
 
     const subjectName = originalTest.subject || 'المادة';
 
+    // CSS الطباعة المعدل:
+    // تم إزالة position: fixed واستبداله بـ padding و margin لضمان ظهوره في نهاية المستند فقط.
     const printStyles = `
         <style>
             @media print {
@@ -356,7 +358,6 @@ function loadIEPTab() {
                     top: 0;
                     width: 100%;
                     padding: 20px;
-                    padding-bottom: 50px; /* مسافة للتذييل */
                     border: none !important;
                 }
                 * {
@@ -366,19 +367,20 @@ function loadIEPTab() {
                 .no-print {
                     display: none !important;
                 }
-                /* التذييل في أسفل كل صفحة */
-                .print-footer {
-                    position: fixed;
-                    bottom: 0;
-                    left: 0;
+                
+                /* تنسيق التذييل ليظهر في نهاية المستند */
+                .print-footer-container {
+                    margin-top: 50px;
                     width: 100%;
                     text-align: center;
-                    font-size: 10px; /* خط صغير حسب الطلب */
-                    color: #555;
                     border-top: 1px solid #ccc;
-                    padding: 5px;
-                    background: #fff;
+                    padding-top: 10px;
                     display: block !important;
+                }
+                .print-footer-text {
+                    font-size: 11px;
+                    color: #555;
+                    font-weight: bold;
                     font-family: 'Tajawal', sans-serif;
                 }
             }
@@ -474,8 +476,10 @@ function loadIEPTab() {
             </table>
         </div>
 
-        <div class="print-footer" style="display:none;">
-            تم طباعة الخطة التربوية الفردية من نظام ميسر التعلم لمعلم صعوبات التعلم أ/ صالح عبد العزيز العجلان
+        <div class="print-footer-container">
+            <p class="print-footer-text">
+                تم طباعة الخطة التربوية الفردية من نظام ميسر التعلم لمعلم صعوبات التعلم أ/ صالح عبد العزيز العجلان
+            </p>
         </div>
     </div>
     `;

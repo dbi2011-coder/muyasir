@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (النسخة النهائية المصححة)
+// الوصف: إدارة ملف الطالب (الخطة الأصلية + تحكم كامل بالدروس + مسارات صحيحة)
 // ============================================
 
 let currentStudentId = null;
@@ -53,9 +53,7 @@ function switchSection(sectionId) {
     if (sectionId === 'progress') loadProgressTab();
 }
 
-// ---------------------------------------------------------
-// 1. قسم الاختبار التشخيصي
-// ---------------------------------------------------------
+// 1. الاختبار التشخيصي
 function loadDiagnosticTab() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const assignedTest = studentTests.find(t => t.studentId === currentStudentId && t.type === 'diagnostic');
@@ -96,9 +94,7 @@ function loadDiagnosticTab() {
     }
 }
 
-// ---------------------------------------------------------
-// 2. قسم الخطة التربوية (لم يتغير سوى التنسيق)
-// ---------------------------------------------------------
+// 2. الخطة التربوية (الكود الأصلي تماماً كما في الملف المرفق)
 function loadIEPTab() {
     const iepContent = document.getElementById('iepContent');
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
@@ -120,7 +116,6 @@ function loadIEPTab() {
 
     const originalTest = allTests.find(t => t.id === completedDiagnostic.testId);
 
-    // تعبئة الرأس
     document.getElementById('iep-student-name').textContent = currentStudent.name;
     document.getElementById('iep-subject').textContent = originalTest ? originalTest.subject : 'غير محدد';
     document.getElementById('iep-grade').textContent = currentStudent.grade;
@@ -128,7 +123,6 @@ function loadIEPTab() {
 
     fillScheduleTable();
 
-    // جلب الأهداف المحققة (المكتملة فقط)
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const completedLessonsMap = {};
     studentLessons.forEach(l => {
@@ -181,13 +175,7 @@ function loadIEPTab() {
             if (obj.instructionalGoals && obj.instructionalGoals.length > 0) {
                 obj.instructionalGoals.forEach(iGoal => {
                     const achievementDate = completedLessonsMap[iGoal];
-                    
-                    // تنسيق التاريخ
-                    const formattedDate = achievementDate 
-                        ? new Date(achievementDate).toLocaleDateString('ar-SA') 
-                        : '';
-
-                    // عرض التاريخ إذا وجد، وإلا حقل فارغ
+                    const formattedDate = achievementDate ? new Date(achievementDate).toLocaleDateString('ar-SA') : '';
                     const dateCellContent = achievementDate 
                         ? `<span class="text-success font-weight-bold">✔ ${formattedDate}</span>` 
                         : `<input type="date" class="form-control" style="border:none; background:transparent;" disabled>`;
@@ -217,7 +205,7 @@ function fillScheduleTable() {
 }
 
 // ---------------------------------------------------------
-// 3. قسم الدروس (الأسهم + التحكم + إلغاء البهتان)
+// 3. قسم الدروس (المعدل: أسهم + إلغاء بهتان + تحكم)
 // ---------------------------------------------------------
 function loadLessonsTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
@@ -243,7 +231,7 @@ function loadLessonsTab() {
 
         if(l.status === 'completed') {
             statusDisplay = `<span class="badge badge-success">مكتمل (${new Date(l.completedDate).toLocaleDateString('ar-SA')})</span>`;
-            cardClass = 'completed'; // سيتم تطبيق التنسيق الواضح عليها
+            cardClass = 'completed'; // كلاس لمنع البهتان
             controls = `
                 <button class="btn btn-info" onclick="openLessonReview(${l.id})">👁️ الحل</button>
                 <button class="btn btn-warning" onclick="resetLesson(${l.id})">🔄 إعادة فتح</button>
@@ -255,7 +243,7 @@ function loadLessonsTab() {
                 : `<button class="btn btn-secondary" onclick="toggleLessonLock(${l.id}, true)">🔒 قفل</button>`;
         }
 
-        // أزرار الأسهم
+        // أزرار الأسهم للترتيب
         const orderButtons = `
             <div class="order-controls">
                 <button class="btn-order" onclick="moveLesson(${l.id}, 'up')" title="تقديم">⬆</button>
@@ -291,18 +279,16 @@ function moveLesson(lessonId, direction) {
     if (currentIndex === -1) return;
 
     if (direction === 'up' && currentIndex > 0) {
-        // تبديل مع السابق
         const temp = myLessons[currentIndex].orderIndex;
         myLessons[currentIndex].orderIndex = myLessons[currentIndex - 1].orderIndex;
         myLessons[currentIndex - 1].orderIndex = temp;
     } else if (direction === 'down' && currentIndex < myLessons.length - 1) {
-        // تبديل مع اللاحق
         const temp = myLessons[currentIndex].orderIndex;
         myLessons[currentIndex].orderIndex = myLessons[currentIndex + 1].orderIndex;
         myLessons[currentIndex + 1].orderIndex = temp;
     }
 
-    // حفظ التغييرات في القائمة الرئيسية
+    // حفظ التغييرات
     myLessons.forEach(l => {
         const mainIdx = studentLessons.findIndex(sl => sl.id === l.id);
         if (mainIdx !== -1) studentLessons[mainIdx].orderIndex = l.orderIndex;
@@ -313,7 +299,7 @@ function moveLesson(lessonId, direction) {
 }
 
 // ---------------------------------------------------------
-// دوال التحكم بالدروس
+// دوال التحكم والإسناد
 // ---------------------------------------------------------
 function openLessonReview(assignmentId) {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
@@ -334,17 +320,15 @@ function openLessonReview(assignmentId) {
 
 function resetLesson(id) {
     if(!confirm('تنبيه: سيتم إعادة فتح الدرس ومسح جميع إجابات الطالب وتاريخ الإنجاز. هل أنت متأكد؟')) return;
-    
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const idx = studentLessons.findIndex(l => l.id === id);
     if(idx !== -1) {
         studentLessons[idx].status = 'pending';
-        delete studentLessons[idx].completedDate; // حذف التاريخ (سيختفي من الخطة)
-        delete studentLessons[idx].answers; // حذف الإجابات
-        
+        delete studentLessons[idx].completedDate; // ✅ حذف التاريخ لتحديث الخطة
+        delete studentLessons[idx].answers;
         localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
         loadLessonsTab();
-        loadIEPTab(); // تحديث الخطة
+        loadIEPTab(); // تحديث واجهة الخطة فوراً
         alert('تمت إعادة الفتح.');
     }
 }

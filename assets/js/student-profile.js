@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (تحسين الطباعة الاحترافية بالألوان + تذييل الصفحة)
+// الوصف: إدارة ملف الطالب (تعديل تذييل الطباعة والعبارة المخصصة)
 // ============================================
 
 let currentStudentId = null;
@@ -28,7 +28,6 @@ function loadStudentData() {
         return;
     }
     
-    // تحديث الواجهة
     if(document.getElementById('sideName')) document.getElementById('sideName').textContent = currentStudent.name;
     if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = currentStudent.name;
     if(document.getElementById('sideGrade')) document.getElementById('sideGrade').textContent = currentStudent.grade + ' - ' + (currentStudent.subject || 'عام');
@@ -54,9 +53,9 @@ function switchSection(sectionId) {
     if (sectionId === 'progress') loadProgressTab();
 }
 
-// ---------------------------------------------------------
+// ============================================
 // 1. قسم الاختبار التشخيصي
-// ---------------------------------------------------------
+// ============================================
 function loadDiagnosticTab() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const assignedTest = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic');
@@ -229,7 +228,7 @@ function saveTestReview() {
 }
 
 // ============================================
-// 2. الخطة التربوية (طباعة احترافية ملونة + تذييل الصفحة)
+// 2. الخطة التربوية (طباعة احترافية + تذييل مخصص)
 // ============================================
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
@@ -342,7 +341,7 @@ function loadIEPTab() {
 
     const subjectName = originalTest.subject || 'المادة';
 
-    // إضافة ستايل خاص للطباعة فقط
+    // ستايل الطباعة + التذييل المخصص
     const printStyles = `
         <style>
             @media print {
@@ -358,9 +357,9 @@ function loadIEPTab() {
                     top: 0;
                     width: 100%;
                     padding: 20px;
-                    border: none !important; /* إخفاء الحدود الخارجية عند الطباعة */
+                    border: none !important;
                 }
-                /* إجبار المتصفح على طباعة الألوان الخلفية */
+                /* فرض طباعة الألوان الخلفية */
                 * {
                     -webkit-print-color-adjust: exact !important; 
                     print-color-adjust: exact !important;
@@ -368,17 +367,24 @@ function loadIEPTab() {
                 .no-print {
                     display: none !important;
                 }
-                /* تذييل الصفحة */
+                /* التذييل المخصص */
                 .print-footer {
                     position: fixed;
                     bottom: 0;
+                    left: 0;
                     width: 100%;
                     text-align: center;
-                    font-size: 10px;
-                    color: #555;
-                    border-top: 1px solid #ccc;
-                    padding-top: 5px;
+                    font-size: 11px;
+                    color: #333;
+                    border-top: 1px solid #999;
+                    padding-top: 8px;
                     background: #fff;
+                    display: block !important;
+                    font-weight: bold;
+                }
+                /* إخفاء الترويسات الافتراضية للمتصفح عبر الهوامش (قد يتطلب تدخل المستخدم) */
+                @page {
+                    margin-bottom: 2cm; 
                 }
             }
         </style>
@@ -495,7 +501,6 @@ function fillScheduleTable() {
         if (hasStudent) {
             const cellId = daysMap[session.day];
             if (cellId && document.getElementById(cellId)) {
-                // إضافة !important للخلفية لضمان الطباعة
                 document.getElementById(cellId).innerHTML += `<div style="background:#e2e6ea !important; padding:4px; margin-bottom:2px; border-radius:3px; font-size:0.9rem;">حصة ${session.period || 1}</div>`;
             }
         }

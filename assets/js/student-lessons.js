@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-lessons.js
-// الوصف: إدارة الدروس (مصحح مع حفظ الإجابات والترتيب بالأسهم)
+// الوصف: إدارة الدروس المتسلسلة (مصحح مع حفظ الإجابات والترتيب بالأسهم)
 // ============================================
 
 let currentAssignmentId = null;
@@ -208,10 +208,10 @@ function submitAssessment() {
             });
         });
 
-        // 2. الحفظ
+        // 2. تحديث الحالة وحفظ الإجابات والتاريخ الجديد
         allStudentLessons[lessonIndex].status = 'completed';
         allStudentLessons[lessonIndex].completedDate = new Date().toISOString(); 
-        allStudentLessons[lessonIndex].answers = collectedAnswers; 
+        allStudentLessons[lessonIndex].answers = collectedAnswers; // حفظ الإجابات
         
         localStorage.setItem('studentLessons', JSON.stringify(allStudentLessons));
         

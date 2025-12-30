@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (تعديل تذييل الطباعة والعبارة المخصصة)
+// الوصف: إدارة ملف الطالب (الطباعة الاحترافية + تذييل مخصص + إخفاء الرابط)
 // ============================================
 
 let currentStudentId = null;
@@ -228,7 +228,7 @@ function saveTestReview() {
 }
 
 // ============================================
-// 2. الخطة التربوية (طباعة احترافية + تذييل مخصص)
+// 2. الخطة التربوية (طباعة احترافية + تذييل مخصص مكان الرابط)
 // ============================================
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
@@ -341,7 +341,6 @@ function loadIEPTab() {
 
     const subjectName = originalTest.subject || 'المادة';
 
-    // ستايل الطباعة + التذييل المخصص
     const printStyles = `
         <style>
             @media print {
@@ -357,9 +356,9 @@ function loadIEPTab() {
                     top: 0;
                     width: 100%;
                     padding: 20px;
+                    padding-bottom: 50px; /* مسافة للتذييل */
                     border: none !important;
                 }
-                /* فرض طباعة الألوان الخلفية */
                 * {
                     -webkit-print-color-adjust: exact !important; 
                     print-color-adjust: exact !important;
@@ -367,24 +366,20 @@ function loadIEPTab() {
                 .no-print {
                     display: none !important;
                 }
-                /* التذييل المخصص */
+                /* التذييل في أسفل كل صفحة */
                 .print-footer {
                     position: fixed;
                     bottom: 0;
                     left: 0;
                     width: 100%;
                     text-align: center;
-                    font-size: 11px;
-                    color: #333;
-                    border-top: 1px solid #999;
-                    padding-top: 8px;
+                    font-size: 10px; /* خط صغير حسب الطلب */
+                    color: #555;
+                    border-top: 1px solid #ccc;
+                    padding: 5px;
                     background: #fff;
                     display: block !important;
-                    font-weight: bold;
-                }
-                /* إخفاء الترويسات الافتراضية للمتصفح عبر الهوامش (قد يتطلب تدخل المستخدم) */
-                @page {
-                    margin-bottom: 2cm; 
+                    font-family: 'Tajawal', sans-serif;
                 }
             }
         </style>

@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (استعادة تصميم الخطة الكلاسيكي + الميزات الجديدة)
+// الوصف: إدارة ملف الطالب (تعديل تنسيق الخطة لتظهر نقاط القوة والاحتياج بجانب بعض)
 // ============================================
 
 let currentStudentId = null;
@@ -28,6 +28,7 @@ function loadStudentData() {
         return;
     }
     
+    // تحديث الواجهة
     if(document.getElementById('sideName')) document.getElementById('sideName').textContent = currentStudent.name;
     if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = currentStudent.name;
     if(document.getElementById('sideGrade')) document.getElementById('sideGrade').textContent = currentStudent.grade + ' - ' + (currentStudent.subject || 'عام');
@@ -53,9 +54,9 @@ function switchSection(sectionId) {
     if (sectionId === 'progress') loadProgressTab();
 }
 
-// ---------------------------------------------------------
+// ============================================
 // 1. قسم الاختبار التشخيصي
-// ---------------------------------------------------------
+// ============================================
 function loadDiagnosticTab() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const assignedTest = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic');
@@ -102,7 +103,7 @@ function loadDiagnosticTab() {
 }
 
 // ---------------------------------------------------------
-// دالة تنسيق الإجابات (صوت، صورة، نصوص، قوائم)
+// تنسيق الإجابات (صور، صوت، نصوص، قوائم)
 // ---------------------------------------------------------
 function formatAnswerDisplay(answerData) {
     if (!answerData) return '<span class="text-muted">لم يجب</span>';
@@ -129,7 +130,6 @@ function formatAnswerDisplay(answerData) {
             const html = checkTypeAndReturnHTML(val);
             if (html) return html;
         }
-        // قائمة (ترتيب)
         let htmlList = '<ol style="padding-right: 20px; margin-bottom: 0;">';
         values.forEach(val => { if(val) htmlList += `<li>${val}</li>`; });
         htmlList += '</ol>';
@@ -229,30 +229,28 @@ function saveTestReview() {
 }
 
 // ============================================
-// 2. الخطة التربوية (استعادة التصميم القديم بالضبط)
+// 2. الخطة التربوية (التصميم القديم مع إصلاح المحاذاة)
 // ============================================
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
     const wordModel = document.querySelector('.iep-word-model');
     if (!iepContainer) return;
 
-    // 1. البحث عن الاختبار المكتمل
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
 
+    // البحث عن الاختبار
     const completedDiagnostic = studentTests
         .filter(t => t.studentId == currentStudentId && t.type === 'diagnostic' && t.status === 'completed')
         .sort((a, b) => new Date(b.assignedDate) - new Date(a.assignedDate))[0];
 
-    // إخفاء/إظهار الحاوية
     if (!completedDiagnostic) {
         if(wordModel) wordModel.style.display = 'none';
         iepContainer.innerHTML = `<div class="empty-state"><h3>الخطة غير جاهزة</h3><p>يجب إكمال وتصحيح اختبار تشخيصي أولاً.</p></div>`;
         return;
     }
 
-    // إذا وجدنا اختبار، نظهر النموذج ونمسح رسالة "فارغ"
     if(wordModel) wordModel.style.display = 'block';
     if(iepContainer.querySelector('.empty-state')) iepContainer.innerHTML = '';
 
@@ -262,7 +260,7 @@ function loadIEPTab() {
         return;
     }
 
-    // 2. تحليل الأهداف (نقاط القوة والاحتياج)
+    // تحليل الأهداف
     let needsObjects = [];
     let strengthHTML = '';
     let needsHTML = '';
@@ -297,7 +295,7 @@ function loadIEPTab() {
     if(!strengthHTML) strengthHTML = '<li>لا توجد نقاط مسجلة.</li>';
     if(!needsHTML) needsHTML = '<li>لا توجد نقاط احتياج مسجلة.</li>';
 
-    // 3. جلب تواريخ الدروس
+    // تواريخ الدروس
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const completedLessonsMap = {};
     studentLessons.forEach(l => {
@@ -306,7 +304,7 @@ function loadIEPTab() {
         }
     });
 
-    // 4. بناء جدول الأهداف
+    // جدول الأهداف
     let objectivesRows = '';
     if (needsObjects.length === 0) {
         objectivesRows = '<tr><td colspan="3" class="text-center">جميع الأهداف محققة.</td></tr>';
@@ -319,14 +317,12 @@ function loadIEPTab() {
                 obj.instructionalGoals.forEach(iGoal => {
                     const achievementDate = completedLessonsMap[iGoal];
                     let dateDisplay = '';
-                    
                     if (achievementDate) {
                         try {
                             const d = new Date(achievementDate);
                             dateDisplay = `<span class="text-success font-weight-bold">✔ ${d.toLocaleDateString('ar-SA')}</span>`;
                         } catch(e) {}
                     } else {
-                        // حقل تاريخ فارغ كلاسيكي
                         dateDisplay = `<input type="date" class="form-control" style="border:none; background:transparent;" disabled>`;
                     }
                     objectivesRows += `<tr><td class="text-center">${counter++}</td><td>${iGoal}</td><td>${dateDisplay}</td></tr>`;
@@ -337,8 +333,7 @@ function loadIEPTab() {
         });
     }
 
-    // 5. بناء هيكل الخطة القديم (HTML Injection)
-    // هذا الكود يعيد بناء الشكل الرسمي السابق (جداول، ترويسات، مربعات)
+    // ✅ بناء الهيكل (استخدام Flexbox لضمان المحاذاة الأفقية)
     const iepHTML = `
     <div class="iep-word-model-content" style="background:#fff; padding:20px; border:1px solid #ccc; font-family:'Tajawal', sans-serif;">
         
@@ -381,20 +376,20 @@ function loadIEPTab() {
             </table>
         </div>
 
-        <div class="row mb-4">
-            <div class="col-md-6">
+        <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+            <div style="flex: 1;">
                 <div class="card h-100" style="border:1px solid #ddd;">
-                    <div class="card-header" style="background:#28a745; color:#fff; text-align:center;">نقاط القوة</div>
-                    <div class="card-body">
-                        <ul id="iep-strengths-list" style="padding-right:20px;">${strengthHTML}</ul>
+                    <div class="card-header" style="background:#28a745; color:#fff; text-align:center; padding: 10px; font-weight: bold;">نقاط القوة</div>
+                    <div class="card-body" style="padding: 15px;">
+                        <ul id="iep-strengths-list" style="padding-right:20px; margin:0;">${strengthHTML}</ul>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div style="flex: 1;">
                 <div class="card h-100" style="border:1px solid #ddd;">
-                    <div class="card-header" style="background:#dc3545; color:#fff; text-align:center;">نقاط الاحتياج</div>
-                    <div class="card-body">
-                        <ul id="iep-needs-list" style="padding-right:20px;">${needsHTML}</ul>
+                    <div class="card-header" style="background:#dc3545; color:#fff; text-align:center; padding: 10px; font-weight: bold;">نقاط الاحتياج</div>
+                    <div class="card-body" style="padding: 15px;">
+                        <ul id="iep-needs-list" style="padding-right:20px; margin:0;">${needsHTML}</ul>
                     </div>
                 </div>
             </div>
@@ -420,7 +415,6 @@ function loadIEPTab() {
 
     iepContainer.innerHTML = iepHTML;
     
-    // تعبئة الجدول (بعد رسم HTML)
     fillScheduleTable();
 }
 

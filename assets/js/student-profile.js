@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (دعم الصوت + إصلاح نهائي للخطة)
+// الوصف: إدارة ملف الطالب (بناء الخطة ديناميكياً لضمان ظهورها + دعم الوسائط)
 // ============================================
 
 let currentStudentId = null;
@@ -54,9 +54,9 @@ function switchSection(sectionId) {
     if (sectionId === 'progress') loadProgressTab();
 }
 
-// ---------------------------------------------------------
+// ============================================
 // 1. قسم الاختبار التشخيصي
-// ---------------------------------------------------------
+// ============================================
 function loadDiagnosticTab() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const assignedTest = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic');
@@ -68,6 +68,7 @@ function loadDiagnosticTab() {
         
         const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
         const originalTest = allTests.find(t => t.id == assignedTest.testId);
+        const testTitle = originalTest ? originalTest.title : 'اختبار (محذوف)';
         
         let statusBadge = '';
         let actionContent = '';
@@ -82,8 +83,6 @@ function loadDiagnosticTab() {
             statusBadge = '<span class="badge badge-secondary">قيد الانتظار</span>';
         }
 
-        const testTitle = originalTest ? originalTest.title : 'اختبار (محذوف)';
-        
         detailsDiv.innerHTML = `
             <div class="card">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -100,47 +99,41 @@ function loadDiagnosticTab() {
 }
 
 // ---------------------------------------------------------
-// ✅ دالة التنسيق الذكي (تدعم الصوت، الصور، والترتيب)
+// دالة تنسيق الإجابات (صور، صوت، نصوص، قوائم)
 // ---------------------------------------------------------
 function formatAnswerDisplay(answerData) {
     if (!answerData) return '<span class="text-muted">لم يجب</span>';
 
-    // دالة مساعدة لفحص نوع البيانات
     const checkTypeAndReturnHTML = (data) => {
         if (typeof data !== 'string') return null;
-        
-        // 1. هل هو صوت؟ (Audio)
+        // صوت
         if (data.startsWith('data:audio')) {
             return `<audio controls src="${data}" style="width: 100%; margin-top:5px;"></audio>`;
         }
-        // 2. هل هو صورة؟ (Image)
+        // صورة
         if (data.startsWith('data:image')) {
             return `<img src="${data}" style="max-width:100%; border:1px solid #ccc; border-radius:5px; margin-top:5px;">`;
         }
         return null;
     };
 
-    // معالجة البيانات النصية المباشرة
+    // نص مباشر
     if (typeof answerData === 'string') {
         const html = checkTypeAndReturnHTML(answerData);
         return html ? html : answerData;
     }
 
-    // معالجة الكائنات (مثل أسئلة الترتيب أو التسجيل الصوتي المحفوظ ككائن)
+    // كائن (مثل أسئلة الترتيب p_0_g_0)
     if (typeof answerData === 'object') {
         const values = Object.values(answerData);
-        
-        // التحقق من القيم داخل الكائن
+        // فحص ما إذا كانت القيم وسائط
         for (let val of values) {
             const html = checkTypeAndReturnHTML(val);
-            if (html) return html; // إذا وجدنا صوت أو صورة نعرضه
+            if (html) return html;
         }
-
-        // إذا لم يكن وسائط، نعرضه كقائمة (للترتيب)
+        // إذا لم تكن وسائط، اعرضها كقائمة
         let htmlList = '<ol style="padding-right: 20px; margin-bottom: 0;">';
-        values.forEach(val => {
-            if(val) htmlList += `<li>${val}</li>`;
-        });
+        values.forEach(val => { if(val) htmlList += `<li>${val}</li>`; });
         htmlList += '</ol>';
         return htmlList;
     }
@@ -152,7 +145,7 @@ function openReviewModal(assignmentId) {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const assignment = studentTests.find(t => t.id == assignmentId);
     
-    if(!assignment) { alert('بيانات الاختبار غير متوفرة'); return; }
+    if(!assignment) { alert('لم يتم العثور على الاختبار'); return; }
     
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const originalTest = allTests.find(t => t.id == assignment.testId);
@@ -164,14 +157,7 @@ function openReviewModal(assignmentId) {
     if (originalTest && originalTest.questions) {
         originalTest.questions.forEach((q, index) => {
             const studentAnsObj = assignment.answers ? assignment.answers.find(a => a.questionId == q.id) : null;
-            
-            let rawAnswer = null;
-            if (studentAnsObj) {
-                // قد تكون الإجابة في answer أو value حسب نوع السؤال
-                rawAnswer = studentAnsObj.answer || studentAnsObj.value;
-            }
-
-            // استخدام دالة التنسيق الجديدة
+            let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
             const formattedAnswer = formatAnswerDisplay(rawAnswer);
 
             const currentScore = studentAnsObj ? (studentAnsObj.score || 0) : 0;
@@ -223,7 +209,6 @@ function saveTestReview() {
             const noteInp = container.querySelector(`textarea[name="note_${q.id}"]`);
             
             if (!studentTests[idx].answers) studentTests[idx].answers = [];
-
             let ansIdx = studentTests[idx].answers.findIndex(a => a.questionId == q.id);
             const newScore = parseInt(scoreInp.value) || 0;
             
@@ -231,18 +216,13 @@ function saveTestReview() {
                 studentTests[idx].answers[ansIdx].score = newScore;
                 studentTests[idx].answers[ansIdx].teacherNote = noteInp.value;
             } else {
-                studentTests[idx].answers.push({
-                    questionId: q.id,
-                    score: newScore,
-                    teacherNote: noteInp.value,
-                    answer: null
-                });
+                studentTests[idx].answers.push({ questionId: q.id, score: newScore, teacherNote: noteInp.value, answer: null });
             }
             totalScore += newScore;
             maxTotalScore += (q.passingScore || 1);
         });
-        
         studentTests[idx].score = maxTotalScore > 0 ? Math.round((totalScore / maxTotalScore) * 100) : 0;
+        studentTests[idx].status = 'completed'; // تأكيد الاكتمال
     }
 
     localStorage.setItem('studentTests', JSON.stringify(studentTests));
@@ -253,64 +233,38 @@ function saveTestReview() {
 }
 
 // ============================================
-// 2. الخطة التربوية (إصلاح شامل لضمان الظهور)
+// 2. الخطة التربوية (بناء HTML ديناميكياً)
 // ============================================
 function loadIEPTab() {
-    const iepContent = document.getElementById('iepContent');
-    const wordModel = document.querySelector('.iep-word-model');
-    if (!iepContent) return;
+    const iepContainer = document.getElementById('iepContent');
+    if (!iepContainer) return;
 
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
 
-    // البحث عن أحدث اختبار مكتمل
+    // 1. البحث عن الاختبار المكتمل
     const completedDiagnostic = studentTests
         .filter(t => t.studentId == currentStudentId && t.type === 'diagnostic' && t.status === 'completed')
         .sort((a, b) => new Date(b.assignedDate) - new Date(a.assignedDate))[0];
 
     if (!completedDiagnostic) {
-        if(wordModel) wordModel.style.display = 'none';
-        iepContent.innerHTML = `<div class="empty-state"><h3>الخطة غير جاهزة</h3><p>يجب إكمال وتصحيح اختبار تشخيصي أولاً.</p></div>`;
+        iepContainer.innerHTML = `<div class="empty-state"><h3>الخطة غير جاهزة</h3><p>يجب إكمال وتصحيح اختبار تشخيصي أولاً.</p></div>`;
         return;
     }
 
-    if(wordModel) wordModel.style.display = 'block';
-    if(iepContent.querySelector('.empty-state')) iepContent.innerHTML = '';
-
     const originalTest = allTests.find(t => t.id == completedDiagnostic.testId);
-    
-    // تعبئة البيانات الأساسية
-    if(document.getElementById('iep-student-name')) document.getElementById('iep-student-name').textContent = currentStudent.name || '-';
-    if(document.getElementById('iep-grade')) document.getElementById('iep-grade').textContent = currentStudent.grade || '-';
-    if(document.getElementById('iep-subject')) document.getElementById('iep-subject').textContent = originalTest ? originalTest.subject : 'عام';
-    if(document.getElementById('iep-date')) document.getElementById('iep-date').textContent = new Date().toLocaleDateString('ar-SA');
+    if (!originalTest) {
+        iepContainer.innerHTML = `<div class="alert alert-danger">خطأ: بيانات الاختبار الأصلي محذوفة.</div>`;
+        return;
+    }
 
-    fillScheduleTable();
-
-    // جلب تواريخ الدروس
-    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    const completedLessonsMap = {};
-    studentLessons.forEach(l => {
-        if (l.studentId == currentStudentId && l.status === 'completed') {
-            completedLessonsMap[l.objective] = l.completedDate;
-        }
-    });
-
-    const strengthsList = document.getElementById('iep-strengths-list');
-    const needsList = document.getElementById('iep-needs-list');
-    const objectivesBody = document.getElementById('iep-objectives-body');
-
-    if(strengthsList) strengthsList.innerHTML = '';
-    if(needsList) needsList.innerHTML = '';
-    if(objectivesBody) objectivesBody.innerHTML = '';
-
+    // 2. تحليل الأهداف (نقاط القوة والاحتياج)
     let needsObjects = [];
-
-    // ✅ منطق توليد النقاط (تم تحسينه ليكون أكثر تسامحاً مع أنواع البيانات)
-    if (originalTest && originalTest.questions) {
+    let strengthHTML = '';
+    
+    if (originalTest.questions) {
         originalTest.questions.forEach(question => {
-            // البحث عن الإجابة (حتى لو لم تكن موجودة، نعتبر الدرجة 0)
             let studentScore = 0;
             if (completedDiagnostic.answers) {
                 const ans = completedDiagnostic.answers.find(a => a.questionId == question.id);
@@ -321,70 +275,91 @@ function loadIEPTab() {
                 const objective = allObjectives.find(o => o.id == question.linkedGoalId);
                 if (objective) {
                     const passingScore = Number(question.passingScore) || 1;
-
-                    // تصنيف الهدف
                     if (studentScore >= passingScore) {
-                        if(strengthsList && !strengthsList.innerHTML.includes(objective.shortTermGoal)) {
-                            strengthsList.innerHTML += `<li>${objective.shortTermGoal}</li>`;
+                        if (!strengthHTML.includes(objective.shortTermGoal)) {
+                            strengthHTML += `<li>${objective.shortTermGoal}</li>`;
                         }
                     } else {
-                        // تجنب التكرار
-                        if (!needsObjects.find(o => o.id == objective.id)) {
-                            needsObjects.push(objective);
-                            if(needsList) needsList.innerHTML += `<li>${objective.shortTermGoal}</li>`;
-                        }
+                        if (!needsObjects.find(o => o.id == objective.id)) needsObjects.push(objective);
                     }
                 }
             }
         });
     }
 
-    // تعبئة جدول الأهداف
-    if (objectivesBody) {
-        if(needsObjects.length === 0) {
-            objectivesBody.innerHTML = '<tr><td colspan="3" class="text-center">جميع الأهداف محققة (لا توجد نقاط احتياج).</td></tr>';
-        } else {
-            let objectiveCounter = 1;
-            needsObjects.forEach(obj => {
-                objectivesBody.innerHTML += `<tr style="background-color: #e9ecef;"><td style="font-weight:bold; text-align:center;">*</td><td colspan="2"><strong>هدف قصير المدى:</strong> ${obj.shortTermGoal}</td></tr>`;
-
-                if (obj.instructionalGoals && obj.instructionalGoals.length > 0) {
-                    obj.instructionalGoals.forEach(iGoal => {
-                        const achievementDate = completedLessonsMap[iGoal];
-                        
-                        let dateDisplay = '<input type="date" class="form-control" style="border:none; background:transparent;" disabled>';
-                        
-                        if (achievementDate) {
-                            try {
-                                const d = new Date(achievementDate);
-                                if(!isNaN(d.getTime())) {
-                                    dateDisplay = `<span class="text-success font-weight-bold">✔ ${d.toLocaleDateString('ar-SA')}</span>`;
-                                }
-                            } catch(e) {}
-                        }
-
-                        objectivesBody.innerHTML += `<tr><td style="text-align:center;">${objectiveCounter++}</td><td>${iGoal}</td><td>${dateDisplay}</td></tr>`;
-                    });
-                } else {
-                    objectivesBody.innerHTML += `<tr><td>-</td><td class="text-muted">لا توجد أهداف تدريسية</td><td></td></tr>`;
-                }
-            });
-        }
-    }
-}
-
-function fillScheduleTable() {
-    const daysMap = { 'sunday': 'day-sunday', 'monday': 'day-monday', 'tuesday': 'day-tuesday', 'wednesday': 'day-wednesday', 'thursday': 'day-thursday' };
-    const schedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]'); 
-    Object.values(daysMap).forEach(id => { const el = document.getElementById(id); if(el) el.innerHTML = ''; });
-    schedule.forEach(session => {
-        if (session.students && session.students.includes(currentStudentId)) {
-            const cellId = daysMap[session.day];
-            if (cellId && document.getElementById(cellId)) {
-                document.getElementById(cellId).innerHTML = `<div style="background:#28a745; color:white; padding:5px; border-radius:4px; text-align:center;">حصة ${session.period || 1}</div>`;
-            }
+    // 3. جلب تواريخ الدروس
+    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    const completedLessonsMap = {};
+    studentLessons.forEach(l => {
+        if (l.studentId == currentStudentId && l.status === 'completed') {
+            completedLessonsMap[l.objective] = l.completedDate;
         }
     });
+
+    // 4. بناء جدول الاحتياجات
+    let objectivesRows = '';
+    if (needsObjects.length === 0) {
+        objectivesRows = '<tr><td colspan="3" class="text-center">جميع الأهداف محققة (لا توجد نقاط احتياج).</td></tr>';
+    } else {
+        let counter = 1;
+        needsObjects.forEach(obj => {
+            objectivesRows += `<tr style="background-color: #f8f9fa;"><td class="text-center"><strong>*</strong></td><td colspan="2"><strong>هدف قصير المدى:</strong> ${obj.shortTermGoal}</td></tr>`;
+            
+            if (obj.instructionalGoals && obj.instructionalGoals.length > 0) {
+                obj.instructionalGoals.forEach(iGoal => {
+                    const achievementDate = completedLessonsMap[iGoal];
+                    let dateDisplay = '<span class="text-muted">⏳ قيد العمل</span>';
+                    
+                    if (achievementDate) {
+                        try {
+                            const d = new Date(achievementDate);
+                            dateDisplay = `<span class="text-success font-weight-bold">✔ ${d.toLocaleDateString('ar-SA')}</span>`;
+                        } catch(e) {}
+                    }
+                    objectivesRows += `<tr><td class="text-center">${counter++}</td><td>${iGoal}</td><td>${dateDisplay}</td></tr>`;
+                });
+            }
+        });
+    }
+
+    // 5. بناء القالب النهائي وإدخاله في الصفحة
+    const planHTML = `
+        <div class="card" style="border-top: 4px solid var(--primary-color);">
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px; border-bottom:1px solid #eee; padding-bottom:10px;">
+                <div><strong>الطالب:</strong> ${currentStudent.name}</div>
+                <div><strong>الصف:</strong> ${currentStudent.grade}</div>
+                <div><strong>المادة:</strong> ${originalTest.subject || 'عام'}</div>
+                <div><strong>تاريخ الخطة:</strong> ${new Date().toLocaleDateString('ar-SA')}</div>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <h5 style="color:var(--success-color);"> نقاط القوة:</h5>
+                    <ul id="iep-strengths-list">${strengthHTML || '<li>لا توجد نقاط مسجلة.</li>'}</ul>
+                </div>
+                <div class="col-md-6">
+                    <h5 style="color:var(--danger-color);"> نقاط الاحتياج:</h5>
+                    <ul>${needsObjects.map(o => `<li>${o.shortTermGoal}</li>`).join('') || '<li>لا توجد نقاط احتياج.</li>'}</ul>
+                </div>
+            </div>
+
+            <h5>الأهداف التدريسية والجدول الزمني:</h5>
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th style="width:50px">#</th>
+                        <th>الهدف التدريسي</th>
+                        <th style="width:150px">تاريخ التحقق</th>
+                    </tr>
+                </thead>
+                <tbody id="iep-objectives-body">
+                    ${objectivesRows}
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    iepContainer.innerHTML = planHTML;
 }
 
 // ============================================
@@ -429,8 +404,7 @@ function loadLessonsTab() {
             <div class="order-controls">
                 <button class="btn-order" onclick="moveLesson(${l.id}, 'up')" title="تقديم">⬆</button>
                 <button class="btn-order" onclick="moveLesson(${l.id}, 'down')" title="تأخير">⬇</button>
-            </div>
-        `;
+            </div>`;
 
         return `
         <div class="content-card ${cardClass}">
@@ -481,24 +455,19 @@ function openLessonReview(assignmentId) {
     const lesson = studentLessons.find(l => l.id == assignmentId);
     const container = document.getElementById('lessonAnswersBody');
     
-    if(!lesson || !lesson.answers || lesson.answers.length === 0) {
-        container.innerHTML = '<div class="alert alert-warning">لا توجد إجابات محفوظة لهذا الدرس.</div>';
+    if(!lesson || !lesson.answers) {
+        container.innerHTML = '<div class="alert alert-warning">لا توجد إجابات محفوظة.</div>';
     } else {
         container.innerHTML = lesson.answers.map((ans, i) => {
             const formatted = formatAnswerDisplay(ans.value);
-            return `
-            <div class="review-question-item">
-                <div style="margin-bottom:5px;"><strong>س${i+1}:</strong> ${ans.questionText || 'سؤال'}</div>
-                <div class="student-answer-box">${formatted}</div>
-            </div>
-            `;
+            return `<div class="review-question-item"><div style="margin-bottom:5px;"><strong>س${i+1}:</strong> ${ans.questionText || 'سؤال'}</div><div class="student-answer-box">${formatted}</div></div>`;
         }).join('');
     }
     document.getElementById('viewLessonAnswersModal').classList.add('show');
 }
 
 function resetLesson(id) {
-    if(!confirm('هل أنت متأكد من إعادة فتح الدرس؟ سيتم مسح الإجابات وتاريخ الإنجاز.')) return;
+    if(!confirm('تنبيه: سيتم إعادة فتح الدرس ومسح الإجابات وتاريخ الإنجاز. هل أنت متأكد؟')) return;
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const idx = studentLessons.findIndex(l => l.id == id);
     if(idx !== -1) {
@@ -556,7 +525,6 @@ function regenerateLessons() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const completedDiagnostic = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic' && t.status === 'completed');
     if (!completedDiagnostic) { alert('يجب إجراء اختبار تشخيصي أولاً.'); return; }
-    
     const allLessonsLib = JSON.parse(localStorage.getItem('lessons') || '[]');
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const myLessons = studentLessons.filter(l => l.studentId == currentStudentId);

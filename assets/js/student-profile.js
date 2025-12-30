@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (إصلاح عرض أسئلة الترتيب + ضمان ظهور الخطة)
+// الوصف: إدارة ملف الطالب (دعم الصوت + إصلاح نهائي للخطة)
 // ============================================
 
 let currentStudentId = null;
@@ -20,7 +20,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function loadStudentData() {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
-    // استخدام == لضمان المطابقة سواء كان الرقم نصاً أو رقماً
     currentStudent = users.find(u => u.id == currentStudentId);
     
     if (!currentStudent) {
@@ -29,6 +28,7 @@ function loadStudentData() {
         return;
     }
     
+    // تحديث الواجهة
     if(document.getElementById('sideName')) document.getElementById('sideName').textContent = currentStudent.name;
     if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = currentStudent.name;
     if(document.getElementById('sideGrade')) document.getElementById('sideGrade').textContent = currentStudent.grade + ' - ' + (currentStudent.subject || 'عام');
@@ -100,30 +100,43 @@ function loadDiagnosticTab() {
 }
 
 // ---------------------------------------------------------
-// ✅ دالة التنسيق الذكي للإجابات (تحل مشكلة الترتيب والصور)
+// ✅ دالة التنسيق الذكي (تدعم الصوت، الصور، والترتيب)
 // ---------------------------------------------------------
 function formatAnswerDisplay(answerData) {
     if (!answerData) return '<span class="text-muted">لم يجب</span>';
 
-    // 1. إذا كانت الإجابة نصية بسيطة
-    if (typeof answerData === 'string') {
-        // التحقق مما إذا كانت صورة Base64
-        if (answerData.startsWith('data:image')) {
-            return `<img src="${answerData}" style="max-width:100%; border:1px solid #ccc; border-radius:5px;">`;
+    // دالة مساعدة لفحص نوع البيانات
+    const checkTypeAndReturnHTML = (data) => {
+        if (typeof data !== 'string') return null;
+        
+        // 1. هل هو صوت؟ (Audio)
+        if (data.startsWith('data:audio')) {
+            return `<audio controls src="${data}" style="width: 100%; margin-top:5px;"></audio>`;
         }
-        return answerData;
+        // 2. هل هو صورة؟ (Image)
+        if (data.startsWith('data:image')) {
+            return `<img src="${data}" style="max-width:100%; border:1px solid #ccc; border-radius:5px; margin-top:5px;">`;
+        }
+        return null;
+    };
+
+    // معالجة البيانات النصية المباشرة
+    if (typeof answerData === 'string') {
+        const html = checkTypeAndReturnHTML(answerData);
+        return html ? html : answerData;
     }
 
-    // 2. إذا كانت كائن (Object) مثل أسئلة الترتيب {"p_0": "...", "p_1": "..."}
+    // معالجة الكائنات (مثل أسئلة الترتيب أو التسجيل الصوتي المحفوظ ككائن)
     if (typeof answerData === 'object') {
         const values = Object.values(answerData);
         
-        // هل هي صورة داخل كائن؟
-        if (values.length > 0 && typeof values[0] === 'string' && values[0].startsWith('data:image')) {
-            return `<img src="${values[0]}" style="max-width:100%; border:1px solid #ccc;">`;
+        // التحقق من القيم داخل الكائن
+        for (let val of values) {
+            const html = checkTypeAndReturnHTML(val);
+            if (html) return html; // إذا وجدنا صوت أو صورة نعرضه
         }
 
-        // إذن هي سؤال ترتيب أو توصيل - نعرضها كقائمة
+        // إذا لم يكن وسائط، نعرضه كقائمة (للترتيب)
         let htmlList = '<ol style="padding-right: 20px; margin-bottom: 0;">';
         values.forEach(val => {
             if(val) htmlList += `<li>${val}</li>`;
@@ -139,7 +152,7 @@ function openReviewModal(assignmentId) {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const assignment = studentTests.find(t => t.id == assignmentId);
     
-    if(!assignment) { alert('لم يتم العثور على بيانات الاختبار'); return; }
+    if(!assignment) { alert('بيانات الاختبار غير متوفرة'); return; }
     
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const originalTest = allTests.find(t => t.id == assignment.testId);
@@ -152,13 +165,13 @@ function openReviewModal(assignmentId) {
         originalTest.questions.forEach((q, index) => {
             const studentAnsObj = assignment.answers ? assignment.answers.find(a => a.questionId == q.id) : null;
             
-            // استخراج الإجابة الخام
             let rawAnswer = null;
             if (studentAnsObj) {
-                rawAnswer = studentAnsObj.answer || studentAnsObj.value; // قد تكون محفوظة بـ value أو answer
+                // قد تكون الإجابة في answer أو value حسب نوع السؤال
+                rawAnswer = studentAnsObj.answer || studentAnsObj.value;
             }
 
-            // تنسيق الإجابة للعرض
+            // استخدام دالة التنسيق الجديدة
             const formattedAnswer = formatAnswerDisplay(rawAnswer);
 
             const currentScore = studentAnsObj ? (studentAnsObj.score || 0) : 0;
@@ -186,7 +199,7 @@ function openReviewModal(assignmentId) {
             container.appendChild(item);
         });
     } else {
-        container.innerHTML = '<p class="text-center text-muted">لا توجد أسئلة لعرضها.</p>';
+        container.innerHTML = '<p class="text-center text-muted">لا توجد أسئلة.</p>';
     }
     document.getElementById('reviewTestModal').classList.add('show');
 }
@@ -209,7 +222,6 @@ function saveTestReview() {
             const scoreInp = container.querySelector(`input[name="score_${q.id}"]`);
             const noteInp = container.querySelector(`textarea[name="note_${q.id}"]`);
             
-            // التأكد من وجود مصفوفة الإجابات
             if (!studentTests[idx].answers) studentTests[idx].answers = [];
 
             let ansIdx = studentTests[idx].answers.findIndex(a => a.questionId == q.id);
@@ -219,12 +231,11 @@ function saveTestReview() {
                 studentTests[idx].answers[ansIdx].score = newScore;
                 studentTests[idx].answers[ansIdx].teacherNote = noteInp.value;
             } else {
-                // إضافة سجل للإجابة إذا لم يكن موجوداً
                 studentTests[idx].answers.push({
                     questionId: q.id,
                     score: newScore,
                     teacherNote: noteInp.value,
-                    answer: null // لم يجب
+                    answer: null
                 });
             }
             totalScore += newScore;
@@ -237,17 +248,12 @@ function saveTestReview() {
     localStorage.setItem('studentTests', JSON.stringify(studentTests));
     closeModal('reviewTestModal');
     loadDiagnosticTab();
-    
-    // تحديث الخطة إذا كانت مفتوحة
-    if(document.getElementById('section-iep').classList.contains('active')) {
-        loadIEPTab();
-    }
-    
+    if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
     alert('تم حفظ التصحيح');
 }
 
 // ============================================
-// 2. الخطة التربوية (إصلاح شامل للاختفاء)
+// 2. الخطة التربوية (إصلاح شامل لضمان الظهور)
 // ============================================
 function loadIEPTab() {
     const iepContent = document.getElementById('iepContent');
@@ -258,7 +264,7 @@ function loadIEPTab() {
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
 
-    // البحث عن أحدث اختبار مكتمل (بمرونة في الـ ID)
+    // البحث عن أحدث اختبار مكتمل
     const completedDiagnostic = studentTests
         .filter(t => t.studentId == currentStudentId && t.type === 'diagnostic' && t.status === 'completed')
         .sort((a, b) => new Date(b.assignedDate) - new Date(a.assignedDate))[0];
@@ -269,24 +275,20 @@ function loadIEPTab() {
         return;
     }
 
-    // وجدنا اختباراً، نظهر النموذج
     if(wordModel) wordModel.style.display = 'block';
     if(iepContent.querySelector('.empty-state')) iepContent.innerHTML = '';
 
     const originalTest = allTests.find(t => t.id == completedDiagnostic.testId);
-
-    // حماية: إذا كان الاختبار الأصلي محذوفاً
-    const subjectName = originalTest ? originalTest.subject : 'غير محدد';
-
-    // تعبئة الرأس
+    
+    // تعبئة البيانات الأساسية
     if(document.getElementById('iep-student-name')) document.getElementById('iep-student-name').textContent = currentStudent.name || '-';
     if(document.getElementById('iep-grade')) document.getElementById('iep-grade').textContent = currentStudent.grade || '-';
-    if(document.getElementById('iep-subject')) document.getElementById('iep-subject').textContent = subjectName;
+    if(document.getElementById('iep-subject')) document.getElementById('iep-subject').textContent = originalTest ? originalTest.subject : 'عام';
     if(document.getElementById('iep-date')) document.getElementById('iep-date').textContent = new Date().toLocaleDateString('ar-SA');
 
     fillScheduleTable();
 
-    // جلب تواريخ الدروس المكتملة
+    // جلب تواريخ الدروس
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const completedLessonsMap = {};
     studentLessons.forEach(l => {
@@ -305,24 +307,28 @@ function loadIEPTab() {
 
     let needsObjects = [];
 
-    // منطق توليد النقاط (مع حماية ضد البيانات الناقصة)
-    if (originalTest && originalTest.questions && Array.isArray(completedDiagnostic.answers)) {
+    // ✅ منطق توليد النقاط (تم تحسينه ليكون أكثر تسامحاً مع أنواع البيانات)
+    if (originalTest && originalTest.questions) {
         originalTest.questions.forEach(question => {
-            const studentAnswerObj = completedDiagnostic.answers.find(a => a.questionId == question.id);
+            // البحث عن الإجابة (حتى لو لم تكن موجودة، نعتبر الدرجة 0)
+            let studentScore = 0;
+            if (completedDiagnostic.answers) {
+                const ans = completedDiagnostic.answers.find(a => a.questionId == question.id);
+                if (ans) studentScore = Number(ans.score) || 0;
+            }
+
             if (question.linkedGoalId) {
                 const objective = allObjectives.find(o => o.id == question.linkedGoalId);
                 if (objective) {
-                    const studentScore = studentAnswerObj ? (studentAnswerObj.score || 0) : 0;
-                    const passingScore = question.passingScore || 1;
+                    const passingScore = Number(question.passingScore) || 1;
 
-                    // إذا حقق الدرجة -> نقطة قوة
+                    // تصنيف الهدف
                     if (studentScore >= passingScore) {
                         if(strengthsList && !strengthsList.innerHTML.includes(objective.shortTermGoal)) {
                             strengthsList.innerHTML += `<li>${objective.shortTermGoal}</li>`;
                         }
-                    } 
-                    // إذا لم يحقق -> نقطة احتياج
-                    else {
+                    } else {
+                        // تجنب التكرار
                         if (!needsObjects.find(o => o.id == objective.id)) {
                             needsObjects.push(objective);
                             if(needsList) needsList.innerHTML += `<li>${objective.shortTermGoal}</li>`;
@@ -333,7 +339,7 @@ function loadIEPTab() {
         });
     }
 
-    // تعبئة الجدول
+    // تعبئة جدول الأهداف
     if (objectivesBody) {
         if(needsObjects.length === 0) {
             objectivesBody.innerHTML = '<tr><td colspan="3" class="text-center">جميع الأهداف محققة (لا توجد نقاط احتياج).</td></tr>';
@@ -382,7 +388,7 @@ function fillScheduleTable() {
 }
 
 // ============================================
-// 3. قسم الدروس (الأسهم + التحكم + إلغاء البهتان)
+// 3. قسم الدروس
 // ============================================
 function loadLessonsTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
@@ -394,7 +400,6 @@ function loadLessonsTab() {
         return;
     }
 
-    // ترتيب حسب orderIndex
     myList.sort((a, b) => {
         const orderA = a.orderIndex !== undefined ? a.orderIndex : 9999;
         const orderB = b.orderIndex !== undefined ? b.orderIndex : 9999;
@@ -480,7 +485,7 @@ function openLessonReview(assignmentId) {
         container.innerHTML = '<div class="alert alert-warning">لا توجد إجابات محفوظة لهذا الدرس.</div>';
     } else {
         container.innerHTML = lesson.answers.map((ans, i) => {
-            const formatted = formatAnswerDisplay(ans.value); // استخدام نفس دالة التنسيق
+            const formatted = formatAnswerDisplay(ans.value);
             return `
             <div class="review-question-item">
                 <div style="margin-bottom:5px;"><strong>س${i+1}:</strong> ${ans.questionText || 'سؤال'}</div>
@@ -493,7 +498,7 @@ function openLessonReview(assignmentId) {
 }
 
 function resetLesson(id) {
-    if(!confirm('هل أنت متأكد من إعادة فتح الدرس؟ سيتم مسح الإجابات والتاريخ.')) return;
+    if(!confirm('هل أنت متأكد من إعادة فتح الدرس؟ سيتم مسح الإجابات وتاريخ الإنجاز.')) return;
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const idx = studentLessons.findIndex(l => l.id == id);
     if(idx !== -1) {
@@ -577,7 +582,6 @@ function regenerateLessons() {
     alert(`تم التحديث وإضافة ${addedCount} درس.`);
 }
 
-// 4. الواجبات والتقدم
 function loadAssignmentsTab() {
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId == currentStudentId);
     const container = document.getElementById('studentAssignmentsGrid');

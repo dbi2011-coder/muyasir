@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (تعديل أزرار الترتيب: تقديم/تأخير حسب الموقع)
+// الوصف: إدارة ملف الطالب (استبدال الأسهم بنصوص "تقديم" و "تأخير")
 // ============================================
 
 let currentStudentId = null;
@@ -228,7 +228,7 @@ function saveTestReview() {
 }
 
 // ============================================
-// 2. الخطة التربوية (نفس التصميم المحسن)
+// 2. الخطة التربوية (طباعة احترافية + تذييل مخصص)
 // ============================================
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
@@ -482,7 +482,7 @@ function loadIEPTab() {
 
     iepContainer.innerHTML = iepHTML;
     
-    // زر الطباعة العلوي يعمل الآن
+    // تأكيد عمل زر الطباعة العلوي
     const topPrintBtn = document.querySelector('#section-iep .content-header button');
     if(topPrintBtn) {
         topPrintBtn.setAttribute('onclick', 'window.print()');
@@ -510,7 +510,7 @@ function fillScheduleTable() {
 }
 
 // ============================================
-// 3. قسم الدروس (أزرار التقديم والتأخير)
+// 3. قسم الدروس (تقديم وتأخير بنصوص)
 // ============================================
 function loadLessonsTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
@@ -529,7 +529,6 @@ function loadLessonsTab() {
         return orderA - orderB || new Date(a.assignedDate) - new Date(b.assignedDate);
     });
 
-    // رسم البطاقات
     container.innerHTML = myList.map((l, index) => {
         let controls = '';
         let statusDisplay = '';
@@ -549,25 +548,31 @@ function loadLessonsTab() {
                 : `<button class="btn btn-secondary" onclick="toggleLessonLock(${l.id}, true)">🔒 قفل</button>`;
         }
 
-        // ✅ منطق أزرار الترتيب (تقديم/تأخير)
+        // ✅ أزرار الترتيب (تقديم وتأخير) بنصوص
+        // العنصر الأول في المصفوفة (index 0) = هو الأول في الترتيب (الأعلى).
+        // لا يمكن تقديمه (رفعه) أكثر. يمكن تأخيره (إنزاله).
+        
+        // العنصر الأخير في المصفوفة = هو الأخير في الترتيب (الأسفل).
+        // لا يمكن تأخيره (إنزاله) أكثر. يمكن تقديمه (رفعه).
+
         const isFirst = (index === 0);
         const isLast = (index === myList.length - 1);
         
         let orderButtonsHTML = '';
         
-        // زر التقديم (للأعلى) - يظهر إذا لم يكن الأول
+        // زر التقديم (للأعلى/السابق): يظهر للجميع ما عدا الأول
         if (!isFirst) {
-            orderButtonsHTML += `<button class="btn-order" onclick="moveLesson(${l.id}, 'up')" title="تقديم (للأعلى)">⬆</button>`;
+            orderButtonsHTML += `<button class="btn-order" onclick="moveLesson(${l.id}, 'up')" title="نقل للأعلى" style="width: auto; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; background: #fff; border: 1px solid #ddd; cursor: pointer;">تقديم</button>`;
         }
         
-        // زر التأخير (للأسفل) - يظهر إذا لم يكن الأخير
+        // زر التأخير (للأسفل/اللاحق): يظهر للجميع ما عدا الأخير
         if (!isLast) {
-            orderButtonsHTML += `<button class="btn-order" onclick="moveLesson(${l.id}, 'down')" title="تأخير (للأسفل)">⬇</button>`;
+            orderButtonsHTML += `<button class="btn-order" onclick="moveLesson(${l.id}, 'down')" title="نقل للأسفل" style="width: auto; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; background: #fff; border: 1px solid #ddd; cursor: pointer;">تأخير</button>`;
         }
 
         return `
-        <div class="content-card ${cardClass}">
-            <div class="order-controls" style="display:flex; gap:5px; position:absolute; top:10px; left:10px;">
+        <div class="content-card ${cardClass}" style="position: relative;">
+            <div class="order-controls" style="position: absolute; top: 10px; left: 10px; display: flex; gap: 5px; z-index: 5;">
                 ${orderButtonsHTML}
             </div>
             <div class="content-header" style="margin-top:0;">
@@ -586,7 +591,7 @@ function moveLesson(lessonId, direction) {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     let myLessons = studentLessons.filter(l => l.studentId == currentStudentId);
     
-    // التأكد من الترتيب الحالي
+    // التأكد من الترتيب الحالي قبل التحريك
     myLessons.sort((a, b) => (a.orderIndex||0) - (b.orderIndex||0));
     myLessons.forEach((l, i) => l.orderIndex = i);
 
@@ -594,12 +599,12 @@ function moveLesson(lessonId, direction) {
     if (currentIndex === -1) return;
 
     if (direction === 'up' && currentIndex > 0) {
-        // تبديل مع السابق (تقديم)
+        // تقديم: تبديل مع السابق
         const temp = myLessons[currentIndex].orderIndex;
         myLessons[currentIndex].orderIndex = myLessons[currentIndex - 1].orderIndex;
         myLessons[currentIndex - 1].orderIndex = temp;
     } else if (direction === 'down' && currentIndex < myLessons.length - 1) {
-        // تبديل مع اللاحق (تأخير)
+        // تأخير: تبديل مع اللاحق
         const temp = myLessons[currentIndex].orderIndex;
         myLessons[currentIndex].orderIndex = myLessons[currentIndex + 1].orderIndex;
         myLessons[currentIndex + 1].orderIndex = temp;

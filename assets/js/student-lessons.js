@@ -1,13 +1,12 @@
 // ============================================
 // 📁 المسار: assets/js/student-lessons.js
-// الوصف: إدارة الدروس في واجهة الطالب (إصلاح عدم الظهور + ترتيب + حفظ)
+// الوصف: إدارة الدروس في واجهة الطالب (إصلاح عدم الظهور ومطابقة الهوية)
 // ============================================
 
 let currentAssignmentId = null;
 let currentLessonContent = null;
 
 document.addEventListener('DOMContentLoaded', function() {
-    // التأكد من أننا في صفحة الدروس
     if (document.getElementById('lessonsContainer')) {
         injectLessonModalHTML();
         loadStudentLessons();
@@ -20,15 +19,22 @@ function loadStudentLessons() {
     // 1. التحقق من المستخدم المسجل
     let currentStudent = null;
     try {
-        if (typeof getCurrentUser === 'function') currentStudent = getCurrentUser();
-        // محاولة بديلة إذا لم تكن الدالة موجودة
+        // محاولة الجلب من دالة النظام
+        if (typeof getCurrentUser === 'function') {
+            currentStudent = getCurrentUser();
+        }
+        // محاولة الجلب اليدوية من التخزين المؤقت
         if (!currentStudent && sessionStorage.getItem('currentUser')) {
             currentStudent = JSON.parse(sessionStorage.getItem('currentUser')).user;
         }
-    } catch (e) { console.error('Error fetching user:', e); }
+        // محاولة الجلب من التخزين الدائم (في حال تذكر الدخول)
+        if (!currentStudent && localStorage.getItem('currentUser')) {
+            currentStudent = JSON.parse(localStorage.getItem('currentUser')).user;
+        }
+    } catch (e) { console.error('خطأ في جلب بيانات المستخدم:', e); }
 
     if (!currentStudent || !currentStudent.id) {
-        container.innerHTML = '<div class="alert alert-danger">يرجى تسجيل الدخول لعرض الدروس.</div>';
+        container.innerHTML = '<div class="alert alert-danger" style="grid-column: 1/-1;">يرجى تسجيل الدخول لعرض الدروس.</div>';
         return;
     }
 
@@ -36,12 +42,13 @@ function loadStudentLessons() {
     const allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const lessonsLib = JSON.parse(localStorage.getItem('lessons') || '[]');
     
-    // 3. التصفية (استخدام == بدلاً من === لضمان تطابق الأرقام والنصوص)
-    let myLessons = allStudentLessons.filter(l => l.studentId == currentStudent.id);
+    // 3. التصفية (باستخدام String لضمان تطابق الأرقام والنصوص)
+    // نقارن رقم الطالب في الدرس مع رقم الطالب المسجل حالياً
+    let myLessons = allStudentLessons.filter(l => String(l.studentId) === String(currentStudent.id));
 
     if (myLessons.length === 0) {
         container.innerHTML = `
-            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #666;">
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #666; background:#fff; border-radius:10px; border:1px solid #eee;">
                 <div style="font-size: 3rem; margin-bottom: 10px;">📚</div>
                 <h3>لا توجد دروس مسندة حالياً</h3>
                 <p>سيقوم المعلم بإضافة الدروس إلى قائمتك قريباً.</p>
@@ -61,7 +68,12 @@ function loadStudentLessons() {
     // 5. رسم البطاقات
     myLessons.forEach((lessonAssignment, index) => {
         // جلب تفاصيل الدرس الأصلي (الأسئلة والمحتوى)
-        const originalLesson = lessonsLib.find(l => l.id == lessonAssignment.originalLessonId) || {};
+        // نستخدم || {} لمنع الخطأ إذا كان الدرس الأصلي محذوفاً
+        const originalLesson = lessonsLib.find(l => l.id == lessonAssignment.originalLessonId) || { 
+            title: lessonAssignment.title, 
+            subject: 'عام',
+            exercises: { questions: [] }
+        };
         
         // --- منطق القفل ---
         let isLocked = false;
@@ -100,6 +112,9 @@ function loadStudentLessons() {
             btnHtml = `<button class="btn btn-success" style="width:100%; background:#28a745; border:none;" onclick="openLessonOverlay(${lessonAssignment.id}, ${lessonAssignment.originalLessonId})">ابدأ الدرس الآن</button>`;
         }
 
+        // عدد التمارين (حماية ضد البيانات الناقصة)
+        const exerciseCount = (originalLesson.exercises && originalLesson.exercises.questions) ? originalLesson.exercises.questions.length : 0;
+
         const html = `
             <div class="test-card ${cardClass}">
                 ${lockOverlay}
@@ -112,7 +127,7 @@ function loadStudentLessons() {
                 </div>
                 <div class="card-meta">
                     <span>${originalLesson.subject || 'عام'}</span>
-                    <span>${originalLesson.exercises?.questions?.length || 0} تمارين</span>
+                    <span>${exerciseCount} تمارين</span>
                 </div>
                 <div style="margin-top:auto;">${btnHtml}</div>
             </div>
@@ -127,16 +142,19 @@ function openLessonOverlay(assignmentId, originalLessonId) {
     currentAssignmentId = assignmentId;
 
     if (!currentLessonContent) {
-        alert('حدث خطأ: محتوى الدرس غير موجود في المكتبة.');
+        alert('عذراً، محتوى هذا الدرس لم يعد متوفراً في المكتبة.');
         return;
     }
 
     document.getElementById('lessonFocusTitle').textContent = currentLessonContent.title;
-    document.getElementById('reqScore').textContent = currentLessonContent.exercises?.passScore || 50;
+    
+    // التعامل مع نسبة الاجتياز (الافتراضي 50)
+    const passScore = (currentLessonContent.exercises && currentLessonContent.exercises.passScore) ? currentLessonContent.exercises.passScore : 50;
+    document.getElementById('reqScore').textContent = passScore;
 
     renderIntro();
-    renderQuestions(currentLessonContent.exercises?.questions || [], 'exercisesList');
-    renderQuestions(currentLessonContent.assessment?.questions || [], 'assessmentList');
+    renderQuestions((currentLessonContent.exercises ? currentLessonContent.exercises.questions : []), 'exercisesList');
+    renderQuestions((currentLessonContent.assessment ? currentLessonContent.assessment.questions : []), 'assessmentList');
 
     const modal = document.getElementById('lessonFocusMode');
     if(modal) {
@@ -147,7 +165,7 @@ function openLessonOverlay(assignmentId, originalLessonId) {
 
 function closeLessonMode() {
     document.getElementById('lessonFocusMode').style.display = 'none';
-    loadStudentLessons(); // تحديث القائمة عند الخروج
+    loadStudentLessons(); // تحديث الحالة
 }
 
 function showStage(stageName) {
@@ -167,50 +185,60 @@ function renderIntro() {
     const container = document.getElementById('introContent');
     const intro = currentLessonContent.intro || {};
     container.innerHTML = '';
-    if (intro.text) container.innerHTML += `<div class="alert alert-info" style="font-size:1.1rem; line-height:1.6;">${intro.text}</div>`;
+    
+    if (intro.text) {
+        container.innerHTML += `<div class="alert alert-info" style="font-size:1.1rem; line-height:1.6; background-color:#e9ecef; border:none; color:#333;">${intro.text}</div>`;
+    }
     
     if (intro.type === 'video' && intro.url) {
         let videoId = intro.url.split('v=')[1];
         if (!videoId && intro.url.includes('youtu.be')) videoId = intro.url.split('/').pop();
+        // التعامل مع روابط يوتيوب القصيرة أو الكاملة
         const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}` : intro.url;
-        container.innerHTML += `<div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:10px;"><iframe style="position:absolute; top:0; left:0; width:100%; height:100%;" src="${embedUrl}" frameborder="0" allowfullscreen></iframe></div>`;
+        
+        container.innerHTML += `
+            <div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:10px; margin-top:15px;">
+                <iframe style="position:absolute; top:0; left:0; width:100%; height:100%;" src="${embedUrl}" frameborder="0" allowfullscreen></iframe>
+            </div>`;
     } else if (intro.type === 'image' && intro.url) {
-        container.innerHTML += `<img src="${intro.url}" style="max-width:100%; border-radius:10px; margin-top:10px;">`;
+        container.innerHTML += `<img src="${intro.url}" style="max-width:100%; border-radius:10px; margin-top:15px; border:1px solid #ddd;">`;
     } else if (intro.type === 'link' && intro.url) {
-        container.innerHTML += `<a href="${intro.url}" target="_blank" class="btn btn-outline-primary mt-2">🔗 فتح الرابط الخارجي</a>`;
+        container.innerHTML += `<div style="margin-top:15px; text-align:center;"><a href="${intro.url}" target="_blank" class="btn btn-outline-primary">🔗 فتح الرابط الخارجي</a></div>`;
     }
 }
 
 function renderQuestions(questions, containerId) {
     const container = document.getElementById(containerId);
-    if (!questions || questions.length === 0) { container.innerHTML = '<p class="text-muted">لا توجد أسئلة في هذا القسم.</p>'; return; }
+    if (!questions || questions.length === 0) { 
+        container.innerHTML = '<p class="text-muted text-center">لا توجد أسئلة في هذا القسم.</p>'; 
+        return; 
+    }
     
     container.innerHTML = questions.map((q, i) => {
         let inputHtml = '';
         if (q.type === 'multiple-choice') {
             inputHtml = (q.choices || []).map((c, idx) => `
-                <div class="form-check" style="margin-bottom:5px;">
+                <div class="form-check" style="margin-bottom:8px; background:white; padding:10px; border-radius:5px; border:1px solid #eee;">
                     <input class="form-check-input" type="radio" name="${containerId}_q_${i}" id="${containerId}_q_${i}_${idx}" value="${c}">
-                    <label class="form-check-label" for="${containerId}_q_${i}_${idx}">${c}</label>
+                    <label class="form-check-label" for="${containerId}_q_${i}_${idx}" style="margin-right:10px; cursor:pointer; width:100%;">${c}</label>
                 </div>
             `).join('');
         } else {
-            inputHtml = `<input type="text" class="form-control" name="${containerId}_q_${i}" placeholder="اكتب إجابتك هنا...">`;
+            inputHtml = `<input type="text" class="form-control" name="${containerId}_q_${i}" placeholder="اكتب إجابتك هنا..." style="padding:10px;">`;
         }
         return `
-            <div class="question-box" style="background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:15px; border:1px solid #eee;">
-                <h5 style="margin-bottom:10px;"><strong>س${i+1}:</strong> ${q.text}</h5>
+            <div class="question-box" style="background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:20px; border:1px solid #e0e0e0;">
+                <h5 style="margin-bottom:15px; color:#333;"><strong>س${i+1}:</strong> ${q.text}</h5>
                 ${inputHtml}
             </div>`;
     }).join('');
 }
 
 function submitExercises() {
-    // يمكن إضافة منطق تصحيح فوري هنا إذا رغبت
+    // يمكن إضافة تحقق من الإجابات هنا، حالياً ننتقل للتقييم مباشرة
     showStage('assessment');
 }
 
-// دالة التقييم والحفظ
 function submitAssessment() {
     const allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const lessonIndex = allStudentLessons.findIndex(l => l.id == currentAssignmentId);
@@ -218,7 +246,7 @@ function submitAssessment() {
     if (lessonIndex !== -1) {
         // 1. تجميع الإجابات
         const collectedAnswers = [];
-        const questions = currentLessonContent.assessment?.questions || [];
+        const questions = (currentLessonContent.assessment && currentLessonContent.assessment.questions) ? currentLessonContent.assessment.questions : [];
         
         questions.forEach((q, i) => {
             let val = '';
@@ -243,11 +271,10 @@ function submitAssessment() {
         
         localStorage.setItem('studentLessons', JSON.stringify(allStudentLessons));
         
-        alert('🎉 أحسنت! تم إكمال الدرس وحفظ الإجابات.');
+        alert('🎉 أحسنت! تم إكمال الدرس وحفظ إجاباتك.');
         closeLessonMode();
-        // لا داعي لاستدعاء loadStudentLessons هنا لأن closeLessonMode تستدعيها
     } else {
-        alert('خطأ: لم يتم العثور على سجل الدرس.');
+        alert('حدث خطأ أثناء حفظ الدرس. يرجى المحاولة مرة أخرى.');
     }
 }
 
@@ -256,7 +283,7 @@ function injectLessonModalHTML() {
     const modalHTML = `
     <div id="lessonFocusMode" class="lesson-focus-mode">
         <div class="focus-header">
-            <h3><span id="lessonFocusTitle">عنوان الدرس</span></h3>
+            <h3 style="margin:0;"><span id="lessonFocusTitle">عنوان الدرس</span></h3>
             <div class="lesson-progress-bar">
                 <span class="progress-step">1. الشرح</span>
                 <span class="progress-step">2. التمارين</span>
@@ -267,18 +294,18 @@ function injectLessonModalHTML() {
         <div class="lesson-container">
             <div id="stage-intro" class="lesson-stage">
                 <div id="introContent"></div>
-                <hr>
-                <button class="btn btn-primary btn-block mt-3" onclick="showStage('exercises')">التالي: التمارين</button>
+                <hr style="margin:20px 0;">
+                <button class="btn btn-primary btn-block mt-3" onclick="showStage('exercises')">التالي: التمارين ⬅</button>
             </div>
             <div id="stage-exercises" class="lesson-stage">
-                <div class="alert alert-warning">حاول حل التمارين التالية (نسبة الاجتياز: <span id="reqScore"></span>%)</div>
+                <div class="alert alert-warning">🎯 حاول حل التمارين التالية (نسبة الاجتياز المطلوبة: <span id="reqScore"></span>%)</div>
                 <div id="exercisesList"></div>
-                <button class="btn btn-success btn-block mt-3" onclick="submitExercises()">التالي: التقييم النهائي</button>
+                <button class="btn btn-success btn-block mt-3" onclick="submitExercises()">التالي: التقييم النهائي ⬅</button>
             </div>
             <div id="stage-assessment" class="lesson-stage">
-                <div class="alert alert-info">أجب على الأسئلة التالية لإنهاء الدرس:</div>
+                <div class="alert alert-info">📝 أجب على الأسئلة التالية لإنهاء الدرس:</div>
                 <div id="assessmentList"></div>
-                <button class="btn btn-primary btn-block mt-3" onclick="submitAssessment()">تسليم وإنهاء الدرس</button>
+                <button class="btn btn-primary btn-block mt-3" onclick="submitAssessment()">✅ تسليم وإنهاء الدرس</button>
             </div>
         </div>
     </div>`;

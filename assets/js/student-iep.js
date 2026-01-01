@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-iep.js
-// الوصف: عرض الخطة للطالب (تذييل يظهر في الصفحة الأخيرة فقط + إزالة الأزرار الزائدة)
+// الوصف: عرض الخطة للطالب (نسخة مطابقة للمعلم: تدعم التسريع، الألوان، والتفوق)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -12,27 +12,28 @@ document.addEventListener('DOMContentLoaded', function() {
 function loadStudentIEP() {
     const iepContainer = document.getElementById('iepContainer');
     
-    // التحقق من المستخدم
+    // 1. التحقق من المستخدم
     let currentStudent = null;
     try {
         if (typeof getCurrentUser === 'function') currentStudent = getCurrentUser();
         if (!currentStudent && sessionStorage.getItem('currentUser')) {
-            currentStudent = JSON.parse(sessionStorage.getItem('currentUser')).user;
+            currentStudent = JSON.parse(sessionStorage.getItem('currentUser')).user; // فك الغلاف إن وجد
+        } else if (!currentStudent && sessionStorage.getItem('currentUser')) {
+             currentStudent = JSON.parse(sessionStorage.getItem('currentUser'));
         }
     } catch (e) {}
 
     if (!currentStudent) return;
-    
     const currentStudentId = currentStudent.id;
 
-    // جلب البيانات
+    // 2. جلب البيانات
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
     const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
 
-    // البحث عن أحدث اختبار تشخيصي مكتمل
+    // البحث عن الاختبار المكتمل
     const completedDiagnostic = studentTests
         .filter(t => t.studentId == currentStudentId && t.type === 'diagnostic' && t.status === 'completed')
         .sort((a, b) => new Date(b.assignedDate) - new Date(a.assignedDate))[0];
@@ -40,8 +41,8 @@ function loadStudentIEP() {
     // إذا لم تكن الخطة جاهزة
     if (!completedDiagnostic) {
         iepContainer.innerHTML = `
-            <div class="empty-state" style="text-align:center; padding:40px; background:white; border-radius:8px;">
-                <div style="font-size:3rem;">⏳</div>
+            <div class="empty-state" style="text-align:center; padding:40px; background:white; border-radius:8px; border:1px solid #eee;">
+                <div style="font-size:3rem; margin-bottom:10px;">⏳</div>
                 <h3>الخطة غير جاهزة بعد</h3>
                 <p>يجب إكمال الاختبار التشخيصي وتصحيحه من قبل المعلم لتظهر خطتك هنا.</p>
                 <a href="my-tests.html" class="btn btn-primary" style="margin-top:15px;">الذهاب للاختبارات</a>
@@ -51,9 +52,9 @@ function loadStudentIEP() {
     }
 
     const originalTest = allTests.find(t => t.id == completedDiagnostic.testId);
-    if (!originalTest) return; // حماية
+    if (!originalTest) return;
 
-    // تحليل الأهداف (قوة واحتياج)
+    // 3. تحليل نقاط القوة والاحتياج
     let needsObjects = [];
     let strengthHTML = '';
     let needsHTML = '';
@@ -88,18 +89,24 @@ function loadStudentIEP() {
     if(!strengthHTML) strengthHTML = '<li>لا توجد نقاط مسجلة.</li>';
     if(!needsHTML) needsHTML = '<li>لا توجد نقاط احتياج مسجلة.</li>';
 
-    // تواريخ الدروس
+    // 4. خريطة الدروس (بما فيها التسريع)
     const completedLessonsMap = {};
+    const acceleratedLessonsMap = {}; // خريطة جديدة للتسريع
+
     studentLessons.forEach(l => {
-        if (l.studentId == currentStudentId && l.status === 'completed') {
-            completedLessonsMap[l.objective] = l.completedDate;
+        if (l.studentId == currentStudentId) {
+            if (l.status === 'completed') {
+                completedLessonsMap[l.objective] = l.completedDate;
+            } else if (l.status === 'accelerated') {
+                acceleratedLessonsMap[l.objective] = l.completedDate;
+            }
         }
     });
 
-    // جدول الأهداف
+    // 5. بناء جدول الأهداف (مطابق للمعلم)
     let objectivesRows = '';
     if (needsObjects.length === 0) {
-        objectivesRows = '<tr><td colspan="3" class="text-center">جميع الأهداف محققة.</td></tr>';
+        objectivesRows = '<tr><td colspan="3" class="text-center">جميع الأهداف محققة (ما شاء الله).</td></tr>';
     } else {
         let stgCounter = 1;
         needsObjects.forEach(obj => {
@@ -113,18 +120,25 @@ function loadStudentIEP() {
             
             if (obj.instructionalGoals && obj.instructionalGoals.length > 0) {
                 obj.instructionalGoals.forEach(iGoal => {
-                    const achievementDate = completedLessonsMap[iGoal];
+                    const compDate = completedLessonsMap[iGoal];
+                    const accelDate = acceleratedLessonsMap[iGoal];
                     let dateDisplay = '';
-                    if (achievementDate) {
-                        try {
-                            const d = new Date(achievementDate);
-                            dateDisplay = `<span class="text-success font-weight-bold">✔ ${d.toLocaleDateString('ar-SA')}</span>`;
-                        } catch(e) {}
+                    let rowStyle = '';
+
+                    // أولوية العرض: التسريع أولاً
+                    if (accelDate) {
+                        const d = new Date(accelDate).toLocaleDateString('ar-SA');
+                        dateDisplay = `<span style="font-weight:bold; color:#856404;">⚡ ${d} (تفوق)</span>`;
+                        rowStyle = 'background-color: #fff3cd !important;'; // خلفية ذهبية فاتحة
+                    } else if (compDate) {
+                        const d = new Date(compDate).toLocaleDateString('ar-SA');
+                        dateDisplay = `<span class="text-success font-weight-bold">✔ ${d}</span>`;
                     } else {
-                        dateDisplay = `<span style="color:#999;">⏳ قيد العمل</span>`;
+                        dateDisplay = `<span style="color:#999; font-size:0.9rem;">⏳ قيد العمل</span>`;
                     }
+
                     objectivesRows += `
-                        <tr>
+                        <tr style="${rowStyle}">
                             <td class="text-center" style="color:#666;">-</td>
                             <td>${iGoal}</td>
                             <td>${dateDisplay}</td>
@@ -139,8 +153,7 @@ function loadStudentIEP() {
 
     const subjectName = originalTest.subject || 'المادة';
 
-    // بناء جدول الحصص
-    const daysMap = { 'sunday': 'الأحد', 'monday': 'الاثنين', 'tuesday': 'الثلاثاء', 'wednesday': 'الأربعاء', 'thursday': 'الخميس' };
+    // 6. جدول الحصص
     const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'];
     let scheduleCells = '';
 
@@ -157,7 +170,7 @@ function loadStudentIEP() {
         scheduleCells += `<td style="height:50px; vertical-align:middle;">${content}</td>`;
     });
 
-    // ✅ ستايل الطباعة المعدل (لإظهار التذييل في النهاية فقط)
+    // ستايل الطباعة
     const printStyles = `
         <style>
             @media print {
@@ -166,22 +179,12 @@ function loadStudentIEP() {
                 .iep-word-model-content { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; border: none !important; }
                 * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
                 .no-print { display: none !important; }
-                
-                /* تنسيق التذييل ليكون في نهاية المحتوى فقط وليس ثابتاً في كل صفحة */
                 .print-footer-container {
-                    margin-top: 50px;
-                    width: 100%;
-                    text-align: center;
-                    border-top: 1px solid #ccc;
-                    padding-top: 10px;
+                    margin-top: 50px; width: 100%; text-align: center;
+                    border-top: 1px solid #ccc; padding-top: 10px;
                     display: block !important;
                 }
-                .print-footer-text {
-                    font-size: 11px;
-                    color: #555;
-                    font-weight: bold;
-                    font-family: 'Tajawal', sans-serif;
-                }
+                .print-footer-text { font-size: 11px; color: #555; font-weight: bold; font-family: 'Tajawal', sans-serif; }
             }
         </style>
     `;

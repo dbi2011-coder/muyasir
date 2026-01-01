@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (تقديم وتأخير نصي + المسارات الأربعة + السجل التاريخي)
+// الوصف: إدارة ملف الطالب (تم إنزال أزرار الترتيب لمنع تغطية الحالة)
 // ============================================
 
 let currentStudentId = null;
@@ -108,7 +108,7 @@ function loadDiagnosticTab() {
 }
 
 // ---------------------------------------------------------
-// 2. إدارة الدروس (تعديل الأزرار إلى نصوص)
+// 2. إدارة الدروس (تعديل مكان الأزرار)
 // ---------------------------------------------------------
 function loadLessonsTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
@@ -153,33 +153,33 @@ function loadLessonsTab() {
             controls += `<button class="btn btn-info btn-sm" style="background:#ffc107; border:none; color:#000;" onclick="accelerateLesson(${l.id})">⚡ تسريع (تفوق)</button>`;
         }
 
-        // ✅ أزرار الترتيب (تقديم / تأخير) - نصية ومستطيلة
+        // أزرار الترتيب (تقديم / تأخير)
         const isFirst = index === 0;
         const isLast = index === myList.length - 1;
         
         let orderBtns = '';
-        // زر التقديم (للأعلى) - يظهر للكل ما عدا الأول
         if (!isFirst) {
-            orderBtns += `<button class="btn-order" style="width:auto; height:auto; padding:2px 8px; border-radius:4px;" onclick="moveLesson(${l.id}, 'up')">تقديم</button>`;
+            orderBtns += `<button class="btn-order" style="width:auto; height:auto; padding:2px 8px; border-radius:4px; margin-left:5px;" onclick="moveLesson(${l.id}, 'up')">تقديم</button>`;
         }
-        // زر التأخير (للأسفل) - يظهر للكل ما عدا الأخير
         if (!isLast) {
             orderBtns += `<button class="btn-order" style="width:auto; height:auto; padding:2px 8px; border-radius:4px;" onclick="moveLesson(${l.id}, 'down')">تأخير</button>`;
         }
 
+        // ✅ التعديل هنا: إنزال الأزرار للأسفل (top: 50px) لتجنب تغطية الحالة
         return `
         <div class="content-card" style="${cardStyle} position:relative;">
-            <div style="position:absolute; top:10px; left:10px; display:flex; gap:5px; z-index:5;">${orderBtns}</div>
+            <div style="position:absolute; top:50px; left:10px; display:flex; z-index:5;">${orderBtns}</div>
             
             <div style="display:flex; justify-content:space-between;">
-                <div style="margin-right:80px;"> <h4 style="margin:0;">${index+1}. ${l.title}</h4>
+                <div style="margin-right:20px;">
+                    <h4 style="margin:0;">${index+1}. ${l.title}</h4>
                     <small class="text-muted">${l.objective}</small>
                 </div>
                 <div>${statusBadge}</div>
             </div>
             
             <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
-                <div class="lesson-actions" style="width:100%; display:flex; gap:5px; margin-top:10px;">
+                <div class="lesson-actions" style="width:100%; display:flex; gap:5px; margin-top:25px;">
                     ${controls}
                     <button class="btn btn-danger btn-sm" onclick="deleteLesson(${l.id})">حذف</button>
                 </div>
@@ -219,7 +219,6 @@ function accelerateLesson(id) {
         target.historyLog.push({ date: new Date().toISOString(), status: 'accelerated' });
         localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
         loadLessonsTab();
-        // تحديث الخطة إذا كانت مفتوحة
         if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
     }
 }
@@ -233,7 +232,7 @@ function resetLesson(id) {
         target.status = 'pending';
         delete target.completedDate;
         delete target.answers;
-        target.historyLog = []; // مسح السجل
+        target.historyLog = [];
         localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
         loadLessonsTab();
         if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
@@ -430,7 +429,7 @@ function loadIEPTab() {
 
     let objectivesRows = '';
     if (needsObjects.length === 0) {
-        objectivesRows = '<tr><td colspan="3" class="text-center">جميع الأهداف محققة (ما شاء الله).</td></tr>';
+        objectivesRows = '<tr><td colspan="3" class="text-center">جميع الأهداف محققة.</td></tr>';
     } else {
         let stgCounter = 1;
         needsObjects.forEach(obj => {
@@ -526,16 +525,55 @@ function loadIEPTab() {
     </div>`;
 
     iepContainer.innerHTML = iepHTML;
+    
+    const topPrintBtn = document.querySelector('#section-iep .content-header button');
+    if(topPrintBtn) topPrintBtn.setAttribute('onclick', 'window.print()');
 }
 
 // نوافذ مساعدة
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-function showAssignHomeworkModal() { /* كود الواجبات السابق */ document.getElementById('assignHomeworkModal').classList.add('show'); }
-function assignHomework() { /* كود الواجبات السابق */ }
+function showAssignTestModal() {
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    const select = document.getElementById('testSelect');
+    select.innerHTML = '<option value="">اختر اختباراً...</option>';
+    allTests.forEach(t => select.innerHTML += `<option value="${t.id}">${t.title}</option>`);
+    document.getElementById('assignTestModal').classList.add('show');
+}
+function assignTest() {
+    const testId = parseInt(document.getElementById('testSelect').value);
+    if(!testId) return;
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    if(studentTests.some(t => t.studentId == currentStudentId && t.type === 'diagnostic')) {
+        alert('يوجد اختبار معين مسبقاً');
+        return;
+    }
+    studentTests.push({
+        id: Date.now(),
+        studentId: currentStudentId,
+        testId: testId,
+        type: 'diagnostic',
+        status: 'pending',
+        assignedDate: new Date().toISOString()
+    });
+    localStorage.setItem('studentTests', JSON.stringify(studentTests));
+    closeModal('assignTestModal');
+    loadDiagnosticTab();
+    alert('تم تعيين الاختبار بنجاح.');
+}
+function showAssignHomeworkModal() { document.getElementById('assignHomeworkModal').classList.add('show'); }
+function assignHomework() { /* كود الواجبات */ }
 function showAssignLibraryLessonModal() {
     const all = JSON.parse(localStorage.getItem('lessons') || '[]');
     const s = document.getElementById('libraryLessonSelect');
     s.innerHTML = '<option value="">اختر...</option>';
     all.forEach(l => s.innerHTML += `<option value="${l.id}">${l.title}</option>`);
     document.getElementById('assignLibraryLessonModal').classList.add('show');
+}
+function deleteAssignedTest(id) {
+    if(!confirm('حذف؟')) return;
+    let st = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    st = st.filter(t => t.id != id);
+    localStorage.setItem('studentTests', JSON.stringify(st));
+    loadDiagnosticTab();
+    if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
 }

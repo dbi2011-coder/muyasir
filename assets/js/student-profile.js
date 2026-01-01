@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (شامل: تشخيص، خطة، دروس، واجبات، وسجل التقدم الأكاديمي "ERP")
+// الوصف: ملف الطالب (تصميم الجدول "ERP" محسن + كافة الخصائص السابقة)
 // ============================================
 
 let currentStudentId = null;
@@ -16,8 +16,11 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    // حقن نافذة الأحداث الإدارية (للاستخدام في جدول التقدم)
+    // حقن نافذة الأحداث الإدارية
     injectAdminEventModal();
+    // حقن ستايل CSS خاص للجدول لتحسين المظهر فوراً
+    injectCustomTableStyles();
+    
     loadStudentData();
 });
 
@@ -31,14 +34,13 @@ function loadStudentData() {
         return;
     }
     
-    // تحديث بيانات الواجهة العلوية والجانبية
+    // تحديث بيانات الواجهة
     if(document.getElementById('sideName')) document.getElementById('sideName').textContent = currentStudent.name;
     if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = currentStudent.name;
     if(document.getElementById('sideGrade')) document.getElementById('sideGrade').textContent = currentStudent.grade + ' - ' + (currentStudent.subject || 'عام');
     if(document.getElementById('sideAvatar')) document.getElementById('sideAvatar').textContent = currentStudent.name.charAt(0);
     document.title = `ملف الطالب: ${currentStudent.name}`;
     
-    // تفعيل التبويب الافتراضي
     switchSection('diagnostic');
 }
 
@@ -60,7 +62,7 @@ function switchSection(sectionId) {
 }
 
 // ============================================
-// 1. قسم الاختبار التشخيصي
+// 1. التشخيص
 // ============================================
 function loadDiagnosticTab() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
@@ -359,9 +361,10 @@ function saveAndReindexLessons(myList, replaceAll, others) {
 }
 
 // ============================================
-// 3. جدول التقدم (النظام الأكاديمي الشامل)
+// 3. جدول التقدم (التصميم الجديد المحسن)
 // ============================================
 function loadProgressTab() {
+    // 1. جلب البيانات
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const adminEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]');
     const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
@@ -369,7 +372,7 @@ function loadProgressTab() {
     let myList = studentLessons.filter(l => l.studentId == currentStudentId);
     let myEvents = adminEvents.filter(e => e.studentId == currentStudentId);
 
-    // دمج السجلات
+    // 2. دمج السجلات
     let timeline = [];
     myList.forEach(l => {
         if (l.historyLog && l.historyLog.length > 0) {
@@ -378,57 +381,148 @@ function loadProgressTab() {
             });
         }
     });
-    myEvents.forEach(e => { timeline.push({ date: e.date, type: 'event', title: 'حدث إداري', status: e.type, note: e.note }); });
+    myEvents.forEach(e => {
+        timeline.push({ date: e.date, type: 'event', title: 'حدث إداري', status: e.type, note: e.note });
+    });
 
-    // ترتيب
     timeline.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-    // خوارزمية الحساب
+    // 3. بناء واجهة الجدول (HTML Replacement)
+    const container = document.getElementById('section-progress');
+    // تنظيف الحاوية لضمان بناء الجدول الجديد
+    container.innerHTML = `
+        <div class="content-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2>سجل التقدم الأكاديمي</h2>
+            <button class="btn btn-primary" onclick="openAdminEventModal()">
+                <i class="fas fa-plus-circle"></i> تسجيل حدث (إعفاء/إجازة)
+            </button>
+        </div>
+        
+        <div class="table-responsive shadow-sm" style="background:white; border-radius:10px; overflow:hidden; border:1px solid #eee;">
+            <table class="table custom-table" style="margin-bottom:0;">
+                <thead style="background-color: #343a40; color: white;">
+                    <tr>
+                        <th style="width: 35%; text-align: right; padding: 15px;">اسم الدرس / الحدث</th>
+                        <th style="width: 15%; text-align: center; padding: 15px;">حالة الدرس</th>
+                        <th style="width: 15%; text-align: center; padding: 15px;">حالة الطالب</th>
+                        <th style="width: 15%; text-align: center; padding: 15px;">نوع الحصة</th>
+                        <th style="width: 20%; text-align: center; padding: 15px;">التاريخ</th>
+                    </tr>
+                </thead>
+                <tbody id="progressTableBody"></tbody>
+            </table>
+        </div>
+    `;
+
+    // 4. تعبئة البيانات (الصفوف)
     let debtBalance = 0;
     const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const tbody = document.getElementById('progressTableBody');
-    const container = document.getElementById('section-progress');
-    
-    // زر إضافة حدث يدوي
-    if (container && !document.getElementById('btnAddEvent')) {
-        const btnDiv = document.createElement('div');
-        btnDiv.innerHTML = `<button id="btnAddEvent" class="btn btn-outline-dark mb-3" style="float:left;" onclick="openAdminEventModal()">➕ تسجيل (إعفاء/إجازة)</button><div style="clear:both;"></div>`;
-        container.insertBefore(btnDiv, container.firstChild);
-    }
 
-    if (timeline.length === 0) { tbody.innerHTML = '<tr><td colspan="5" class="text-center">لا توجد سجلات.</td></tr>'; return; }
+    if (timeline.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="padding:30px; color:#999;">لا توجد سجلات أكاديمية حتى الآن.</td></tr>';
+        return;
+    }
 
     tbody.innerHTML = timeline.map(item => {
         const d = new Date(item.date);
         const dayKey = dayNames[d.getDay()];
         const dateStr = d.toLocaleDateString('ar-SA');
-        let colLesson = item.title, colLessonStatus = '-', colStudentStatus = '-', colSessionType = '-', rowClass = '';
         
+        let colLesson = item.title;
+        let colLessonStatus = '-';
+        let colStudentStatus = '-';
+        let colSessionType = '-';
+        let rowStyle = ''; // ستايل للصف (ألوان)
+
         const isScheduled = teacherSchedule.some(s => s.day === dayKey && (s.studentId == currentStudentId || (s.students && s.students.includes(currentStudentId))));
 
+        // A. أحداث إدارية
         if (item.type === 'event') {
-            if (item.status === 'vacation') { colStudentStatus = '<span class="badge badge-info">إجازة</span>'; colLessonStatus = 'توقف مؤقت'; rowClass = 'table-info'; } 
-            else if (item.status === 'excused') { colStudentStatus = '<span class="badge badge-warning">معفى</span>'; colLessonStatus = 'مؤجل'; rowClass = 'table-warning'; debtBalance++; colStudentStatus += ` <small class="text-danger">(${debtBalance} دين)</small>`; }
-            if(item.note) colLesson += `<br><small class="text-muted">(${item.note})</small>`;
+            if (item.status === 'vacation') {
+                colStudentStatus = '<span class="badge badge-pill badge-info" style="padding:8px 12px;">إجازة</span>';
+                colLessonStatus = '<span class="text-muted">توقف مؤقت</span>';
+                rowStyle = 'background-color: #e3f2fd;'; // أزرق فاتح جداً
+            } else if (item.status === 'excused') {
+                colStudentStatus = '<span class="badge badge-pill badge-warning" style="padding:8px 12px;">معفى</span>';
+                colLessonStatus = '<span class="text-muted">مؤجل</span>';
+                rowStyle = 'background-color: #fff3cd;'; // أصفر فاتح
+                debtBalance++;
+                colStudentStatus += `<div style="font-size:0.8rem; color:#856404; margin-top:4px;">(رصيد دين: ${debtBalance})</div>`;
+            }
+            if(item.note) colLesson += `<div style="font-size:0.85rem; color:#6c757d; margin-top:5px;">📝 ${item.note}</div>`;
+
+        // B. سجلات الدروس (النظام)
         } else {
-            if (item.status === 'absence') { colStudentStatus = '<span class="badge badge-danger">غائب</span>'; colLessonStatus = 'لم يؤخذ'; rowClass = 'table-danger'; debtBalance++; } 
-            else {
-                colStudentStatus = '<span class="badge badge-success">حاضر</span>';
+            if (item.status === 'absence') {
+                colStudentStatus = '<span class="badge badge-pill badge-danger" style="padding:8px 12px;">غائب</span>';
+                colLessonStatus = '<span class="text-danger">لم يؤخذ</span>';
+                rowStyle = 'background-color: #f8d7da;'; // أحمر فاتح
+                debtBalance++;
+            } else {
+                colStudentStatus = '<span class="badge badge-pill badge-success" style="padding:8px 12px;">حاضر</span>';
+                
+                // حالة الدرس
                 if (item.status === 'started') colLessonStatus = 'بدأ';
                 else if (item.status === 'extension') colLessonStatus = 'تمديد';
-                else if (item.status === 'completed') { colLessonStatus = '<span class="text-success font-weight-bold">متحقق</span>'; rowClass = 'table-success'; }
-                else if (item.status === 'accelerated') { colLessonStatus = '<span class="text-warning font-weight-bold">تسريع</span>'; rowClass = 'table-warning'; }
-                
-                if (isScheduled) colSessionType = 'أساسية';
-                else { if (debtBalance > 0) { colSessionType = '<span class="text-primary font-weight-bold">تعويضية</span>'; debtBalance--; } else colSessionType = 'إضافية'; }
+                else if (item.status === 'completed') { colLessonStatus = '<span class="text-success font-weight-bold">✔ متحقق</span>'; rowStyle = 'background-color: #f0fff4; border-right: 4px solid #28a745;'; }
+                else if (item.status === 'accelerated') { colLessonStatus = '<span class="text-warning font-weight-bold">⚡ تسريع</span>'; rowStyle = 'background-color: #fffbf0; border-right: 4px solid #ffc107;'; }
+
+                // نوع الحصة
+                if (isScheduled) {
+                    colSessionType = 'أساسية';
+                } else {
+                    if (debtBalance > 0) {
+                        colSessionType = '<span class="text-primary font-weight-bold">تعويضية</span>';
+                        debtBalance--; // سداد
+                    } else {
+                        colSessionType = 'إضافية';
+                    }
+                }
             }
         }
-        return `<tr class="${rowClass}"><td>${colLesson}</td><td>${colLessonStatus}</td><td>${colStudentStatus}</td><td>${colSessionType}</td><td>${dateStr}</td></tr>`;
+
+        return `
+            <tr style="${rowStyle} border-bottom: 1px solid #eee;">
+                <td style="text-align: right; vertical-align: middle; padding: 15px;"><strong>${colLesson}</strong></td>
+                <td style="text-align: center; vertical-align: middle; padding: 15px;">${colLessonStatus}</td>
+                <td style="text-align: center; vertical-align: middle; padding: 15px;">${colStudentStatus}</td>
+                <td style="text-align: center; vertical-align: middle; padding: 15px;">${colSessionType}</td>
+                <td style="text-align: center; vertical-align: middle; padding: 15px; font-family:'Tajawal';">${dateStr}</td>
+            </tr>
+        `;
     }).join('');
 
-    // درس قادم
+    // الدرس القادم (قيد التنفيذ)
     const currentLesson = myList.find(l => l.status !== 'completed' && l.status !== 'accelerated');
-    if (currentLesson) tbody.innerHTML += `<tr style="border-top:2px dashed #999; background:#f9f9f9;"><td><strong>${currentLesson.title}</strong></td><td><span class="badge badge-primary">قيد التنفيذ</span></td><td>-</td><td>قادم</td><td>-</td></tr>`;
+    if (currentLesson) {
+        tbody.innerHTML += `
+            <tr style="background-color: #f8f9fa; border-top: 2px dashed #dee2e6;">
+                <td style="text-align: right; padding: 15px;">
+                    <span class="text-primary font-weight-bold">▶ ${currentLesson.title}</span>
+                    <br><small class="text-muted">الدرس الحالي</small>
+                </td>
+                <td style="text-align: center; vertical-align: middle;"><span class="badge badge-secondary">قيد التنفيذ</span></td>
+                <td style="text-align: center; vertical-align: middle;">-</td>
+                <td style="text-align: center; vertical-align: middle;">قادم</td>
+                <td style="text-align: center; vertical-align: middle;">-</td>
+            </tr>
+        `;
+    }
+}
+
+// ------------------------------------------------
+// وظيفة مساعدة: حقن CSS لتحسين الجدول
+// ------------------------------------------------
+function injectCustomTableStyles() {
+    if (document.getElementById('customTableStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'customTableStyles';
+    style.innerHTML = `
+        .custom-table tr:hover { background-color: #f1f1f1 !important; transition: 0.2s; }
+        .badge-pill { border-radius: 50rem; }
+    `;
+    document.head.appendChild(style);
 }
 
 // ============================================

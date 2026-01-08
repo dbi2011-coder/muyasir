@@ -68,30 +68,46 @@ function loadProgressTab() {
     const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
 
     // تصفية بيانات الطالب الحالي
+    // ملاحظة: استخدام == يسمح بمقارنة النص بالرقم في حال اختلاف النوع
     let myList = studentLessons.filter(l => l.studentId == currentStudentId);
     let myEvents = adminEvents.filter(e => e.studentId == currentStudentId);
 
-    // ترتيب الدروس لضمان معرفة "الدرس الحالي" بدقة عند الغياب
-    myList.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
-
-    // 1. تحديد تاريخ بداية الخطة (أول درس تم تعيينه)
-    let planStartDate = null;
-    if (myList.length > 0) {
-        const sortedByCreation = [...myList].sort((a, b) => new Date(a.assignedDate) - new Date(b.assignedDate));
-        planStartDate = new Date(sortedByCreation[0].assignedDate);
-    }
-
-    if (!planStartDate) {
-        document.getElementById('section-progress').innerHTML = `
+    const container = document.getElementById('section-progress');
+    
+    // فحص 1: هل توجد خطة أصلاً؟
+    if (myList.length === 0) {
+        container.innerHTML = `
             <div class="content-header"><h1>سجل المتابعة اليومي</h1></div>
-            <div class="empty-state"><h3>لم تبدأ الخطة بعد</h3><p>يجب إكمال التشخيص وتوليد الدروس لبدء الحساب.</p></div>`;
+            <div class="empty-state">
+                <h3>لم تبدأ الخطة بعد</h3>
+                <p>يجب إكمال التشخيص وتوليد الدروس أولاً لتفعيل السجل.</p>
+            </div>`;
         return;
     }
 
-    // 2. تجهيز البيانات الخام (Raw Data)
+    // فحص 2: هل الطالب مضاف للجدول الدراسي؟
+    // هذا ضروري لحساب الغياب التلقائي
+    const isStudentScheduled = teacherSchedule.some(s => 
+        s.studentId == currentStudentId || (s.students && s.students.includes(currentStudentId))
+    );
+
+    // ترتيب الدروس
+    myList.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+
+    // تحديد تاريخ البداية
+    // نأخذ تاريخ أول درس تم تعيينه، أو تاريخ اليوم إذا كان غير موجود
+    let planStartDate = null;
+    const sortedByDate = [...myList].sort((a, b) => new Date(a.assignedDate) - new Date(b.assignedDate));
+    if (sortedByDate.length > 0) planStartDate = new Date(sortedByDate[0].assignedDate);
+    
+    if (!planStartDate || isNaN(planStartDate.getTime())) {
+        planStartDate = new Date(); // fallback
+    }
+
+    // تجهيز البيانات الخام
     let rawLogs = [];
 
-    // أ) تفكيك سجلات الدروس
+    // أ) سجلات الدروس (التاريخية)
     myList.forEach(l => {
         if (l.historyLog && l.historyLog.length > 0) {
             l.historyLog.forEach(log => {
@@ -99,7 +115,7 @@ function loadProgressTab() {
                     dateObj: new Date(log.date),
                     dateStr: new Date(log.date).toDateString(),
                     type: 'lesson',
-                    status: log.status, // started, extension, completed, absence, accelerated
+                    status: log.status,
                     title: l.title,
                     lessonId: l.id,
                     cachedType: log.cachedSessionType || null
@@ -108,7 +124,7 @@ function loadProgressTab() {
         }
     });
 
-    // ب) تفكيك الأحداث الإدارية
+    // ب) الأحداث الإدارية
     myEvents.forEach(e => {
         rawLogs.push({
             dateObj: new Date(e.date),
@@ -121,16 +137,14 @@ function loadProgressTab() {
         });
     });
 
-    // 3. المعالجة الزمنية (يوم بيوم)
     let finalTimeline = [];
-    let balance = 0; // الرصيد التراكمي
+    let balance = 0;
     const today = new Date();
-    // ضبط الوقت لنهاية اليوم لضمان شمولية المقارنة
     today.setHours(23, 59, 59, 999);
     
     const dayMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-    // حلقة التكرار الرئيسية (من البداية حتى اليوم)
+    // الحلقة الزمنية
     for (let d = new Date(planStartDate); d <= today; d.setDate(d.getDate() + 1)) {
         const currentDateStr = d.toDateString();
         const dayKey = dayMap[d.getDay()];
@@ -141,113 +155,68 @@ function loadProgressTab() {
             (s.studentId == currentStudentId || (s.students && s.students.includes(currentStudentId)))
         );
 
-        // جلب جميع أحداث هذا اليوم
         let daysLogs = rawLogs.filter(log => log.dateStr === currentDateStr);
 
-        // 🧹 تنظيف العرض (Filtering Logic) - القواعد الجديدة 🧹
+        // تنظيف: إذا تم الإنجاز، نحذف "بدأ" و "تمديد" لنفس الدرس
         const completedIdsToday = daysLogs.filter(l => l.status === 'completed' || l.status === 'accelerated').map(l => l.lessonId);
-        
         if (completedIdsToday.length > 0) {
             daysLogs = daysLogs.filter(l => {
-                // القاعدة 1 (نفس اليوم): إذا تحقق الدرس، احذف "بدأ"
-                if (l.status === 'started' && completedIdsToday.includes(l.lessonId)) return false;
-                
-                // القاعدة 2 (اليوم التالي): إذا تحقق الدرس، احذف "تمديد" (يكتفى بمتحقق)
-                if (l.status === 'extension' && completedIdsToday.includes(l.lessonId)) return false;
-                
+                if ((l.status === 'started' || l.status === 'extension') && completedIdsToday.includes(l.lessonId)) return false;
                 return true;
             });
         }
 
-        // 🚨 معالجة الغياب التلقائي (Gap Detection) 🚨
+        // كشف الغياب التلقائي (فقط إذا كان الطالب في الجدول)
         if (daysLogs.length === 0 && isScheduledDay) {
-            // البحث عن الدرس الذي كان مفترضاً أن يكون نشطاً في ذلك التاريخ
-            // هو الدرس الذي لم يكتمل، أو اكتمل بتاريخ لاحق لتاريخ الغياب الحالي
             let activeLessonAtThatTime = myList.find(l => {
-                if (l.status === 'pending') return true; // ما زال معلقاً حتى اليوم
-                // أو اكتمل في المستقبل بالنسبة ليوم الغياب هذا
+                if (l.status === 'pending') return true;
                 const completionDate = l.completedDate ? new Date(l.completedDate) : new Date();
                 return completionDate > d; 
             });
 
             daysLogs.push({
                 dateObj: new Date(d),
-                type: 'auto-absence', // علامة لتمييز المعالجة
-                title: activeLessonAtThatTime ? activeLessonAtThatTime.title : 'درس غير محدد',
-                // القيم النصية المطلوبة بدقة:
+                type: 'auto-absence',
+                title: activeLessonAtThatTime ? activeLessonAtThatTime.title : 'درس مجدول',
                 customLessonStatus: 'لم ينفذ',
                 customStudentStatus: 'غائب',
                 customSessionType: 'أساسية'
             });
         }
 
-        // 🧮 معالجة السجلات وحساب الرصيد 🧮
+        // معالجة السجلات وحساب الرصيد
         daysLogs.forEach(log => {
-            let displayStatus = '';
-            let displayType = ''; 
-            let rowClass = '';
-            let studentState = '';
+            let displayStatus = '', displayType = '', rowClass = '', studentState = '';
             
-            // --- حالة 1: حدث إداري ---
             if (log.type === 'event') {
-                if (log.status === 'vacation') {
-                    studentState = 'إجازة'; displayStatus = 'توقف مؤقت'; rowClass = 'bg-info-light';
-                } else if (log.status === 'excused') {
-                    studentState = 'معفى'; displayStatus = 'مؤجل'; rowClass = 'bg-warning-light';
-                    balance--; // خصم
-                }
-
-            // --- حالة 2: غياب تلقائي (المنطق الجديد) ---
-            } else if (log.type === 'auto-absence') {
-                studentState = `<span class="text-danger font-weight-bold">${log.customStudentStatus}</span>`; // غائب
-                displayStatus = log.customLessonStatus; // لم ينفذ
-                displayType = log.customSessionType; // أساسية
-                rowClass = 'bg-danger-light';
-                balance--; // خصم من الرصيد
-
-            // --- حالة 3: غياب مسجل يدوياً (قديم) ---
-            } else if (log.status === 'absence') {
+                if (log.status === 'vacation') { studentState = 'إجازة'; displayStatus = 'توقف مؤقت'; rowClass = 'bg-info-light'; }
+                else if (log.status === 'excused') { studentState = 'معفى'; displayStatus = 'مؤجل'; rowClass = 'bg-warning-light'; balance--; }
+            } else if (log.type === 'auto-absence' || log.status === 'absence') {
                 studentState = '<span class="text-danger font-weight-bold">غائب</span>';
-                displayStatus = 'لم ينفذ'; // توحيد المسمى
+                displayStatus = 'لم ينفذ';
                 displayType = 'أساسية';
                 rowClass = 'bg-danger-light';
                 balance--;
-
-            // --- حالة 4: حضور ونشاط ---
             } else {
                 studentState = 'حاضر';
-
-                // مسميات حالة الدرس
                 if (log.status === 'started') displayStatus = 'بدأ';
                 else if (log.status === 'extension') displayStatus = 'تمديد';
                 else if (log.status === 'completed') { displayStatus = '<span class="text-success font-weight-bold">✔ متحقق</span>'; rowClass = 'bg-success-light'; }
                 else if (log.status === 'accelerated') { displayStatus = '<span class="text-warning font-weight-bold">⚡ تسريع</span>'; rowClass = 'bg-warning-light'; }
 
-                // 🔥 تحديد نوع الحصة (المحاسبة) 🔥
                 if (log.cachedType) {
-                    // إذا كانت مخزنة سابقاً
                     if (log.cachedType === 'basic') displayType = 'أساسية';
                     else if (log.cachedType === 'compensation') { displayType = '<span class="text-primary font-weight-bold">تعويضية</span>'; balance++; }
                     else if (log.cachedType === 'additional') { displayType = 'إضافية'; balance++; }
                 } else {
-                    // الحساب التلقائي
-                    if (isScheduledDay) {
-                        displayType = 'أساسية';
-                        // الرصيد ثابت (0)
-                    } else {
-                        // يوم غير مجدول
-                        if (balance < 0) {
-                            displayType = '<span class="text-primary font-weight-bold">تعويضية</span>';
-                            balance++; // سداد الدين
-                        } else {
-                            displayType = 'إضافية';
-                            balance++; // زيادة الرصيد
-                        }
+                    if (isScheduledDay) displayType = 'أساسية';
+                    else {
+                        if (balance < 0) { displayType = '<span class="text-primary font-weight-bold">تعويضية</span>'; balance++; }
+                        else { displayType = 'إضافية'; balance++; }
                     }
                 }
             }
 
-            // إضافة للصف
             finalTimeline.push({
                 title: log.title,
                 lessonStatus: displayStatus,
@@ -263,10 +232,18 @@ function loadProgressTab() {
         });
     }
 
-    // 4. الترتيب والعرض النهائي
     finalTimeline.sort((a, b) => a.rawDate - b.rawDate);
 
-    const container = document.getElementById('section-progress');
+    // بناء الواجهة
+    let alertsHtml = '';
+    if (!isStudentScheduled) {
+        alertsHtml = `
+            <div class="alert alert-warning" style="margin-bottom:15px; border:1px solid #ffeeba; background-color:#fff3cd; color:#856404; padding:10px; border-radius:5px;">
+                <strong>⚠️ تنبيه:</strong> هذا الطالب غير مضاف للجدول الدراسي الأسبوعي (Teacher Schedule).<br>
+                لن يتم حساب "الغياب التلقائي" حتى تقوم بإضافته للحصص (الأحد، الاثنين...) في صفحة الجدول.
+            </div>`;
+    }
+
     container.innerHTML = `
         <div class="content-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <div>
@@ -274,10 +251,10 @@ function loadProgressTab() {
                 <span class="badge ${balance < 0 ? 'badge-danger' : 'badge-success'}">الرصيد الحالي: ${balance > 0 ? '+' + balance : balance} حصة</span>
             </div>
             <button class="btn btn-primary" onclick="openAdminEventModal()">
-                <i class="fas fa-plus-circle"></i> تسجيل حدث (إعفاء/إجازة)
+                <i class="fas fa-plus-circle"></i> تسجيل حدث
             </button>
         </div>
-        
+        ${alertsHtml}
         <div class="table-responsive">
             <table class="word-table">
                 <thead>
@@ -296,47 +273,32 @@ function loadProgressTab() {
     `;
 
     const tbody = document.getElementById('progressTableBody');
+    let rowsHtml = '';
+
     if (finalTimeline.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4">لا توجد سجلات.</td></tr>';
-        return;
+        rowsHtml += '<tr><td colspan="6" class="text-center p-4 text-muted">لا توجد سجلات سابقة (غياب أو حضور) حتى الآن.</td></tr>';
+    } else {
+        rowsHtml += finalTimeline.map(item => {
+            let actionsHtml = '-';
+            if (item.actions) {
+                actionsHtml = `<button class="btn-icon text-primary" onclick="editAdminEvent(${item.actions})">✏️</button><button class="btn-icon text-danger" onclick="deleteAdminEvent(${item.actions})">🗑️</button>`;
+            }
+            let statusWithBalance = item.studentStatus;
+            if (item.studentStatus.includes('غائب') || item.studentStatus.includes('معفى')) {
+                 statusWithBalance += ` <br><span style="font-size:0.75rem; color:${item.balanceSnapshot < 0 ? 'red' : 'green'};">(${item.balanceSnapshot > 0 ? '+' : ''}${item.balanceSnapshot})</span>`;
+            }
+            let noteHtml = item.note ? `<br><small class="text-muted">[${item.note}]</small>` : '';
+            return `<tr class="${item.rowClass || ''}"><td><strong>${item.title}</strong>${noteHtml}</td><td class="text-center">${item.lessonStatus}</td><td class="text-center">${statusWithBalance}</td><td class="text-center">${item.sessionType}</td><td class="text-center">${item.date}</td><td class="text-center">${actionsHtml}</td></tr>`;
+        }).join('');
     }
 
-    tbody.innerHTML = finalTimeline.map(item => {
-        let actionsHtml = '-';
-        if (item.actions) {
-            actionsHtml = `
-                <button class="btn-icon text-primary" onclick="editAdminEvent(${item.actions})">✏️</button>
-                <button class="btn-icon text-danger" onclick="deleteAdminEvent(${item.actions})">🗑️</button>
-            `;
-        }
-
-        let statusWithBalance = item.studentStatus;
-        // عرض الرصيد بجانب حالات الغياب أو الإعفاء فقط
-        if (item.studentStatus.includes('غائب') || item.studentStatus.includes('معفى')) {
-             statusWithBalance += ` <br><span style="font-size:0.75rem; color:${item.balanceSnapshot < 0 ? 'red' : 'green'};">(${item.balanceSnapshot > 0 ? '+' : ''}${item.balanceSnapshot})</span>`;
-        }
-
-        let noteHtml = item.note ? `<br><small class="text-muted">[${item.note}]</small>` : '';
-
-        return `
-            <tr class="${item.rowClass || ''}">
-                <td><strong>${item.title}</strong>${noteHtml}</td>
-                <td class="text-center">${item.lessonStatus}</td>
-                <td class="text-center">${statusWithBalance}</td>
-                <td class="text-center">${item.sessionType}</td>
-                <td class="text-center">${item.date}</td>
-                <td class="text-center">${actionsHtml}</td>
-            </tr>
-        `;
-    }).join('');
-
-    // عرض الدرس الحالي (القادم)
+    // عرض الدرس القادم/الحالي دائماً في الأسفل
     const activeLesson = studentLessons.find(l => l.studentId == currentStudentId && l.status !== 'completed' && l.status !== 'accelerated');
     if (activeLesson) {
-        tbody.innerHTML += `
+        rowsHtml += `
             <tr style="background-color:#f8f9fa; border-top:2px dashed #ccc; color:#666;">
-                <td>${activeLesson.title} <small>(الدرس الحالي)</small></td>
-                <td class="text-center">قيد التنفيذ</td>
+                <td>${activeLesson.title} <small>(الدرس القادم/الحالي)</small></td>
+                <td class="text-center">قيد الانتظار</td>
                 <td class="text-center">-</td>
                 <td class="text-center">قادم</td>
                 <td class="text-center">-</td>
@@ -344,6 +306,8 @@ function loadProgressTab() {
             </tr>
         `;
     }
+
+    tbody.innerHTML = rowsHtml;
 }
 
 // ============================================

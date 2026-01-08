@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: نظام التقدم الأكاديمي (تعديل: كتابة اسم الدرس في البيان عند الغياب)
+// الوصف: نظام التقدم الأكاديمي (مع ضبط مسميات الغياب التلقائي: لم ينفذ / أساسية)
 // ============================================
 
 let currentStudentId = null;
@@ -60,7 +60,7 @@ function switchSection(sectionId) {
 }
 
 // ============================================
-// 🔥 1. محرك سجل التقدم الذكي (تحديث: اسم البيان للغياب)
+// 🔥 1. محرك سجل التقدم الذكي (تحديث الغياب التلقائي)
 // ============================================
 function loadProgressTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
@@ -70,7 +70,7 @@ function loadProgressTab() {
     let myList = studentLessons.filter(l => l.studentId == currentStudentId);
     let myEvents = adminEvents.filter(e => e.studentId == currentStudentId);
 
-    // 1. تحديد تاريخ بداية الخطة
+    // 1. تحديد تاريخ بداية الخطة (نقطة الصفر)
     let planStartDate = null;
     if (myList.length > 0) {
         const sortedByCreation = [...myList].sort((a, b) => new Date(a.assignedDate) - new Date(b.assignedDate));
@@ -95,7 +95,7 @@ function loadProgressTab() {
                     dateObj: new Date(log.date),
                     dateStr: new Date(log.date).toDateString(),
                     type: 'lesson',
-                    status: log.status, 
+                    status: log.status, // started, extension, completed, absence, accelerated
                     title: l.title,
                     lessonId: l.id,
                     cachedType: log.cachedSessionType || null
@@ -110,18 +110,12 @@ function loadProgressTab() {
             dateObj: new Date(e.date),
             dateStr: new Date(e.date).toDateString(),
             type: 'event',
-            status: e.type, 
+            status: e.type, // excused, vacation
             title: 'حدث إداري',
             id: e.id,
             note: e.note
         });
     });
-
-    // تحديد "الدرس الحالي" لاستخدام اسمه في حالة الغياب
-    // نبحث عن أول درس لم يكتمل بعد
-    const activeLesson = myList.find(l => l.status !== 'completed' && l.status !== 'accelerated');
-    // إذا لم يوجد درس نشط (أنهى كل شيء)، نضع نصاً عاماً
-    const gapLessonTitle = activeLesson ? activeLesson.title : 'حصة دراسية';
 
     // 3. المعالجة الزمنية
     let finalTimeline = [];
@@ -133,6 +127,7 @@ function loadProgressTab() {
         const currentDateStr = d.toDateString();
         const dayKey = dayMap[d.getDay()];
 
+        // هل هذا اليوم موجود في جدول الطالب؟
         const isScheduledDay = teacherSchedule.some(s => 
             s.day === dayKey && 
             (s.studentId == currentStudentId || (s.students && s.students.includes(currentStudentId)))
@@ -140,7 +135,7 @@ function loadProgressTab() {
 
         let daysLogs = rawLogs.filter(log => log.dateStr === currentDateStr);
 
-        // تنظيف: إذا تحقق الدرس، نحذف "started" لنفس الدرس
+        // تنظيف: إذا تحقق الدرس، نحذف "started" لنفس الدرس في نفس اليوم
         const completedIdsToday = daysLogs.filter(l => l.status === 'completed' || l.status === 'accelerated').map(l => l.lessonId);
         if (completedIdsToday.length > 0) {
             daysLogs = daysLogs.filter(l => !(l.status === 'started' && completedIdsToday.includes(l.lessonId)));
@@ -152,43 +147,46 @@ function loadProgressTab() {
                 dateObj: new Date(d),
                 type: 'auto-absence',
                 status: 'absence',
-                title: gapLessonTitle // ✅ هنا التعديل: نضع اسم الدرس الحالي بدلاً من كلمة "غياب"
+                title: 'غياب' // اسم البيان
             });
         }
 
+        // معالجة السجلات
         daysLogs.forEach(log => {
             let displayStatus = '';
             let displayType = '';
             let rowClass = '';
             let studentState = '';
 
-            // 1. تحديد نوع الحصة
+            // 1. تحديد نوع الحصة المبدئي بناءً على الجدول
             if (isScheduledDay) {
-                displayType = 'أساسية';
+                displayType = 'أساسية'; // الافتراضي للأيام المجدولة
             } else {
                 displayType = (balance < 0) ? '<span class="text-primary font-weight-bold">تعويضية</span>' : 'إضافية';
             }
 
             // 2. معالجة الحالات
             if (log.type === 'event') {
+                // أحداث إدارية
                 if (log.status === 'vacation') {
                     studentState = 'إجازة'; displayStatus = 'توقف مؤقت'; rowClass = 'bg-info-light';
                 } else if (log.status === 'excused') {
                     studentState = 'معفى'; displayStatus = 'مؤجل'; rowClass = 'bg-warning-light';
-                    balance--; 
+                    balance--; // دين
                 }
             
             } else if (log.status === 'absence' || log.type === 'auto-absence') {
-                // حالة الغياب
+                // ✅ حالة الغياب (المطلوبة)
                 studentState = '<span class="text-danger font-weight-bold">غائب</span>';
-                displayStatus = 'لم ينفذ'; // حالة الدرس
+                displayStatus = 'لم ينفذ'; // التعديل المطلوب
                 rowClass = 'bg-danger-light';
-                
+                // الغياب في يوم مجدول هو دائماً حصة "أساسية" ضائعة
                 if (isScheduledDay) displayType = 'أساسية'; 
-                balance--; 
+                
+                balance--; // خصم من الرصيد
                 
             } else {
-                // حضور
+                // حضور (دروس)
                 studentState = 'حاضر';
                 
                 if (log.status === 'started') displayStatus = 'بدأ';
@@ -196,16 +194,19 @@ function loadProgressTab() {
                 else if (log.status === 'completed') { displayStatus = '<span class="text-success font-weight-bold">✔ متحقق</span>'; rowClass = 'bg-success-light'; }
                 else if (log.status === 'accelerated') { displayStatus = '<span class="text-warning font-weight-bold">⚡ تسريع</span>'; rowClass = 'bg-warning-light'; }
 
+                // تثبيت نوع الحصة (الأرشفة)
                 if (log.cachedType) {
                     if (log.cachedType === 'basic') displayType = 'أساسية';
                     else if (log.cachedType === 'compensation') { displayType = '<span class="text-primary font-weight-bold">تعويضية</span>'; balance++; }
                     else if (log.cachedType === 'additional') { displayType = 'إضافية'; balance++; }
                 } else {
+                    // الحساب المباشر
                     if (isScheduledDay) {
                         displayType = 'أساسية';
+                        // لا تغيير في الرصيد للحضور الأساسي
                     } else {
-                        if (balance < 0) balance++; 
-                        else balance++; 
+                        if (balance < 0) balance++; // تعويض
+                        else balance++; // إضافي
                     }
                 }
             }
@@ -287,6 +288,7 @@ function loadProgressTab() {
     }).join('');
 
     // عرض الدرس القادم
+    const activeLesson = studentLessons.find(l => l.studentId == currentStudentId && l.status !== 'completed' && l.status !== 'accelerated');
     if (activeLesson) {
         tbody.innerHTML += `
             <tr style="background-color:#f8f9fa; border-top:2px dashed #ccc; color:#666;">

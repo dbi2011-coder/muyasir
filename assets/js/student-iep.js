@@ -1,10 +1,11 @@
 // ============================================
 // 📁 المسار: assets/js/student-iep.js
-// الوصف: عرض الخطة للطالب (نسخة مطابقة للمعلم: تدعم التسريع، الألوان، والتفوق)
+// الوصف: عرض الخطة للطالب (تم تحديث ربط الجدول بالأيام العربية)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    if (window.location.pathname.includes('my-iep.html')) {
+    // التحقق من الصفحة الحالية وتشغيل الدالة المناسبة
+    if (window.location.pathname.includes('my-iep.html') || document.getElementById('iepContainer')) {
         loadStudentIEP();
     }
 });
@@ -12,39 +13,44 @@ document.addEventListener('DOMContentLoaded', function() {
 function loadStudentIEP() {
     const iepContainer = document.getElementById('iepContainer');
     
-    // 1. التحقق من المستخدم
+    // 1. التحقق من المستخدم الحالي
     let currentStudent = null;
     try {
-        if (typeof getCurrentUser === 'function') currentStudent = getCurrentUser();
-        if (!currentStudent && sessionStorage.getItem('currentUser')) {
-            currentStudent = JSON.parse(sessionStorage.getItem('currentUser')).user; // فك الغلاف إن وجد
-        } else if (!currentStudent && sessionStorage.getItem('currentUser')) {
-             currentStudent = JSON.parse(sessionStorage.getItem('currentUser'));
+        // محاولة جلب المستخدم من الجلسة
+        const sessionUser = sessionStorage.getItem('currentUser');
+        if (sessionUser) {
+            const parsed = JSON.parse(sessionUser);
+            currentStudent = parsed.user ? parsed.user : parsed;
         }
-    } catch (e) {}
+    } catch (e) {
+        console.error('Error loading user:', e);
+    }
 
-    if (!currentStudent) return;
+    if (!currentStudent) {
+        // إذا لم يتم العثور على طالب مسجل دخول، لا تفعل شيئاً (أو حوله لصفحة الدخول)
+        return;
+    }
     const currentStudentId = currentStudent.id;
 
-    // 2. جلب البيانات
+    // 2. جلب البيانات من LocalStorage
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
     const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
 
-    // البحث عن الاختبار المكتمل
+    // البحث عن الاختبار التشخيصي المكتمل لهذا الطالب
     const completedDiagnostic = studentTests
         .filter(t => t.studentId == currentStudentId && t.type === 'diagnostic' && t.status === 'completed')
         .sort((a, b) => new Date(b.assignedDate) - new Date(a.assignedDate))[0];
 
-    // إذا لم تكن الخطة جاهزة
+    // إذا لم تكن الخطة جاهزة (لا يوجد اختبار مكتمل)
     if (!completedDiagnostic) {
         iepContainer.innerHTML = `
-            <div class="empty-state" style="text-align:center; padding:40px; background:white; border-radius:8px; border:1px solid #eee;">
+            <div class="empty-state" style="text-align:center; padding:40px; background:white; border-radius:8px; border:1px solid #eee; margin-top:20px;">
                 <div style="font-size:3rem; margin-bottom:10px;">⏳</div>
                 <h3>الخطة غير جاهزة بعد</h3>
-                <p>يجب إكمال الاختبار التشخيصي وتصحيحه من قبل المعلم لتظهر خطتك هنا.</p>
+                <p>يجب إكمال الاختبار التشخيصي وتصحيحه من قبل المعلم لتظهر تفاصيل خطتك هنا.</p>
                 <a href="my-tests.html" class="btn btn-primary" style="margin-top:15px;">الذهاب للاختبارات</a>
             </div>
         `;
@@ -72,10 +78,12 @@ function loadStudentIEP() {
                 if (objective) {
                     const passingScore = Number(question.passingScore) || 1;
                     if (studentScore >= passingScore) {
+                        // نقطة قوة
                         if (!strengthHTML.includes(objective.shortTermGoal)) {
                             strengthHTML += `<li>${objective.shortTermGoal}</li>`;
                         }
                     } else {
+                        // نقطة احتياج
                         if (!needsObjects.find(o => o.id == objective.id)) {
                             needsObjects.push(objective);
                             needsHTML += `<li>${objective.shortTermGoal}</li>`;
@@ -89,9 +97,9 @@ function loadStudentIEP() {
     if(!strengthHTML) strengthHTML = '<li>لا توجد نقاط مسجلة.</li>';
     if(!needsHTML) needsHTML = '<li>لا توجد نقاط احتياج مسجلة.</li>';
 
-    // 4. خريطة الدروس (بما فيها التسريع)
+    // 4. خريطة الدروس (تاريخ الإنجاز والتسريع)
     const completedLessonsMap = {};
-    const acceleratedLessonsMap = {}; // خريطة جديدة للتسريع
+    const acceleratedLessonsMap = {}; 
 
     studentLessons.forEach(l => {
         if (l.studentId == currentStudentId) {
@@ -103,7 +111,7 @@ function loadStudentIEP() {
         }
     });
 
-    // 5. بناء جدول الأهداف (مطابق للمعلم)
+    // 5. بناء جدول الأهداف
     let objectivesRows = '';
     if (needsObjects.length === 0) {
         objectivesRows = '<tr><td colspan="3" class="text-center">جميع الأهداف محققة (ما شاء الله).</td></tr>';
@@ -125,11 +133,10 @@ function loadStudentIEP() {
                     let dateDisplay = '';
                     let rowStyle = '';
 
-                    // أولوية العرض: التسريع أولاً
                     if (accelDate) {
                         const d = new Date(accelDate).toLocaleDateString('ar-SA');
                         dateDisplay = `<span style="font-weight:bold; color:#856404;">⚡ ${d} (تفوق)</span>`;
-                        rowStyle = 'background-color: #fff3cd !important;'; // خلفية ذهبية فاتحة
+                        rowStyle = 'background-color: #fff3cd !important;'; 
                     } else if (compDate) {
                         const d = new Date(compDate).toLocaleDateString('ar-SA');
                         dateDisplay = `<span class="text-success font-weight-bold">✔ ${d}</span>`;
@@ -153,24 +160,28 @@ function loadStudentIEP() {
 
     const subjectName = originalTest.subject || 'المادة';
 
-    // 6. جدول الحصص
-    const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'];
+    // 6. جدول الحصص (تم التصحيح هنا: استخدام الأيام العربية)
+    // 🔥 هذا هو التعديل الجوهري لمطابقة ملف study-schedule.js 🔥
+    const dayKeys = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
     let scheduleCells = '';
 
     dayKeys.forEach(dayKey => {
         let content = '';
+        // البحث في الجدول باستخدام اسم اليوم العربي
         const session = teacherSchedule.find(s => s.day === dayKey && (
             (s.students && s.students.includes(currentStudentId)) || s.studentId == currentStudentId
         ));
         
         if (session) {
-            content = `<div style="background:#e2e6ea !important; padding:4px; margin-bottom:2px; border-radius:3px; font-size:0.9rem;">حصة ${session.period || 1}</div>`;
+            content = `<div style="background:#e2e6ea !important; padding:4px; margin-bottom:2px; border-radius:3px; font-size:0.9rem; font-weight:bold; color:#333;">حصة ${session.period || 1}</div>`;
+        } else {
+            content = '<span style="color:#ccc;">-</span>';
         }
         
         scheduleCells += `<td style="height:50px; vertical-align:middle;">${content}</td>`;
     });
 
-    // ستايل الطباعة
+    // 7. ستايل الطباعة
     const printStyles = `
         <style>
             @media print {
@@ -189,10 +200,10 @@ function loadStudentIEP() {
         </style>
     `;
 
-    // الهيكل النهائي
+    // 8. الهيكل النهائي للواجهة
     const iepHTML = `
     ${printStyles}
-    <div class="iep-word-model-content" style="background:#fff; padding:20px; border:1px solid #ccc; font-family:'Tajawal', sans-serif;">
+    <div class="iep-word-model-content" style="background:#fff; padding:20px; border:1px solid #ccc; font-family:'Tajawal', sans-serif; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius:8px;">
         
         <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #333; padding-bottom:10px;">
             <h3>الخطة التربوية الفردية</h3>
@@ -227,8 +238,8 @@ function loadStudentIEP() {
             </table>
         </div>
 
-        <div style="display: flex; gap: 20px; margin-bottom: 20px;">
-            <div style="flex: 1;">
+        <div style="display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 300px;">
                 <div class="card h-100" style="border:1px solid #ddd;">
                     <div class="card-header" style="background:#28a745 !important; color:#fff; text-align:center; padding: 10px; font-weight: bold;">نقاط القوة</div>
                     <div class="card-body" style="padding: 15px;">
@@ -236,7 +247,7 @@ function loadStudentIEP() {
                     </div>
                 </div>
             </div>
-            <div style="flex: 1;">
+            <div style="flex: 1; min-width: 300px;">
                 <div class="card h-100" style="border:1px solid #ddd;">
                     <div class="card-header" style="background:#dc3545 !important; color:#fff; text-align:center; padding: 10px; font-weight: bold;">نقاط الاحتياج</div>
                     <div class="card-body" style="padding: 15px;">
@@ -278,6 +289,9 @@ function loadStudentIEP() {
                 تم طباعة الخطة التربوية الفردية من نظام ميسر التعلم لمعلم صعوبات التعلم أ/ صالح عبد العزيز العجلان
             </p>
         </div>
+    </div>
+    <div style="text-align:center; margin-top:20px;" class="no-print">
+        <button onclick="window.print()" class="btn btn-secondary"><i class="fas fa-print"></i> طباعة الخطة</button>
     </div>
     `;
 

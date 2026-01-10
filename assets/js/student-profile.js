@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: نظام التقدم الأكاديمي (دعم الاستبدال + تسمية الغياب باسم الدرس)
+// الوصف: نظام التقدم الأكاديمي (تعديلات الواجهة: اسم الدرس + إخفاء الرصيد التفصيلي)
 // ============================================
 
 let currentStudentId = null;
@@ -74,38 +74,33 @@ function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDa
     let newEvents = [];
     let hasChanges = false;
 
-    // تحديد الدرس المعلق الحالي (الذي يجب أن يأخذه الطالب)
-    // نستخدمه لتسمية الغياب باسم الدرس بدلاً من عبارة عامة
+    // تحديد الدرس المعلق الحالي لتسمية الغياب
     let pendingLesson = myList.find(l => l.status === 'pending');
     let lessonTitleForAbsence = pendingLesson ? pendingLesson.title : 'درس غير محدد';
 
     for (let d = new Date(planStartDate); d < today; d.setDate(d.getDate() + 1)) {
-        // تجاوز اليوم الحالي
         if (d.toDateString() === new Date().toDateString()) continue;
 
         const dateStr = d.toDateString();
         
-        // 1. هل يوجد سجل بالفعل؟
         const hasLesson = myList.some(l => l.historyLog && l.historyLog.some(log => new Date(log.date).toDateString() === dateStr));
         const hasEvent = myEvents.some(e => new Date(e.date).toDateString() === dateStr);
         
         if (hasLesson || hasEvent) continue;
 
-        // 2. هل كان مجدولاً؟
         const dayKey = dayMap[d.getDay()];
         const isScheduledDay = teacherSchedule.some(s => 
             s.day === dayKey && 
             (s.students && s.students.includes(currentStudentId))
         );
 
-        // 3. أرشفة الغياب
         if (isScheduledDay) {
             newEvents.push({
                 id: Date.now() + Math.random(),
                 studentId: currentStudentId,
                 date: new Date(d).toISOString(),
                 type: 'auto-absence',
-                title: lessonTitleForAbsence, // 🔥 هنا نضع اسم الدرس بدلاً من "حدث"
+                title: lessonTitleForAbsence,
                 note: `غياب عن درس: ${lessonTitleForAbsence}`
             });
             hasChanges = true;
@@ -140,7 +135,6 @@ function loadProgressTab() {
     const sortedByDate = [...myList].sort((a, b) => new Date(a.assignedDate) - new Date(b.assignedDate));
     let planStartDate = sortedByDate.length > 0 ? new Date(sortedByDate[0].assignedDate) : new Date();
 
-    // أرشفة الفراغات
     let myEvents = syncMissingDaysToArchive(myList, adminEvents.filter(e => e.studentId == currentStudentId), teacherSchedule, planStartDate);
 
     let rawLogs = [];
@@ -162,14 +156,13 @@ function loadProgressTab() {
         }
     });
 
-    // ب) الأحداث (والغياب المؤرشف)
+    // ب) الأحداث
     myEvents.forEach(e => {
         rawLogs.push({
             dateObj: new Date(e.date),
             dateStr: new Date(e.date).toDateString(),
             type: e.type === 'auto-absence' ? 'auto-absence' : 'event',
             status: e.type,
-            // 🔥 هنا نستخدم العنوان المخزن (اسم الدرس) للغياب التلقائي
             title: e.title || (e.type === 'auto-absence' ? 'درس غير محدد' : 'حدث إداري'),
             id: e.id,
             note: e.note
@@ -182,7 +175,7 @@ function loadProgressTab() {
     rawLogs.sort((a, b) => a.dateObj - b.dateObj);
 
     rawLogs.forEach(log => {
-        // تنظيف التكرار في نفس اليوم
+        // تنظيف التكرار
         if (log.status === 'started' || log.status === 'extension') {
             const hasCompletion = rawLogs.some(l => 
                 l.dateStr === log.dateStr && 
@@ -249,12 +242,13 @@ function loadProgressTab() {
                     actionsHtml = `<button class="btn-icon text-primary" onclick="editAdminEvent(${item.actions})">✏️</button>` + actionsHtml;
                 }
             }
-            let statusWithBalance = item.studentStatus;
-            if (item.studentStatus.includes('غائب') || item.studentStatus.includes('معفى')) {
-                 statusWithBalance += ` <br><span style="font-size:0.75rem; color:${item.balanceSnapshot < 0 ? 'red' : 'green'};">(${item.balanceSnapshot > 0 ? '+' : ''}${item.balanceSnapshot})</span>`;
-            }
+            
+            // 🔥 تعديل: إزالة عرض الرصيد داخل الجدول 🔥
+            let statusDisplay = item.studentStatus; 
+            // تم حذف الكود الذي كان يضيف الرصيد هنا
+
             let noteHtml = item.note ? `<br><small class="text-muted">[${item.note}]</small>` : '';
-            return `<tr class="${item.rowClass || ''}"><td><strong>${item.title}</strong>${noteHtml}</td><td class="text-center">${item.lessonStatus}</td><td class="text-center">${statusWithBalance}</td><td class="text-center">${item.sessionType}</td><td class="text-center">${item.date}</td><td class="text-center">${actionsHtml}</td></tr>`;
+            return `<tr class="${item.rowClass || ''}"><td><strong>${item.title}</strong>${noteHtml}</td><td class="text-center">${item.lessonStatus}</td><td class="text-center">${statusDisplay}</td><td class="text-center">${item.sessionType}</td><td class="text-center">${item.date}</td><td class="text-center">${actionsHtml}</td></tr>`;
         }).join('');
     }
 
@@ -272,6 +266,7 @@ function loadProgressTab() {
         `;
     }
 
+    // 🔥 تعديل: تغيير اسم العمود الأول إلى "اسم الدرس" 🔥
     container.innerHTML = `
         <div class="content-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <div>
@@ -286,9 +281,9 @@ function loadProgressTab() {
             <table class="word-table">
                 <thead>
                     <tr>
-                        <th style="width: 30%;">البيان</th>
+                        <th style="width: 30%;">اسم الدرس</th>
                         <th style="width: 15%;">حالة الدرس</th>
-                        <th style="width: 15%;">حالة الطالب (الرصيد)</th>
+                        <th style="width: 15%;">حالة الطالب</th>
                         <th style="width: 15%;">نوع الحصة</th>
                         <th style="width: 15%;">التاريخ</th>
                         <th style="width: 10%;">إجراءات</th>
@@ -393,17 +388,13 @@ function saveAdminEvent() {
     const targetDateStr = new Date(dateInput).toDateString();
     let events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
 
-    // 🔥 منطق الاستبدال: حذف أي حدث (تلقائي أو يدوي) في نفس التاريخ للطالب 🔥
+    // 🔥 منطق الاستبدال: حذف أي حدث سابق لنفس الطالب في هذا التاريخ 🔥
     events = events.filter(e => {
-        // نبقي الأحداث التي لطلاب آخرين
         if (e.studentId != currentStudentId) return true;
-        // نبقي الأحداث التي في تواريخ مختلفة
         if (new Date(e.date).toDateString() !== targetDateStr) return true;
-        // نحذف (نستبدل) أي حدث لهذا الطالب في هذا التاريخ
         return false;
     });
     
-    // إضافة الحدث الجديد
     events.push({
         id: Date.now(),
         studentId: currentStudentId,

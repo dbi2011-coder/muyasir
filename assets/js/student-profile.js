@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: نظام التقدم الأكاديمي الذكي (تصحيح ربط الجدول العربي)
+// الوصف: نظام التقدم الأكاديمي الذكي (تم تحديث عرض الخطة + السجل ليدعم العربية)
 // ============================================
 
 let currentStudentId = null;
@@ -60,20 +60,18 @@ function switchSection(sectionId) {
 }
 
 // ============================================
-// 🔥 1. محرك سجل التقدم الذكي (نسخة الربط العربي المحدثة)
+// 🔥 1. محرك سجل التقدم الذكي (النسخة العربية الكاملة)
 // ============================================
 function loadProgressTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const adminEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]');
     const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
 
-    // تصفية بيانات الطالب
     let myList = studentLessons.filter(l => l.studentId == currentStudentId);
     let myEvents = adminEvents.filter(e => e.studentId == currentStudentId);
 
     const container = document.getElementById('section-progress');
     
-    // فحص 1: هل توجد خطة؟
     if (myList.length === 0) {
         container.innerHTML = `
             <div class="content-header"><h1>سجل المتابعة اليومي</h1></div>
@@ -84,15 +82,12 @@ function loadProgressTab() {
         return;
     }
 
-    // فحص 2: هل الطالب مضاف للجدول؟
     const isStudentScheduled = teacherSchedule.some(s => 
         s.students && s.students.includes(currentStudentId)
     );
 
-    // ترتيب الدروس
     myList.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
 
-    // تحديد تاريخ البداية
     let planStartDate = null;
     const sortedByDate = [...myList].sort((a, b) => new Date(a.assignedDate) - new Date(b.assignedDate));
     if (sortedByDate.length > 0) planStartDate = new Date(sortedByDate[0].assignedDate);
@@ -101,10 +96,8 @@ function loadProgressTab() {
         planStartDate = new Date(); 
     }
 
-    // تجهيز البيانات الخام
     let rawLogs = [];
 
-    // أ) الدروس
     myList.forEach(l => {
         if (l.historyLog && l.historyLog.length > 0) {
             l.historyLog.forEach(log => {
@@ -121,7 +114,6 @@ function loadProgressTab() {
         }
     });
 
-    // ب) الأحداث
     myEvents.forEach(e => {
         rawLogs.push({
             dateObj: new Date(e.date),
@@ -139,16 +131,12 @@ function loadProgressTab() {
     const today = new Date();
     today.setHours(23, 59, 59, 999);
     
-    // 🔥 التصحيح الجوهري: خريطة الأيام بالعربية لتطابق study-schedule.js 🔥
-    // 0 = الأحد, 1 = الاثنين ... (حسب getDay() في JS يبدأ 0 للأحد)
     const dayMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
-    // الحلقة الزمنية
     for (let d = new Date(planStartDate); d <= today; d.setDate(d.getDate() + 1)) {
         const currentDateStr = d.toDateString();
-        const dayKey = dayMap[d.getDay()]; // سيعود بـ "الأحد"، "الاثنين"...
+        const dayKey = dayMap[d.getDay()];
 
-        // هل هذا اليوم موجود في جدول الطالب؟ (مطابقة النص العربي)
         const isScheduledDay = teacherSchedule.some(s => 
             s.day === dayKey && 
             (s.students && s.students.includes(currentStudentId))
@@ -156,7 +144,6 @@ function loadProgressTab() {
 
         let daysLogs = rawLogs.filter(log => log.dateStr === currentDateStr);
 
-        // تنظيف: منع تكرار بدأ/تمديد إذا تم الإنجاز
         const completedIdsToday = daysLogs.filter(l => l.status === 'completed' || l.status === 'accelerated').map(l => l.lessonId);
         if (completedIdsToday.length > 0) {
             daysLogs = daysLogs.filter(l => {
@@ -165,7 +152,6 @@ function loadProgressTab() {
             });
         }
 
-        // كشف الغياب التلقائي (الآن سيعمل لأن isScheduledDay صحيح)
         if (daysLogs.length === 0 && isScheduledDay) {
             let activeLessonAtThatTime = myList.find(l => {
                 if (l.status === 'pending') return true;
@@ -183,7 +169,6 @@ function loadProgressTab() {
             });
         }
 
-        // معالجة السجلات
         daysLogs.forEach(log => {
             let displayStatus = '', displayType = '', rowClass = '', studentState = '';
             
@@ -208,7 +193,6 @@ function loadProgressTab() {
                     else if (log.cachedType === 'compensation') { displayType = '<span class="text-primary font-weight-bold">تعويضية</span>'; balance++; }
                     else if (log.cachedType === 'additional') { displayType = 'إضافية'; balance++; }
                 } else {
-                    // الآن isScheduledDay يعمل بشكل صحيح
                     if (isScheduledDay) displayType = 'أساسية';
                     else {
                         if (balance < 0) { displayType = '<span class="text-primary font-weight-bold">تعويضية</span>'; balance++; }
@@ -234,13 +218,12 @@ function loadProgressTab() {
 
     finalTimeline.sort((a, b) => a.rawDate - b.rawDate);
 
-    // بناء الواجهة
     let alertsHtml = '';
     if (!isStudentScheduled) {
         alertsHtml = `
             <div class="alert alert-warning" style="margin-bottom:15px; border:1px solid #ffeeba; background-color:#fff3cd; color:#856404; padding:10px; border-radius:5px;">
                 <strong>⚠️ تنبيه:</strong> هذا الطالب غير مضاف للجدول الدراسي الأسبوعي.<br>
-                لن يتم حساب الغياب التلقائي حتى تذهب لصفحة "الجدول الدراسي" وتضيفه للحصص (الأحد، الاثنين...).
+                لن يتم حساب الغياب التلقائي حتى تذهب لصفحة "الجدول الدراسي" وتضيفه للحصص.
             </div>`;
     }
 
@@ -479,7 +462,7 @@ function loadDiagnosticTab() {
     }
 }
 
-// 2. الخطة التربوية
+// 2. الخطة التربوية (تم التعديل هنا: استخدام الأيام العربية)
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
     const wordModel = document.querySelector('.iep-word-model');
@@ -543,10 +526,12 @@ function loadIEPTab() {
     });
 
     const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
-    const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday'];
+    // 🔥 التعديل هنا: استخدام الأيام بالعربية لمطابقة بيانات الجدول
+    const dayKeys = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
     let scheduleCells = dayKeys.map(dk => {
         const session = teacherSchedule.find(s => s.day === dk && (s.studentId == currentStudentId || (s.students && s.students.includes(currentStudentId))));
-        return `<td style="height:50px;">${session ? 'حصة ' + (session.period||1) : ''}</td>`;
+        let content = session ? `حصة ${session.period || 1}` : '-';
+        return `<td style="height:50px; vertical-align:middle;">${content}</td>`;
     }).join('');
 
     const subjectName = originalTest ? originalTest.subject : 'عام';

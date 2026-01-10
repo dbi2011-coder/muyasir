@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: نظام التقدم الأكاديمي الذكي (رصيد الحصص + تنظيف العرض + الأرشفة)
+// الوصف: نظام التقدم الأكاديمي الذكي (تصحيح ربط الجدول العربي)
 // ============================================
 
 let currentStudentId = null;
@@ -60,54 +60,51 @@ function switchSection(sectionId) {
 }
 
 // ============================================
-// 🔥 1. محرك سجل التقدم الذكي (The Smart Progress Engine)
+// 🔥 1. محرك سجل التقدم الذكي (نسخة الربط العربي المحدثة)
 // ============================================
 function loadProgressTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const adminEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]');
     const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
 
-    // تصفية بيانات الطالب الحالي
-    // ملاحظة: استخدام == يسمح بمقارنة النص بالرقم في حال اختلاف النوع
+    // تصفية بيانات الطالب
     let myList = studentLessons.filter(l => l.studentId == currentStudentId);
     let myEvents = adminEvents.filter(e => e.studentId == currentStudentId);
 
     const container = document.getElementById('section-progress');
     
-    // فحص 1: هل توجد خطة أصلاً؟
+    // فحص 1: هل توجد خطة؟
     if (myList.length === 0) {
         container.innerHTML = `
             <div class="content-header"><h1>سجل المتابعة اليومي</h1></div>
             <div class="empty-state">
                 <h3>لم تبدأ الخطة بعد</h3>
-                <p>يجب إكمال التشخيص وتوليد الدروس أولاً لتفعيل السجل.</p>
+                <p>يجب إكمال التشخيص وتوليد الدروس أولاً.</p>
             </div>`;
         return;
     }
 
-    // فحص 2: هل الطالب مضاف للجدول الدراسي؟
-    // هذا ضروري لحساب الغياب التلقائي
+    // فحص 2: هل الطالب مضاف للجدول؟
     const isStudentScheduled = teacherSchedule.some(s => 
-        s.studentId == currentStudentId || (s.students && s.students.includes(currentStudentId))
+        s.students && s.students.includes(currentStudentId)
     );
 
     // ترتيب الدروس
     myList.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
 
     // تحديد تاريخ البداية
-    // نأخذ تاريخ أول درس تم تعيينه، أو تاريخ اليوم إذا كان غير موجود
     let planStartDate = null;
     const sortedByDate = [...myList].sort((a, b) => new Date(a.assignedDate) - new Date(b.assignedDate));
     if (sortedByDate.length > 0) planStartDate = new Date(sortedByDate[0].assignedDate);
     
     if (!planStartDate || isNaN(planStartDate.getTime())) {
-        planStartDate = new Date(); // fallback
+        planStartDate = new Date(); 
     }
 
     // تجهيز البيانات الخام
     let rawLogs = [];
 
-    // أ) سجلات الدروس (التاريخية)
+    // أ) الدروس
     myList.forEach(l => {
         if (l.historyLog && l.historyLog.length > 0) {
             l.historyLog.forEach(log => {
@@ -124,7 +121,7 @@ function loadProgressTab() {
         }
     });
 
-    // ب) الأحداث الإدارية
+    // ب) الأحداث
     myEvents.forEach(e => {
         rawLogs.push({
             dateObj: new Date(e.date),
@@ -142,22 +139,24 @@ function loadProgressTab() {
     const today = new Date();
     today.setHours(23, 59, 59, 999);
     
-    const dayMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    // 🔥 التصحيح الجوهري: خريطة الأيام بالعربية لتطابق study-schedule.js 🔥
+    // 0 = الأحد, 1 = الاثنين ... (حسب getDay() في JS يبدأ 0 للأحد)
+    const dayMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 
     // الحلقة الزمنية
     for (let d = new Date(planStartDate); d <= today; d.setDate(d.getDate() + 1)) {
         const currentDateStr = d.toDateString();
-        const dayKey = dayMap[d.getDay()];
+        const dayKey = dayMap[d.getDay()]; // سيعود بـ "الأحد"، "الاثنين"...
 
-        // هل هذا اليوم موجود في جدول الطالب؟
+        // هل هذا اليوم موجود في جدول الطالب؟ (مطابقة النص العربي)
         const isScheduledDay = teacherSchedule.some(s => 
             s.day === dayKey && 
-            (s.studentId == currentStudentId || (s.students && s.students.includes(currentStudentId)))
+            (s.students && s.students.includes(currentStudentId))
         );
 
         let daysLogs = rawLogs.filter(log => log.dateStr === currentDateStr);
 
-        // تنظيف: إذا تم الإنجاز، نحذف "بدأ" و "تمديد" لنفس الدرس
+        // تنظيف: منع تكرار بدأ/تمديد إذا تم الإنجاز
         const completedIdsToday = daysLogs.filter(l => l.status === 'completed' || l.status === 'accelerated').map(l => l.lessonId);
         if (completedIdsToday.length > 0) {
             daysLogs = daysLogs.filter(l => {
@@ -166,7 +165,7 @@ function loadProgressTab() {
             });
         }
 
-        // كشف الغياب التلقائي (فقط إذا كان الطالب في الجدول)
+        // كشف الغياب التلقائي (الآن سيعمل لأن isScheduledDay صحيح)
         if (daysLogs.length === 0 && isScheduledDay) {
             let activeLessonAtThatTime = myList.find(l => {
                 if (l.status === 'pending') return true;
@@ -184,7 +183,7 @@ function loadProgressTab() {
             });
         }
 
-        // معالجة السجلات وحساب الرصيد
+        // معالجة السجلات
         daysLogs.forEach(log => {
             let displayStatus = '', displayType = '', rowClass = '', studentState = '';
             
@@ -209,6 +208,7 @@ function loadProgressTab() {
                     else if (log.cachedType === 'compensation') { displayType = '<span class="text-primary font-weight-bold">تعويضية</span>'; balance++; }
                     else if (log.cachedType === 'additional') { displayType = 'إضافية'; balance++; }
                 } else {
+                    // الآن isScheduledDay يعمل بشكل صحيح
                     if (isScheduledDay) displayType = 'أساسية';
                     else {
                         if (balance < 0) { displayType = '<span class="text-primary font-weight-bold">تعويضية</span>'; balance++; }
@@ -239,8 +239,8 @@ function loadProgressTab() {
     if (!isStudentScheduled) {
         alertsHtml = `
             <div class="alert alert-warning" style="margin-bottom:15px; border:1px solid #ffeeba; background-color:#fff3cd; color:#856404; padding:10px; border-radius:5px;">
-                <strong>⚠️ تنبيه:</strong> هذا الطالب غير مضاف للجدول الدراسي الأسبوعي (Teacher Schedule).<br>
-                لن يتم حساب "الغياب التلقائي" حتى تقوم بإضافته للحصص (الأحد، الاثنين...) في صفحة الجدول.
+                <strong>⚠️ تنبيه:</strong> هذا الطالب غير مضاف للجدول الدراسي الأسبوعي.<br>
+                لن يتم حساب الغياب التلقائي حتى تذهب لصفحة "الجدول الدراسي" وتضيفه للحصص (الأحد، الاثنين...).
             </div>`;
     }
 
@@ -276,7 +276,7 @@ function loadProgressTab() {
     let rowsHtml = '';
 
     if (finalTimeline.length === 0) {
-        rowsHtml += '<tr><td colspan="6" class="text-center p-4 text-muted">لا توجد سجلات سابقة (غياب أو حضور) حتى الآن.</td></tr>';
+        rowsHtml += '<tr><td colspan="6" class="text-center p-4 text-muted">لا توجد سجلات سابقة.</td></tr>';
     } else {
         rowsHtml += finalTimeline.map(item => {
             let actionsHtml = '-';
@@ -292,7 +292,6 @@ function loadProgressTab() {
         }).join('');
     }
 
-    // عرض الدرس القادم/الحالي دائماً في الأسفل
     const activeLesson = studentLessons.find(l => l.studentId == currentStudentId && l.status !== 'completed' && l.status !== 'accelerated');
     if (activeLesson) {
         rowsHtml += `

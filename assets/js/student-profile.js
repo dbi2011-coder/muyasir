@@ -90,10 +90,7 @@ function loadProgressTab() {
     // أ) تفكيك سجلات الدروس مع تحسين المنطق
     myList.forEach(l => {
         if (l.historyLog && l.historyLog.length > 0) {
-            // ✅ ترتيب السجلات تاريخياً داخل الدرس الواحد
             const sortedLogs = [...l.historyLog].sort((a, b) => new Date(a.date) - new Date(b.date));
-            
-            // ✅ تحسين المنطق: إيجاد تواريخ البداية والنهاية لكل درس
             const lessonLogs = [];
             let lessonStarted = false;
             
@@ -105,9 +102,8 @@ function loadProgressTab() {
                     }
                 } else if (log.status === 'completed' || log.status === 'accelerated') {
                     lessonLogs.push(log);
-                    break; // ✅ توقف بعد الإنجاز
+                    break;
                 } else if (log.status === 'extension') {
-                    // ✅ احتفظ بـ "تمديد" فقط إذا لم يكن هناك إنجاز بعد
                     const hasCompletionAfterThis = sortedLogs.some(
                         laterLog => new Date(laterLog.date) > new Date(log.date) && 
                         (laterLog.status === 'completed' || laterLog.status === 'accelerated')
@@ -116,11 +112,10 @@ function loadProgressTab() {
                         lessonLogs.push(log);
                     }
                 } else {
-                    lessonLogs.push(log); // حالات أخرى مثل الغياب
+                    lessonLogs.push(log);
                 }
             }
             
-            // ✅ إضافة السجلات المصفاة
             lessonLogs.forEach(log => {
                 rawLogs.push({
                     dateObj: new Date(log.date),
@@ -163,23 +158,22 @@ function loadProgressTab() {
         const currentDateStr = d.toDateString();
         const dayKey = dayMap[d.getDay()];
 
-        // ✅ التحقق إذا كان اليوم مجدولاً
+        // التحقق إذا كان اليوم مجدولاً
         const isScheduledDay = teacherSchedule.some(s => 
             s.day === dayKey && 
             (s.studentId == currentStudentId || (s.students && s.students.includes(currentStudentId)))
         );
 
-        // ✅ جلب أحداث اليوم
+        // جلب أحداث اليوم
         let daysLogs = rawLogs.filter(log => log.dateStr === currentDateStr);
 
-        // ✅ التحقق من أنواع الأحداث في اليوم
+        // التحقق من أنواع الأحداث في اليوم
         const hasEventToday = daysLogs.some(l => l.type === 'event');
 
-        // ✅ منطق الغياب التلقائي
+        // منطق الغياب التلقائي
         if (daysLogs.length === 0 && isScheduledDay && !hasEventToday) {
-            // ✅ السيناريو: يوم مجدول بدون سجلات (غياب تلقائي)
             const previousBalance = balance;
-            balance--; // خصم من الرصيد
+            balance--;
             
             finalTimeline.push({
                 title: currentActiveLesson ? currentActiveLesson.title : 'حصة مجدولة',
@@ -196,7 +190,7 @@ function loadProgressTab() {
             continue;
         }
 
-        // ✅ معالجة السجلات الفعلية لهذا اليوم
+        // معالجة السجلات الفعلية لهذا اليوم
         daysLogs.forEach(log => {
             let displayStatus = '';
             let displayType = '';
@@ -204,7 +198,7 @@ function loadProgressTab() {
             let studentState = '';
             const previousBalance = balance;
 
-            // --- حالة 1: حدث إداري ---
+            // حالة 1: حدث إداري
             if (log.type === 'event') {
                 if (log.status === 'vacation') {
                     studentState = 'إجازة'; 
@@ -214,21 +208,20 @@ function loadProgressTab() {
                     studentState = 'معفى'; 
                     displayStatus = 'مؤجل'; 
                     rowClass = 'bg-warning-light';
-                    balance--; // خصم من الرصيد
+                    balance--;
                 }
             
-            // --- حالة 2: غياب مسجل ---
+            // حالة 2: غياب مسجل
             } else if (log.status === 'absence') {
                 studentState = '<span class="text-danger font-weight-bold">غائب</span>';
                 displayStatus = 'لم يؤخذ';
                 rowClass = 'bg-danger-light';
                 balance--;
                 
-            // --- حالة 3: حضور درس ---
+            // حالة 3: حضور درس
             } else {
                 studentState = 'حاضر';
                 
-                // ✅ تحسين عرض حالة الدرس
                 if (log.status === 'started') {
                     displayStatus = 'بدأ';
                 } else if (log.status === 'extension') {
@@ -241,7 +234,7 @@ function loadProgressTab() {
                     rowClass = 'bg-warning-light'; 
                 }
 
-                // ✅ تحديد نوع الحصة
+                // تحديد نوع الحصة
                 if (log.cachedType) {
                     if (log.cachedType === 'basic') displayType = 'أساسية';
                     else if (log.cachedType === 'compensation') { 
@@ -255,9 +248,7 @@ function loadProgressTab() {
                 } else {
                     if (isScheduledDay) {
                         displayType = 'أساسية';
-                        // ✅ في الحصة الأساسية لا نغير الرصيد
                     } else {
-                        // ✅ يوم غير مجدول
                         if (previousBalance < 0) {
                             displayType = '<span class="text-primary font-weight-bold">تعويضية</span>';
                             balance++;
@@ -267,7 +258,7 @@ function loadProgressTab() {
                         }
                     }
                     
-                    // ✅ حفظ نوع الحصة إذا لم يكن مخزناً
+                    // حفظ نوع الحصة إذا لم يكن مخزناً
                     const lessonIndex = studentLessons.findIndex(l => l.id === log.lessonId);
                     if (lessonIndex !== -1) {
                         const historyLogIndex = studentLessons[lessonIndex].historyLog.findIndex(
@@ -287,7 +278,7 @@ function loadProgressTab() {
                 }
             }
 
-            // ✅ إضافة السجل للقائمة النهائية
+            // إضافة السجل للقائمة النهائية
             finalTimeline.push({
                 title: log.title,
                 lessonStatus: displayStatus,
@@ -384,7 +375,7 @@ function loadProgressTab() {
         `;
     }).join('');
 
-    // ✅ إضافة ملخص الدرس الحالي إذا كان موجوداً
+    // إضافة ملخص الدرس الحالي إذا كان موجوداً
     if (currentActiveLesson) {
         tbody.innerHTML += `
             <tr style="background-color:#f8f9fa; border-top:3px double #ccc; color:#666; font-weight:bold;">
@@ -521,10 +512,8 @@ function deleteAdminEvent(id) {
 }
 
 // ============================================
-// الدوال الأساسية (التشخيص، الخطة، الدروس) - مستعادة بالكامل
-// ============================================
-
 // 1. التشخيص
+// ============================================
 function loadDiagnosticTab() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const assignedTest = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic');
@@ -569,7 +558,9 @@ function loadDiagnosticTab() {
     }
 }
 
+// ============================================
 // 2. الخطة التربوية
+// ============================================
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
     const wordModel = document.querySelector('.iep-word-model');
@@ -655,7 +646,9 @@ function loadIEPTab() {
     if(topPrintBtn) topPrintBtn.setAttribute('onclick', 'window.print()');
 }
 
+// ============================================
 // 3. الدروس
+// ============================================
 function loadLessonsTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     let myList = studentLessons.filter(l => l.studentId == currentStudentId);
@@ -673,4 +666,12 @@ function loadLessonsTab() {
         const isLockedForStudent = !prevCompleted;
         let statusBadge = '', cardStyle = '';
         
-        if (l
+        if (l.status === 'completed') { 
+            statusBadge = '<span class="badge badge-success">✅ مكتمل</span>'; 
+            cardStyle = 'border-right: 5px solid #28a745;'; 
+        } else if (l.status === 'accelerated') { 
+            statusBadge = '<span class="badge badge-warning" style="background:#ffc107; color:#000;">⚡ مسرع (تفوق)</span>'; 
+            cardStyle = 'border-right: 5px solid #ffc107; background:#fffbf0;'; 
+        } else if (isLockedForStudent) { 
+            statusBadge = '<span class="badge badge-secondary">🔒 مغلق</span>'; 
+            cardStyle = 'border-right: 5px solid #6c757d

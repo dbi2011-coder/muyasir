@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: نظام التقدم الأكاديمي (نظام الأرشفة التاريخية - Frozen History)
+// الوصف: نظام التقدم الأكاديمي (دعم الاستبدال + تسمية الغياب باسم الدرس)
 // ============================================
 
 let currentStudentId = null;
@@ -60,63 +60,63 @@ function switchSection(sectionId) {
 }
 
 // ============================================
-// 🔥 1. محرك سجل التقدم (مع الأرشفة التاريخية)
+// 🔥 1. محرك سجل التقدم (مع الأرشفة والاستبدال)
 // ============================================
 
-// دالة مساعدة: تحويل الغياب المحسوب إلى سجلات دائمة
+// دالة مساعدة: تحويل الغياب المحسوب إلى سجلات دائمة (مع اسم الدرس)
 function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDate) {
-    if (!planStartDate) return;
+    if (!planStartDate) return myEvents;
     
     const today = new Date();
-    today.setHours(23, 59, 59, 999); // نهاية اليوم
+    today.setHours(23, 59, 59, 999);
     const dayMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     
     let newEvents = [];
     let hasChanges = false;
 
-    // نفحص من بداية الخطة حتى "أمس" (لأن اليوم ما زال جارياً)
+    // تحديد الدرس المعلق الحالي (الذي يجب أن يأخذه الطالب)
+    // نستخدمه لتسمية الغياب باسم الدرس بدلاً من عبارة عامة
+    let pendingLesson = myList.find(l => l.status === 'pending');
+    let lessonTitleForAbsence = pendingLesson ? pendingLesson.title : 'درس غير محدد';
+
     for (let d = new Date(planStartDate); d < today; d.setDate(d.getDate() + 1)) {
-        // تجاوز التواريخ المستقبلية أو اليوم الحالي في الأرشفة (نتركها للعرض المباشر)
+        // تجاوز اليوم الحالي
         if (d.toDateString() === new Date().toDateString()) continue;
 
         const dateStr = d.toDateString();
         
-        // 1. هل يوجد سجل بالفعل لهذا اليوم؟ (درس أو حدث أو غياب مسجل سابقاً)
+        // 1. هل يوجد سجل بالفعل؟
         const hasLesson = myList.some(l => l.historyLog && l.historyLog.some(log => new Date(log.date).toDateString() === dateStr));
         const hasEvent = myEvents.some(e => new Date(e.date).toDateString() === dateStr);
         
-        if (hasLesson || hasEvent) continue; // اليوم مغطى، لا نفعل شيئاً
+        if (hasLesson || hasEvent) continue;
 
-        // 2. هل كان هذا اليوم مجدولاً؟
+        // 2. هل كان مجدولاً؟
         const dayKey = dayMap[d.getDay()];
         const isScheduledDay = teacherSchedule.some(s => 
             s.day === dayKey && 
             (s.students && s.students.includes(currentStudentId))
         );
 
-        // 3. إذا كان مجدولاً ولم يسجل فيه شيء => ننشئ سجل غياب دائم
+        // 3. أرشفة الغياب
         if (isScheduledDay) {
-            // نبحث عن الدرس الذي كان مفترضاً أن يكون (أقرب درس معلق)
-            let pendingLesson = myList.find(l => l.status === 'pending');
-            
             newEvents.push({
-                id: Date.now() + Math.random(), // ID فريد
+                id: Date.now() + Math.random(),
                 studentId: currentStudentId,
                 date: new Date(d).toISOString(),
-                type: 'auto-absence', // نوع خاص للغياب المؤرشف
-                note: pendingLesson ? `غياب عن: ${pendingLesson.title}` : 'غياب عن درس مجدول'
+                type: 'auto-absence',
+                title: lessonTitleForAbsence, // 🔥 هنا نضع اسم الدرس بدلاً من "حدث"
+                note: `غياب عن درس: ${lessonTitleForAbsence}`
             });
             hasChanges = true;
         }
     }
 
-    // حفظ السجلات الجديدة في LocalStorage
     if (hasChanges) {
         let allEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]');
         allEvents = [...allEvents, ...newEvents];
         localStorage.setItem('studentEvents', JSON.stringify(allEvents));
-        console.log(`تم أرشفة ${newEvents.length} أيام غياب تاريخية.`);
-        return allEvents.filter(e => e.studentId == currentStudentId); // إرجاع القائمة المحدثة
+        return allEvents.filter(e => e.studentId == currentStudentId);
     }
     
     return myEvents;
@@ -124,7 +124,7 @@ function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDa
 
 function loadProgressTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    let adminEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]'); // سنحدثها
+    let adminEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]');
     const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
 
     let myList = studentLessons.filter(l => l.studentId == currentStudentId);
@@ -136,19 +136,16 @@ function loadProgressTab() {
         return;
     }
 
-    // ترتيب الدروس وتحديد البداية
     myList.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
     const sortedByDate = [...myList].sort((a, b) => new Date(a.assignedDate) - new Date(b.assignedDate));
     let planStartDate = sortedByDate.length > 0 ? new Date(sortedByDate[0].assignedDate) : new Date();
 
-    // 🔥 خطوة الأرشفة: تحويل الفراغات الماضية إلى سجلات ثابتة 🔥
-    // نمرر القائمة الحالية، وإذا حدث تحديث نستخدم القائمة الجديدة
+    // أرشفة الفراغات
     let myEvents = syncMissingDaysToArchive(myList, adminEvents.filter(e => e.studentId == currentStudentId), teacherSchedule, planStartDate);
 
-    // الآن نبدأ العرض بناءً على البيانات (التي قد تشمل الآن غيابات مؤرشفة)
     let rawLogs = [];
 
-    // أ) تفكيك سجلات الدروس
+    // أ) الدروس
     myList.forEach(l => {
         if (l.historyLog) {
             l.historyLog.forEach(log => {
@@ -159,20 +156,21 @@ function loadProgressTab() {
                     status: log.status,
                     title: l.title,
                     lessonId: l.id,
-                    cachedType: log.cachedSessionType || null // 🔥 نعتمد على النوع المخزن
+                    cachedType: log.cachedSessionType || null
                 });
             });
         }
     });
 
-    // ب) تفكيك الأحداث (بما فيها الغياب المؤرشف)
+    // ب) الأحداث (والغياب المؤرشف)
     myEvents.forEach(e => {
         rawLogs.push({
             dateObj: new Date(e.date),
             dateStr: new Date(e.date).toDateString(),
             type: e.type === 'auto-absence' ? 'auto-absence' : 'event',
             status: e.type,
-            title: e.type === 'auto-absence' ? 'درس لم ينفذ' : 'حدث إداري',
+            // 🔥 هنا نستخدم العنوان المخزن (اسم الدرس) للغياب التلقائي
+            title: e.title || (e.type === 'auto-absence' ? 'درس غير محدد' : 'حدث إداري'),
             id: e.id,
             note: e.note
         });
@@ -181,34 +179,21 @@ function loadProgressTab() {
     let finalTimeline = [];
     let balance = 0;
     
-    // لضمان التسلسل الصحيح، نرتب كل السجلات زمنياً
     rawLogs.sort((a, b) => a.dateObj - b.dateObj);
 
-    // حلقة العرض (نعرض ما هو موجود في السجلات فقط)
-    // لم نعد بحاجة لحلقة days For Loop المعقدة لأن "syncMissingDaysToArchive" قامت بالعمل الصعب وحفظته
-    
-    // نحتاج فقط لمعرفة اليوم الحالي لعرض "الدرس القادم"
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
-
-    // تجميع السجلات حسب التاريخ (لدمج عمليات اليوم الواحد)
-    let datesProcessed = [];
-    
     rawLogs.forEach(log => {
-        // تنظيف العرض: إذا وجد إنجاز في نفس اليوم، نتجاهل "بدأ"
+        // تنظيف التكرار في نفس اليوم
         if (log.status === 'started' || log.status === 'extension') {
-            // هل يوجد completed لنفس الدرس في نفس اليوم؟
             const hasCompletion = rawLogs.some(l => 
                 l.dateStr === log.dateStr && 
                 l.lessonId === log.lessonId && 
                 (l.status === 'completed' || l.status === 'accelerated')
             );
-            if (hasCompletion) return; // تخطي هذا السجل
+            if (hasCompletion) return;
         }
 
         let displayStatus = '', displayType = '', rowClass = '', studentState = '';
         
-        // --- 1. أحداث إدارية وغياب مؤرشف ---
         if (log.type === 'event' || log.type === 'auto-absence') {
             if (log.status === 'vacation') { 
                 studentState = 'إجازة'; displayStatus = 'توقف مؤقت'; rowClass = 'bg-info-light'; 
@@ -217,12 +202,10 @@ function loadProgressTab() {
             } else if (log.type === 'auto-absence' || log.status === 'absence') {
                 studentState = '<span class="text-danger font-weight-bold">غائب</span>';
                 displayStatus = 'لم ينفذ'; 
-                displayType = 'أساسية'; // الغياب المؤرشف دائماً يخصم أساسي
+                displayType = 'أساسية';
                 rowClass = 'bg-danger-light';
                 balance--;
             }
-        
-        // --- 2. سجلات الدروس ---
         } else {
             studentState = 'حاضر';
             if (log.status === 'started') displayStatus = 'بدأ';
@@ -230,14 +213,11 @@ function loadProgressTab() {
             else if (log.status === 'completed') { displayStatus = '<span class="text-success font-weight-bold">✔ متحقق</span>'; rowClass = 'bg-success-light'; }
             else if (log.status === 'accelerated') { displayStatus = '<span class="text-warning font-weight-bold">⚡ تسريع</span>'; rowClass = 'bg-warning-light'; }
 
-            // 🔥 منطق نوع الحصة (المجمد) 🔥
             if (log.cachedType) {
-                // إذا كان محفوظاً في السجل، نستخدمه كما هو (لا نعيد الحساب)
                 if (log.cachedType === 'basic') displayType = 'أساسية';
                 else if (log.cachedType === 'compensation') { displayType = '<span class="text-primary font-weight-bold">تعويضية</span>'; balance++; }
                 else if (log.cachedType === 'additional') { displayType = 'إضافية'; balance++; }
             } else {
-                // fallback للبيانات القديمة جداً
                 displayType = 'أساسية'; 
             }
         }
@@ -256,10 +236,7 @@ function loadProgressTab() {
         });
     });
 
-    // بناء الجدول
-    const tbodyContainer = document.getElementById('progressTableBody');
-    if(!tbodyContainer) return; // حماية
-
+    // العرض
     let rowsHtml = '';
     if (finalTimeline.length === 0) {
         rowsHtml = '<tr><td colspan="6" class="text-center p-4">لا توجد سجلات.</td></tr>';
@@ -267,9 +244,8 @@ function loadProgressTab() {
         rowsHtml = finalTimeline.map(item => {
             let actionsHtml = '-';
             if (item.actions) {
-                // نسمح بحذف الغياب التلقائي أيضاً إذا أراد المعلم تعديله
                 actionsHtml = `<button class="btn-icon text-danger" onclick="deleteAdminEvent(${item.actions})">🗑️</button>`;
-                if (item.rowClass !== 'bg-danger-light') { // تعديل للملاحظات اليدوية فقط
+                if (item.rowClass !== 'bg-danger-light') {
                     actionsHtml = `<button class="btn-icon text-primary" onclick="editAdminEvent(${item.actions})">✏️</button>` + actionsHtml;
                 }
             }
@@ -282,7 +258,6 @@ function loadProgressTab() {
         }).join('');
     }
 
-    // عرض الدرس القادم
     const activeLesson = studentLessons.find(l => l.studentId == currentStudentId && l.status !== 'completed' && l.status !== 'accelerated');
     if (activeLesson) {
         rowsHtml += `
@@ -297,9 +272,6 @@ function loadProgressTab() {
         `;
     }
 
-    // تنبيه بسيط
-    const alertsHtml = `<div class="alert alert-info" style="font-size:0.9rem; padding:5px 10px; margin-bottom:15px;">💡 <strong>معلومة:</strong> سجلات الغياب السابقة تم حفظها ولن تتأثر بتغيير الجدول مستقبلاً.</div>`;
-
     container.innerHTML = `
         <div class="content-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <div>
@@ -310,7 +282,6 @@ function loadProgressTab() {
                 <i class="fas fa-plus-circle"></i> تسجيل حدث
             </button>
         </div>
-        ${alertsHtml}
         <div class="table-responsive">
             <table class="word-table">
                 <thead>
@@ -357,7 +328,7 @@ function injectWordTableStyles() {
 }
 
 // ============================================
-// 🛠️ إدارة الأحداث (إضافة / تعديل / حذف)
+// 🛠️ إدارة الأحداث (استبدال القديم وحفظ الجديد)
 // ============================================
 function injectAdminEventModal() {
     if (document.getElementById('adminEventModal')) return;
@@ -414,28 +385,32 @@ function editAdminEvent(id) {
 
 function saveAdminEvent() {
     const type = document.getElementById('manualEventType').value;
-    const date = document.getElementById('manualEventDate').value;
+    const dateInput = document.getElementById('manualEventDate').value;
     const note = document.getElementById('manualEventNote').value;
-    if (!date) { alert('يرجى اختيار التاريخ'); return; }
-
-    let events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
     
-    if (editingEventId) {
-        const idx = events.findIndex(e => e.id == editingEventId);
-        if (idx !== -1) {
-            events[idx].type = type;
-            events[idx].date = new Date(date).toISOString();
-            events[idx].note = note;
-        }
-    } else {
-        events.push({
-            id: Date.now(),
-            studentId: currentStudentId,
-            date: new Date(date).toISOString(),
-            type: type,
-            note: note
-        });
-    }
+    if (!dateInput) { alert('يرجى اختيار التاريخ'); return; }
+
+    const targetDateStr = new Date(dateInput).toDateString();
+    let events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
+
+    // 🔥 منطق الاستبدال: حذف أي حدث (تلقائي أو يدوي) في نفس التاريخ للطالب 🔥
+    events = events.filter(e => {
+        // نبقي الأحداث التي لطلاب آخرين
+        if (e.studentId != currentStudentId) return true;
+        // نبقي الأحداث التي في تواريخ مختلفة
+        if (new Date(e.date).toDateString() !== targetDateStr) return true;
+        // نحذف (نستبدل) أي حدث لهذا الطالب في هذا التاريخ
+        return false;
+    });
+    
+    // إضافة الحدث الجديد
+    events.push({
+        id: Date.now(),
+        studentId: currentStudentId,
+        date: new Date(dateInput).toISOString(),
+        type: type,
+        note: note
+    });
 
     localStorage.setItem('studentEvents', JSON.stringify(events));
     closeAdminEventModal();
@@ -499,7 +474,7 @@ function loadDiagnosticTab() {
     }
 }
 
-// 2. الخطة التربوية (تم التعديل هنا: استخدام الأيام العربية)
+// 2. الخطة التربوية
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
     const wordModel = document.querySelector('.iep-word-model');

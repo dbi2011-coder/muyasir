@@ -60,63 +60,57 @@ function switchSection(sectionId) {
 }
 
 // ============================================
-// 🔥 1. محرك سجل التقدم الذكي (المحدث والكامل)
+// 🔥 1. محرك سجل التقدم الذكي (The Smart Progress Engine)
 // ============================================
 function loadProgressTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const adminEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]');
     const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
 
+    // تصفية بيانات الطالب الحالي
+    // ملاحظة: استخدام == يسمح بمقارنة النص بالرقم في حال اختلاف النوع
     let myList = studentLessons.filter(l => l.studentId == currentStudentId);
     let myEvents = adminEvents.filter(e => e.studentId == currentStudentId);
 
-    // 1. تحديد تاريخ بداية الخطة (نقطة الصفر)
-    let planStartDate = null;
-    if (myList.length > 0) {
-        const sortedByCreation = [...myList].sort((a, b) => new Date(a.assignedDate) - new Date(b.assignedDate));
-        planStartDate = new Date(sortedByCreation[0].assignedDate);
-    }
-
-    if (!planStartDate) {
-        document.getElementById('section-progress').innerHTML = `
+    const container = document.getElementById('section-progress');
+    
+    // فحص 1: هل توجد خطة أصلاً؟
+    if (myList.length === 0) {
+        container.innerHTML = `
             <div class="content-header"><h1>سجل المتابعة اليومي</h1></div>
-            <div class="empty-state"><h3>لم تبدأ الخطة بعد</h3><p>يجب إكمال التشخيص وتوليد الدروس لبدء الحساب.</p></div>`;
+            <div class="empty-state">
+                <h3>لم تبدأ الخطة بعد</h3>
+                <p>يجب إكمال التشخيص وتوليد الدروس أولاً لتفعيل السجل.</p>
+            </div>`;
         return;
     }
 
-    // 2. تجهيز البيانات الخام مع تحسينات
+    // فحص 2: هل الطالب مضاف للجدول الدراسي؟
+    // هذا ضروري لحساب الغياب التلقائي
+    const isStudentScheduled = teacherSchedule.some(s => 
+        s.studentId == currentStudentId || (s.students && s.students.includes(currentStudentId))
+    );
+
+    // ترتيب الدروس
+    myList.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+
+    // تحديد تاريخ البداية
+    // نأخذ تاريخ أول درس تم تعيينه، أو تاريخ اليوم إذا كان غير موجود
+    let planStartDate = null;
+    const sortedByDate = [...myList].sort((a, b) => new Date(a.assignedDate) - new Date(b.assignedDate));
+    if (sortedByDate.length > 0) planStartDate = new Date(sortedByDate[0].assignedDate);
+    
+    if (!planStartDate || isNaN(planStartDate.getTime())) {
+        planStartDate = new Date(); // fallback
+    }
+
+    // تجهيز البيانات الخام
     let rawLogs = [];
 
-    // أ) تفكيك سجلات الدروس مع تحسين المنطق
+    // أ) سجلات الدروس (التاريخية)
     myList.forEach(l => {
         if (l.historyLog && l.historyLog.length > 0) {
-            const sortedLogs = [...l.historyLog].sort((a, b) => new Date(a.date) - new Date(b.date));
-            const lessonLogs = [];
-            let lessonStarted = false;
-            
-            for (const log of sortedLogs) {
-                if (log.status === 'started') {
-                    if (!lessonStarted) {
-                        lessonLogs.push(log);
-                        lessonStarted = true;
-                    }
-                } else if (log.status === 'completed' || log.status === 'accelerated') {
-                    lessonLogs.push(log);
-                    break;
-                } else if (log.status === 'extension') {
-                    const hasCompletionAfterThis = sortedLogs.some(
-                        laterLog => new Date(laterLog.date) > new Date(log.date) && 
-                        (laterLog.status === 'completed' || laterLog.status === 'accelerated')
-                    );
-                    if (!hasCompletionAfterThis) {
-                        lessonLogs.push(log);
-                    }
-                } else {
-                    lessonLogs.push(log);
-                }
-            }
-            
-            lessonLogs.forEach(log => {
+            l.historyLog.forEach(log => {
                 rawLogs.push({
                     dateObj: new Date(log.date),
                     dateStr: new Date(log.date).toDateString(),
@@ -130,7 +124,7 @@ function loadProgressTab() {
         }
     });
 
-    // ب) تفكيك الأحداث الإدارية
+    // ب) الأحداث الإدارية
     myEvents.forEach(e => {
         rawLogs.push({
             dateObj: new Date(e.date),
@@ -143,200 +137,134 @@ function loadProgressTab() {
         });
     });
 
-    // 3. المعالجة الزمنية اليومية
     let finalTimeline = [];
     let balance = 0;
     const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    
     const dayMap = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
-    // الحصول على الدرس الحالي النشط
-    const activeLessons = myList.filter(l => l.status !== 'completed' && l.status !== 'accelerated');
-    const currentActiveLesson = activeLessons.length > 0 ? activeLessons[0] : null;
-
-    // حلقة التكرار الرئيسية (يوم بيوم)
+    // الحلقة الزمنية
     for (let d = new Date(planStartDate); d <= today; d.setDate(d.getDate() + 1)) {
         const currentDateStr = d.toDateString();
         const dayKey = dayMap[d.getDay()];
 
-        // التحقق إذا كان اليوم مجدولاً
+        // هل هذا اليوم موجود في جدول الطالب؟
         const isScheduledDay = teacherSchedule.some(s => 
             s.day === dayKey && 
             (s.studentId == currentStudentId || (s.students && s.students.includes(currentStudentId)))
         );
 
-        // جلب أحداث اليوم
         let daysLogs = rawLogs.filter(log => log.dateStr === currentDateStr);
 
-        // التحقق من أنواع الأحداث في اليوم
-        const hasEventToday = daysLogs.some(l => l.type === 'event');
-
-        // منطق الغياب التلقائي
-        if (daysLogs.length === 0 && isScheduledDay && !hasEventToday) {
-            const previousBalance = balance;
-            balance--;
-            
-            finalTimeline.push({
-                title: currentActiveLesson ? currentActiveLesson.title : 'حصة مجدولة',
-                lessonStatus: 'لم ينفذ',
-                studentStatus: '<span class="text-danger font-weight-bold">غائب</span>',
-                sessionType: 'أساسية',
-                date: d.toLocaleDateString('ar-SA'),
-                rawDate: new Date(d),
-                balanceSnapshot: balance,
-                actions: null,
-                note: 'غياب تلقائي (لم يسجل حضور)',
-                rowClass: 'bg-danger-light'
+        // تنظيف: إذا تم الإنجاز، نحذف "بدأ" و "تمديد" لنفس الدرس
+        const completedIdsToday = daysLogs.filter(l => l.status === 'completed' || l.status === 'accelerated').map(l => l.lessonId);
+        if (completedIdsToday.length > 0) {
+            daysLogs = daysLogs.filter(l => {
+                if ((l.status === 'started' || l.status === 'extension') && completedIdsToday.includes(l.lessonId)) return false;
+                return true;
             });
-            continue;
         }
 
-        // معالجة السجلات الفعلية لهذا اليوم
-        daysLogs.forEach(log => {
-            let displayStatus = '';
-            let displayType = '';
-            let rowClass = '';
-            let studentState = '';
-            const previousBalance = balance;
+        // كشف الغياب التلقائي (فقط إذا كان الطالب في الجدول)
+        if (daysLogs.length === 0 && isScheduledDay) {
+            let activeLessonAtThatTime = myList.find(l => {
+                if (l.status === 'pending') return true;
+                const completionDate = l.completedDate ? new Date(l.completedDate) : new Date();
+                return completionDate > d; 
+            });
 
-            // حالة 1: حدث إداري
-            if (log.type === 'event') {
-                if (log.status === 'vacation') {
-                    studentState = 'إجازة'; 
-                    displayStatus = 'توقف مؤقت'; 
-                    rowClass = 'bg-info-light';
-                } else if (log.status === 'excused') {
-                    studentState = 'معفى'; 
-                    displayStatus = 'مؤجل'; 
-                    rowClass = 'bg-warning-light';
-                    balance--;
-                }
+            daysLogs.push({
+                dateObj: new Date(d),
+                type: 'auto-absence',
+                title: activeLessonAtThatTime ? activeLessonAtThatTime.title : 'درس مجدول',
+                customLessonStatus: 'لم ينفذ',
+                customStudentStatus: 'غائب',
+                customSessionType: 'أساسية'
+            });
+        }
+
+        // معالجة السجلات وحساب الرصيد
+        daysLogs.forEach(log => {
+            let displayStatus = '', displayType = '', rowClass = '', studentState = '';
             
-            // حالة 2: غياب مسجل
-            } else if (log.status === 'absence') {
+            if (log.type === 'event') {
+                if (log.status === 'vacation') { studentState = 'إجازة'; displayStatus = 'توقف مؤقت'; rowClass = 'bg-info-light'; }
+                else if (log.status === 'excused') { studentState = 'معفى'; displayStatus = 'مؤجل'; rowClass = 'bg-warning-light'; balance--; }
+            } else if (log.type === 'auto-absence' || log.status === 'absence') {
                 studentState = '<span class="text-danger font-weight-bold">غائب</span>';
-                displayStatus = 'لم يؤخذ';
+                displayStatus = 'لم ينفذ';
+                displayType = 'أساسية';
                 rowClass = 'bg-danger-light';
                 balance--;
-                
-            // حالة 3: حضور درس
             } else {
                 studentState = 'حاضر';
-                
-                if (log.status === 'started') {
-                    displayStatus = 'بدأ';
-                } else if (log.status === 'extension') {
-                    displayStatus = 'تمديد';
-                } else if (log.status === 'completed') { 
-                    displayStatus = '<span class="text-success font-weight-bold">✔ متحقق</span>'; 
-                    rowClass = 'bg-success-light'; 
-                } else if (log.status === 'accelerated') { 
-                    displayStatus = '<span class="text-warning font-weight-bold">⚡ تسريع</span>'; 
-                    rowClass = 'bg-warning-light'; 
-                }
+                if (log.status === 'started') displayStatus = 'بدأ';
+                else if (log.status === 'extension') displayStatus = 'تمديد';
+                else if (log.status === 'completed') { displayStatus = '<span class="text-success font-weight-bold">✔ متحقق</span>'; rowClass = 'bg-success-light'; }
+                else if (log.status === 'accelerated') { displayStatus = '<span class="text-warning font-weight-bold">⚡ تسريع</span>'; rowClass = 'bg-warning-light'; }
 
-                // تحديد نوع الحصة
                 if (log.cachedType) {
                     if (log.cachedType === 'basic') displayType = 'أساسية';
-                    else if (log.cachedType === 'compensation') { 
-                        displayType = '<span class="text-primary font-weight-bold">تعويضية</span>'; 
-                        balance++; 
-                    }
-                    else if (log.cachedType === 'additional') { 
-                        displayType = 'إضافية'; 
-                        balance++; 
-                    }
+                    else if (log.cachedType === 'compensation') { displayType = '<span class="text-primary font-weight-bold">تعويضية</span>'; balance++; }
+                    else if (log.cachedType === 'additional') { displayType = 'إضافية'; balance++; }
                 } else {
-                    if (isScheduledDay) {
-                        displayType = 'أساسية';
-                    } else {
-                        if (previousBalance < 0) {
-                            displayType = '<span class="text-primary font-weight-bold">تعويضية</span>';
-                            balance++;
-                        } else {
-                            displayType = 'إضافية';
-                            balance++;
-                        }
-                    }
-                    
-                    // حفظ نوع الحصة إذا لم يكن مخزناً
-                    const lessonIndex = studentLessons.findIndex(l => l.id === log.lessonId);
-                    if (lessonIndex !== -1) {
-                        const historyLogIndex = studentLessons[lessonIndex].historyLog.findIndex(
-                            h => new Date(h.date).toDateString() === log.dateStr && h.status === log.status
-                        );
-                        if (historyLogIndex !== -1) {
-                            if (isScheduledDay) {
-                                studentLessons[lessonIndex].historyLog[historyLogIndex].cachedSessionType = 'basic';
-                            } else if (previousBalance < 0) {
-                                studentLessons[lessonIndex].historyLog[historyLogIndex].cachedSessionType = 'compensation';
-                            } else {
-                                studentLessons[lessonIndex].historyLog[historyLogIndex].cachedSessionType = 'additional';
-                            }
-                            localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
-                        }
+                    if (isScheduledDay) displayType = 'أساسية';
+                    else {
+                        if (balance < 0) { displayType = '<span class="text-primary font-weight-bold">تعويضية</span>'; balance++; }
+                        else { displayType = 'إضافية'; balance++; }
                     }
                 }
             }
 
-            // إضافة السجل للقائمة النهائية
             finalTimeline.push({
                 title: log.title,
                 lessonStatus: displayStatus,
                 studentStatus: studentState,
-                sessionType: displayType,
+                sessionType: displayType || '-',
                 date: d.toLocaleDateString('ar-SA'),
-                rawDate: new Date(d),
+                rawDate: d,
                 balanceSnapshot: balance,
                 actions: log.type === 'event' ? log.id : null,
-                note: log.note || (log.type === 'lesson' ? '' : log.title),
+                note: log.note,
                 rowClass: rowClass
             });
         });
     }
 
-    // 4. بناء الجدول
     finalTimeline.sort((a, b) => a.rawDate - b.rawDate);
 
-    const container = document.getElementById('section-progress');
+    // بناء الواجهة
+    let alertsHtml = '';
+    if (!isStudentScheduled) {
+        alertsHtml = `
+            <div class="alert alert-warning" style="margin-bottom:15px; border:1px solid #ffeeba; background-color:#fff3cd; color:#856404; padding:10px; border-radius:5px;">
+                <strong>⚠️ تنبيه:</strong> هذا الطالب غير مضاف للجدول الدراسي الأسبوعي (Teacher Schedule).<br>
+                لن يتم حساب "الغياب التلقائي" حتى تقوم بإضافته للحصص (الأحد، الاثنين...) في صفحة الجدول.
+            </div>`;
+    }
+
     container.innerHTML = `
         <div class="content-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <div>
                 <h2>سجل المتابعة اليومي</h2>
-                <span class="badge ${balance < 0 ? 'badge-danger' : 'badge-success'}">
-                    الرصيد الحالي: ${balance > 0 ? '+' + balance : balance} حصة
-                </span>
-                <small class="text-muted" style="display:block; margin-top:5px;">
-                    ${balance < 0 ? 'عليه دين' : balance > 0 ? 'لديه رصيد إضافي' : 'متوازن'}
-                </small>
+                <span class="badge ${balance < 0 ? 'badge-danger' : 'badge-success'}">الرصيد الحالي: ${balance > 0 ? '+' + balance : balance} حصة</span>
             </div>
             <button class="btn btn-primary" onclick="openAdminEventModal()">
-                <i class="fas fa-plus-circle"></i> تسجيل حدث (إعفاء/إجازة)
+                <i class="fas fa-plus-circle"></i> تسجيل حدث
             </button>
         </div>
-        
-        <div class="card mb-4">
-            <div class="card-body">
-                <h5 class="card-title">📊 ملخص الرصيد</h5>
-                <p class="card-text">
-                    <strong>قاعدة الحساب:</strong><br>
-                    • الحصة الأساسية في يومها: لا تغير الرصيد<br>
-                    • الغياب في يوم مجدول: -1 (دين)<br>
-                    • الحضور في يوم غير مجدول مع وجود دين: +1 (تعويضية)<br>
-                    • الحضور في يوم غير مجدول بدون دين: +1 (إضافية)
-                </p>
-            </div>
-        </div>
-        
+        ${alertsHtml}
         <div class="table-responsive">
             <table class="word-table">
                 <thead>
                     <tr>
-                        <th style="width: 25%;">البيان</th>
+                        <th style="width: 30%;">البيان</th>
                         <th style="width: 15%;">حالة الدرس</th>
-                        <th style="width: 15%;">حالة الطالب</th>
+                        <th style="width: 15%;">حالة الطالب (الرصيد)</th>
                         <th style="width: 15%;">نوع الحصة</th>
                         <th style="width: 15%;">التاريخ</th>
-                        <th style="width: 15%;">الرصيد بعد</th>
+                        <th style="width: 10%;">إجراءات</th>
                     </tr>
                 </thead>
                 <tbody id="progressTableBody"></tbody>
@@ -345,49 +273,41 @@ function loadProgressTab() {
     `;
 
     const tbody = document.getElementById('progressTableBody');
+    let rowsHtml = '';
+
     if (finalTimeline.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4">لا توجد سجلات.</td></tr>';
-        return;
+        rowsHtml += '<tr><td colspan="6" class="text-center p-4 text-muted">لا توجد سجلات سابقة (غياب أو حضور) حتى الآن.</td></tr>';
+    } else {
+        rowsHtml += finalTimeline.map(item => {
+            let actionsHtml = '-';
+            if (item.actions) {
+                actionsHtml = `<button class="btn-icon text-primary" onclick="editAdminEvent(${item.actions})">✏️</button><button class="btn-icon text-danger" onclick="deleteAdminEvent(${item.actions})">🗑️</button>`;
+            }
+            let statusWithBalance = item.studentStatus;
+            if (item.studentStatus.includes('غائب') || item.studentStatus.includes('معفى')) {
+                 statusWithBalance += ` <br><span style="font-size:0.75rem; color:${item.balanceSnapshot < 0 ? 'red' : 'green'};">(${item.balanceSnapshot > 0 ? '+' : ''}${item.balanceSnapshot})</span>`;
+            }
+            let noteHtml = item.note ? `<br><small class="text-muted">[${item.note}]</small>` : '';
+            return `<tr class="${item.rowClass || ''}"><td><strong>${item.title}</strong>${noteHtml}</td><td class="text-center">${item.lessonStatus}</td><td class="text-center">${statusWithBalance}</td><td class="text-center">${item.sessionType}</td><td class="text-center">${item.date}</td><td class="text-center">${actionsHtml}</td></tr>`;
+        }).join('');
     }
 
-    tbody.innerHTML = finalTimeline.map(item => {
-        let actionsHtml = '-';
-        if (item.actions) {
-            actionsHtml = `
-                <button class="btn-icon text-primary" onclick="editAdminEvent(${item.actions})">✏️</button>
-                <button class="btn-icon text-danger" onclick="deleteAdminEvent(${item.actions})">🗑️</button>
-            `;
-        }
-
-        let noteHtml = item.note ? `<br><small class="text-muted">[${item.note}]</small>` : '';
-        let balanceColor = item.balanceSnapshot < 0 ? 'text-danger' : item.balanceSnapshot > 0 ? 'text-success' : 'text-muted';
-        let balanceSign = item.balanceSnapshot > 0 ? '+' : '';
-
-        return `
-            <tr class="${item.rowClass || ''}">
-                <td><strong>${item.title}</strong>${noteHtml}</td>
-                <td class="text-center">${item.lessonStatus}</td>
-                <td class="text-center">${item.studentStatus}</td>
-                <td class="text-center">${item.sessionType || '-'}</td>
-                <td class="text-center">${item.date}</td>
-                <td class="text-center ${balanceColor} font-weight-bold">${balanceSign}${item.balanceSnapshot}</td>
-            </tr>
-        `;
-    }).join('');
-
-    // إضافة ملخص الدرس الحالي إذا كان موجوداً
-    if (currentActiveLesson) {
-        tbody.innerHTML += `
-            <tr style="background-color:#f8f9fa; border-top:3px double #ccc; color:#666; font-weight:bold;">
-                <td>${currentActiveLesson.title} <small>(الدرس الحالي)</small></td>
-                <td class="text-center">قيد التنفيذ</td>
+    // عرض الدرس القادم/الحالي دائماً في الأسفل
+    const activeLesson = studentLessons.find(l => l.studentId == currentStudentId && l.status !== 'completed' && l.status !== 'accelerated');
+    if (activeLesson) {
+        rowsHtml += `
+            <tr style="background-color:#f8f9fa; border-top:2px dashed #ccc; color:#666;">
+                <td>${activeLesson.title} <small>(الدرس القادم/الحالي)</small></td>
+                <td class="text-center">قيد الانتظار</td>
                 <td class="text-center">-</td>
-                <td class="text-center">-</td>
+                <td class="text-center">قادم</td>
                 <td class="text-center">-</td>
                 <td class="text-center">-</td>
             </tr>
         `;
     }
+
+    tbody.innerHTML = rowsHtml;
 }
 
 // ============================================
@@ -512,8 +432,10 @@ function deleteAdminEvent(id) {
 }
 
 // ============================================
-// 1. التشخيص
+// الدوال الأساسية (التشخيص، الخطة، الدروس) - مستعادة بالكامل
 // ============================================
+
+// 1. التشخيص
 function loadDiagnosticTab() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const assignedTest = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic');
@@ -558,9 +480,7 @@ function loadDiagnosticTab() {
     }
 }
 
-// ============================================
 // 2. الخطة التربوية
-// ============================================
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
     const wordModel = document.querySelector('.iep-word-model');
@@ -646,9 +566,7 @@ function loadIEPTab() {
     if(topPrintBtn) topPrintBtn.setAttribute('onclick', 'window.print()');
 }
 
-// ============================================
 // 3. الدروس
-// ============================================
 function loadLessonsTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     let myList = studentLessons.filter(l => l.studentId == currentStudentId);
@@ -666,19 +584,10 @@ function loadLessonsTab() {
         const isLockedForStudent = !prevCompleted;
         let statusBadge = '', cardStyle = '';
         
-        if (l.status === 'completed') { 
-            statusBadge = '<span class="badge badge-success">✅ مكتمل</span>'; 
-            cardStyle = 'border-right: 5px solid #28a745;'; 
-        } else if (l.status === 'accelerated') { 
-            statusBadge = '<span class="badge badge-warning" style="background:#ffc107; color:#000;">⚡ مسرع (تفوق)</span>'; 
-            cardStyle = 'border-right: 5px solid #ffc107; background:#fffbf0;'; 
-        } else if (isLockedForStudent) { 
-            statusBadge = '<span class="badge badge-secondary">🔒 مغلق</span>'; 
-            cardStyle = 'border-right: 5px solid #6c757d; opacity:0.8;'; 
-        } else { 
-            statusBadge = '<span class="badge badge-primary">🔓 نشط حالياً</span>'; 
-            cardStyle = 'border-right: 5px solid #007bff;'; 
-        }
+        if (l.status === 'completed') { statusBadge = '<span class="badge badge-success">✅ مكتمل</span>'; cardStyle = 'border-right: 5px solid #28a745;'; } 
+        else if (l.status === 'accelerated') { statusBadge = '<span class="badge badge-warning" style="background:#ffc107; color:#000;">⚡ مسرع (تفوق)</span>'; cardStyle = 'border-right: 5px solid #ffc107; background:#fffbf0;'; } 
+        else if (isLockedForStudent) { statusBadge = '<span class="badge badge-secondary">🔒 مغلق</span>'; cardStyle = 'border-right: 5px solid #6c757d; opacity:0.8;'; } 
+        else { statusBadge = '<span class="badge badge-primary">🔓 نشط حالياً</span>'; cardStyle = 'border-right: 5px solid #007bff;'; }
 
         let controls = (l.status === 'completed' || l.status === 'accelerated') ? 
             `<button class="btn btn-warning btn-sm" onclick="resetLesson(${l.id})">🔄 إعادة فتح (إلغاء)</button>` : 
@@ -704,37 +613,19 @@ function loadLessonsTab() {
     }).join('');
 }
 
-// ============================================
 // 4. الواجبات
-// ============================================
 function loadAssignmentsTab() {
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId == currentStudentId);
     const container = document.getElementById('studentAssignmentsGrid');
-    if (list.length === 0) { 
-        container.innerHTML = '<div class="empty-state"><h3>لا توجد واجبات.</h3></div>'; 
-        return; 
-    }
-    container.innerHTML = list.map(a => `
-        <div class="content-card">
-            <h4>${a.title}</h4>
-            <div class="content-meta">
-                <span>${a.dueDate || 'مفتوح'}</span>
-                <span class="badge ${a.status === 'completed' ? 'badge-success' : 'badge-primary'}">
-                    ${a.status === 'completed' ? 'مكتمل' : 'جديد'}
-                </span>
-            </div>
-            <button class="btn btn-sm btn-danger mt-2" onclick="deleteAssignment(${a.id})">حذف</button>
-        </div>
-    `).join('');
+    if (list.length === 0) { container.innerHTML = '<div class="empty-state"><h3>لا توجد واجبات.</h3></div>'; return; }
+    container.innerHTML = list.map(a => `<div class="content-card"><h4>${a.title}</h4><div class="content-meta"><span>${a.dueDate || 'مفتوح'}</span><span class="badge ${a.status === 'completed' ? 'badge-success' : 'badge-primary'}">${a.status === 'completed' ? 'مكتمل' : 'جديد'}</span></div><button class="btn btn-sm btn-danger mt-2" onclick="deleteAssignment(${a.id})">حذف</button></div>`).join('');
 }
 
 // ============================================
 // الدوال المساعدة العامة
 // ============================================
 
-function closeModal(id) { 
-    document.getElementById(id).classList.remove('show'); 
-}
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
 function moveLesson(lessonId, direction) {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
@@ -808,12 +699,8 @@ function autoGenerateLessons() {
                         if(!newLessons.find(x => x.originalLessonId == m.id)) {
                             newLessons.push({
                                 id: Date.now() + Math.floor(Math.random()*10000),
-                                studentId: currentStudentId, 
-                                title: m.title, 
-                                objective: m.linkedInstructionalGoal,
-                                originalLessonId: m.id, 
-                                status: 'pending', 
-                                assignedDate: new Date().toISOString()
+                                studentId: currentStudentId, title: m.title, objective: m.linkedInstructionalGoal,
+                                originalLessonId: m.id, status: 'pending', assignedDate: new Date().toISOString()
                             });
                         }
                     });
@@ -840,29 +727,17 @@ function showAssignTestModal() {
     allTests.forEach(t => select.innerHTML += `<option value="${t.id}">${t.title}</option>`);
     document.getElementById('assignTestModal').classList.add('show');
 }
-
 function assignTest() {
     const testId = parseInt(document.getElementById('testSelect').value);
     if(!testId) return;
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    if(studentTests.some(t => t.studentId == currentStudentId && t.type === 'diagnostic')) { 
-        alert('يوجد اختبار معين مسبقاً'); 
-        return; 
-    }
-    studentTests.push({ 
-        id: Date.now(), 
-        studentId: currentStudentId, 
-        testId: testId, 
-        type: 'diagnostic', 
-        status: 'pending', 
-        assignedDate: new Date().toISOString() 
-    });
+    if(studentTests.some(t => t.studentId == currentStudentId && t.type === 'diagnostic')) { alert('يوجد اختبار معين مسبقاً'); return; }
+    studentTests.push({ id: Date.now(), studentId: currentStudentId, testId: testId, type: 'diagnostic', status: 'pending', assignedDate: new Date().toISOString() });
     localStorage.setItem('studentTests', JSON.stringify(studentTests));
     closeModal('assignTestModal');
     loadDiagnosticTab();
     alert('تم تعيين الاختبار بنجاح.');
 }
-
 function deleteAssignedTest(id) {
     if(!confirm('حذف؟')) return;
     let st = JSON.parse(localStorage.getItem('studentTests') || '[]');
@@ -871,38 +746,23 @@ function deleteAssignedTest(id) {
     loadDiagnosticTab();
     if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
 }
-
-function showAssignHomeworkModal() { 
-    document.getElementById('assignHomeworkModal').classList.add('show'); 
-}
-
+function showAssignHomeworkModal() { document.getElementById('assignHomeworkModal').classList.add('show'); }
 function assignHomework() { 
-    const select = document.getElementById('homeworkSelect'); 
-    if(!select.value) return; 
+    const select = document.getElementById('homeworkSelect'); if(!select.value) return; 
     const title = select.options[select.selectedIndex].text; 
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]'); 
-    list.push({ 
-        id: Date.now(), 
-        studentId: currentStudentId, 
-        title: title, 
-        status: 'pending', 
-        dueDate: document.getElementById('homeworkDueDate').value, 
-        assignedDate: new Date().toISOString() 
-    }); 
+    list.push({ id: Date.now(), studentId: currentStudentId, title: title, status: 'pending', dueDate: document.getElementById('homeworkDueDate').value, assignedDate: new Date().toISOString() }); 
     localStorage.setItem('studentAssignments', JSON.stringify(list)); 
-    closeModal('assignHomeworkModal'); 
-    loadAssignmentsTab(); 
-    alert('تم الإسناد'); 
+    closeModal('assignHomeworkModal'); loadAssignmentsTab(); alert('تم الإسناد'); 
 }
-
-function deleteAssignment(id) {
-    if(!confirm('حذف هذا الواجب؟')) return;
-    let assignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
-    assignments = assignments.filter(a => a.id != id);
-    localStorage.setItem('studentAssignments', JSON.stringify(assignments));
-    loadAssignmentsTab();
+function deleteAssignment(id) { 
+    if(confirm('حذف؟')) { 
+        let list = JSON.parse(localStorage.getItem('studentAssignments') || '[]'); 
+        list = list.filter(a => a.id != id); 
+        localStorage.setItem('studentAssignments', JSON.stringify(list)); 
+        loadAssignmentsTab(); 
+    } 
 }
-
 function showAssignLibraryLessonModal() {
     const all = JSON.parse(localStorage.getItem('lessons') || '[]');
     const s = document.getElementById('libraryLessonSelect');
@@ -910,7 +770,6 @@ function showAssignLibraryLessonModal() {
     all.forEach(l => s.innerHTML += `<option value="${l.id}">${l.title}</option>`);
     document.getElementById('assignLibraryLessonModal').classList.add('show');
 }
-
 function assignLibraryLesson() {
     const lessonId = parseInt(document.getElementById('libraryLessonSelect').value);
     if(!lessonId) return;
@@ -920,27 +779,19 @@ function assignLibraryLesson() {
     let myLessons = studentLessons.filter(l => l.studentId == currentStudentId);
     let otherLessons = studentLessons.filter(l => l.studentId != currentStudentId);
     myLessons.push({
-        id: Date.now(), 
-        studentId: currentStudentId, 
-        title: lesson.title,
-        objective: lesson.linkedInstructionalGoal || 'إضافي', 
-        originalLessonId: lessonId,
-        status: 'pending', 
-        assignedDate: new Date().toISOString(), 
-        isIntervention: true
+        id: Date.now(), studentId: currentStudentId, title: lesson.title,
+        objective: lesson.linkedInstructionalGoal || 'إضافي', originalLessonId: lessonId,
+        status: 'pending', assignedDate: new Date().toISOString(), isIntervention: true
     });
     saveAndReindexLessons(myLessons, false, otherLessons);
     closeModal('assignLibraryLessonModal');
     loadLessonsTab();
 }
-
 function formatAnswerDisplay(answerData) {
     if (!answerData) return '<span class="text-muted">لم يجب</span>';
-    if (typeof answerData === 'string' && answerData.startsWith('data:image')) 
-        return `<img src="${answerData}" style="max-width:100px; border:1px solid #ccc; border-radius:5px; margin-top:5px;">`;
+    if (typeof answerData === 'string' && answerData.startsWith('data:image')) return `<img src="${answerData}" style="max-width:100px; border:1px solid #ccc; border-radius:5px; margin-top:5px;">`;
     return answerData;
 }
-
 function openReviewModal(assignmentId) {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const assignment = studentTests.find(t => t.id == assignmentId);
@@ -961,34 +812,21 @@ function openReviewModal(assignmentId) {
             const item = document.createElement('div');
             item.className = 'review-question-item';
             item.innerHTML = `
-                <div class="review-q-header">
-                    <strong>س${index+1}: ${q.text}</strong>
-                    <div>
-                        <input type="number" class="score-input" name="score_${q.id}" value="${currentScore}" max="${maxScore}" min="0">
-                        <span class="text-muted"> / ${maxScore}</span>
-                    </div>
-                </div>
-                <div class="student-answer-box">
-                    <strong>إجابة الطالب:</strong>
-                    <div style="margin-top:5px;">${formattedAnswer}</div>
-                </div>
-                <div class="teacher-feedback-box">
-                    <textarea class="form-control" name="note_${q.id}" placeholder="ملاحظات المعلم...">${teacherNote}</textarea>
-                </div>`;
+                <div class="review-q-header"><strong>س${index+1}: ${q.text}</strong><div><input type="number" class="score-input" name="score_${q.id}" value="${currentScore}" max="${maxScore}" min="0"><span class="text-muted"> / ${maxScore}</span></div></div>
+                <div class="student-answer-box"><strong>إجابة الطالب:</strong><div style="margin-top:5px;">${formattedAnswer}</div></div>
+                <div class="teacher-feedback-box"><textarea class="form-control" name="note_${q.id}" placeholder="ملاحظات المعلم...">${teacherNote}</textarea></div>`;
             container.appendChild(item);
         });
     }
     document.getElementById('reviewTestModal').classList.add('show');
 }
-
 function saveTestReview() {
     const id = parseInt(document.getElementById('reviewAssignmentId').value);
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const idx = studentTests.findIndex(t => t.id == id);
     if(idx === -1) return;
     const container = document.getElementById('reviewQuestionsContainer');
-    let totalScore = 0; 
-    let maxTotalScore = 0;
+    let totalScore = 0; let maxTotalScore = 0;
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const originalTest = allTests.find(t => t.id == studentTests[idx].testId);
     if(originalTest && originalTest.questions) {
@@ -998,19 +836,9 @@ function saveTestReview() {
             if (!studentTests[idx].answers) studentTests[idx].answers = [];
             let ansIdx = studentTests[idx].answers.findIndex(a => a.questionId == q.id);
             const newScore = parseInt(scoreInp.value) || 0;
-            if(ansIdx !== -1) { 
-                studentTests[idx].answers[ansIdx].score = newScore; 
-                studentTests[idx].answers[ansIdx].teacherNote = noteInp.value; 
-            } else { 
-                studentTests[idx].answers.push({ 
-                    questionId: q.id, 
-                    score: newScore, 
-                    teacherNote: noteInp.value, 
-                    answer: null 
-                }); 
-            }
-            totalScore += newScore; 
-            maxTotalScore += (q.passingScore || 1);
+            if(ansIdx !== -1) { studentTests[idx].answers[ansIdx].score = newScore; studentTests[idx].answers[ansIdx].teacherNote = noteInp.value; }
+            else { studentTests[idx].answers.push({ questionId: q.id, score: newScore, teacherNote: noteInp.value, answer: null }); }
+            totalScore += newScore; maxTotalScore += (q.passingScore || 1);
         });
         studentTests[idx].score = maxTotalScore > 0 ? Math.round((totalScore / maxTotalScore) * 100) : 0;
         studentTests[idx].status = 'completed';
@@ -1021,7 +849,6 @@ function saveTestReview() {
     if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
     alert('تم حفظ التصحيح');
 }
-
 function returnTestForResubmission() {
     const id = parseInt(document.getElementById('reviewAssignmentId').value);
     if(!confirm('إعادة الاختبار للطالب للتعديل؟')) return;
@@ -1035,12 +862,3 @@ function returnTestForResubmission() {
         alert('تمت الإعادة');
     }
 }
-
-function regenerateLessons() {
-    if (!confirm('سيتم إعادة توليد الدروس من الخطة الحالية. متابعة؟')) return;
-    autoGenerateLessons();
-}
-
-// ============================================
-// نهاية الملف
-// ============================================

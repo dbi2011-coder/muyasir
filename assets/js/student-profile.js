@@ -674,4 +674,373 @@ function loadLessonsTab() {
             cardStyle = 'border-right: 5px solid #ffc107; background:#fffbf0;'; 
         } else if (isLockedForStudent) { 
             statusBadge = '<span class="badge badge-secondary">🔒 مغلق</span>'; 
-            cardStyle = 'border-right: 5px solid #6c757d
+            cardStyle = 'border-right: 5px solid #6c757d; opacity:0.8;'; 
+        } else { 
+            statusBadge = '<span class="badge badge-primary">🔓 نشط حالياً</span>'; 
+            cardStyle = 'border-right: 5px solid #007bff;'; 
+        }
+
+        let controls = (l.status === 'completed' || l.status === 'accelerated') ? 
+            `<button class="btn btn-warning btn-sm" onclick="resetLesson(${l.id})">🔄 إعادة فتح (إلغاء)</button>` : 
+            `<button class="btn btn-info btn-sm" style="background:#ffc107; border:none; color:#000;" onclick="accelerateLesson(${l.id})">⚡ تسريع (تفوق)</button>`;
+
+        const isFirst = index === 0;
+        const isLast = index === myList.length - 1;
+        let orderBtns = '';
+        if (!isFirst) orderBtns += `<button class="btn-order" style="width:auto; height:auto; padding:2px 8px; border-radius:4px; margin-left:5px;" onclick="moveLesson(${l.id}, 'up')">تقديم</button>`;
+        if (!isLast) orderBtns += `<button class="btn-order" style="width:auto; height:auto; padding:2px 8px; border-radius:4px;" onclick="moveLesson(${l.id}, 'down')">تأخير</button>`;
+
+        return `
+        <div class="content-card" style="${cardStyle} position:relative;">
+            <div style="position:absolute; top:50px; left:10px; display:flex; z-index:5;">${orderBtns}</div>
+            <div style="display:flex; justify-content:space-between;">
+                <div style="margin-right:20px;"><h4 style="margin:0;">${index+1}. ${l.title}</h4><small class="text-muted">${l.objective}</small></div>
+                <div>${statusBadge}</div>
+            </div>
+            <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
+                <div class="lesson-actions" style="width:100%; display:flex; gap:5px; margin-top:25px;">${controls}<button class="btn btn-danger btn-sm" onclick="deleteLesson(${l.id})">حذف</button></div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+// ============================================
+// 4. الواجبات
+// ============================================
+function loadAssignmentsTab() {
+    const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId == currentStudentId);
+    const container = document.getElementById('studentAssignmentsGrid');
+    if (list.length === 0) { 
+        container.innerHTML = '<div class="empty-state"><h3>لا توجد واجبات.</h3></div>'; 
+        return; 
+    }
+    container.innerHTML = list.map(a => `
+        <div class="content-card">
+            <h4>${a.title}</h4>
+            <div class="content-meta">
+                <span>${a.dueDate || 'مفتوح'}</span>
+                <span class="badge ${a.status === 'completed' ? 'badge-success' : 'badge-primary'}">
+                    ${a.status === 'completed' ? 'مكتمل' : 'جديد'}
+                </span>
+            </div>
+            <button class="btn btn-sm btn-danger mt-2" onclick="deleteAssignment(${a.id})">حذف</button>
+        </div>
+    `).join('');
+}
+
+// ============================================
+// الدوال المساعدة العامة
+// ============================================
+
+function closeModal(id) { 
+    document.getElementById(id).classList.remove('show'); 
+}
+
+function moveLesson(lessonId, direction) {
+    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    let myLessons = studentLessons.filter(l => l.studentId == currentStudentId);
+    let otherLessons = studentLessons.filter(l => l.studentId != currentStudentId);
+    myLessons.sort((a, b) => (a.orderIndex||0) - (b.orderIndex||0));
+    const idx = myLessons.findIndex(l => l.id == lessonId);
+    if (idx === -1) return;
+
+    if (direction === 'up' && idx > 0) [myLessons[idx], myLessons[idx-1]] = [myLessons[idx-1], myLessons[idx]];
+    else if (direction === 'down' && idx < myLessons.length - 1) [myLessons[idx], myLessons[idx+1]] = [myLessons[idx+1], myLessons[idx]];
+    saveAndReindexLessons(myLessons, false, otherLessons);
+}
+
+function accelerateLesson(id) {
+    if(!confirm('تسريع هذا الدرس؟ سيتم اعتباره منجزاً.')) return;
+    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    const target = studentLessons.find(l => l.id == id);
+    if(target) {
+        target.status = 'accelerated';
+        target.completedDate = new Date().toISOString();
+        if(!target.historyLog) target.historyLog = [];
+        target.historyLog.push({ date: new Date().toISOString(), status: 'accelerated' });
+        localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
+        loadLessonsTab();
+        if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
+    }
+}
+
+function resetLesson(id) {
+    if(!confirm('سيتم مسح السجل التاريخي لهذا الدرس بالكامل.')) return;
+    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    const target = studentLessons.find(l => l.id == id);
+    if(target) {
+        target.status = 'pending';
+        delete target.completedDate;
+        delete target.answers;
+        target.historyLog = [];
+        localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
+        loadLessonsTab();
+        if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
+    }
+}
+
+function deleteLesson(id) {
+    if(!confirm('حذف الدرس؟')) return;
+    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    let myLessons = studentLessons.filter(l => l.studentId == currentStudentId && l.id != id);
+    let otherLessons = studentLessons.filter(l => l.studentId != currentStudentId);
+    saveAndReindexLessons(myLessons, false, otherLessons);
+}
+
+function autoGenerateLessons() {
+    if(!confirm('سيتم حذف الدروس الحالية وتوليد قائمة جديدة. متابعة؟')) return;
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const compDiag = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic' && t.status === 'completed');
+    if (!compDiag) { alert('يجب إكمال التشخيص أولاً'); return; }
+    const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
+    const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+    const originalTest = JSON.parse(localStorage.getItem('tests') || '[]').find(t => t.id == compDiag.testId);
+
+    let newLessons = [];
+    if(originalTest && originalTest.questions) {
+        originalTest.questions.forEach(q => {
+            const ans = compDiag.answers ? compDiag.answers.find(a => a.questionId == q.id) : null;
+            if((ans?.score || 0) < (q.passingScore || 1) && q.linkedGoalId) {
+                const obj = allObjectives.find(o => o.id == q.linkedGoalId);
+                if(obj) {
+                    const matches = allLessons.filter(l => l.linkedInstructionalGoal === obj.shortTermGoal || (obj.instructionalGoals||[]).includes(l.linkedInstructionalGoal));
+                    matches.forEach(m => {
+                        if(!newLessons.find(x => x.originalLessonId == m.id)) {
+                            newLessons.push({
+                                id: Date.now() + Math.floor(Math.random()*10000),
+                                studentId: currentStudentId, 
+                                title: m.title, 
+                                objective: m.linkedInstructionalGoal,
+                                originalLessonId: m.id, 
+                                status: 'pending', 
+                                assignedDate: new Date().toISOString()
+                            });
+                        }
+                    });
+                }
+            }
+        });
+    }
+    if(newLessons.length === 0) { alert('لا توجد دروس مقترحة.'); return; }
+    saveAndReindexLessons(newLessons, true);
+    alert('تم توليد الدروس.');
+}
+
+function saveAndReindexLessons(myList, replaceAll, others) {
+    myList.forEach((l, i) => l.orderIndex = i);
+    let final = replaceAll ? [...JSON.parse(localStorage.getItem('studentLessons') || '[]').filter(l => l.studentId != currentStudentId), ...myList] : [...others, ...myList];
+    localStorage.setItem('studentLessons', JSON.stringify(final));
+    loadLessonsTab();
+}
+
+function showAssignTestModal() {
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    const select = document.getElementById('testSelect');
+    select.innerHTML = '<option value="">اختر اختباراً...</option>';
+    allTests.forEach(t => select.innerHTML += `<option value="${t.id}">${t.title}</option>`);
+    document.getElementById('assignTestModal').classList.add('show');
+}
+
+function assignTest() {
+    const testId = parseInt(document.getElementById('testSelect').value);
+    if(!testId) return;
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    if(studentTests.some(t => t.studentId == currentStudentId && t.type === 'diagnostic')) { 
+        alert('يوجد اختبار معين مسبقاً'); 
+        return; 
+    }
+    studentTests.push({ 
+        id: Date.now(), 
+        studentId: currentStudentId, 
+        testId: testId, 
+        type: 'diagnostic', 
+        status: 'pending', 
+        assignedDate: new Date().toISOString() 
+    });
+    localStorage.setItem('studentTests', JSON.stringify(studentTests));
+    closeModal('assignTestModal');
+    loadDiagnosticTab();
+    alert('تم تعيين الاختبار بنجاح.');
+}
+
+function deleteAssignedTest(id) {
+    if(!confirm('حذف؟')) return;
+    let st = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    st = st.filter(t => t.id != id);
+    localStorage.setItem('studentTests', JSON.stringify(st));
+    loadDiagnosticTab();
+    if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
+}
+
+function showAssignHomeworkModal() { 
+    document.getElementById('assignHomeworkModal').classList.add('show'); 
+}
+
+function assignHomework() { 
+    const select = document.getElementById('homeworkSelect'); 
+    if(!select.value) return; 
+    const title = select.options[select.selectedIndex].text; 
+    const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]'); 
+    list.push({ 
+        id: Date.now(), 
+        studentId: currentStudentId, 
+        title: title, 
+        status: 'pending', 
+        dueDate: document.getElementById('homeworkDueDate').value, 
+        assignedDate: new Date().toISOString() 
+    }); 
+    localStorage.setItem('studentAssignments', JSON.stringify(list)); 
+    closeModal('assignHomeworkModal'); 
+    loadAssignmentsTab(); 
+    alert('تم الإسناد'); 
+}
+
+function deleteAssignment(id) {
+    if(!confirm('حذف هذا الواجب؟')) return;
+    let assignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
+    assignments = assignments.filter(a => a.id != id);
+    localStorage.setItem('studentAssignments', JSON.stringify(assignments));
+    loadAssignmentsTab();
+}
+
+function showAssignLibraryLessonModal() {
+    const all = JSON.parse(localStorage.getItem('lessons') || '[]');
+    const s = document.getElementById('libraryLessonSelect');
+    s.innerHTML = '<option value="">اختر...</option>';
+    all.forEach(l => s.innerHTML += `<option value="${l.id}">${l.title}</option>`);
+    document.getElementById('assignLibraryLessonModal').classList.add('show');
+}
+
+function assignLibraryLesson() {
+    const lessonId = parseInt(document.getElementById('libraryLessonSelect').value);
+    if(!lessonId) return;
+    const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+    const lesson = allLessons.find(l => l.id == lessonId);
+    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    let myLessons = studentLessons.filter(l => l.studentId == currentStudentId);
+    let otherLessons = studentLessons.filter(l => l.studentId != currentStudentId);
+    myLessons.push({
+        id: Date.now(), 
+        studentId: currentStudentId, 
+        title: lesson.title,
+        objective: lesson.linkedInstructionalGoal || 'إضافي', 
+        originalLessonId: lessonId,
+        status: 'pending', 
+        assignedDate: new Date().toISOString(), 
+        isIntervention: true
+    });
+    saveAndReindexLessons(myLessons, false, otherLessons);
+    closeModal('assignLibraryLessonModal');
+    loadLessonsTab();
+}
+
+function formatAnswerDisplay(answerData) {
+    if (!answerData) return '<span class="text-muted">لم يجب</span>';
+    if (typeof answerData === 'string' && answerData.startsWith('data:image')) 
+        return `<img src="${answerData}" style="max-width:100px; border:1px solid #ccc; border-radius:5px; margin-top:5px;">`;
+    return answerData;
+}
+
+function openReviewModal(assignmentId) {
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const assignment = studentTests.find(t => t.id == assignmentId);
+    if(!assignment) { alert('لم يتم العثور على الاختبار'); return; }
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    const originalTest = allTests.find(t => t.id == assignment.testId);
+    document.getElementById('reviewAssignmentId').value = assignmentId;
+    const container = document.getElementById('reviewQuestionsContainer');
+    container.innerHTML = '';
+    if (originalTest && originalTest.questions) {
+        originalTest.questions.forEach((q, index) => {
+            const studentAnsObj = assignment.answers ? assignment.answers.find(a => a.questionId == q.id) : null;
+            let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
+            const formattedAnswer = formatAnswerDisplay(rawAnswer);
+            const currentScore = studentAnsObj ? (studentAnsObj.score || 0) : 0;
+            const teacherNote = studentAnsObj ? (studentAnsObj.teacherNote || '') : '';
+            const maxScore = q.passingScore || 1;
+            const item = document.createElement('div');
+            item.className = 'review-question-item';
+            item.innerHTML = `
+                <div class="review-q-header">
+                    <strong>س${index+1}: ${q.text}</strong>
+                    <div>
+                        <input type="number" class="score-input" name="score_${q.id}" value="${currentScore}" max="${maxScore}" min="0">
+                        <span class="text-muted"> / ${maxScore}</span>
+                    </div>
+                </div>
+                <div class="student-answer-box">
+                    <strong>إجابة الطالب:</strong>
+                    <div style="margin-top:5px;">${formattedAnswer}</div>
+                </div>
+                <div class="teacher-feedback-box">
+                    <textarea class="form-control" name="note_${q.id}" placeholder="ملاحظات المعلم...">${teacherNote}</textarea>
+                </div>`;
+            container.appendChild(item);
+        });
+    }
+    document.getElementById('reviewTestModal').classList.add('show');
+}
+
+function saveTestReview() {
+    const id = parseInt(document.getElementById('reviewAssignmentId').value);
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const idx = studentTests.findIndex(t => t.id == id);
+    if(idx === -1) return;
+    const container = document.getElementById('reviewQuestionsContainer');
+    let totalScore = 0; 
+    let maxTotalScore = 0;
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    const originalTest = allTests.find(t => t.id == studentTests[idx].testId);
+    if(originalTest && originalTest.questions) {
+        originalTest.questions.forEach(q => {
+            const scoreInp = container.querySelector(`input[name="score_${q.id}"]`);
+            const noteInp = container.querySelector(`textarea[name="note_${q.id}"]`);
+            if (!studentTests[idx].answers) studentTests[idx].answers = [];
+            let ansIdx = studentTests[idx].answers.findIndex(a => a.questionId == q.id);
+            const newScore = parseInt(scoreInp.value) || 0;
+            if(ansIdx !== -1) { 
+                studentTests[idx].answers[ansIdx].score = newScore; 
+                studentTests[idx].answers[ansIdx].teacherNote = noteInp.value; 
+            } else { 
+                studentTests[idx].answers.push({ 
+                    questionId: q.id, 
+                    score: newScore, 
+                    teacherNote: noteInp.value, 
+                    answer: null 
+                }); 
+            }
+            totalScore += newScore; 
+            maxTotalScore += (q.passingScore || 1);
+        });
+        studentTests[idx].score = maxTotalScore > 0 ? Math.round((totalScore / maxTotalScore) * 100) : 0;
+        studentTests[idx].status = 'completed';
+    }
+    localStorage.setItem('studentTests', JSON.stringify(studentTests));
+    closeModal('reviewTestModal');
+    loadDiagnosticTab();
+    if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
+    alert('تم حفظ التصحيح');
+}
+
+function returnTestForResubmission() {
+    const id = parseInt(document.getElementById('reviewAssignmentId').value);
+    if(!confirm('إعادة الاختبار للطالب للتعديل؟')) return;
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const idx = studentTests.findIndex(t => t.id == id);
+    if(idx !== -1) {
+        studentTests[idx].status = 'returned';
+        localStorage.setItem('studentTests', JSON.stringify(studentTests));
+        closeModal('reviewTestModal');
+        loadDiagnosticTab();
+        alert('تمت الإعادة');
+    }
+}
+
+function regenerateLessons() {
+    if (!confirm('سيتم إعادة توليد الدروس من الخطة الحالية. متابعة؟')) return;
+    autoGenerateLessons();
+}
+
+// ============================================
+// نهاية الملف
+// ============================================

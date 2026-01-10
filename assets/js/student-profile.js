@@ -658,4 +658,19 @@ function loadIEPTab() {
 // 3. الدروس
 function loadLessonsTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    let myList
+    let myList = studentLessons.filter(l => l.studentId == currentStudentId);
+    const container = document.getElementById('studentLessonsGrid');
+
+    if (myList.length === 0) {
+        container.innerHTML = `<div class="empty-state"><h3>لا توجد دروس</h3><button class="btn btn-primary" onclick="autoGenerateLessons()">⚡ توليد تلقائي</button></div>`;
+        return;
+    }
+
+    myList.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
+
+    container.innerHTML = myList.map((l, index) => {
+        const prevCompleted = index === 0 || ['completed', 'accelerated'].includes(myList[index-1].status);
+        const isLockedForStudent = !prevCompleted;
+        let statusBadge = '', cardStyle = '';
+        
+        if (l

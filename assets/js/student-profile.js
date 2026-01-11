@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: نظام التقدم الأكاديمي (اختيار الواجب من المكتبة + زر يمين + تنسيق نظيف)
+// الوصف: نظام التقدم الأكاديمي (الإسناد من مكتبة الواجبات حصراً + كافة التنسيقات)
 // ============================================
 
 let currentStudentId = null;
@@ -343,9 +343,9 @@ function injectAdminEventModal() {
     document.body.insertAdjacentHTML('beforeend', html);
 }
 
-// 🔥 2. نافذة إسناد الواجبات (تم إعادتها لقائمة منسدلة) 🔥
+// 🔥 2. نافذة إسناد الواجبات (تحديث: قائمة منسدلة من بنك الواجبات) 🔥
 function injectHomeworkModal() {
-    // 🧹 حذف النافذة القديمة إذا وجدت لضمان التحديث
+    // 🧹 حذف النافذة القديمة
     const oldModal = document.getElementById('assignHomeworkModal');
     if (oldModal) oldModal.remove();
 
@@ -355,9 +355,10 @@ function injectHomeworkModal() {
             <span class="close-btn" onclick="closeModal('assignHomeworkModal')">&times;</span>
             <h3>إسناد واجب جديد</h3>
             <div class="form-group">
-                <label>اختر الواجب/الدرس من المكتبة:</label>
+                <label>اختر الواجب من المكتبة:</label>
                 <select id="homeworkSelect" class="form-control">
-                    </select>
+                    <option value="">جارِ التحميل...</option>
+                </select>
             </div>
             <div class="form-group">
                 <label>تاريخ التسليم:</label>
@@ -821,9 +822,10 @@ function deleteAssignedTest(id) {
     if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
 }
 
-// 🔥🔥 فتح نافذة إسناد الواجب (تعبئة القائمة + إعادة البناء إذا لزم) 🔥🔥
+// 🔥🔥 فتح نافذة إسناد الواجب (جلب الواجبات من libraryAssignments) 🔥🔥
 function showAssignHomeworkModal() { 
-    const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+    // 🔥 التعديل هنا: جلب البيانات من مكتبة الواجبات
+    const allAssignments = JSON.parse(localStorage.getItem('libraryAssignments') || '[]');
     const select = document.getElementById('homeworkSelect');
     
     // إذا لم يجد العنصر (بسبب التحديث)، أعد بناء النافذة فوراً
@@ -834,14 +836,14 @@ function showAssignHomeworkModal() {
         return;
     }
 
-    // تعبئة القائمة بالدروس المتوفرة
-    select.innerHTML = '<option value="">اختر من قائمة الدروس...</option>';
-    if (allLessons.length > 0) {
-        allLessons.forEach(l => {
-            select.innerHTML += `<option value="${l.title}">${l.title}</option>`;
+    // تعبئة القائمة بالواجبات المتوفرة
+    select.innerHTML = '<option value="">اختر من قائمة الواجبات...</option>';
+    if (allAssignments.length > 0) {
+        allAssignments.forEach(a => {
+            select.innerHTML += `<option value="${a.title}">${a.title}</option>`;
         });
     } else {
-        select.innerHTML += `<option value="" disabled>لا توجد دروس في المكتبة</option>`;
+        select.innerHTML += `<option value="" disabled>لا توجد واجبات في المكتبة</option>`;
     }
 
     // ضبط تاريخ اليوم كتاريخ افتراضي
@@ -854,7 +856,7 @@ function assignHomework() {
     const select = document.getElementById('homeworkSelect'); 
     
     // التحقق من الاختيار
-    if(!select || !select.value) { alert('الرجاء اختيار واجب/درس من القائمة'); return; }
+    if(!select || !select.value) { alert('الرجاء اختيار واجب من القائمة'); return; }
     
     const title = select.value; 
     

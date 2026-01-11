@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: نظام التقدم الأكاديمي (تم إصلاح مشكلة زر الإسناد + الإدخال اليدوي)
+// الوصف: نظام التقدم الأكاديمي (واجهة نظيفة: زر واحد لليسار + بدون عناوين مكررة)
 // ============================================
 
 let currentStudentId = null;
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     injectAdminEventModal();
-    injectHomeworkModal(); // ✅ تم إضافة هذا السطر الضروري (كان مفقوداً)
+    injectHomeworkModal(); 
     injectWordTableStyles();
     loadStudentData();
 });
@@ -315,7 +315,6 @@ function injectWordTableStyles() {
 // 🛠️ إدارة النوافذ المنبثقة (الأحداث + الواجبات)
 // ============================================
 
-// 1. نافذة الأحداث الإدارية
 function injectAdminEventModal() {
     if (document.getElementById('adminEventModal')) return;
     const html = `
@@ -344,7 +343,6 @@ function injectAdminEventModal() {
     document.body.insertAdjacentHTML('beforeend', html);
 }
 
-// 🔥 2. نافذة إسناد الواجبات (إدخال يدوي حر) 🔥
 function injectHomeworkModal() {
     if (document.getElementById('assignHomeworkModal')) return;
     const html = `
@@ -432,7 +430,6 @@ function deleteAdminEvent(id) {
 // الدوال الأساسية (التشخيص، الخطة، الدروس)
 // ============================================
 
-// 1. التشخيص
 function loadDiagnosticTab() {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const assignedTest = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic');
@@ -477,7 +474,6 @@ function loadDiagnosticTab() {
     }
 }
 
-// 2. الخطة التربوية
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
     const wordModel = document.querySelector('.iep-word-model');
@@ -564,7 +560,6 @@ function loadIEPTab() {
     if(topPrintBtn) topPrintBtn.setAttribute('onclick', 'window.print()');
 }
 
-// 3. الدروس
 function loadLessonsTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     let myList = studentLessons.filter(l => l.studentId == currentStudentId);
@@ -611,15 +606,14 @@ function loadLessonsTab() {
     }).join('');
 }
 
-// 4. الواجبات (يدعم التعبئة اليدوية + العرض)
+// 🔥🔥 4. الواجبات (تعديل: واجهة نظيفة بدون عناوين مكررة) 🔥🔥
 function loadAssignmentsTab() {
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId == currentStudentId);
     const container = document.getElementById('studentAssignmentsGrid');
     
-    // إضافة زر "إسناد واجب" دائماً في الأعلى
+    // 🔥 تم حذف العنوان (h2) وضبط الزر ليكون على اليسار فقط 🔥
     const headerHtml = `
-        <div class="content-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h2>الواجبات والمهام</h2>
+        <div class="content-header" style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:20px;">
             <button class="btn btn-primary" onclick="showAssignHomeworkModal()">
                 <i class="fas fa-plus-circle"></i> إسناد واجب جديد
             </button>
@@ -799,7 +793,6 @@ function deleteAssignedTest(id) {
     if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
 }
 
-// 🔥🔥 إصلاح نافذة إسناد الواجب (مربع نصي حر) 🔥🔥
 function showAssignHomeworkModal() { 
     // ضبط تاريخ اليوم كتاريخ افتراضي
     document.getElementById('homeworkDueDate').valueAsDate = new Date();

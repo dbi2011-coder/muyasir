@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: نظام التقدم الأكاديمي (إصلاح إسناد الواجبات + السجل والأرشفة)
+// الوصف: نظام التقدم الأكاديمي (تم فصل الواجبات عن الدروس في الإسناد اليدوي)
 // ============================================
 
 let currentStudentId = null;
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     injectAdminEventModal();
-    injectHomeworkModal(); // ✅ تم إضافة هذا السطر لإنشاء نافذة الواجبات
+    injectHomeworkModal(); // إنشاء نافذة الواجبات
     injectWordTableStyles();
     loadStudentData();
 });
@@ -61,7 +61,7 @@ function switchSection(sectionId) {
 }
 
 // ============================================
-// 🔥 1. محرك سجل التقدم (مع الأرشفة والاستبدال)
+// 🔥 1. محرك سجل التقدم (الأرشفة والاستبدال)
 // ============================================
 
 function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDate) {
@@ -81,7 +81,6 @@ function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDa
         if (d.toDateString() === new Date().toDateString()) continue;
 
         const dateStr = d.toDateString();
-        
         const hasLesson = myList.some(l => l.historyLog && l.historyLog.some(log => new Date(log.date).toDateString() === dateStr));
         const hasEvent = myEvents.some(e => new Date(e.date).toDateString() === dateStr);
         
@@ -122,7 +121,6 @@ function loadProgressTab() {
     const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
 
     let myList = studentLessons.filter(l => l.studentId == currentStudentId);
-    
     const container = document.getElementById('section-progress');
     
     if (myList.length === 0) {
@@ -138,7 +136,6 @@ function loadProgressTab() {
 
     let rawLogs = [];
 
-    // أ) الدروس
     myList.forEach(l => {
         if (l.historyLog) {
             l.historyLog.forEach(log => {
@@ -155,7 +152,6 @@ function loadProgressTab() {
         }
     });
 
-    // ب) الأحداث
     myEvents.forEach(e => {
         rawLogs.push({
             dateObj: new Date(e.date),
@@ -316,7 +312,7 @@ function injectWordTableStyles() {
 }
 
 // ============================================
-// 🛠️ إدارة النوافذ المنبثقة (Events + Homework)
+// 🛠️ إدارة النوافذ المنبثقة (الأحداث + الواجبات)
 // ============================================
 
 // 1. نافذة الأحداث الإدارية
@@ -348,7 +344,7 @@ function injectAdminEventModal() {
     document.body.insertAdjacentHTML('beforeend', html);
 }
 
-// 🔥 2. نافذة إسناد الواجبات (تمت إضافتها للإصلاح) 🔥
+// 🔥 2. نافذة إسناد الواجبات (تم تصحيحها لتدعم الإدخال اليدوي) 🔥
 function injectHomeworkModal() {
     if (document.getElementById('assignHomeworkModal')) return;
     const html = `
@@ -357,9 +353,8 @@ function injectHomeworkModal() {
             <span class="close-btn" onclick="closeModal('assignHomeworkModal')">&times;</span>
             <h3>إسناد واجب جديد</h3>
             <div class="form-group">
-                <label>اختر الدرس/الواجب:</label>
-                <select id="homeworkSelect" class="form-control">
-                    </select>
+                <label>عنوان الواجب (اكتب هنا):</label>
+                <input type="text" id="homeworkTitleInput" class="form-control" placeholder="مثال: حل تمارين ص 20، ورقة عمل الجمع...">
             </div>
             <div class="form-group">
                 <label>تاريخ التسليم:</label>
@@ -710,6 +705,7 @@ function deleteLesson(id) {
     saveAndReindexLessons(myLessons, false, otherLessons);
 }
 
+// 🔥🔥 دالة التوليد التلقائي (مع إنشاء واجبات تلقائية) 🔥🔥
 function autoGenerateLessons() {
     if(!confirm('سيتم حذف الدروس الحالية وتوليد قائمة جديدة. متابعة؟')) return;
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
@@ -720,7 +716,7 @@ function autoGenerateLessons() {
     const originalTest = JSON.parse(localStorage.getItem('tests') || '[]').find(t => t.id == compDiag.testId);
 
     let newLessons = [];
-    let newAssignments = [];
+    let newAssignments = []; 
 
     if(originalTest && originalTest.questions) {
         originalTest.questions.forEach(q => {
@@ -731,18 +727,20 @@ function autoGenerateLessons() {
                     const matches = allLessons.filter(l => l.linkedInstructionalGoal === obj.shortTermGoal || (obj.instructionalGoals||[]).includes(l.linkedInstructionalGoal));
                     matches.forEach(m => {
                         if(!newLessons.find(x => x.originalLessonId == m.id)) {
+                            // إنشاء الدرس
                             newLessons.push({
                                 id: Date.now() + Math.floor(Math.random()*10000),
                                 studentId: currentStudentId, title: m.title, objective: m.linkedInstructionalGoal,
                                 originalLessonId: m.id, status: 'pending', assignedDate: new Date().toISOString()
                             });
                             
+                            // 🔥 إنشاء واجب تلقائي مرتبط بالدرس 🔥
                             newAssignments.push({
                                 id: Date.now() + Math.floor(Math.random()*10000) + 1,
                                 studentId: currentStudentId,
                                 title: `مراجعة وتطبيق: ${m.title}`,
                                 status: 'pending',
-                                dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                                dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // بعد أسبوع
                                 assignedDate: new Date().toISOString()
                             });
                         }
@@ -754,8 +752,10 @@ function autoGenerateLessons() {
 
     if(newLessons.length === 0) { alert('لا توجد دروس مقترحة.'); return; }
     
+    // حفظ الدروس
     saveAndReindexLessons(newLessons, true);
     
+    // حفظ الواجبات التلقائية
     if (newAssignments.length > 0) {
         let currentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
         currentAssignments = [...currentAssignments.filter(a => a.studentId != currentStudentId), ...newAssignments];
@@ -800,34 +800,22 @@ function deleteAssignedTest(id) {
     if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
 }
 
-// 🔥🔥 إصلاح نافذة إسناد الواجب (تعبئة القائمة بالدروس) 🔥🔥
+// 🔥🔥 إصلاح نافذة إسناد الواجب (مربع نصي حر) 🔥🔥
 function showAssignHomeworkModal() { 
-    const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const select = document.getElementById('homeworkSelect');
-    
-    // تعبئة القائمة بالدروس المتوفرة
-    select.innerHTML = '<option value="">اختر من قائمة الدروس...</option>';
-    if (allLessons.length > 0) {
-        allLessons.forEach(l => {
-            select.innerHTML += `<option value="${l.title}">${l.title}</option>`;
-        });
-    } else {
-        select.innerHTML += `<option value="" disabled>لا توجد دروس في المكتبة</option>`;
-    }
-
     // ضبط تاريخ اليوم كتاريخ افتراضي
     document.getElementById('homeworkDueDate').valueAsDate = new Date();
+    document.getElementById('homeworkTitleInput').value = ''; // تصفير الحقل
     
     document.getElementById('assignHomeworkModal').classList.add('show'); 
 }
 
 function assignHomework() { 
-    const select = document.getElementById('homeworkSelect'); 
+    const titleInput = document.getElementById('homeworkTitleInput'); 
     
-    // التحقق من الاختيار
-    if(!select.value) { alert('الرجاء اختيار واجب/درس من القائمة'); return; }
+    // التحقق من الإدخال
+    if(!titleInput.value) { alert('الرجاء كتابة عنوان للواجب'); return; }
     
-    const title = select.value; 
+    const title = titleInput.value; 
     
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]'); 
     list.push({ 

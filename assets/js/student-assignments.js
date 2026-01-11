@@ -1,13 +1,13 @@
 // ============================================
 // 📁 المسار: assets/js/student-assignments.js
-// الوصف: واجهة الطالب - عرض وحل الواجبات (مع تصميم احترافي ومنظم)
+// الوصف: واجهة الطالب - تصميم القائمة (List View) نظيف ومرتب
 // ============================================
 
 let currentAssignmentId = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('my-assignments.html')) {
-        injectAssignmentStyles(); // 🔥 إضافة التصميم
+        injectCleanStyles(); // 🔥 تطبيق التصميم الجديد
         loadStudentAssignments();
         updateCurrentAssignmentSection();
     }
@@ -18,204 +18,217 @@ function getCurrentUser() {
 }
 
 // ==========================================
-// 🎨 1. حقن التنسيقات (CSS Injection)
+// 🎨 1. تنسيقات القائمة النظيفة (CSS)
 // ==========================================
-function injectAssignmentStyles() {
-    if (document.getElementById('assignmentStyles')) return;
+function injectCleanStyles() {
+    if (document.getElementById('cleanAssignmentStyles')) return;
     const style = document.createElement('style');
-    style.id = 'assignmentStyles';
+    style.id = 'cleanAssignmentStyles';
     style.innerHTML = `
-        /* تنسيق الحاوية الرئيسية */
-        #currentAssignmentSection { margin-bottom: 30px; }
-        
-        /* تنسيق اللوحة العلوية (الواجب العاجل) */
-        .hero-banner {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 20px rgba(118, 75, 162, 0.2);
-            text-align: center;
-            position: relative;
-            overflow: hidden;
-        }
-        .hero-banner h3 { margin: 0 0 10px 0; font-size: 1.8rem; font-weight: bold; }
-        .hero-banner p { opacity: 0.9; margin-bottom: 20px; font-size: 1.1rem; }
-        .btn-hero {
-            background: white; color: #764ba2; border: none; padding: 10px 30px;
-            border-radius: 25px; font-weight: bold; transition: transform 0.2s;
-            cursor: pointer; text-decoration: none; display: inline-block;
-        }
-        .btn-hero:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        /* حاوية الصفحة */
+        .assignments-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
 
-        /* تنسيق أدوات التصفية */
-        .filters-container {
+        /* 1. قسم التنبيه (الواجب العاجل) - بسيط جداً */
+        .urgent-alert {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .urgent-info h4 { margin: 0 0 5px 0; font-size: 1.1rem; font-weight: bold; }
+        .urgent-info p { margin: 0; font-size: 0.9rem; }
+        .btn-urgent {
+            background-color: #856404; color: white; border: none;
+            padding: 8px 20px; border-radius: 5px; text-decoration: none; font-size: 0.9rem;
+        }
+        .btn-urgent:hover { background-color: #6d5203; }
+
+        /* 2. القائمة الرئيسية */
+        .assignments-list-header {
             display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 20px; background: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #eee;
+            border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px;
         }
-        .filter-label { font-weight: bold; color: #555; margin-left: 10px; }
+        .assignments-list-header h3 { margin: 0; color: #444; }
 
-        /* تنسيق شبكة البطاقات */
-        .assignments-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* استجابة تلقائية */
-            gap: 20px;
+        /* 3. تصميم الصف (الواجب) */
+        .assignment-row {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s ease;
         }
-
-        /* تنسيق البطاقة الواحدة */
-        .assignment-card {
-            background: white; border: 1px solid #e0e0e0; border-radius: 12px;
-            overflow: hidden; transition: transform 0.2s, box-shadow 0.2s;
-            display: flex; flex-direction: column;
+        .assignment-row:hover { border-color: #007bff; box-shadow: 0 3px 10px rgba(0,0,0,0.05); }
+        
+        /* تفاصيل الصف */
+        .row-info { display: flex; align-items: center; gap: 20px; flex-grow: 1; }
+        .row-icon { 
+            width: 40px; height: 40px; background: #f0f2f5; 
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            color: #555; font-size: 1.2rem;
         }
-        .assignment-card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
+        .row-text h5 { margin: 0 0 4px 0; font-size: 1rem; font-weight: bold; color: #333; }
+        .row-text .meta { font-size: 0.85rem; color: #777; }
+        .row-text .meta span { margin-left: 15px; }
         
-        .card-header { padding: 15px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: flex-start; }
-        .card-title { margin: 0; font-size: 1.1rem; color: #333; font-weight: bold; }
-        
-        .status-badge { font-size: 0.75rem; padding: 4px 8px; border-radius: 12px; font-weight: bold; }
+        /* الحالة والزر */
+        .row-actions { display: flex; align-items: center; gap: 15px; }
+        .status-badge { 
+            font-size: 0.8rem; padding: 5px 10px; border-radius: 20px; background: #eee; color: #555; 
+        }
         .status-pending { background: #fff3cd; color: #856404; }
         .status-completed { background: #d4edda; color: #155724; }
-        .status-overdue { background: #f8d7da; color: #721c24; }
-
-        .card-body { padding: 15px; flex-grow: 1; }
-        .meta-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #666; }
-        .meta-label { color: #999; }
-        .meta-val { color: #333; font-weight: 500; }
-
-        .card-footer { padding: 15px; background: #fafafa; border-top: 1px solid #f0f0f0; text-align: center; }
-        .btn-card { width: 100%; padding: 8px; border-radius: 6px; font-size: 0.95rem; }
+        
+        .btn-action {
+            padding: 6px 15px; border-radius: 5px; border: 1px solid #ddd;
+            background: white; color: #555; font-size: 0.9rem; cursor: pointer; transition: 0.2s;
+        }
+        .btn-action:hover { background: #f8f9fa; border-color: #ccc; }
+        .btn-primary-action { background: #007bff; color: white; border: none; }
+        .btn-primary-action:hover { background: #0056b3; }
 
         /* حالة فارغة */
-        .empty-state { text-align: center; padding: 50px; color: #999; grid-column: 1 / -1; }
-        .empty-icon { font-size: 3rem; margin-bottom: 10px; opacity: 0.5; }
+        .empty-list { text-align: center; padding: 40px; background: #fafafa; border-radius: 8px; color: #777; }
+
+        /* تجاوب للجوال */
+        @media (max-width: 768px) {
+            .assignment-row { flex-direction: column; align-items: flex-start; gap: 15px; }
+            .row-actions { width: 100%; justify-content: space-between; margin-top: 10px; }
+            .row-info { width: 100%; }
+        }
     `;
     document.head.appendChild(style);
 }
 
 // ==========================================
-// 📋 2. عرض الواجبات
+// 📋 2. عرض الواجبات (تصميم القائمة)
 // ==========================================
 
 function loadStudentAssignments() {
     const assignmentsList = document.getElementById('assignmentsList');
-    // إضافة كلاس الشبكة للحاوية
-    assignmentsList.className = 'assignments-grid';
+    // تنظيف الكلاسات القديمة إن وجدت
+    assignmentsList.className = ''; 
     
     const currentStudent = getCurrentUser();
     const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
     
-    const studentAssignmentsFiltered = studentAssignments.filter(assignment => 
+    const list = studentAssignments.filter(assignment => 
         assignment.studentId === currentStudent.id
     );
     
-    if (studentAssignmentsFiltered.length === 0) {
+    // الفرز: المعلقة أولاً، ثم حسب التاريخ الأحدث
+    list.sort((a, b) => {
+        if (a.status === 'pending' && b.status !== 'pending') return -1;
+        if (a.status !== 'pending' && b.status === 'pending') return 1;
+        return new Date(b.assignedDate) - new Date(a.assignedDate);
+    });
+
+    if (list.length === 0) {
         assignmentsList.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">🎉</div>
-                <h3>لا توجد واجبات مطلوبة</h3>
-                <p>أنت متفوق! لقد أنجزت جميع مهامك.</p>
+            <div class="empty-list">
+                <div style="font-size:2.5rem; margin-bottom:10px;">✨</div>
+                <h4>لا توجد واجبات حالياً</h4>
+                <p>سجل مهامك نظيف تماماً.</p>
             </div>
         `;
         return;
     }
     
-    assignmentsList.innerHTML = studentAssignmentsFiltered.map(assignment => {
-        const statusClass = getAssignmentStatusClass(assignment.status);
-        const statusText = getAssignmentStatusText(assignment.status);
-        
-        // تحديد لون الشريط الجانبي بناءً على الحالة
-        let borderStyle = '';
-        if(assignment.status === 'pending') borderStyle = 'border-right: 4px solid #ffc107;';
-        else if(assignment.status === 'completed') borderStyle = 'border-right: 4px solid #28a745;';
+    // إضافة عنوان للقائمة
+    let html = `<div class="assignments-list-header">
+                    <h3>📝 قائمة الواجبات (${list.length})</h3>
+                </div>`;
+
+    html += list.map(assignment => {
+        const isPending = assignment.status === 'pending';
+        const dateStr = new Date(assignment.assignedDate).toLocaleDateString('ar-SA');
+        const dueStr = assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString('ar-SA') : 'مفتوح';
         
         return `
-            <div class="assignment-card" style="${borderStyle}">
-                <div class="card-header">
-                    <h3 class="card-title">${assignment.title}</h3>
-                    <span class="status-badge status-${statusClass}">${statusText}</span>
-                </div>
-                <div class="card-body">
-                    <div class="meta-row">
-                        <span class="meta-label"><i class="fas fa-book"></i> المادة:</span>
-                        <span class="meta-val">${assignment.subject || 'عام'}</span>
+            <div class="assignment-row" style="${isPending ? 'border-right: 4px solid #ffc107;' : 'border-right: 4px solid #28a745;'}">
+                <div class="row-info">
+                    <div class="row-icon">
+                        <i class="${isPending ? 'fas fa-hourglass-half text-warning' : 'fas fa-check-circle text-success'}"></i>
                     </div>
-                    <div class="meta-row">
-                        <span class="meta-label"><i class="far fa-calendar-alt"></i> الإسناد:</span>
-                        <span class="meta-val">${new Date(assignment.assignedDate).toLocaleDateString('ar-SA')}</span>
+                    <div class="row-text">
+                        <h5>${assignment.title}</h5>
+                        <div class="meta">
+                            <span><i class="fas fa-book"></i> ${assignment.subject || 'عام'}</span>
+                            <span><i class="far fa-calendar"></i> ${dateStr}</span>
+                            ${isPending ? `<span class="text-danger"><i class="far fa-clock"></i> تسليم: ${dueStr}</span>` : ''}
+                        </div>
                     </div>
-                    ${assignment.dueDate ? `
-                    <div class="meta-row">
-                        <span class="meta-label"><i class="far fa-clock"></i> التسليم:</span>
-                        <span class="meta-val text-danger">${new Date(assignment.dueDate).toLocaleDateString('ar-SA')}</span>
-                    </div>` : ''}
-                    ${assignment.score !== undefined ? `
-                    <div class="meta-row" style="margin-top:10px; padding-top:10px; border-top:1px dashed #eee;">
-                        <span class="meta-label">الدرجة:</span>
-                        <span class="meta-val badge badge-success">${assignment.score}%</span>
-                    </div>` : ''}
                 </div>
-                <div class="card-footer">
-                    ${assignment.status === 'pending' ? `
-                    <button class="btn btn-success btn-card" onclick="solveAssignment(${assignment.id})">
-                        <i class="fas fa-pencil-alt"></i> حل الواجب
-                    </button>
-                    ` : ''}
-                    ${assignment.status === 'completed' ? `
-                    <button class="btn btn-primary btn-card" onclick="viewAssignmentResult(${assignment.id})">
-                        <i class="fas fa-eye"></i> عرض إجابتي
-                    </button>
-                    ` : ''}
+                
+                <div class="row-actions">
+                    ${!isPending && assignment.score !== undefined ? `<span class="badge badge-success">${assignment.score}%</span>` : ''}
+                    
+                    ${isPending ? `
+                        <button class="btn-action btn-primary-action" onclick="solveAssignment(${assignment.id})">
+                            ابدأ الحل
+                        </button>
+                    ` : `
+                        <button class="btn-action" onclick="viewAssignmentResult(${assignment.id})">
+                            مراجعة الحل
+                        </button>
+                    `}
                 </div>
             </div>
         `;
     }).join('');
+
+    assignmentsList.innerHTML = html;
 }
 
-// 3. تحديث قسم "الواجب الحالي" (Hero Section)
+// 3. تحديث قسم "الواجب الحالي" (تنبيه بسيط)
 function updateCurrentAssignmentSection() {
-    const currentAssignmentSection = document.getElementById('currentAssignmentSection');
-    if (!currentAssignmentSection) return;
+    const section = document.getElementById('currentAssignmentSection');
+    if (!section) return;
 
     const currentStudent = getCurrentUser();
     const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
     
-    // البحث عن أقرب واجب لم يتم حله
-    const currentAssignment = studentAssignments.find(assignment => 
-        assignment.studentId === currentStudent.id && assignment.status === 'pending'
-    );
+    // البحث عن واجب معلق وموعد تسليمه قريب
+    const urgent = studentAssignments.find(a => a.studentId === currentStudent.id && a.status === 'pending');
     
-    if (!currentAssignment) {
-        // إخفاء القسم إذا لم يوجد واجب عاجل لتوفير المساحة
-        currentAssignmentSection.style.display = 'none';
+    if (!urgent) {
+        section.style.display = 'none'; // إخفاء القسم إذا لم يوجد شيء عاجل
         return;
     }
     
-    currentAssignmentSection.style.display = 'block';
-    currentAssignmentSection.innerHTML = `
-        <div class="hero-banner">
-            <div style="font-size:3rem; margin-bottom:10px;">🚀</div>
-            <h3>واجب جديد: ${currentAssignment.title}</h3>
-            <p>مطلوب تسليمه في: ${new Date(currentAssignment.dueDate).toLocaleDateString('ar-SA')}</p>
-            <button class="btn-hero" onclick="solveAssignment(${currentAssignment.id})">
-                ابدأ الحل الآن <i class="fas fa-arrow-left"></i>
+    section.style.display = 'block';
+    section.innerHTML = `
+        <div class="urgent-alert">
+            <div class="urgent-info">
+                <h4><i class="fas fa-exclamation-circle"></i> تذكير: واجب مستحق</h4>
+                <p>لديك واجب بعنوان "<strong>${urgent.title}</strong>" بانتظار الحل.</p>
+            </div>
+            <button class="btn-urgent" onclick="solveAssignment(${urgent.id})">
+                الذهاب للواجب
             </button>
         </div>
     `;
 }
 
 // ==========================================
-// 🔥 4. محرك الحل (كما هو - يعمل بشكل صحيح)
+// 🔥 4. محرك الحل (نفس المنطق السليم السابق)
 // ==========================================
 
 function solveAssignment(assignmentId) {
     const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
     const assignment = studentAssignments.find(a => a.id === assignmentId);
     
-    if (!assignment) {
-        alert('الواجب غير موجود');
-        return;
-    }
+    if (!assignment) { alert('الواجب غير موجود'); return; }
     
     currentAssignmentId = assignmentId;
     document.getElementById('assignmentModalTitle').textContent = assignment.title;

@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: نظام التقدم الأكاديمي (تعديلات الواجهة: اسم الدرس + إخفاء الرصيد التفصيلي)
+// الوصف: نظام التقدم الأكاديمي (إصلاح إسناد الواجبات + السجل والأرشفة)
 // ============================================
 
 let currentStudentId = null;
@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     injectAdminEventModal();
+    injectHomeworkModal(); // ✅ تم إضافة هذا السطر لإنشاء نافذة الواجبات
     injectWordTableStyles();
     loadStudentData();
 });
@@ -63,7 +64,6 @@ function switchSection(sectionId) {
 // 🔥 1. محرك سجل التقدم (مع الأرشفة والاستبدال)
 // ============================================
 
-// دالة مساعدة: تحويل الغياب المحسوب إلى سجلات دائمة (مع اسم الدرس)
 function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDate) {
     if (!planStartDate) return myEvents;
     
@@ -74,7 +74,6 @@ function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDa
     let newEvents = [];
     let hasChanges = false;
 
-    // تحديد الدرس المعلق الحالي لتسمية الغياب
     let pendingLesson = myList.find(l => l.status === 'pending');
     let lessonTitleForAbsence = pendingLesson ? pendingLesson.title : 'درس غير محدد';
 
@@ -175,7 +174,6 @@ function loadProgressTab() {
     rawLogs.sort((a, b) => a.dateObj - b.dateObj);
 
     rawLogs.forEach(log => {
-        // تنظيف التكرار
         if (log.status === 'started' || log.status === 'extension') {
             const hasCompletion = rawLogs.some(l => 
                 l.dateStr === log.dateStr && 
@@ -229,7 +227,6 @@ function loadProgressTab() {
         });
     });
 
-    // العرض
     let rowsHtml = '';
     if (finalTimeline.length === 0) {
         rowsHtml = '<tr><td colspan="6" class="text-center p-4">لا توجد سجلات.</td></tr>';
@@ -243,10 +240,7 @@ function loadProgressTab() {
                 }
             }
             
-            // 🔥 تعديل: إزالة عرض الرصيد داخل الجدول 🔥
             let statusDisplay = item.studentStatus; 
-            // تم حذف الكود الذي كان يضيف الرصيد هنا
-
             let noteHtml = item.note ? `<br><small class="text-muted">[${item.note}]</small>` : '';
             return `<tr class="${item.rowClass || ''}"><td><strong>${item.title}</strong>${noteHtml}</td><td class="text-center">${item.lessonStatus}</td><td class="text-center">${statusDisplay}</td><td class="text-center">${item.sessionType}</td><td class="text-center">${item.date}</td><td class="text-center">${actionsHtml}</td></tr>`;
         }).join('');
@@ -266,7 +260,6 @@ function loadProgressTab() {
         `;
     }
 
-    // 🔥 تعديل: تغيير اسم العمود الأول إلى "اسم الدرس" 🔥
     container.innerHTML = `
         <div class="content-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <div>
@@ -323,8 +316,10 @@ function injectWordTableStyles() {
 }
 
 // ============================================
-// 🛠️ إدارة الأحداث (استبدال القديم وحفظ الجديد)
+// 🛠️ إدارة النوافذ المنبثقة (Events + Homework)
 // ============================================
+
+// 1. نافذة الأحداث الإدارية
 function injectAdminEventModal() {
     if (document.getElementById('adminEventModal')) return;
     const html = `
@@ -348,6 +343,29 @@ function injectAdminEventModal() {
                 <textarea id="manualEventNote" class="form-control"></textarea>
             </div>
             <button class="btn btn-primary w-100" onclick="saveAdminEvent()">حفظ السجل</button>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// 🔥 2. نافذة إسناد الواجبات (تمت إضافتها للإصلاح) 🔥
+function injectHomeworkModal() {
+    if (document.getElementById('assignHomeworkModal')) return;
+    const html = `
+    <div id="assignHomeworkModal" class="modal">
+        <div class="modal-content" style="border: 2px solid #000;">
+            <span class="close-btn" onclick="closeModal('assignHomeworkModal')">&times;</span>
+            <h3>إسناد واجب جديد</h3>
+            <div class="form-group">
+                <label>اختر الدرس/الواجب:</label>
+                <select id="homeworkSelect" class="form-control">
+                    </select>
+            </div>
+            <div class="form-group">
+                <label>تاريخ التسليم:</label>
+                <input type="date" id="homeworkDueDate" class="form-control">
+            </div>
+            <button class="btn btn-primary w-100" onclick="assignHomework()">حفظ الإسناد</button>
         </div>
     </div>`;
     document.body.insertAdjacentHTML('beforeend', html);
@@ -388,7 +406,6 @@ function saveAdminEvent() {
     const targetDateStr = new Date(dateInput).toDateString();
     let events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
 
-    // 🔥 منطق الاستبدال: حذف أي حدث سابق لنفس الطالب في هذا التاريخ 🔥
     events = events.filter(e => {
         if (e.studentId != currentStudentId) return true;
         if (new Date(e.date).toDateString() !== targetDateStr) return true;
@@ -599,12 +616,41 @@ function loadLessonsTab() {
     }).join('');
 }
 
-// 4. الواجبات
+// 4. الواجبات (يدعم التعبئة اليدوية + العرض)
 function loadAssignmentsTab() {
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId == currentStudentId);
     const container = document.getElementById('studentAssignmentsGrid');
-    if (list.length === 0) { container.innerHTML = '<div class="empty-state"><h3>لا توجد واجبات.</h3></div>'; return; }
-    container.innerHTML = list.map(a => `<div class="content-card"><h4>${a.title}</h4><div class="content-meta"><span>${a.dueDate || 'مفتوح'}</span><span class="badge ${a.status === 'completed' ? 'badge-success' : 'badge-primary'}">${a.status === 'completed' ? 'مكتمل' : 'جديد'}</span></div><button class="btn btn-sm btn-danger mt-2" onclick="deleteAssignment(${a.id})">حذف</button></div>`).join('');
+    
+    // إضافة زر "إسناد واجب" دائماً في الأعلى
+    const headerHtml = `
+        <div class="content-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2>الواجبات والمهام</h2>
+            <button class="btn btn-primary" onclick="showAssignHomeworkModal()">
+                <i class="fas fa-plus-circle"></i> إسناد واجب جديد
+            </button>
+        </div>
+    `;
+
+    if (list.length === 0) { 
+        container.innerHTML = headerHtml + '<div class="empty-state"><h3>لا توجد واجبات حالياً.</h3><p>يمكنك إسناد واجب يدوياً أو سيتم توليدها تلقائياً مع الدروس.</p></div>'; 
+        return; 
+    }
+
+    const cardsHtml = list.map(a => `
+        <div class="content-card">
+            <div style="display:flex; justify-content:space-between;">
+                <h4 style="margin:0;">${a.title}</h4>
+                <span class="badge ${a.status === 'completed' ? 'badge-success' : 'badge-primary'}">${a.status === 'completed' ? 'مكتمل' : 'جديد'}</span>
+            </div>
+            <div class="content-meta" style="margin-top:10px;">
+                <span>📅 التسليم: ${a.dueDate || 'مفتوح'}</span>
+                <span>تاريخ الإسناد: ${new Date(a.assignedDate).toLocaleDateString('ar-SA')}</span>
+            </div>
+            <button class="btn btn-sm btn-danger mt-3" onclick="deleteAssignment(${a.id})">حذف الواجب</button>
+        </div>`
+    ).join('');
+
+    container.innerHTML = headerHtml + `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:20px;">${cardsHtml}</div>`;
 }
 
 // ============================================
@@ -674,6 +720,8 @@ function autoGenerateLessons() {
     const originalTest = JSON.parse(localStorage.getItem('tests') || '[]').find(t => t.id == compDiag.testId);
 
     let newLessons = [];
+    let newAssignments = [];
+
     if(originalTest && originalTest.questions) {
         originalTest.questions.forEach(q => {
             const ans = compDiag.answers ? compDiag.answers.find(a => a.questionId == q.id) : null;
@@ -688,15 +736,34 @@ function autoGenerateLessons() {
                                 studentId: currentStudentId, title: m.title, objective: m.linkedInstructionalGoal,
                                 originalLessonId: m.id, status: 'pending', assignedDate: new Date().toISOString()
                             });
+                            
+                            newAssignments.push({
+                                id: Date.now() + Math.floor(Math.random()*10000) + 1,
+                                studentId: currentStudentId,
+                                title: `مراجعة وتطبيق: ${m.title}`,
+                                status: 'pending',
+                                dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                                assignedDate: new Date().toISOString()
+                            });
                         }
                     });
                 }
             }
         });
     }
+
     if(newLessons.length === 0) { alert('لا توجد دروس مقترحة.'); return; }
+    
     saveAndReindexLessons(newLessons, true);
-    alert('تم توليد الدروس.');
+    
+    if (newAssignments.length > 0) {
+        let currentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
+        currentAssignments = [...currentAssignments.filter(a => a.studentId != currentStudentId), ...newAssignments];
+        localStorage.setItem('studentAssignments', JSON.stringify(currentAssignments));
+    }
+
+    alert('تم توليد الدروس والواجبات المرتبطة بنجاح.');
+    if (document.getElementById('section-assignments').classList.contains('active')) loadAssignmentsTab();
 }
 
 function saveAndReindexLessons(myList, replaceAll, others) {
@@ -732,17 +799,54 @@ function deleteAssignedTest(id) {
     loadDiagnosticTab();
     if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
 }
-function showAssignHomeworkModal() { document.getElementById('assignHomeworkModal').classList.add('show'); }
-function assignHomework() { 
-    const select = document.getElementById('homeworkSelect'); if(!select.value) return; 
-    const title = select.options[select.selectedIndex].text; 
-    const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]'); 
-    list.push({ id: Date.now(), studentId: currentStudentId, title: title, status: 'pending', dueDate: document.getElementById('homeworkDueDate').value, assignedDate: new Date().toISOString() }); 
-    localStorage.setItem('studentAssignments', JSON.stringify(list)); 
-    closeModal('assignHomeworkModal'); loadAssignmentsTab(); alert('تم الإسناد'); 
+
+// 🔥🔥 إصلاح نافذة إسناد الواجب (تعبئة القائمة بالدروس) 🔥🔥
+function showAssignHomeworkModal() { 
+    const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+    const select = document.getElementById('homeworkSelect');
+    
+    // تعبئة القائمة بالدروس المتوفرة
+    select.innerHTML = '<option value="">اختر من قائمة الدروس...</option>';
+    if (allLessons.length > 0) {
+        allLessons.forEach(l => {
+            select.innerHTML += `<option value="${l.title}">${l.title}</option>`;
+        });
+    } else {
+        select.innerHTML += `<option value="" disabled>لا توجد دروس في المكتبة</option>`;
+    }
+
+    // ضبط تاريخ اليوم كتاريخ افتراضي
+    document.getElementById('homeworkDueDate').valueAsDate = new Date();
+    
+    document.getElementById('assignHomeworkModal').classList.add('show'); 
 }
+
+function assignHomework() { 
+    const select = document.getElementById('homeworkSelect'); 
+    
+    // التحقق من الاختيار
+    if(!select.value) { alert('الرجاء اختيار واجب/درس من القائمة'); return; }
+    
+    const title = select.value; 
+    
+    const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]'); 
+    list.push({ 
+        id: Date.now(), 
+        studentId: currentStudentId, 
+        title: title, 
+        status: 'pending', 
+        dueDate: document.getElementById('homeworkDueDate').value, 
+        assignedDate: new Date().toISOString() 
+    }); 
+    
+    localStorage.setItem('studentAssignments', JSON.stringify(list)); 
+    closeModal('assignHomeworkModal'); 
+    loadAssignmentsTab(); 
+    alert('تم الإسناد بنجاح'); 
+}
+
 function deleteAssignment(id) { 
-    if(confirm('حذف؟')) { 
+    if(confirm('حذف هذا الواجب؟')) { 
         let list = JSON.parse(localStorage.getItem('studentAssignments') || '[]'); 
         list = list.filter(a => a.id != id); 
         localStorage.setItem('studentAssignments', JSON.stringify(list)); 

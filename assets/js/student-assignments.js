@@ -1,12 +1,13 @@
 // ============================================
 // 📁 المسار: assets/js/student-assignments.js
-// الوصف: واجهة الطالب - عرض وحل الواجبات (ديناميكي)
+// الوصف: واجهة الطالب - عرض وحل الواجبات (مع تصميم احترافي ومنظم)
 // ============================================
 
 let currentAssignmentId = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('my-assignments.html')) {
+        injectAssignmentStyles(); // 🔥 إضافة التصميم
         loadStudentAssignments();
         updateCurrentAssignmentSection();
     }
@@ -16,9 +17,91 @@ function getCurrentUser() {
     return JSON.parse(sessionStorage.getItem('currentUser')).user;
 }
 
-// 1. تحميل قائمة الواجبات
+// ==========================================
+// 🎨 1. حقن التنسيقات (CSS Injection)
+// ==========================================
+function injectAssignmentStyles() {
+    if (document.getElementById('assignmentStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'assignmentStyles';
+    style.innerHTML = `
+        /* تنسيق الحاوية الرئيسية */
+        #currentAssignmentSection { margin-bottom: 30px; }
+        
+        /* تنسيق اللوحة العلوية (الواجب العاجل) */
+        .hero-banner {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(118, 75, 162, 0.2);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero-banner h3 { margin: 0 0 10px 0; font-size: 1.8rem; font-weight: bold; }
+        .hero-banner p { opacity: 0.9; margin-bottom: 20px; font-size: 1.1rem; }
+        .btn-hero {
+            background: white; color: #764ba2; border: none; padding: 10px 30px;
+            border-radius: 25px; font-weight: bold; transition: transform 0.2s;
+            cursor: pointer; text-decoration: none; display: inline-block;
+        }
+        .btn-hero:hover { transform: scale(1.05); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+
+        /* تنسيق أدوات التصفية */
+        .filters-container {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 20px; background: #f8f9fa; padding: 15px; border-radius: 10px; border: 1px solid #eee;
+        }
+        .filter-label { font-weight: bold; color: #555; margin-left: 10px; }
+
+        /* تنسيق شبكة البطاقات */
+        .assignments-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* استجابة تلقائية */
+            gap: 20px;
+        }
+
+        /* تنسيق البطاقة الواحدة */
+        .assignment-card {
+            background: white; border: 1px solid #e0e0e0; border-radius: 12px;
+            overflow: hidden; transition: transform 0.2s, box-shadow 0.2s;
+            display: flex; flex-direction: column;
+        }
+        .assignment-card:hover { transform: translateY(-5px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
+        
+        .card-header { padding: 15px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: flex-start; }
+        .card-title { margin: 0; font-size: 1.1rem; color: #333; font-weight: bold; }
+        
+        .status-badge { font-size: 0.75rem; padding: 4px 8px; border-radius: 12px; font-weight: bold; }
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-overdue { background: #f8d7da; color: #721c24; }
+
+        .card-body { padding: 15px; flex-grow: 1; }
+        .meta-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; color: #666; }
+        .meta-label { color: #999; }
+        .meta-val { color: #333; font-weight: 500; }
+
+        .card-footer { padding: 15px; background: #fafafa; border-top: 1px solid #f0f0f0; text-align: center; }
+        .btn-card { width: 100%; padding: 8px; border-radius: 6px; font-size: 0.95rem; }
+
+        /* حالة فارغة */
+        .empty-state { text-align: center; padding: 50px; color: #999; grid-column: 1 / -1; }
+        .empty-icon { font-size: 3rem; margin-bottom: 10px; opacity: 0.5; }
+    `;
+    document.head.appendChild(style);
+}
+
+// ==========================================
+// 📋 2. عرض الواجبات
+// ==========================================
+
 function loadStudentAssignments() {
     const assignmentsList = document.getElementById('assignmentsList');
+    // إضافة كلاس الشبكة للحاوية
+    assignmentsList.className = 'assignments-grid';
+    
     const currentStudent = getCurrentUser();
     const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
     
@@ -29,9 +112,9 @@ function loadStudentAssignments() {
     if (studentAssignmentsFiltered.length === 0) {
         assignmentsList.innerHTML = `
             <div class="empty-state">
-                <div class="empty-icon">📋</div>
+                <div class="empty-icon">🎉</div>
                 <h3>لا توجد واجبات مطلوبة</h3>
-                <p>سيتم إضافة الواجبات المطلوبة هنا</p>
+                <p>أنت متفوق! لقد أنجزت جميع مهامك.</p>
             </div>
         `;
         return;
@@ -41,40 +124,47 @@ function loadStudentAssignments() {
         const statusClass = getAssignmentStatusClass(assignment.status);
         const statusText = getAssignmentStatusText(assignment.status);
         
+        // تحديد لون الشريط الجانبي بناءً على الحالة
+        let borderStyle = '';
+        if(assignment.status === 'pending') borderStyle = 'border-right: 4px solid #ffc107;';
+        else if(assignment.status === 'completed') borderStyle = 'border-right: 4px solid #28a745;';
+        
         return `
-            <div class="assignment-card ${statusClass}">
+            <div class="assignment-card" style="${borderStyle}">
                 <div class="card-header">
                     <h3 class="card-title">${assignment.title}</h3>
-                    <span class="card-status ${statusClass}">${statusText}</span>
+                    <span class="status-badge status-${statusClass}">${statusText}</span>
                 </div>
-                <div class="card-meta">
-                    <div class="meta-item">
-                        <span>المادة:</span>
-                        <strong>${assignment.subject || 'عام'}</strong>
+                <div class="card-body">
+                    <div class="meta-row">
+                        <span class="meta-label"><i class="fas fa-book"></i> المادة:</span>
+                        <span class="meta-val">${assignment.subject || 'عام'}</span>
                     </div>
-                    <div class="meta-item">
-                        <span>تاريخ الإضافة:</span>
-                        <strong>${new Date(assignment.assignedDate).toLocaleDateString('ar-SA')}</strong>
+                    <div class="meta-row">
+                        <span class="meta-label"><i class="far fa-calendar-alt"></i> الإسناد:</span>
+                        <span class="meta-val">${new Date(assignment.assignedDate).toLocaleDateString('ar-SA')}</span>
                     </div>
                     ${assignment.dueDate ? `
-                    <div class="meta-item">
-                        <span>موعد التسليم:</span>
-                        <strong>${new Date(assignment.dueDate).toLocaleDateString('ar-SA')}</strong>
-                    </div>
-                    ` : ''}
+                    <div class="meta-row">
+                        <span class="meta-label"><i class="far fa-clock"></i> التسليم:</span>
+                        <span class="meta-val text-danger">${new Date(assignment.dueDate).toLocaleDateString('ar-SA')}</span>
+                    </div>` : ''}
                     ${assignment.score !== undefined ? `
-                    <div class="meta-item">
-                        <span>النتيجة:</span>
-                        <strong>${assignment.score}%</strong>
-                    </div>
-                    ` : ''}
+                    <div class="meta-row" style="margin-top:10px; padding-top:10px; border-top:1px dashed #eee;">
+                        <span class="meta-label">الدرجة:</span>
+                        <span class="meta-val badge badge-success">${assignment.score}%</span>
+                    </div>` : ''}
                 </div>
-                <div class="card-actions">
+                <div class="card-footer">
                     ${assignment.status === 'pending' ? `
-                    <button class="btn btn-success" onclick="solveAssignment(${assignment.id})">📝 حل الواجب</button>
+                    <button class="btn btn-success btn-card" onclick="solveAssignment(${assignment.id})">
+                        <i class="fas fa-pencil-alt"></i> حل الواجب
+                    </button>
                     ` : ''}
                     ${assignment.status === 'completed' ? `
-                    <button class="btn btn-primary" onclick="viewAssignmentResult(${assignment.id})">📄 عرض الإجابة</button>
+                    <button class="btn btn-primary btn-card" onclick="viewAssignmentResult(${assignment.id})">
+                        <i class="fas fa-eye"></i> عرض إجابتي
+                    </button>
                     ` : ''}
                 </div>
             </div>
@@ -82,7 +172,7 @@ function loadStudentAssignments() {
     }).join('');
 }
 
-// 2. تحديث قسم "الواجب الحالي"
+// 3. تحديث قسم "الواجب الحالي" (Hero Section)
 function updateCurrentAssignmentSection() {
     const currentAssignmentSection = document.getElementById('currentAssignmentSection');
     if (!currentAssignmentSection) return;
@@ -90,42 +180,37 @@ function updateCurrentAssignmentSection() {
     const currentStudent = getCurrentUser();
     const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
     
+    // البحث عن أقرب واجب لم يتم حله
     const currentAssignment = studentAssignments.find(assignment => 
         assignment.studentId === currentStudent.id && assignment.status === 'pending'
     );
     
     if (!currentAssignment) {
-        currentAssignmentSection.innerHTML = `
-            <div class="current-assignment-content">
-                <h3 class="current-assignment-title">ممتاز! لا توجد واجبات جديدة</h3>
-                <p class="current-assignment-description">أنجزت جميع مهامك، استمتع بوقتك.</p>
-            </div>
-        `;
+        // إخفاء القسم إذا لم يوجد واجب عاجل لتوفير المساحة
+        currentAssignmentSection.style.display = 'none';
         return;
     }
     
+    currentAssignmentSection.style.display = 'block';
     currentAssignmentSection.innerHTML = `
-        <div class="current-assignment-content">
-            <h3 class="current-assignment-title">واجب جديد: ${currentAssignment.title}</h3>
-            <p class="current-assignment-description">يجب تسليم هذا الواجب قريباً.</p>
-            <button class="btn btn-light btn-large" onclick="solveAssignment(${currentAssignment.id})">
-                ابدأ الحل الآن
+        <div class="hero-banner">
+            <div style="font-size:3rem; margin-bottom:10px;">🚀</div>
+            <h3>واجب جديد: ${currentAssignment.title}</h3>
+            <p>مطلوب تسليمه في: ${new Date(currentAssignment.dueDate).toLocaleDateString('ar-SA')}</p>
+            <button class="btn-hero" onclick="solveAssignment(${currentAssignment.id})">
+                ابدأ الحل الآن <i class="fas fa-arrow-left"></i>
             </button>
         </div>
     `;
 }
 
 // ==========================================
-// 🔥 3. محرك حل الواجبات (Dynamic Rendering) 🔥
+// 🔥 4. محرك الحل (كما هو - يعمل بشكل صحيح)
 // ==========================================
 
 function solveAssignment(assignmentId) {
     const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
-    // البحث في واجبات الطالب (التي تم نسخها له)
     const assignment = studentAssignments.find(a => a.id === assignmentId);
-    
-    // إذا لم نجد الأسئلة داخل واجب الطالب، نحاول البحث في المصدر (للحالات القديمة)
-    // لكن في نظامنا الحالي، تم نسخ الأسئلة بالفعل داخل كائن الواجب عند الإسناد.
     
     if (!assignment) {
         alert('الواجب غير موجود');
@@ -133,29 +218,21 @@ function solveAssignment(assignmentId) {
     }
     
     currentAssignmentId = assignmentId;
-    
     document.getElementById('assignmentModalTitle').textContent = assignment.title;
-    
-    // بناء واجهة الأسئلة
     const contentDiv = document.getElementById('assignmentContent');
-    contentDiv.innerHTML = ''; // تنظيف
+    contentDiv.innerHTML = ''; 
 
-    // تعليمات
     if (assignment.description) {
         contentDiv.innerHTML += `<div class="alert alert-info mb-4">${assignment.description}</div>`;
     }
 
-    // هل توجد أسئلة؟
     if (!assignment.questions || assignment.questions.length === 0) {
-        contentDiv.innerHTML += `<div class="text-center p-5"><h3>لا توجد أسئلة في هذا الواجب.</h3><p>قد يكون واجباً للقراءة أو المراجعة فقط.</p></div>`;
+        contentDiv.innerHTML += `<div class="text-center p-5"><h3>لا توجد أسئلة.</h3></div>`;
     } else {
-        // توليد الأسئلة
         let questionsHtml = '<form id="studentAnswersForm">';
-        
         assignment.questions.forEach((q, index) => {
             questionsHtml += renderSingleQuestion(q, index);
         });
-        
         questionsHtml += '</form>';
         contentDiv.innerHTML += questionsHtml;
     }
@@ -163,7 +240,6 @@ function solveAssignment(assignmentId) {
     document.getElementById('solveAssignmentModal').classList.add('show');
 }
 
-// دالة مساعدة لرسم سؤال واحد حسب نوعه
 function renderSingleQuestion(q, index) {
     let html = `
     <div class="question-box mb-4 p-3 border rounded bg-white shadow-sm" data-id="${q.id}" data-type="${q.type}">
@@ -173,15 +249,11 @@ function renderSingleQuestion(q, index) {
         </div>
     `;
 
-    // 1. الأسئلة القياسية (MCQ)
     if (q.type === 'mcq' || q.type === 'mcq-media') {
         html += `<p class="lead mb-3">${q.text}</p>`;
-        
-        // عرض الصورة إذا وجدت
         if (q.attachment) {
             html += `<div class="mb-3 text-center"><img src="${q.attachment}" style="max-width:100%; max-height:200px; border-radius:8px; border:1px solid #ddd;"></div>`;
         }
-
         if (q.choices && q.choices.length > 0) {
             html += `<div class="choices-list">`;
             q.choices.forEach((choice, i) => {
@@ -193,14 +265,10 @@ function renderSingleQuestion(q, index) {
             });
             html += `</div>`;
         }
-    } 
-    // 2. الأسئلة المقالية
-    else if (q.type === 'open-ended') {
+    } else if (q.type === 'open-ended') {
         html += `<p class="lead mb-3">${q.text}</p>`;
         html += `<textarea class="form-control" name="q_${q.id}" rows="4" placeholder="اكتب إجابتك هنا..."></textarea>`;
-    }
-    // 3. الأسئلة المركبة (فقرات) - معالجة مبسطة للطالب
-    else if (q.paragraphs) {
+    } else if (q.paragraphs) {
         html += `<p class="lead mb-3">${q.text || 'أجب عما يلي:'}</p>`;
         q.paragraphs.forEach((p, pIdx) => {
             html += `<div class="mb-2 p-2 bg-light rounded">`;
@@ -209,31 +277,22 @@ function renderSingleQuestion(q, index) {
                 html += `<input type="text" class="form-control mt-1" name="q_${q.id}_p${pIdx}" placeholder="الكلمة كاملة">`;
             } else if (q.type.includes('reading')) {
                 html += `<div class="p-2 border bg-white mb-2">${p.text}</div>`;
-                html += `<p class="text-muted small">اقرأ النص أعلاه (تقييم ذاتي أو يسجله المعلم لاحقاً)</p>`;
+                html += `<p class="text-muted small">اقرأ النص أعلاه</p>`;
             } else {
-                // fallback لبقية الأنواع
                 html += `<p>${p.text}</p>`;
                 html += `<input type="text" class="form-control" name="q_${q.id}_p${pIdx}" placeholder="إجابتك...">`;
             }
             html += `</div>`;
         });
     }
-
     html += `</div>`;
     return html;
 }
 
-// ==========================================
-// 🔥 4. نظام التسليم والتصحيح 🔥
-// ==========================================
-
 function submitAssignment() {
     if (!currentAssignmentId) return;
-    
-    // إظهار تأكيد
-    if(!confirm('هل أنت متأكد من تسليم الإجابات؟ لا يمكنك التعديل بعد ذلك.')) return;
+    if(!confirm('تسليم الإجابات النهائية؟')) return;
 
-    // جلب الواجب الأصلي
     const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
     const assignmentIndex = studentAssignments.findIndex(a => a.id === currentAssignmentId);
     if (assignmentIndex === -1) return;
@@ -241,7 +300,6 @@ function submitAssignment() {
     const assignment = studentAssignments[assignmentIndex];
     const form = document.getElementById('studentAnswersForm');
     
-    // جمع الإجابات وتصحيح الآلي منها
     let totalScore = 0;
     let earnedScore = 0;
     const studentAnswers = [];
@@ -249,51 +307,37 @@ function submitAssignment() {
     assignment.questions.forEach(q => {
         const qScore = parseInt(q.passingScore || 1);
         totalScore += qScore;
-        
         let answerData = { questionId: q.id, type: q.type, score: 0 };
 
         if (q.type === 'mcq' || q.type === 'mcq-media') {
-            // البحث عن الخيار المحدد
             const selected = form.querySelector(`input[name="q_${q.id}"]:checked`);
             if (selected) {
                 const val = parseInt(selected.value);
                 answerData.value = val;
-                // تصحيح آلي
                 if (val === parseInt(q.correctAnswer)) {
                     earnedScore += qScore;
                     answerData.score = qScore;
                 }
-            } else {
-                answerData.value = null;
-            }
+            } else { answerData.value = null; }
         } else if (q.type === 'open-ended') {
-            // المقالي يحتاج تصحيح معلم، نعطيه 0 مؤقتاً أو درجة كاملة حسب سياستك
-            // هنا سنجعله 0 بانتظار المعلم، أو يمكن اعتباره "مكتمل"
             const textVal = form.querySelector(`textarea[name="q_${q.id}"]`)?.value;
             answerData.value = textVal;
-            // المقالي لا يصحح آلياً هنا (يمكنك تغييره)
         } else {
-            // بقية الأنواع تعتبر مقالية/يدوية حالياً
             answerData.value = "تم الحل";
-            // earnedScore += qScore; // (اختياري: إعطاء الدرجة لمجرد المحاولة)
         }
-        
         studentAnswers.push(answerData);
     });
 
-    // حساب النسبة المئوية (للأسئلة القابلة للتصحيح)
-    // إذا كان كله مقالي، قد تكون النسبة 0 وهذا طبيعي بانتظار المعلم
     let finalPercent = totalScore > 0 ? Math.round((earnedScore / totalScore) * 100) : 100;
 
-    // تحديث البيانات
     studentAssignments[assignmentIndex].status = 'completed';
     studentAssignments[assignmentIndex].completedDate = new Date().toISOString();
-    studentAssignments[assignmentIndex].score = finalPercent; // الدرجة المحسوبة
-    studentAssignments[assignmentIndex].answers = studentAnswers; // حفظ إجابات الطالب
+    studentAssignments[assignmentIndex].score = finalPercent;
+    studentAssignments[assignmentIndex].answers = studentAnswers;
 
     localStorage.setItem('studentAssignments', JSON.stringify(studentAssignments));
     
-    alert(`تم التسليم بنجاح! نتيجتك الأولية: ${finalPercent}%`);
+    alert(`تم التسليم! الدرجة التقديرية: ${finalPercent}%`);
     closeSolveAssignmentModal();
     loadStudentAssignments();
     updateCurrentAssignmentSection();
@@ -304,12 +348,11 @@ function closeSolveAssignmentModal() {
     currentAssignmentId = null;
 }
 
-// عرض النتيجة (للمراجعة فقط)
 function viewAssignmentResult(assignmentId) {
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
     const item = list.find(a => a.id == assignmentId);
     if(item) {
-        alert(`تم حل هذا الواجب بتاريخ: ${new Date(item.completedDate).toLocaleDateString('ar-SA')}\nالدرجة: ${item.score}%`);
+        alert(`تم الحل بتاريخ: ${new Date(item.completedDate).toLocaleDateString('ar-SA')}\nالدرجة: ${item.score}%`);
     }
 }
 
@@ -323,7 +366,6 @@ function getAssignmentStatusText(status) {
     return statusTexts[status] || 'غير محدد';
 }
 
-// تصدير الدوال
 window.solveAssignment = solveAssignment;
 window.submitAssignment = submitAssignment;
 window.closeSolveAssignmentModal = closeSolveAssignmentModal;

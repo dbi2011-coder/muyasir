@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: نظام التقدم الأكاديمي (تنسيق الواجهة: الحالة الفارغة متناسقة ومرتبة)
+// الوصف: نظام التقدم الأكاديمي (إصلاح تعارض النافذة القديمة + كافة الميزات)
 // ============================================
 
 let currentStudentId = null;
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     injectAdminEventModal();
-    injectHomeworkModal(); 
+    injectHomeworkModal(); // بناء نافذة الواجبات (النسخة المحدثة)
     injectWordTableStyles();
     loadStudentData();
 });
@@ -343,8 +343,12 @@ function injectAdminEventModal() {
     document.body.insertAdjacentHTML('beforeend', html);
 }
 
+// 🔥🔥 تم تعديل هذه الدالة لتحذف النسخة القديمة إذا وجدت 🔥🔥
 function injectHomeworkModal() {
-    if (document.getElementById('assignHomeworkModal')) return;
+    // 🧹 تنظيف: حذف النافذة القديمة إذا كانت موجودة لضمان التحديث
+    const oldModal = document.getElementById('assignHomeworkModal');
+    if (oldModal) oldModal.remove();
+
     const html = `
     <div id="assignHomeworkModal" class="modal">
         <div class="modal-content" style="border: 2px solid #000;">
@@ -816,6 +820,7 @@ function deleteAssignedTest(id) {
     if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
 }
 
+// 🔥🔥 إصلاح نافذة إسناد الواجب (مربع نصي حر) 🔥🔥
 function showAssignHomeworkModal() { 
     // ضبط تاريخ اليوم كتاريخ افتراضي
     document.getElementById('homeworkDueDate').valueAsDate = new Date();

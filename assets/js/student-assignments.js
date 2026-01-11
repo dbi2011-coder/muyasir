@@ -1,14 +1,14 @@
 // ============================================
 // 📁 المسار: assets/js/student-assignments.js
-// الوصف: واجهة الطالب - تصميم القائمة (List View) نظيف ومرتب
+// الوصف: واجهة الطالب - عرض وحل الواجبات (تصميم القائمة + إصلاح التصفية)
 // ============================================
 
 let currentAssignmentId = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('my-assignments.html')) {
-        injectCleanStyles(); // 🔥 تطبيق التصميم الجديد
-        loadStudentAssignments();
+        injectCleanStyles(); 
+        loadStudentAssignments(); // تحميل افتراضي (الكل)
         updateCurrentAssignmentSection();
     }
 });
@@ -28,7 +28,7 @@ function injectCleanStyles() {
         /* حاوية الصفحة */
         .assignments-container { max-width: 1000px; margin: 0 auto; padding: 20px; }
 
-        /* 1. قسم التنبيه (الواجب العاجل) - بسيط جداً */
+        /* 1. قسم التنبيه (الواجب العاجل) */
         .urgent-alert {
             background-color: #fff3cd;
             color: #856404;
@@ -36,9 +36,7 @@ function injectCleanStyles() {
             border-radius: 8px;
             padding: 15px 20px;
             margin-bottom: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            display: flex; align-items: center; justify-content: space-between;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
         .urgent-info h4 { margin: 0 0 5px 0; font-size: 1.1rem; font-weight: bold; }
@@ -46,6 +44,7 @@ function injectCleanStyles() {
         .btn-urgent {
             background-color: #856404; color: white; border: none;
             padding: 8px 20px; border-radius: 5px; text-decoration: none; font-size: 0.9rem;
+            cursor: pointer;
         }
         .btn-urgent:hover { background-color: #6d5203; }
 
@@ -63,14 +62,11 @@ function injectCleanStyles() {
             border-radius: 8px;
             padding: 15px 20px;
             margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            display: flex; align-items: center; justify-content: space-between;
             transition: all 0.2s ease;
         }
         .assignment-row:hover { border-color: #007bff; box-shadow: 0 3px 10px rgba(0,0,0,0.05); }
         
-        /* تفاصيل الصف */
         .row-info { display: flex; align-items: center; gap: 20px; flex-grow: 1; }
         .row-icon { 
             width: 40px; height: 40px; background: #f0f2f5; 
@@ -81,14 +77,7 @@ function injectCleanStyles() {
         .row-text .meta { font-size: 0.85rem; color: #777; }
         .row-text .meta span { margin-left: 15px; }
         
-        /* الحالة والزر */
         .row-actions { display: flex; align-items: center; gap: 15px; }
-        .status-badge { 
-            font-size: 0.8rem; padding: 5px 10px; border-radius: 20px; background: #eee; color: #555; 
-        }
-        .status-pending { background: #fff3cd; color: #856404; }
-        .status-completed { background: #d4edda; color: #155724; }
-        
         .btn-action {
             padding: 6px 15px; border-radius: 5px; border: 1px solid #ddd;
             background: white; color: #555; font-size: 0.9rem; cursor: pointer; transition: 0.2s;
@@ -100,7 +89,6 @@ function injectCleanStyles() {
         /* حالة فارغة */
         .empty-list { text-align: center; padding: 40px; background: #fafafa; border-radius: 8px; color: #777; }
 
-        /* تجاوب للجوال */
         @media (max-width: 768px) {
             .assignment-row { flex-direction: column; align-items: flex-start; gap: 15px; }
             .row-actions { width: 100%; justify-content: space-between; margin-top: 10px; }
@@ -111,22 +99,38 @@ function injectCleanStyles() {
 }
 
 // ==========================================
-// 📋 2. عرض الواجبات (تصميم القائمة)
+// 📋 2. عرض الواجبات (مع دعم التصفية)
 // ==========================================
 
-function loadStudentAssignments() {
+// دالة التصفية التي يستدعيها ملف HTML
+function filterAssignments() {
+    const filterValue = document.getElementById('assignmentFilter').value;
+    loadStudentAssignments(filterValue);
+}
+
+function loadStudentAssignments(filter = 'all') {
     const assignmentsList = document.getElementById('assignmentsList');
-    // تنظيف الكلاسات القديمة إن وجدت
     assignmentsList.className = ''; 
     
     const currentStudent = getCurrentUser();
     const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
     
-    const list = studentAssignments.filter(assignment => 
+    // 1. فلترة حسب الطالب
+    let list = studentAssignments.filter(assignment => 
         assignment.studentId === currentStudent.id
     );
+
+    // 2. فلترة حسب الحالة (من القائمة المنسدلة)
+    if (filter !== 'all') {
+        list = list.filter(a => {
+            if (filter === 'pending') return a.status === 'pending';
+            if (filter === 'completed') return a.status === 'completed';
+            if (filter === 'overdue') return a.status === 'overdue'; // (إذا كنت تستخدم هذه الحالة)
+            return true;
+        });
+    }
     
-    // الفرز: المعلقة أولاً، ثم حسب التاريخ الأحدث
+    // 3. الفرز: المعلقة أولاً
     list.sort((a, b) => {
         if (a.status === 'pending' && b.status !== 'pending') return -1;
         if (a.status !== 'pending' && b.status === 'pending') return 1;
@@ -136,15 +140,14 @@ function loadStudentAssignments() {
     if (list.length === 0) {
         assignmentsList.innerHTML = `
             <div class="empty-list">
-                <div style="font-size:2.5rem; margin-bottom:10px;">✨</div>
-                <h4>لا توجد واجبات حالياً</h4>
-                <p>سجل مهامك نظيف تماماً.</p>
+                <div style="font-size:2.5rem; margin-bottom:10px;">📂</div>
+                <h4>لا توجد واجبات مطابقة</h4>
+                <p>جرب تغيير خيار التصفية.</p>
             </div>
         `;
         return;
     }
     
-    // إضافة عنوان للقائمة
     let html = `<div class="assignments-list-header">
                     <h3>📝 قائمة الواجبات (${list.length})</h3>
                 </div>`;
@@ -190,19 +193,17 @@ function loadStudentAssignments() {
     assignmentsList.innerHTML = html;
 }
 
-// 3. تحديث قسم "الواجب الحالي" (تنبيه بسيط)
+// 3. تحديث قسم "الواجب الحالي"
 function updateCurrentAssignmentSection() {
     const section = document.getElementById('currentAssignmentSection');
     if (!section) return;
 
     const currentStudent = getCurrentUser();
     const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
-    
-    // البحث عن واجب معلق وموعد تسليمه قريب
     const urgent = studentAssignments.find(a => a.studentId === currentStudent.id && a.status === 'pending');
     
     if (!urgent) {
-        section.style.display = 'none'; // إخفاء القسم إذا لم يوجد شيء عاجل
+        section.style.display = 'none';
         return;
     }
     
@@ -221,7 +222,7 @@ function updateCurrentAssignmentSection() {
 }
 
 // ==========================================
-// 🔥 4. محرك الحل (نفس المنطق السليم السابق)
+// 🔥 4. محرك الحل (يعمل بشكل صحيح)
 // ==========================================
 
 function solveAssignment(assignmentId) {
@@ -369,16 +370,8 @@ function viewAssignmentResult(assignmentId) {
     }
 }
 
-function getAssignmentStatusClass(status) {
-    const statusClasses = { 'pending': 'pending', 'completed': 'completed', 'overdue': 'overdue' };
-    return statusClasses[status] || 'pending';
-}
-
-function getAssignmentStatusText(status) {
-    const statusTexts = { 'pending': 'معلقة', 'completed': 'مكتملة', 'overdue': 'متأخرة' };
-    return statusTexts[status] || 'غير محدد';
-}
-
+// تصدير الدوال للاستخدام العالمي (لضمان عملها مع HTML onclick)
+window.filterAssignments = filterAssignments;
 window.solveAssignment = solveAssignment;
 window.submitAssignment = submitAssignment;
 window.closeSolveAssignmentModal = closeSolveAssignmentModal;

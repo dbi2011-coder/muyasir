@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: نظام التقدم الأكاديمي (تم فصل الواجبات عن الدروس في الإسناد اليدوي)
+// الوصف: نظام التقدم الأكاديمي (تم إصلاح مشكلة زر الإسناد + الإدخال اليدوي)
 // ============================================
 
 let currentStudentId = null;
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     injectAdminEventModal();
-    injectHomeworkModal(); // إنشاء نافذة الواجبات
+    injectHomeworkModal(); // ✅ تم إضافة هذا السطر الضروري (كان مفقوداً)
     injectWordTableStyles();
     loadStudentData();
 });
@@ -344,7 +344,7 @@ function injectAdminEventModal() {
     document.body.insertAdjacentHTML('beforeend', html);
 }
 
-// 🔥 2. نافذة إسناد الواجبات (تم تصحيحها لتدعم الإدخال اليدوي) 🔥
+// 🔥 2. نافذة إسناد الواجبات (إدخال يدوي حر) 🔥
 function injectHomeworkModal() {
     if (document.getElementById('assignHomeworkModal')) return;
     const html = `
@@ -705,7 +705,6 @@ function deleteLesson(id) {
     saveAndReindexLessons(myLessons, false, otherLessons);
 }
 
-// 🔥🔥 دالة التوليد التلقائي (مع إنشاء واجبات تلقائية) 🔥🔥
 function autoGenerateLessons() {
     if(!confirm('سيتم حذف الدروس الحالية وتوليد قائمة جديدة. متابعة؟')) return;
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');

@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: نظام التقدم الأكاديمي (زر الإسناد جهة اليمين + كافة الإصلاحات السابقة)
+// الوصف: نظام التقدم الأكاديمي (ترتيب الواجهة الفارغة: النص ثم الزر)
 // ============================================
 
 let currentStudentId = null;
@@ -606,24 +606,35 @@ function loadLessonsTab() {
     }).join('');
 }
 
-// 🔥🔥 4. الواجبات (واجهة نظيفة: زر واحد يمين + بدون عناوين) 🔥🔥
+// 🔥🔥 4. الواجبات (ترتيب جديد: النص أولاً ثم الزر في حالة الفراغ) 🔥🔥
 function loadAssignmentsTab() {
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId == currentStudentId);
     const container = document.getElementById('studentAssignmentsGrid');
     
-    // 🔥 جعل الزر على اليمين (flex-start) في اللغات RTL
-    const headerHtml = `
-        <div class="content-header" style="display:flex; justify-content:flex-start; align-items:center; margin-bottom:20px;">
-            <button class="btn btn-primary" onclick="showAssignHomeworkModal()">
-                <i class="fas fa-plus-circle"></i> إسناد واجب جديد
-            </button>
-        </div>
+    const assignBtn = `
+        <button class="btn btn-primary" onclick="showAssignHomeworkModal()">
+            <i class="fas fa-plus-circle"></i> إسناد واجب جديد
+        </button>
     `;
 
     if (list.length === 0) { 
-        container.innerHTML = headerHtml + '<div class="empty-state"><h3>لا توجد واجبات حالياً.</h3><p>يمكنك إسناد واجب يدوياً أو سيتم توليدها تلقائياً مع الدروس.</p></div>'; 
+        // 🔥 التعديل هنا: النص أولاً ثم الزر تحته
+        container.innerHTML = `
+            <div class="empty-state" style="text-align:center; padding: 40px;">
+                <h3 style="color:#666;">لا توجد واجبات حالياً.</h3>
+                <p style="color:#888; margin-bottom: 20px;">يمكنك إسناد واجب يدوياً أو سيتم توليدها تلقائياً مع الدروس.</p>
+                ${assignBtn}
+            </div>
+        `; 
         return; 
     }
+
+    // في الحالة الممتلئة: الزر في اليمين (flex-start)
+    const headerHtml = `
+        <div class="content-header" style="display:flex; justify-content:flex-start; align-items:center; margin-bottom:20px;">
+            ${assignBtn}
+        </div>
+    `;
 
     const cardsHtml = list.map(a => `
         <div class="content-card">

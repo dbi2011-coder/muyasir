@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: نظام التقدم الأكاديمي (واجهة نظيفة: زر واحد لليسار + بدون عناوين مكررة)
+// الوصف: نظام التقدم الأكاديمي (زر الإسناد جهة اليمين + كافة الإصلاحات السابقة)
 // ============================================
 
 let currentStudentId = null;
@@ -606,14 +606,14 @@ function loadLessonsTab() {
     }).join('');
 }
 
-// 🔥🔥 4. الواجبات (تعديل: واجهة نظيفة بدون عناوين مكررة) 🔥🔥
+// 🔥🔥 4. الواجبات (واجهة نظيفة: زر واحد يمين + بدون عناوين) 🔥🔥
 function loadAssignmentsTab() {
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId == currentStudentId);
     const container = document.getElementById('studentAssignmentsGrid');
     
-    // 🔥 تم حذف العنوان (h2) وضبط الزر ليكون على اليسار فقط 🔥
+    // 🔥 جعل الزر على اليمين (flex-start) في اللغات RTL
     const headerHtml = `
-        <div class="content-header" style="display:flex; justify-content:flex-end; align-items:center; margin-bottom:20px;">
+        <div class="content-header" style="display:flex; justify-content:flex-start; align-items:center; margin-bottom:20px;">
             <button class="btn btn-primary" onclick="showAssignHomeworkModal()">
                 <i class="fas fa-plus-circle"></i> إسناد واجب جديد
             </button>

@@ -1,12 +1,11 @@
 // ============================================
 // 📁 المسار: assets/js/student-assignments.js
-// الوصف: واجهة الطالب (إصلاح عرض الأسئلة الشامل + الطباعة + الرفع)
+// الوصف: واجهة الطالب (إصلاح نهائي لظهور الأسئلة + شبكة أمان للأنواع غير المعروفة)
 // ============================================
 
 let currentAssignmentId = null;
 
 document.addEventListener('DOMContentLoaded', function() {
-    // التأكد من أننا في صفحة الواجبات
     if (document.getElementById('assignmentsList') || window.location.pathname.includes('my-assignments.html')) {
         injectCleanStyles(); 
         injectSolveModal();
@@ -24,10 +23,9 @@ function getCurrentUser() {
 }
 
 // ==========================================
-// 🏗️ 1. بناء نافذة الحل (Modal)
+// 🏗️ 1. بناء نافذة الحل
 // ==========================================
 function injectSolveModal() {
-    // حذف النافذة القديمة لضمان التحديث
     const oldModal = document.getElementById('solveAssignmentModal');
     if (oldModal) oldModal.remove();
     
@@ -67,7 +65,7 @@ function injectSolveModal() {
 }
 
 // ==========================================
-// 🎨 2. التنسيقات (CSS)
+// 🎨 2. التنسيقات
 // ==========================================
 function injectCleanStyles() {
     if (document.getElementById('cleanAssignmentStyles')) return;
@@ -76,17 +74,9 @@ function injectCleanStyles() {
     style.innerHTML = `
         .assignments-container { max-width: 1000px; margin: 0 auto; padding: 20px; font-family: 'Tajawal', sans-serif; }
         .modal.show { display: block !important; }
-        
-        /* تنبيه الواجب */
-        .urgent-alert {
-            background: linear-gradient(to right, #fff3cd, #fff8e1); color: #856404; border: 1px solid #ffeeba;
-            border-radius: 10px; padding: 20px; margin-bottom: 30px; display: flex; align-items: center; justify-content: space-between;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
+        .urgent-alert { background: linear-gradient(to right, #fff3cd, #fff8e1); color: #856404; border: 1px solid #ffeeba; border-radius: 10px; padding: 20px; margin-bottom: 30px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .urgent-info h4 { margin: 0 0 5px 0; font-size: 1.2rem; font-weight:bold; }
         .btn-urgent { background-color: #d39e00; color: white; border: none; padding: 10px 25px; border-radius: 6px; cursor: pointer; font-weight:bold; }
-
-        /* القائمة */
         .assignments-list-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
         .assignment-row { background: white; border: 1px solid #e0e0e0; border-radius: 10px; padding: 15px 25px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; transition: all 0.2s ease; }
         .assignment-row:hover { border-color: #007bff; box-shadow: 0 5px 15px rgba(0,0,0,0.08); transform: translateY(-2px); }
@@ -106,7 +96,6 @@ function injectCleanStyles() {
             .row-actions { width: 100%; justify-content: flex-end; margin-top: 10px; border-top:1px solid #eee; padding-top:10px; }
         }
 
-        /* 🔥 تنسيقات الطباعة 🔥 */
         @media print {
             body * { visibility: hidden; }
             #solveAssignmentModal, #solveAssignmentModal * { visibility: visible; }
@@ -123,7 +112,7 @@ function injectCleanStyles() {
 }
 
 // ==========================================
-// 📋 3. منطق العرض والتصفية
+// 📋 3. منطق العرض
 // ==========================================
 
 function filterAssignments() {
@@ -210,7 +199,7 @@ function updateCurrentAssignmentSection() {
 }
 
 // ==========================================
-// 🔥 4. محرك الحل (Robust Rendering)
+// 🔥 4. محرك الحل (Robust Rendering & Fix)
 // ==========================================
 
 function printAssignment() {
@@ -225,7 +214,6 @@ function solveAssignment(assignmentId) {
     
     currentAssignmentId = assignmentId;
     
-    // إعداد العنوان
     const titleElem = document.getElementById('assignmentModalTitle');
     titleElem.textContent = assignment.title;
     titleElem.setAttribute('data-student-name', getCurrentUser().name || '');
@@ -233,7 +221,6 @@ function solveAssignment(assignmentId) {
     const contentDiv = document.getElementById('assignmentContent');
     contentDiv.innerHTML = ''; 
 
-    // التحكم في العناصر
     const isCompleted = assignment.status === 'completed';
     const btnSubmit = document.getElementById('btnSubmitAnswers');
     const uploadSection = document.getElementById('uploadSolutionSection');
@@ -247,7 +234,6 @@ function solveAssignment(assignmentId) {
                 '';
         } else {
             uploadSection.style.display = 'block';
-            // إعادة ضبط الإدخال
             uploadSection.innerHTML = `
                 <label style="display:block; margin-bottom:10px; font-weight:bold; color:#555;">📤 هل قمت بالحل ورقياً؟ ارفع صورة الحل هنا:</label>
                 <input type="file" id="assignmentFileUpload" accept="image/*,application/pdf" class="form-control" style="width:100%; max-width:400px; margin:0 auto;">
@@ -259,6 +245,7 @@ function solveAssignment(assignmentId) {
         contentDiv.innerHTML += `<div class="alert alert-info mb-4" style="background:#e3f2fd; padding:15px; border-radius:8px; border:1px solid #bbdefb; color:#0d47a1;">${assignment.description}</div>`;
     }
 
+    // التحقق من وجود الأسئلة
     if (!assignment.questions || assignment.questions.length === 0) {
         contentDiv.innerHTML += `<div class="text-center p-5"><h3>لا توجد أسئلة مسجلة.</h3></div>`;
     } else {
@@ -273,7 +260,7 @@ function solveAssignment(assignmentId) {
     document.getElementById('solveAssignmentModal').classList.add('show');
 }
 
-// 🔥 الدالة المحدثة: تعرض كل أنواع الأسئلة (حتى المعقدة) 🔥
+// 🔥🔥 الدالة المنقذة: عرض أي نوع سؤال 🔥🔥
 function renderSingleQuestion(q, index, isReadOnly = false, previousAnswers = []) {
     const prevAnswer = previousAnswers ? previousAnswers.find(a => a.questionId === q.id) : null;
     let html = `
@@ -295,61 +282,37 @@ function renderSingleQuestion(q, index, isReadOnly = false, previousAnswers = []
             q.choices.forEach((choice, i) => {
                 const isChecked = (prevAnswer && prevAnswer.value === i) ? 'checked' : '';
                 const disabled = isReadOnly ? 'disabled' : '';
-                let style = 'padding:10px; border:1px solid #eee; border-radius:6px; display:flex; align-items:center; gap:10px; cursor:pointer;';
-                if (isReadOnly) {
-                    if (i === parseInt(q.correctAnswer)) style += ' background-color:#d4edda; border-color:#c3e6cb;'; 
-                    else if (isChecked && i !== parseInt(q.correctAnswer)) style += ' background-color:#f8d7da; border-color:#f5c6cb;';
-                }
-                html += `<label style="${style}"><input type="radio" name="q_${q.id}" value="${i}" ${isChecked} ${disabled} style="transform:scale(1.2);"> <span style="font-size:1rem;">${choice}</span></label>`;
+                html += `<label style="padding:10px; border:1px solid #eee; margin-bottom:5px; display:block; cursor:pointer;"><input type="radio" name="q_${q.id}" value="${i}" ${isChecked} ${disabled} style="transform:scale(1.2); margin-left:10px;"> <span style="font-size:1rem;">${choice}</span></label>`;
             });
             html += `</div>`;
         }
     } 
-    // 2. أسئلة مقالية (Open Ended)
+    // 2. أسئلة مقالية
     else if (q.type === 'open-ended') {
         html += `<p class="lead mb-3">${q.text}</p>`;
         html += `<textarea class="form-control" name="q_${q.id}" rows="4" style="width:100%; padding:12px; border:1px solid #ccc; border-radius:6px;" placeholder="اكتب إجابتك هنا..." ${isReadOnly ? 'readonly' : ''}>${prevAnswer ? prevAnswer.value : ''}</textarea>`;
     } 
-    // 3. الأسئلة المركبة (سحب وإفلات، إملاء، قراءة، حرف ناقص)
+    // 3. (الإنقاذ) أي نوع آخر: نعرض النص ومربع إجابة افتراضي
     else {
-        html += `<p class="lead mb-3">${q.text || 'أجب عن الأسئلة التالية:'}</p>`;
+        html += `<p class="lead mb-3">${q.text || 'أجب عن السؤال التالي:'}</p>`;
         
-        // التحقق من وجود فقرات، وإن لم توجد (بيانات قديمة) نستخدم fallback
+        // محاولة رسم الفقرات إذا وجدت
         if (q.paragraphs && q.paragraphs.length > 0) {
             q.paragraphs.forEach((p, pIdx) => {
-                html += renderParagraphInput(q, p, pIdx, isReadOnly);
+                html += `<div style="margin-bottom:10px; background:#f9f9f9; padding:10px; border-radius:5px;">
+                            <p>${p.text || ''}</p>
+                            <input type="text" name="q_${q.id}_p${pIdx}" style="width:100%; padding:8px; border:1px solid #ccc;" placeholder="إجابتك..." ${isReadOnly ? 'readonly' : ''}>
+                         </div>`;
             });
         } else {
-            // Fallback: إذا كان النوع معقد لكن لا توجد فقرات، نعرض مربع نص عام
-            html += `<div style="padding:10px; background:#fff3cd; border-radius:5px; font-size:0.9rem; margin-bottom:5px;">سؤال تفاعلي (أجب أدناه):</div>`;
-            html += `<input type="text" class="form-control" name="q_${q.id}_fallback" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px;" placeholder="اكتب إجابتك هنا..." ${isReadOnly ? 'readonly' : ''}>`;
+            // Fallback: مربع نص عام يضمن ظهور السؤال
+            html += `<div style="padding:10px; background:#e2e3e5; border-radius:5px; margin-bottom:5px; font-size:0.9rem;">اكتب إجابتك أدناه:</div>`;
+            html += `<textarea class="form-control" name="q_${q.id}_fallback" rows="3" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:5px;" placeholder="الإجابة..." ${isReadOnly ? 'readonly' : ''}>${prevAnswer ? prevAnswer.value : ''}</textarea>`;
         }
     }
     
     html += `</div>`;
     return html;
-}
-
-function renderParagraphInput(q, p, pIdx, isReadOnly) {
-    let inputHtml = `<div style="margin-bottom:15px; background:#f8f9fa; padding:15px; border-radius:8px;">`;
-    
-    if (q.type === 'missing-char') {
-        inputHtml += `<label style="display:block; margin-bottom:5px;">أكمل الحرف الناقص: <strong style="font-size:1.2rem; margin:0 5px;">${p.missing || ''}</strong></label>`;
-        inputHtml += `<input type="text" name="q_${q.id}_p${pIdx}" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="اكتب الكلمة كاملة" ${isReadOnly ? 'readonly' : ''}>`;
-    } else if (q.type.includes('reading')) {
-        inputHtml += `<div style="padding:10px; border:1px solid #ddd; background:white; margin-bottom:5px;">${p.text}</div>`;
-        inputHtml += `<label style="font-size:0.9rem; color:#666;">اقرأ النص</label>`;
-    } else if (q.type.includes('spelling')) {
-        inputHtml += `<label>اكتب الكلمة التي سمعتها/تعلمتها:</label>`;
-        inputHtml += `<input type="text" name="q_${q.id}_p${pIdx}" style="width:100%; padding:8px; margin-top:5px;" placeholder="اكتب هنا..." ${isReadOnly ? 'readonly' : ''}>`;
-    } else {
-        // سحب وإفلات أو غيره
-        inputHtml += `<p style="margin-bottom:5px;">${p.text}</p>`;
-        inputHtml += `<input type="text" name="q_${q.id}_p${pIdx}" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px;" placeholder="أكمل الفراغ..." ${isReadOnly ? 'readonly' : ''}>`;
-    }
-    
-    inputHtml += `</div>`;
-    return inputHtml;
 }
 
 // 🗂️ قراءة الملف
@@ -362,26 +325,22 @@ function readFileAsBase64(file) {
     });
 }
 
-// 🚀 التسليم (Async)
+// 🚀 التسليم
 async function submitAssignment() {
     if (!currentAssignmentId) return;
     
     const form = document.getElementById('studentAnswersForm');
     const fileInput = document.getElementById('assignmentFileUpload');
     
-    // التحقق من وجود إجابة (رقمية أو ملف)
-    const hasDigitalAnswers = form && form.querySelectorAll('input:checked, textarea:not(:empty), input[type="text"]:not(:empty)').length > 0;
+    const hasDigitalAnswers = form && (form.querySelectorAll('input:checked').length > 0 || form.querySelectorAll('textarea, input[type=text]').length > 0);
     const hasFile = fileInput && fileInput.files.length > 0;
 
-    // إذا كانت الأسئلة معروضة ولكن الطالب لم يحل شيئاً ولم يرفع ملف
+    // السماح بالتسليم إذا كان هناك أي مدخلات
     if (!hasDigitalAnswers && !hasFile) {
-        // حالة استثنائية: إذا كان الواجب للقراءة فقط (بدون أسئلة مدخلة) يمكن التسليم
-        if (form && form.innerHTML.trim() !== '') {
-             if(!confirm('لم تقم بحل أي سؤال ولم ترفع ملفاً. هل تريد التسليم على أي حال؟')) return;
-        }
+        if(!confirm('لم تقم بالإجابة على أي سؤال ولم ترفع ملفاً. هل تريد التسليم فارغاً؟')) return;
+    } else {
+        if(!confirm('هل أنت متأكد من تسليم الإجابات؟')) return;
     }
-
-    if(!confirm('هل أنت متأكد من تسليم الإجابات؟')) return;
 
     const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
     const idx = studentAssignments.findIndex(a => a.id === currentAssignmentId);
@@ -389,13 +348,11 @@ async function submitAssignment() {
 
     const assignment = studentAssignments[idx];
     
-    // 1. معالجة الملف
     let attachedFile = null;
     if (hasFile) {
         try { attachedFile = await readFileAsBase64(fileInput.files[0]); } catch (e) { alert('خطأ في الملف'); return; }
     }
 
-    // 2. معالجة الإجابات الرقمية
     let totalScore = 0;
     let earnedScore = 0;
     const studentAnswers = [];
@@ -406,7 +363,7 @@ async function submitAssignment() {
             totalScore += qScore;
             let answerData = { questionId: q.id, type: q.type, score: 0 };
 
-            if (q.type.includes('mcq')) {
+            if (q.type && q.type.includes('mcq')) {
                 const selected = form.querySelector(`input[name="q_${q.id}"]:checked`);
                 if (selected) {
                     const val = parseInt(selected.value);
@@ -416,23 +373,19 @@ async function submitAssignment() {
                         answerData.score = qScore;
                     }
                 }
-            } else if (q.type === 'open-ended' || !q.type.includes('mcq')) {
-                // البحث عن مدخلات نصية
+            } else {
+                // التقاط الإجابة من أي نوع حقل موجود
                 const textVal = form.querySelector(`textarea[name="q_${q.id}"]`)?.value || 
-                                form.querySelector(`input[name="q_${q.id}_fallback"]`)?.value ||
-                                "تم الحل ورقياً/مختلط";
+                                form.querySelector(`textarea[name="q_${q.id}_fallback"]`)?.value || 
+                                "تم الحل";
                 answerData.value = textVal;
             }
             studentAnswers.push(answerData);
         });
     }
 
-    // 3. النتيجة
-    let finalPercent = 0;
-    if (hasFile) finalPercent = 0; // يحتاج تصحيح يدوي
-    else finalPercent = totalScore > 0 ? Math.round((earnedScore / totalScore) * 100) : 100;
+    let finalPercent = hasFile ? 0 : (totalScore > 0 ? Math.round((earnedScore / totalScore) * 100) : 100);
 
-    // 4. الحفظ
     studentAssignments[idx].status = 'completed';
     studentAssignments[idx].completedDate = new Date().toISOString();
     studentAssignments[idx].score = finalPercent;

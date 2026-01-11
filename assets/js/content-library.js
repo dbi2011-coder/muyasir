@@ -1,10 +1,12 @@
 // ============================================
 // 📁 المسار: assets/js/content-library.js
-// الوصف: إدارة مكتبة المحتوى (تم إصلاح ربط الواجبات بالأهداف)
+// الوصف: إدارة مكتبة المحتوى (إصلاح شامل لربط الواجبات + بناء النوافذ)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
+    // التأكد من تحميل المكتبة إذا وجدت عناصرها
     if (document.getElementById('testsGrid') || document.getElementById('lessonsGrid')) {
+        injectLinkContentModal(); // 🔥 بناء نافذة الربط لضمان وجودها
         loadContentLibrary();
     }
 });
@@ -53,8 +55,7 @@ function loadHomeworks() {
     if (homeworks.length === 0) { grid.innerHTML = `<div class="empty-content-state" style="grid-column:1/-1;text-align:center;"><h3>لا توجد واجبات</h3><button class="btn btn-success mt-2" onclick="showCreateHomeworkModal()">+ واجب جديد</button></div>`; return; }
     grid.innerHTML = homeworks.map(h => {
         const isLinked = !!h.linkedInstructionalGoal;
-        // لاحظ هنا تمرير 'homework' كنوع
-        return `<div class="content-card card-homework"><div class="content-header"><h4 title="${h.title}">${h.title}</h4><span class="content-badge subject-${h.subject}">${h.subject}</span></div><div class="content-body"><p class="text-muted small" style="margin-bottom:10px;">${h.description || 'لا يوجد وصف'}</p><div class="content-meta"><span><i class="fas fa-list-ol"></i> ${h.questions?.length || 0} أسئلة</span>${isLinked ? '<span class="text-success"><i class="fas fa-link"></i> مرتبط بهدف</span>' : ''}</div></div><div class="content-footer"><button class="btn-card-action btn-homework-light" onclick="showLinkModal('homework', ${h.id})"><i class="fas fa-link"></i> ربط</button><button class="btn-card-action btn-homework-light" onclick="editHomework(${h.id})"><i class="fas fa-pen"></i> تعديل</button><button class="btn-card-action btn-delete-card" onclick="deleteHomework(${h.id})"><i class="fas fa-trash"></i> حذف</button></div></div>`;
+        return `<div class="content-card card-homework"><div class="content-header"><h4 title="${h.title}">${h.title}</h4><span class="content-badge subject-${h.subject}">${h.subject}</span></div><div class="content-body"><p class="text-muted small" style="margin-bottom:10px;">${h.description || 'لا يوجد وصف'}</p><div class="content-meta"><span><i class="fas fa-list-ol"></i> ${h.questions?.length || 0} أسئلة</span>${isLinked ? '<span class="text-success"><i class="fas fa-link"></i> مرتبط بهدف</span>' : '<span><i class="fas fa-unlink"></i> غير مرتبط</span>'}</div></div><div class="content-footer"><button class="btn-card-action btn-homework-light" onclick="showLinkModal('homework', ${h.id})"><i class="fas fa-link"></i> ربط</button><button class="btn-card-action btn-homework-light" onclick="editHomework(${h.id})"><i class="fas fa-pen"></i> تعديل</button><button class="btn-card-action btn-delete-card" onclick="deleteHomework(${h.id})"><i class="fas fa-trash"></i> حذف</button></div></div>`;
     }).join('');
 }
 
@@ -324,10 +325,33 @@ async function collectQuestionsFromContainer(id) {
 }
 
 // ==========================================
-// 📥 الدوال الأساسية (مع إصلاح الربط)
+// 📥 الدوال الأساسية (مع إصلاح الربط وبناء النافذة)
 // ==========================================
 function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser')).user; }
 function getAllObjectives() { return JSON.parse(localStorage.getItem('objectives') || '[]').filter(o => o.teacherId === getCurrentUser().id); }
+
+// 🔥 دالة بناء نافذة الربط (جديدة لضمان الوجود)
+function injectLinkContentModal() {
+    if (document.getElementById('linkContentModal')) return; // موجودة مسبقاً
+    const html = `
+    <div id="linkContentModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <span class="close-btn" onclick="document.getElementById('linkContentModal').classList.remove('show')">&times;</span>
+            <h3>ربط المحتوى بالأهداف</h3>
+            <p class="text-muted" id="linkInstructionText" style="margin-bottom:15px;"></p>
+            <input type="hidden" id="linkTargetId">
+            <input type="hidden" id="linkTargetType">
+            
+            <div id="linkContentBody" style="max-height: 400px; overflow-y: auto; margin-bottom: 15px;">
+                </div>
+            
+            <div class="modal-footer" style="text-align:left;">
+                <button class="btn btn-primary" onclick="saveContentLinks()">حفظ الارتباطات</button>
+            </div>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+}
 
 // 🔥 دالة عرض نافذة الربط (محدثة لدعم الواجبات بدقة)
 function showLinkModal(type, id) {
@@ -361,17 +385,15 @@ function showLinkModal(type, id) {
             container.appendChild(row);
         });
     } else {
-        // 🔥 تم الإصلاح هنا: دعم الواجبات
         instruction.textContent = 'قم باختيار هدف تدريسي واحد لربط هذا المحتوى به.';
         
         let currentItem;
-        if (type === 'lesson') {
-            currentItem = JSON.parse(localStorage.getItem('lessons')).find(x => x.id === id);
-        } else if (type === 'homework') {
-            currentItem = JSON.parse(localStorage.getItem('assignments')).find(x => x.id === id);
-        }
+        let storageKey = (type === 'lesson') ? 'lessons' : 'assignments';
+        currentItem = JSON.parse(localStorage.getItem(storageKey) || '[]').find(x => x.id === id);
 
-        const relevantObjs = objectives.filter(o => o.subject === currentItem.subject);
+        if (!currentItem) { alert('العنصر غير موجود!'); return; }
+
+        const relevantObjs = objectives.filter(o => o.subject && currentItem.subject && o.subject.trim() === currentItem.subject.trim());
         
         let selectHtml = '<select class="form-control" id="singleInstructionalLink"><option value="">-- غير مرتبط --</option>';
         relevantObjs.forEach(o => {
@@ -417,7 +439,6 @@ function saveContentLinks() {
             loadTests();
         }
     } else {
-        // 🔥 تم الإصلاح هنا: استخدام المفتاح الصحيح
         const key = (type === 'lesson') ? 'lessons' : 'assignments';
         
         const arr = JSON.parse(localStorage.getItem(key) || '[]');

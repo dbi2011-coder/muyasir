@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: نظام التقدم الأكاديمي (نسخة مستقرة - تم إصلاح مشكلة اختفاء المحتوى)
+// الوصف: نظام التقدم الأكاديمي (النسخة النهائية: توليد ذكي صارم + كافة الإصلاحات)
 // ============================================
 
 let currentStudentId = null;
@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    // الترتيب مهم: بناء النوافذ أولاً ثم تحميل البيانات
     injectAdminEventModal();
     injectHomeworkModal(); 
     injectWordTableStyles();
@@ -344,9 +343,9 @@ function injectAdminEventModal() {
     document.body.insertAdjacentHTML('beforeend', html);
 }
 
-// 🔥 نافذة إسناد الواجبات (نسخة القائمة المنسدلة من المكتبة) 🔥
+// 🔥 نافذة إسناد الواجبات (تحديث: قائمة منسدلة من بنك الواجبات) 🔥
 function injectHomeworkModal() {
-    // 🧹 حذف النافذة القديمة لضمان عدم التعارض
+    // 🧹 حذف النافذة القديمة
     const oldModal = document.getElementById('assignHomeworkModal');
     if (oldModal) oldModal.remove();
 
@@ -613,12 +612,12 @@ function loadLessonsTab() {
     }).join('');
 }
 
-// 🔥🔥 4. الواجبات (حالة فارغة منسقة + زر على اليمين) 🔥🔥
+// 🔥🔥 4. الواجبات (حالة فارغة + زر يمين) 🔥🔥
 function loadAssignmentsTab() {
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId == currentStudentId);
     const container = document.getElementById('studentAssignmentsGrid');
     
-    // تصميم الحالة الفارغة
+    // الحالة الفارغة
     if (list.length === 0) { 
         container.innerHTML = `
             <div style="
@@ -646,7 +645,7 @@ function loadAssignmentsTab() {
         return; 
     }
 
-    // تصميم الحالة الممتلئة (الزر في اليمين - flex-start)
+    // الحالة الممتلئة (زر على اليمين)
     const headerHtml = `
         <div class="content-header" style="display:flex; justify-content:flex-start; align-items:center; margin-bottom:20px;">
             <button class="btn btn-primary" onclick="showAssignHomeworkModal()">
@@ -729,13 +728,19 @@ function deleteLesson(id) {
     saveAndReindexLessons(myLessons, false, otherLessons);
 }
 
+// 🔥 دالة التوليد الذكي (صارمة: واجبات مرتبطة فقط) 🔥
 function autoGenerateLessons() {
-    if(!confirm('سيتم حذف الدروس الحالية وتوليد قائمة جديدة. متابعة؟')) return;
+    if(!confirm('سيتم حذف الدروس الحالية وتوليد قائمة جديدة بناءً على التشخيص. متابعة؟')) return;
+    
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const compDiag = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic' && t.status === 'completed');
-    if (!compDiag) { alert('يجب إكمال التشخيص أولاً'); return; }
+    
+    if (!compDiag) { alert('يجب إكمال وتصحيح الاختبار التشخيصي أولاً'); return; }
+    
     const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
     const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+    // جلب مكتبة الواجبات (تأكدنا سابقاً أن اسمها assignments)
+    const allLibraryAssignments = JSON.parse(localStorage.getItem('assignments') || '[]'); 
     const originalTest = JSON.parse(localStorage.getItem('tests') || '[]').find(t => t.id == compDiag.testId);
 
     let newLessons = [];
@@ -744,28 +749,40 @@ function autoGenerateLessons() {
     if(originalTest && originalTest.questions) {
         originalTest.questions.forEach(q => {
             const ans = compDiag.answers ? compDiag.answers.find(a => a.questionId == q.id) : null;
+            
+            // شرط الرسوب في السؤال المرتبط بهدف
             if((ans?.score || 0) < (q.passingScore || 1) && q.linkedGoalId) {
                 const obj = allObjectives.find(o => o.id == q.linkedGoalId);
                 if(obj) {
+                    // البحث عن الدروس التي تخدم هذا الهدف
                     const matches = allLessons.filter(l => l.linkedInstructionalGoal === obj.shortTermGoal || (obj.instructionalGoals||[]).includes(l.linkedInstructionalGoal));
+                    
                     matches.forEach(m => {
+                        // منع تكرار نفس الدرس
                         if(!newLessons.find(x => x.originalLessonId == m.id)) {
-                            // إنشاء الدرس
+                            
+                            // 1. إنشاء الدرس (دائماً)
                             newLessons.push({
                                 id: Date.now() + Math.floor(Math.random()*10000),
                                 studentId: currentStudentId, title: m.title, objective: m.linkedInstructionalGoal,
                                 originalLessonId: m.id, status: 'pending', assignedDate: new Date().toISOString()
                             });
                             
-                            // إنشاء واجب تلقائي
-                            newAssignments.push({
-                                id: Date.now() + Math.floor(Math.random()*10000) + 1,
-                                studentId: currentStudentId,
-                                title: `مراجعة وتطبيق: ${m.title}`,
-                                status: 'pending',
-                                dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // بعد أسبوع
-                                assignedDate: new Date().toISOString()
-                            });
+                            // 2. البحث عن واجب مرتبط (فقط)
+                            const linkedHomework = allLibraryAssignments.find(h => h.linkedInstructionalGoal === m.linkedInstructionalGoal);
+
+                            if (linkedHomework) {
+                                // ✅ وجدنا واجباً مرتبطاً: ننسخه للطالب
+                                newAssignments.push({
+                                    id: Date.now() + Math.floor(Math.random()*10000) + 1,
+                                    studentId: currentStudentId,
+                                    title: linkedHomework.title,
+                                    status: 'pending',
+                                    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                                    assignedDate: new Date().toISOString()
+                                });
+                            } 
+                            // ⛔ تم حذف الـ else: لن يتم إنشاء واجب تلقائي
                         }
                     });
                 }
@@ -773,18 +790,21 @@ function autoGenerateLessons() {
         });
     }
 
-    if(newLessons.length === 0) { alert('لا توجد دروس مقترحة.'); return; }
+    if(newLessons.length === 0) { alert('لا توجد نقاط ضعف تتطلب خطة علاجية.'); return; }
     
+    // حفظ الدروس
     saveAndReindexLessons(newLessons, true);
     
-    // حفظ الواجبات التلقائية
+    // حفظ الواجبات (إن وجدت)
     if (newAssignments.length > 0) {
         let currentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
         currentAssignments = [...currentAssignments.filter(a => a.studentId != currentStudentId), ...newAssignments];
         localStorage.setItem('studentAssignments', JSON.stringify(currentAssignments));
+        alert(`تم توليد ${newLessons.length} درس و ${newAssignments.length} واجب مرتبط.`);
+    } else {
+        alert(`تم توليد ${newLessons.length} درس (لم يتم العثور على واجبات مرتبطة في المكتبة).`);
     }
 
-    alert('تم توليد الدروس والواجبات المرتبطة بنجاح.');
     if (document.getElementById('section-assignments').classList.contains('active')) loadAssignmentsTab();
 }
 
@@ -822,7 +842,7 @@ function deleteAssignedTest(id) {
     if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
 }
 
-// 🔥 فتح نافذة إسناد الواجب (جلب الواجبات من assignments) 🔥
+// 🔥🔥 فتح نافذة إسناد الواجب (جلب الواجبات من assignments) 🔥🔥
 function showAssignHomeworkModal() { 
     // التأكد من وجود العنصر أولاً
     const select = document.getElementById('homeworkSelect');

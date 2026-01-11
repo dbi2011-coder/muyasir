@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: نظام التقدم الأكاديمي (ترتيب الواجهة الفارغة: النص ثم الزر)
+// الوصف: نظام التقدم الأكاديمي (تنسيق الواجهة: الحالة الفارغة متناسقة ومرتبة)
 // ============================================
 
 let currentStudentId = null;
@@ -606,33 +606,45 @@ function loadLessonsTab() {
     }).join('');
 }
 
-// 🔥🔥 4. الواجبات (ترتيب جديد: النص أولاً ثم الزر في حالة الفراغ) 🔥🔥
+// 🔥🔥 4. الواجبات (تنسيق الحالة الفارغة: النص والعبارة يتوسطان الصفحة داخل صندوق) 🔥🔥
 function loadAssignmentsTab() {
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId == currentStudentId);
     const container = document.getElementById('studentAssignmentsGrid');
     
-    const assignBtn = `
-        <button class="btn btn-primary" onclick="showAssignHomeworkModal()">
-            <i class="fas fa-plus-circle"></i> إسناد واجب جديد
-        </button>
-    `;
-
+    // تصميم الحالة الفارغة
     if (list.length === 0) { 
-        // 🔥 التعديل هنا: النص أولاً ثم الزر تحته
         container.innerHTML = `
-            <div class="empty-state" style="text-align:center; padding: 40px;">
-                <h3 style="color:#666;">لا توجد واجبات حالياً.</h3>
-                <p style="color:#888; margin-bottom: 20px;">يمكنك إسناد واجب يدوياً أو سيتم توليدها تلقائياً مع الدروس.</p>
-                ${assignBtn}
+            <div style="
+                display: flex; 
+                flex-direction: column; 
+                align-items: center; 
+                justify-content: center; 
+                padding: 50px; 
+                text-align: center; 
+                border: 2px dashed #e0e0e0; 
+                border-radius: 10px; 
+                background-color: #fafafa;
+                margin-top: 20px;">
+                
+                <div style="font-size: 3rem; margin-bottom: 10px; color: #ccc;">📝</div>
+                <h3 style="color:#555; margin-bottom: 10px;">لا توجد واجبات حالياً</h3>
+                <p style="color:#777; margin-bottom: 25px; font-size: 0.95rem;">
+                    يمكنك إسناد واجب يدوياً أو سيتم توليدها تلقائياً مع الدروس.
+                </p>
+                <button class="btn btn-primary" onclick="showAssignHomeworkModal()">
+                    <i class="fas fa-plus-circle"></i> إسناد واجب جديد
+                </button>
             </div>
         `; 
         return; 
     }
 
-    // في الحالة الممتلئة: الزر في اليمين (flex-start)
+    // تصميم الحالة الممتلئة (الزر في اليمين)
     const headerHtml = `
         <div class="content-header" style="display:flex; justify-content:flex-start; align-items:center; margin-bottom:20px;">
-            ${assignBtn}
+            <button class="btn btn-primary" onclick="showAssignHomeworkModal()">
+                <i class="fas fa-plus-circle"></i> إسناد واجب جديد
+            </button>
         </div>
     `;
 

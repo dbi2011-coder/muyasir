@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: نظام التقدم الأكاديمي (النسخة النهائية: توليد ذكي صارم + كافة الإصلاحات)
+// الوصف: إدارة ملف الطالب (التقدم، الخطة، الدروس، والواجبات - النسخة النهائية)
 // ============================================
 
 let currentStudentId = null;
@@ -17,9 +17,11 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
+    // حقن النوافذ المنبثقة والستايلات الضرورية
     injectAdminEventModal();
     injectHomeworkModal(); 
     injectWordTableStyles();
+    
     loadStudentData();
 });
 
@@ -33,13 +35,14 @@ function loadStudentData() {
         return;
     }
     
-    // تحديث واجهة الملف الشخصي
+    // تحديث بيانات الواجهة
     if(document.getElementById('sideName')) document.getElementById('sideName').textContent = currentStudent.name;
     if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = currentStudent.name;
     if(document.getElementById('sideGrade')) document.getElementById('sideGrade').textContent = currentStudent.grade + ' - ' + (currentStudent.subject || 'عام');
     if(document.getElementById('sideAvatar')) document.getElementById('sideAvatar').textContent = currentStudent.name.charAt(0);
     document.title = `ملف الطالب: ${currentStudent.name}`;
     
+    // فتح التبويب الافتراضي
     switchSection('diagnostic');
 }
 
@@ -61,7 +64,7 @@ function switchSection(sectionId) {
 }
 
 // ============================================
-// 🔥 1. محرك سجل التقدم (الأرشفة والاستبدال)
+// 🔥 1. سجل التقدم (Progress Tab)
 // ============================================
 
 function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDate) {
@@ -285,155 +288,66 @@ function loadProgressTab() {
 }
 
 // ============================================
-// 🎨 ستايل جدول Word وتنسيقات الألوان
-// ============================================
-function injectWordTableStyles() {
-    if (document.getElementById('wordTableStyles')) return;
-    const style = document.createElement('style');
-    style.id = 'wordTableStyles';
-    style.innerHTML = `
-        .word-table { width: 100%; border-collapse: collapse; font-family: 'Times New Roman', 'Tajawal', serif; font-size: 1rem; background: white; border: 2px solid #000; }
-        .word-table th, .word-table td { border: 1px solid #000; padding: 8px 12px; vertical-align: middle; }
-        .word-table th { background-color: #f2f2f2; font-weight: bold; text-align: center; border-bottom: 2px solid #000; }
-        .word-table tr:nth-child(even) { background-color: #fafafa; }
-        
-        .bg-success-light { background-color: #e8f5e9 !important; }
-        .bg-danger-light { background-color: #ffebee !important; }
-        .bg-warning-light { background-color: #fff3e0 !important; }
-        .bg-info-light { background-color: #e3f2fd !important; }
-
-        .btn-icon { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 0 5px; transition: transform 0.2s; }
-        .btn-icon:hover { transform: scale(1.2); }
-        .badge { padding: 5px 10px; border-radius: 12px; color: white; font-size: 0.8rem; }
-        .badge-success { background-color: #28a745; }
-        .badge-danger { background-color: #dc3545; }
-    `;
-    document.head.appendChild(style);
-}
-
-// ============================================
-// 🛠️ إدارة النوافذ المنبثقة (الأحداث + الواجبات)
+// 🔥 2. واجهة الواجبات ( Assignments Tab) - المعدلة
 // ============================================
 
-function injectAdminEventModal() {
-    if (document.getElementById('adminEventModal')) return;
-    const html = `
-    <div id="adminEventModal" class="modal">
-        <div class="modal-content" style="border: 2px solid #000;">
-            <span class="close-btn" onclick="closeAdminEventModal()">&times;</span>
-            <h3 id="modalTitle">تسجيل حدث إداري</h3>
-            <div class="form-group">
-                <label>نوع الحالة:</label>
-                <select id="manualEventType" class="form-control">
-                    <option value="excused">معفى (يخصم من الرصيد)</option>
-                    <option value="vacation">إجازة (توقف مؤقت)</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>التاريخ:</label>
-                <input type="date" id="manualEventDate" class="form-control">
-            </div>
-            <div class="form-group">
-                <label>ملاحظات:</label>
-                <textarea id="manualEventNote" class="form-control"></textarea>
-            </div>
-            <button class="btn btn-primary w-100" onclick="saveAdminEvent()">حفظ السجل</button>
-        </div>
-    </div>`;
-    document.body.insertAdjacentHTML('beforeend', html);
-}
-
-// 🔥 نافذة إسناد الواجبات (تحديث: قائمة منسدلة من بنك الواجبات) 🔥
-function injectHomeworkModal() {
-    // 🧹 حذف النافذة القديمة
-    const oldModal = document.getElementById('assignHomeworkModal');
-    if (oldModal) oldModal.remove();
-
-    const html = `
-    <div id="assignHomeworkModal" class="modal">
-        <div class="modal-content" style="border: 2px solid #000;">
-            <span class="close-btn" onclick="closeModal('assignHomeworkModal')">&times;</span>
-            <h3>إسناد واجب جديد</h3>
-            <div class="form-group">
-                <label>اختر الواجب من المكتبة:</label>
-                <select id="homeworkSelect" class="form-control">
-                    <option value="">جارِ التحميل...</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>تاريخ التسليم:</label>
-                <input type="date" id="homeworkDueDate" class="form-control">
-            </div>
-            <button class="btn btn-primary w-100" onclick="assignHomework()">حفظ الإسناد</button>
-        </div>
-    </div>`;
-    document.body.insertAdjacentHTML('beforeend', html);
-}
-
-function openAdminEventModal() {
-    editingEventId = null;
-    document.getElementById('modalTitle').textContent = "تسجيل حدث إداري";
-    document.getElementById('manualEventDate').valueAsDate = new Date();
-    document.getElementById('manualEventType').value = 'excused';
-    document.getElementById('manualEventNote').value = '';
-    document.getElementById('adminEventModal').classList.add('show');
-}
-
-function closeAdminEventModal() {
-    document.getElementById('adminEventModal').classList.remove('show');
-}
-
-function editAdminEvent(id) {
-    const events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
-    const event = events.find(e => e.id == id);
-    if (!event) return;
-    editingEventId = id;
-    document.getElementById('modalTitle').textContent = "تعديل الحدث";
-    document.getElementById('manualEventType').value = event.type;
-    document.getElementById('manualEventDate').value = event.date.split('T')[0];
-    document.getElementById('manualEventNote').value = event.note || '';
-    document.getElementById('adminEventModal').classList.add('show');
-}
-
-function saveAdminEvent() {
-    const type = document.getElementById('manualEventType').value;
-    const dateInput = document.getElementById('manualEventDate').value;
-    const note = document.getElementById('manualEventNote').value;
+function loadAssignmentsTab() {
+    const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId == currentStudentId);
+    const container = document.getElementById('studentAssignmentsGrid');
     
-    if (!dateInput) { alert('يرجى اختيار التاريخ'); return; }
+    // الحالة 1: لا توجد واجبات (نظهر الزر الكبير في المنتصف)
+    if (list.length === 0) { 
+        container.innerHTML = `
+            <div style="
+                display: flex; 
+                flex-direction: column; 
+                align-items: center; 
+                justify-content: center; 
+                padding: 50px; 
+                text-align: center; 
+                border: 2px dashed #e0e0e0; 
+                border-radius: 10px; 
+                background-color: #fafafa;
+                margin-top: 20px;">
+                
+                <div style="font-size: 3rem; margin-bottom: 10px; color: #ccc;">📝</div>
+                <h3 style="color:#555; margin-bottom: 10px;">لا توجد واجبات حالياً</h3>
+                <p style="color:#777; margin-bottom: 25px; font-size: 0.95rem;">
+                    يمكنك البدء بإسناد أول واجب للطالب.
+                </p>
+                <button class="btn btn-primary" onclick="showAssignHomeworkModal()">
+                    <i class="fas fa-plus-circle"></i> إسناد واجب جديد
+                </button>
+            </div>
+        `; 
+        return; 
+    }
 
-    const targetDateStr = new Date(dateInput).toDateString();
-    let events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
+    // الحالة 2: توجد واجبات (نعرض البطاقات فقط - الزر العلوي يكفي)
+    const cardsHtml = list.map(a => `
+        <div class="content-card">
+            <div style="display:flex; justify-content:space-between;">
+                <h4 style="margin:0;">${a.title}</h4>
+                <span class="badge ${a.status === 'completed' ? 'badge-success' : 'badge-primary'}">${a.status === 'completed' ? 'مكتمل' : 'جديد'}</span>
+            </div>
+            <div class="content-meta" style="margin-top:10px;">
+                <span>📅 التسليم: ${a.dueDate || 'مفتوح'}</span>
+                <span>تاريخ الإسناد: ${new Date(a.assignedDate).toLocaleDateString('ar-SA')}</span>
+            </div>
+            <div style="margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
+                ${a.status === 'completed' 
+                    ? `<button class="btn btn-sm btn-outline-success" onclick="openReviewModal(${a.id})">🔍 مراجعة الحل</button>` 
+                    : '<span class="text-muted text-sm">بانتظار الحل...</span>'}
+                <button class="btn btn-sm btn-outline-danger" style="float:left;" onclick="deleteAssignment(${a.id})">حذف</button>
+            </div>
+        </div>`
+    ).join('');
 
-    events = events.filter(e => {
-        if (e.studentId != currentStudentId) return true;
-        if (new Date(e.date).toDateString() !== targetDateStr) return true;
-        return false;
-    });
-    
-    events.push({
-        id: Date.now(),
-        studentId: currentStudentId,
-        date: new Date(dateInput).toISOString(),
-        type: type,
-        note: note
-    });
-
-    localStorage.setItem('studentEvents', JSON.stringify(events));
-    closeAdminEventModal();
-    loadProgressTab();
-}
-
-function deleteAdminEvent(id) {
-    if (!confirm('حذف هذا السجل؟')) return;
-    let events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
-    events = events.filter(e => e.id != id);
-    localStorage.setItem('studentEvents', JSON.stringify(events));
-    loadProgressTab();
+    container.innerHTML = `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:20px;">${cardsHtml}</div>`;
 }
 
 // ============================================
-// الدوال الأساسية (التشخيص، الخطة، الدروس)
+// 🔥 3. بقية الدوال الأساسية
 // ============================================
 
 function loadDiagnosticTab() {
@@ -612,68 +526,146 @@ function loadLessonsTab() {
     }).join('');
 }
 
-// 🔥🔥 4. الواجبات (حالة فارغة + زر يمين) 🔥🔥
-function loadAssignmentsTab() {
-    const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId == currentStudentId);
-    const container = document.getElementById('studentAssignmentsGrid');
-    
-    // الحالة الفارغة
-    if (list.length === 0) { 
-        container.innerHTML = `
-            <div style="
-                display: flex; 
-                flex-direction: column; 
-                align-items: center; 
-                justify-content: center; 
-                padding: 50px; 
-                text-align: center; 
-                border: 2px dashed #e0e0e0; 
-                border-radius: 10px; 
-                background-color: #fafafa;
-                margin-top: 20px;">
-                
-                <div style="font-size: 3rem; margin-bottom: 10px; color: #ccc;">📝</div>
-                <h3 style="color:#555; margin-bottom: 10px;">لا توجد واجبات حالياً</h3>
-                <p style="color:#777; margin-bottom: 25px; font-size: 0.95rem;">
-                    يمكنك إسناد واجب يدوياً أو سيتم توليدها تلقائياً مع الدروس.
-                </p>
-                <button class="btn btn-primary" onclick="showAssignHomeworkModal()">
-                    <i class="fas fa-plus-circle"></i> إسناد واجب جديد
-                </button>
-            </div>
-        `; 
-        return; 
-    }
+// ============================================
+// 🔥 4. الدوال المساعدة والنوافذ
+// ============================================
 
-    // الحالة الممتلئة (زر على اليمين)
-    const headerHtml = `
-        <div class="content-header" style="display:flex; justify-content:flex-start; align-items:center; margin-bottom:20px;">
-            <button class="btn btn-primary" onclick="showAssignHomeworkModal()">
-                <i class="fas fa-plus-circle"></i> إسناد واجب جديد
-            </button>
-        </div>
+function injectWordTableStyles() {
+    if (document.getElementById('wordTableStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'wordTableStyles';
+    style.innerHTML = `
+        .word-table { width: 100%; border-collapse: collapse; font-family: 'Times New Roman', 'Tajawal', serif; font-size: 1rem; background: white; border: 2px solid #000; }
+        .word-table th, .word-table td { border: 1px solid #000; padding: 8px 12px; vertical-align: middle; }
+        .word-table th { background-color: #f2f2f2; font-weight: bold; text-align: center; border-bottom: 2px solid #000; }
+        .word-table tr:nth-child(even) { background-color: #fafafa; }
+        .bg-success-light { background-color: #e8f5e9 !important; }
+        .bg-danger-light { background-color: #ffebee !important; }
+        .bg-warning-light { background-color: #fff3e0 !important; }
+        .bg-info-light { background-color: #e3f2fd !important; }
+        .btn-icon { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 0 5px; transition: transform 0.2s; }
+        .btn-icon:hover { transform: scale(1.2); }
+        .badge { padding: 5px 10px; border-radius: 12px; color: white; font-size: 0.8rem; }
+        .badge-success { background-color: #28a745; }
+        .badge-danger { background-color: #dc3545; }
     `;
-
-    const cardsHtml = list.map(a => `
-        <div class="content-card">
-            <div style="display:flex; justify-content:space-between;">
-                <h4 style="margin:0;">${a.title}</h4>
-                <span class="badge ${a.status === 'completed' ? 'badge-success' : 'badge-primary'}">${a.status === 'completed' ? 'مكتمل' : 'جديد'}</span>
-            </div>
-            <div class="content-meta" style="margin-top:10px;">
-                <span>📅 التسليم: ${a.dueDate || 'مفتوح'}</span>
-                <span>تاريخ الإسناد: ${new Date(a.assignedDate).toLocaleDateString('ar-SA')}</span>
-            </div>
-            <button class="btn btn-sm btn-danger mt-3" onclick="deleteAssignment(${a.id})">حذف الواجب</button>
-        </div>`
-    ).join('');
-
-    container.innerHTML = headerHtml + `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:20px;">${cardsHtml}</div>`;
+    document.head.appendChild(style);
 }
 
-// ============================================
-// الدوال المساعدة العامة
-// ============================================
+function injectAdminEventModal() {
+    if (document.getElementById('adminEventModal')) return;
+    const html = `
+    <div id="adminEventModal" class="modal">
+        <div class="modal-content" style="border: 2px solid #000;">
+            <span class="close-btn" onclick="closeAdminEventModal()">&times;</span>
+            <h3 id="modalTitle">تسجيل حدث إداري</h3>
+            <div class="form-group">
+                <label>نوع الحالة:</label>
+                <select id="manualEventType" class="form-control">
+                    <option value="excused">معفى (يخصم من الرصيد)</option>
+                    <option value="vacation">إجازة (توقف مؤقت)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>التاريخ:</label>
+                <input type="date" id="manualEventDate" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>ملاحظات:</label>
+                <textarea id="manualEventNote" class="form-control"></textarea>
+            </div>
+            <button class="btn btn-primary w-100" onclick="saveAdminEvent()">حفظ السجل</button>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function injectHomeworkModal() {
+    const oldModal = document.getElementById('assignHomeworkModal');
+    if (oldModal) oldModal.remove();
+
+    const html = `
+    <div id="assignHomeworkModal" class="modal">
+        <div class="modal-content" style="border: 2px solid #000;">
+            <span class="close-btn" onclick="closeModal('assignHomeworkModal')">&times;</span>
+            <h3>إسناد واجب جديد</h3>
+            <div class="form-group">
+                <label>اختر الواجب من المكتبة:</label>
+                <select id="homeworkSelect" class="form-control">
+                    <option value="">جارِ التحميل...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>تاريخ التسليم:</label>
+                <input type="date" id="homeworkDueDate" class="form-control">
+            </div>
+            <button class="btn btn-primary w-100" onclick="assignHomework()">حفظ الإسناد</button>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function openAdminEventModal() {
+    editingEventId = null;
+    document.getElementById('modalTitle').textContent = "تسجيل حدث إداري";
+    document.getElementById('manualEventDate').valueAsDate = new Date();
+    document.getElementById('manualEventType').value = 'excused';
+    document.getElementById('manualEventNote').value = '';
+    document.getElementById('adminEventModal').classList.add('show');
+}
+
+function closeAdminEventModal() {
+    document.getElementById('adminEventModal').classList.remove('show');
+}
+
+function editAdminEvent(id) {
+    const events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
+    const event = events.find(e => e.id == id);
+    if (!event) return;
+    editingEventId = id;
+    document.getElementById('modalTitle').textContent = "تعديل الحدث";
+    document.getElementById('manualEventType').value = event.type;
+    document.getElementById('manualEventDate').value = event.date.split('T')[0];
+    document.getElementById('manualEventNote').value = event.note || '';
+    document.getElementById('adminEventModal').classList.add('show');
+}
+
+function saveAdminEvent() {
+    const type = document.getElementById('manualEventType').value;
+    const dateInput = document.getElementById('manualEventDate').value;
+    const note = document.getElementById('manualEventNote').value;
+    
+    if (!dateInput) { alert('يرجى اختيار التاريخ'); return; }
+
+    const targetDateStr = new Date(dateInput).toDateString();
+    let events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
+
+    events = events.filter(e => {
+        if (e.studentId != currentStudentId) return true;
+        if (new Date(e.date).toDateString() !== targetDateStr) return true;
+        return false;
+    });
+    
+    events.push({
+        id: Date.now(),
+        studentId: currentStudentId,
+        date: new Date(dateInput).toISOString(),
+        type: type,
+        note: note
+    });
+
+    localStorage.setItem('studentEvents', JSON.stringify(events));
+    closeAdminEventModal();
+    loadProgressTab();
+}
+
+function deleteAdminEvent(id) {
+    if (!confirm('حذف هذا السجل؟')) return;
+    let events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
+    events = events.filter(e => e.id != id);
+    localStorage.setItem('studentEvents', JSON.stringify(events));
+    loadProgressTab();
+}
 
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
@@ -728,7 +720,6 @@ function deleteLesson(id) {
     saveAndReindexLessons(myLessons, false, otherLessons);
 }
 
-// 🔥 دالة التوليد الذكي (صارمة: واجبات مرتبطة فقط) 🔥
 function autoGenerateLessons() {
     if(!confirm('سيتم حذف الدروس الحالية وتوليد قائمة جديدة بناءً على التشخيص. متابعة؟')) return;
     
@@ -739,7 +730,6 @@ function autoGenerateLessons() {
     
     const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
     const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    // جلب مكتبة الواجبات (تأكدنا سابقاً أن اسمها assignments)
     const allLibraryAssignments = JSON.parse(localStorage.getItem('assignments') || '[]'); 
     const originalTest = JSON.parse(localStorage.getItem('tests') || '[]').find(t => t.id == compDiag.testId);
 
@@ -750,29 +740,22 @@ function autoGenerateLessons() {
         originalTest.questions.forEach(q => {
             const ans = compDiag.answers ? compDiag.answers.find(a => a.questionId == q.id) : null;
             
-            // شرط الرسوب في السؤال المرتبط بهدف
             if((ans?.score || 0) < (q.passingScore || 1) && q.linkedGoalId) {
                 const obj = allObjectives.find(o => o.id == q.linkedGoalId);
                 if(obj) {
-                    // البحث عن الدروس التي تخدم هذا الهدف
                     const matches = allLessons.filter(l => l.linkedInstructionalGoal === obj.shortTermGoal || (obj.instructionalGoals||[]).includes(l.linkedInstructionalGoal));
                     
                     matches.forEach(m => {
-                        // منع تكرار نفس الدرس
                         if(!newLessons.find(x => x.originalLessonId == m.id)) {
-                            
-                            // 1. إنشاء الدرس (دائماً)
                             newLessons.push({
                                 id: Date.now() + Math.floor(Math.random()*10000),
                                 studentId: currentStudentId, title: m.title, objective: m.linkedInstructionalGoal,
                                 originalLessonId: m.id, status: 'pending', assignedDate: new Date().toISOString()
                             });
                             
-                            // 2. البحث عن واجب مرتبط (فقط)
                             const linkedHomework = allLibraryAssignments.find(h => h.linkedInstructionalGoal === m.linkedInstructionalGoal);
 
                             if (linkedHomework) {
-                                // ✅ وجدنا واجباً مرتبطاً: ننسخه للطالب
                                 newAssignments.push({
                                     id: Date.now() + Math.floor(Math.random()*10000) + 1,
                                     studentId: currentStudentId,
@@ -782,7 +765,6 @@ function autoGenerateLessons() {
                                     assignedDate: new Date().toISOString()
                                 });
                             } 
-                            // ⛔ تم حذف الـ else: لن يتم إنشاء واجب تلقائي
                         }
                     });
                 }
@@ -792,17 +774,15 @@ function autoGenerateLessons() {
 
     if(newLessons.length === 0) { alert('لا توجد نقاط ضعف تتطلب خطة علاجية.'); return; }
     
-    // حفظ الدروس
     saveAndReindexLessons(newLessons, true);
     
-    // حفظ الواجبات (إن وجدت)
     if (newAssignments.length > 0) {
         let currentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
         currentAssignments = [...currentAssignments.filter(a => a.studentId != currentStudentId), ...newAssignments];
         localStorage.setItem('studentAssignments', JSON.stringify(currentAssignments));
         alert(`تم توليد ${newLessons.length} درس و ${newAssignments.length} واجب مرتبط.`);
     } else {
-        alert(`تم توليد ${newLessons.length} درس (لم يتم العثور على واجبات مرتبطة في المكتبة).`);
+        alert(`تم توليد ${newLessons.length} درس.`);
     }
 
     if (document.getElementById('section-assignments').classList.contains('active')) loadAssignmentsTab();
@@ -842,18 +822,14 @@ function deleteAssignedTest(id) {
     if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
 }
 
-// 🔥🔥 فتح نافذة إسناد الواجب (جلب الواجبات من assignments) 🔥🔥
 function showAssignHomeworkModal() { 
-    // التأكد من وجود العنصر أولاً
     const select = document.getElementById('homeworkSelect');
     if (!select) {
         injectHomeworkModal();
-        // محاولة ثانية بعد جزء من الثانية لضمان الرسم
         setTimeout(showAssignHomeworkModal, 50);
         return;
     }
 
-    // 🔥 التعديل هنا: استخدام 'assignments' ليتوافق مع المكتبة
     const allAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
     
     select.innerHTML = '<option value="">اختر من قائمة الواجبات...</option>';
@@ -900,47 +876,78 @@ function deleteAssignment(id) {
         loadAssignmentsTab(); 
     } 
 }
-function showAssignLibraryLessonModal() {
-    const all = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const s = document.getElementById('libraryLessonSelect');
-    s.innerHTML = '<option value="">اختر...</option>';
-    all.forEach(l => s.innerHTML += `<option value="${l.id}">${l.title}</option>`);
-    document.getElementById('assignLibraryLessonModal').classList.add('show');
-}
-function assignLibraryLesson() {
-    const lessonId = parseInt(document.getElementById('libraryLessonSelect').value);
-    if(!lessonId) return;
-    const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const lesson = allLessons.find(l => l.id == lessonId);
-    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    let myLessons = studentLessons.filter(l => l.studentId == currentStudentId);
-    let otherLessons = studentLessons.filter(l => l.studentId != currentStudentId);
-    myLessons.push({
-        id: Date.now(), studentId: currentStudentId, title: lesson.title,
-        objective: lesson.linkedInstructionalGoal || 'إضافي', originalLessonId: lessonId,
-        status: 'pending', assignedDate: new Date().toISOString(), isIntervention: true
-    });
-    saveAndReindexLessons(myLessons, false, otherLessons);
-    closeModal('assignLibraryLessonModal');
-    loadLessonsTab();
-}
+
 function formatAnswerDisplay(answerData) {
     if (!answerData) return '<span class="text-muted">لم يجب</span>';
     if (typeof answerData === 'string' && answerData.startsWith('data:image')) return `<img src="${answerData}" style="max-width:100px; border:1px solid #ccc; border-radius:5px; margin-top:5px;">`;
     return answerData;
 }
 function openReviewModal(assignmentId) {
-    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    const assignment = studentTests.find(t => t.id == assignmentId);
-    if(!assignment) { alert('لم يتم العثور على الاختبار'); return; }
-    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
-    const originalTest = allTests.find(t => t.id == assignment.testId);
+    const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
+    const assignment = studentAssignments.find(a => a.id == assignmentId);
+    
+    if(!assignment) { 
+        const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+        const test = studentTests.find(t => t.id == assignmentId);
+        if (test) { openTestReviewModal(test); return; } 
+        alert('لم يتم العثور على الواجب/الاختبار'); return; 
+    }
+
+    const allLibraryAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
+    let originalAssignment = allLibraryAssignments.find(a => a.title === assignment.title);
+    
+    // إذا لم توجد أسئلة محفوظة في الواجب المسند، نحاول جلبها من المكتبة
+    if ((!assignment.questions || assignment.questions.length === 0) && originalAssignment) {
+        assignment.questions = originalAssignment.questions;
+    }
+
     document.getElementById('reviewAssignmentId').value = assignmentId;
     const container = document.getElementById('reviewQuestionsContainer');
     container.innerHTML = '';
+
+    if (assignment.attachedSolution) {
+        container.innerHTML += `
+            <div class="alert alert-info" style="margin-bottom:20px;">
+                <strong>📎 حل ورقي مرفق:</strong><br>
+                <a href="${assignment.attachedSolution}" target="_blank" class="btn btn-primary btn-sm mt-2">عرض ملف الحل</a>
+            </div>
+        `;
+    }
+
+    if (assignment.questions) {
+        assignment.questions.forEach((q, index) => {
+            const studentAnsObj = assignment.answers ? assignment.answers.find(a => a.questionId == q.id) : null;
+            let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
+            const formattedAnswer = formatAnswerDisplay(rawAnswer);
+            const currentScore = studentAnsObj ? (studentAnsObj.score || 0) : 0;
+            const teacherNote = studentAnsObj ? (studentAnsObj.teacherNote || '') : '';
+            const maxScore = q.passingScore || 1;
+            
+            const item = document.createElement('div');
+            item.className = 'review-question-item';
+            item.innerHTML = `
+                <div class="review-q-header"><strong>س${index+1}: ${q.text}</strong><div><input type="number" class="score-input" name="score_${q.id}" value="${currentScore}" max="${maxScore}" min="0"><span class="text-muted"> / ${maxScore}</span></div></div>
+                <div class="student-answer-box"><strong>إجابة الطالب:</strong><div style="margin-top:5px;">${formattedAnswer}</div></div>
+                <div class="teacher-feedback-box"><textarea class="form-control" name="note_${q.id}" placeholder="ملاحظات المعلم...">${teacherNote}</textarea></div>`;
+            container.appendChild(item);
+        });
+    } else {
+        container.innerHTML += '<div class="text-center p-3">لا توجد أسئلة رقمية لعرضها (قد يكون الواجب ورقياً فقط).</div>';
+    }
+    
+    document.getElementById('reviewTestModal').classList.add('show');
+}
+
+function openTestReviewModal(test) {
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    const originalTest = allTests.find(t => t.id == test.testId);
+    document.getElementById('reviewAssignmentId').value = test.id;
+    const container = document.getElementById('reviewQuestionsContainer');
+    container.innerHTML = '';
+    
     if (originalTest && originalTest.questions) {
         originalTest.questions.forEach((q, index) => {
-            const studentAnsObj = assignment.answers ? assignment.answers.find(a => a.questionId == q.id) : null;
+            const studentAnsObj = test.answers ? test.answers.find(a => a.questionId == q.id) : null;
             let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
             const formattedAnswer = formatAnswerDisplay(rawAnswer);
             const currentScore = studentAnsObj ? (studentAnsObj.score || 0) : 0;
@@ -957,45 +964,96 @@ function openReviewModal(assignmentId) {
     }
     document.getElementById('reviewTestModal').classList.add('show');
 }
+
 function saveTestReview() {
     const id = parseInt(document.getElementById('reviewAssignmentId').value);
-    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    const idx = studentTests.findIndex(t => t.id == id);
-    if(idx === -1) return;
+    
+    let studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
+    let idx = studentAssignments.findIndex(a => a.id == id);
+    let isAssignment = true;
+
+    if (idx === -1) {
+        const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+        idx = studentTests.findIndex(t => t.id == id);
+        if (idx !== -1) {
+            studentAssignments = studentTests;
+            isAssignment = false;
+        } else {
+            return;
+        }
+    }
+
     const container = document.getElementById('reviewQuestionsContainer');
     let totalScore = 0; let maxTotalScore = 0;
-    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
-    const originalTest = allTests.find(t => t.id == studentTests[idx].testId);
-    if(originalTest && originalTest.questions) {
-        originalTest.questions.forEach(q => {
+    
+    // محاولة جلب الأسئلة الأصلية
+    let questions = studentAssignments[idx].questions;
+    if (!questions && !isAssignment) {
+         const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+         const originalTest = allTests.find(t => t.id == studentAssignments[idx].testId);
+         if(originalTest) questions = originalTest.questions;
+    }
+
+    if(questions) {
+        questions.forEach(q => {
             const scoreInp = container.querySelector(`input[name="score_${q.id}"]`);
             const noteInp = container.querySelector(`textarea[name="note_${q.id}"]`);
-            if (!studentTests[idx].answers) studentTests[idx].answers = [];
-            let ansIdx = studentTests[idx].answers.findIndex(a => a.questionId == q.id);
+            if (!studentAssignments[idx].answers) studentAssignments[idx].answers = [];
+            
+            let ansIdx = studentAssignments[idx].answers.findIndex(a => a.questionId == q.id);
             const newScore = parseInt(scoreInp.value) || 0;
-            if(ansIdx !== -1) { studentTests[idx].answers[ansIdx].score = newScore; studentTests[idx].answers[ansIdx].teacherNote = noteInp.value; }
-            else { studentTests[idx].answers.push({ questionId: q.id, score: newScore, teacherNote: noteInp.value, answer: null }); }
+            
+            if(ansIdx !== -1) { 
+                studentAssignments[idx].answers[ansIdx].score = newScore; 
+                studentAssignments[idx].answers[ansIdx].teacherNote = noteInp.value; 
+            } else { 
+                studentAssignments[idx].answers.push({ questionId: q.id, score: newScore, teacherNote: noteInp.value, answer: null }); 
+            }
             totalScore += newScore; maxTotalScore += (q.passingScore || 1);
         });
-        studentTests[idx].score = maxTotalScore > 0 ? Math.round((totalScore / maxTotalScore) * 100) : 0;
-        studentTests[idx].status = 'completed';
+        studentAssignments[idx].score = maxTotalScore > 0 ? Math.round((totalScore / maxTotalScore) * 100) : 0;
     }
-    localStorage.setItem('studentTests', JSON.stringify(studentTests));
+    
+    // إذا كان هناك ملف مرفق وتم التعديل، نعتبره مصححاً
+    studentAssignments[idx].status = 'completed';
+
+    if (isAssignment) localStorage.setItem('studentAssignments', JSON.stringify(studentAssignments));
+    else localStorage.setItem('studentTests', JSON.stringify(studentAssignments));
+    
     closeModal('reviewTestModal');
-    loadDiagnosticTab();
-    if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
+    if (isAssignment) loadAssignmentsTab();
+    else loadDiagnosticTab();
+    
     alert('تم حفظ التصحيح');
 }
+
 function returnTestForResubmission() {
     const id = parseInt(document.getElementById('reviewAssignmentId').value);
-    if(!confirm('إعادة الاختبار للطالب للتعديل؟')) return;
-    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    const idx = studentTests.findIndex(t => t.id == id);
-    if(idx !== -1) {
-        studentTests[idx].status = 'returned';
-        localStorage.setItem('studentTests', JSON.stringify(studentTests));
-        closeModal('reviewTestModal');
-        loadDiagnosticTab();
-        alert('تمت الإعادة');
+    if(!confirm('إعادة الاختبار/الواجب للطالب للتعديل؟')) return;
+    
+    let studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
+    let idx = studentAssignments.findIndex(a => a.id == id);
+    let isAssignment = true;
+
+    if (idx === -1) {
+        const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+        idx = studentTests.findIndex(t => t.id == id);
+        if (idx !== -1) {
+            studentAssignments = studentTests;
+            isAssignment = false;
+        } else return;
     }
+
+    studentAssignments[idx].status = 'returned'; // أو 'pending'
+    
+    if (isAssignment) {
+        localStorage.setItem('studentAssignments', JSON.stringify(studentAssignments));
+        loadAssignmentsTab();
+    } else {
+        localStorage.setItem('studentTests', JSON.stringify(studentAssignments));
+        loadDiagnosticTab();
+    }
+    
+    closeModal('reviewTestModal');
+    alert('تمت الإعادة');
 }

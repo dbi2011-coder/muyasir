@@ -1,13 +1,13 @@
 // ============================================
 // 📁 المسار: assets/js/student-assignments.js
-// الوصف: واجهة الطالب (تصميم البطاقات Cards + حل المشاكل السابقة)
+// الوصف: واجهة الطالب (تصميم متناسق بالكامل + إصلاحات الأسئلة)
 // ============================================
 
 let currentAssignmentId = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('assignmentsList') || window.location.pathname.includes('my-assignments.html')) {
-        injectCardStyles(); // 🎨 استخدام ستايل البطاقات
+        injectCardStyles(); // 🎨 الستايل الجديد
         injectSolveModal();
         loadStudentAssignments();
         updateCurrentAssignmentSection();
@@ -65,7 +65,7 @@ function injectSolveModal() {
 }
 
 // ==========================================
-// 🎨 2. تنسيقات البطاقات (Card Styles)
+// 🎨 2. التنسيقات (تصميم البطاقات + الهيرو الجديد)
 // ==========================================
 function injectCardStyles() {
     if (document.getElementById('cardAssignmentStyles')) return;
@@ -75,10 +75,43 @@ function injectCardStyles() {
         .assignments-container { max-width: 1200px; margin: 0 auto; padding: 20px; font-family: 'Tajawal', sans-serif; }
         .modal.show { display: block !important; }
         
+        /* 🔥 تصميم منطقة التنبيه الجديد (Hero Section) 🔥 */
+        .hero-section {
+            background: #fff;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05); /* ظل ناعم */
+            border: 1px solid #eaeaea;
+            border-right: 6px solid #007bff; /* خط ملون جانبي */
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-content h2 { margin: 0 0 8px 0; color: #333; font-size: 1.5rem; font-weight: 800; }
+        .hero-content p { margin: 0; color: #666; font-size: 1rem; }
+        
+        .hero-action .btn-hero {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            border: none;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,123,255,0.3);
+            transition: transform 0.2s ease;
+        }
+        .hero-action .btn-hero:hover { transform: translateY(-2px); background-color: #0069d9; }
+
         /* شبكة البطاقات */
         .assignments-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); /* استجابة تلقائية */
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 25px;
             margin-top: 20px;
         }
@@ -86,102 +119,49 @@ function injectCardStyles() {
         /* تصميم البطاقة */
         .assignment-card {
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
             transition: transform 0.3s ease, box-shadow 0.3s ease;
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            border: 1px solid #eee;
+            border: 1px solid #f0f0f0;
             position: relative;
         }
         
         .assignment-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+            border-color: #007bff;
         }
 
-        /* شريط الحالة الملون في الجانب */
-        .card-status-bar {
-            height: 6px;
-            width: 100%;
-        }
+        .card-status-bar { height: 4px; width: 100%; }
         .status-pending .card-status-bar { background: #ffc107; }
         .status-completed .card-status-bar { background: #28a745; }
 
         .card-body { padding: 20px; flex-grow: 1; }
+        .card-title { margin: 0 0 10px 0; font-size: 1.1rem; font-weight: bold; color: #333; }
         
-        .card-title {
-            margin: 0 0 10px 0;
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: #333;
-        }
-
-        .card-meta {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .card-badge {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: bold;
-        }
+        .card-meta { font-size: 0.9rem; color: #666; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        
+        .card-badge { position: absolute; top: 15px; left: 15px; padding: 4px 10px; border-radius: 15px; font-size: 0.75rem; font-weight: bold; }
         .badge-pending { background: #fff3cd; color: #856404; }
         .badge-completed { background: #d4edda; color: #155724; }
 
-        .card-footer {
-            padding: 15px 20px;
-            background: #fcfcfc;
-            border-top: 1px solid #f0f0f0;
-            text-align: center;
-        }
-
-        .btn-card {
-            width: 100%;
-            padding: 10px;
-            border-radius: 8px;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-            transition: 0.2s;
-        }
-        .btn-solve { background: #007bff; color: white; }
-        .btn-solve:hover { background: #0056b3; }
-        .btn-review { background: white; border: 1px solid #ddd; color: #555; }
-        .btn-review:hover { background: #f8f9fa; border-color: #bbb; }
-
-        /* التنبيه العلوي */
-        .urgent-alert {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 15px;
-            padding: 25px;
-            margin-bottom: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 10px 20px rgba(118, 75, 162, 0.2);
-        }
-        .urgent-info h4 { margin: 0 0 5px 0; font-size: 1.4rem; font-weight: bold; }
-        .btn-urgent {
-            background: white; color: #764ba2; border: none;
-            padding: 10px 25px; border-radius: 25px; cursor: pointer; font-weight: bold;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
+        .card-footer { padding: 15px; background: #fbfbfb; border-top: 1px solid #f0f0f0; text-align: center; }
+        .btn-card { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ddd; font-weight: 600; cursor: pointer; transition: 0.2s; background: white; color: #555; }
+        .btn-card:hover { background: #f0f0f0; border-color: #ccc; }
+        
+        .status-pending .btn-card { background: #007bff; color: white; border: none; }
+        .status-pending .btn-card:hover { background: #0069d9; }
 
         .empty-list { text-align: center; padding: 60px; color: #888; grid-column: 1/-1; }
 
-        /* طباعة */
+        @media (max-width: 768px) {
+            .hero-section { flex-direction: column; text-align: center; gap: 20px; }
+            .hero-section { border-right: 1px solid #eaeaea; border-top: 5px solid #007bff; }
+        }
+
         @media print {
             body * { visibility: hidden; }
             #solveAssignmentModal, #solveAssignmentModal * { visibility: visible; }
@@ -194,7 +174,7 @@ function injectCardStyles() {
 }
 
 // ==========================================
-// 📋 3. منطق العرض (Grid Layout)
+// 📋 3. منطق العرض
 // ==========================================
 
 function filterAssignments() {
@@ -206,7 +186,6 @@ function loadStudentAssignments(filter = 'all') {
     const assignmentsList = document.getElementById('assignmentsList');
     if (!assignmentsList) return;
     
-    // 🔥 تغيير الكلاس إلى الشبكة
     assignmentsList.className = 'assignments-grid';
     assignmentsList.innerHTML = ''; 
     
@@ -230,12 +209,10 @@ function loadStudentAssignments(filter = 'all') {
             <div class="empty-list">
                 <div style="font-size:3rem; margin-bottom:15px; opacity:0.5;">📭</div>
                 <h4>لا توجد واجبات</h4>
-                <p>سجلك نظيف تماماً!</p>
             </div>`;
         return;
     }
     
-    // 🔥 بناء البطاقات
     assignmentsList.innerHTML = list.map(assignment => {
         const isPending = assignment.status === 'pending';
         const dateStr = new Date(assignment.assignedDate).toLocaleDateString('ar-SA');
@@ -248,38 +225,21 @@ function loadStudentAssignments(filter = 'all') {
         <div class="assignment-card ${statusClass}">
             <div class="card-status-bar"></div>
             <span class="card-badge ${badgeClass}">${statusText}</span>
-            
             <div class="card-body">
                 <h3 class="card-title">${assignment.title}</h3>
-                
-                <div class="card-meta">
-                    <i class="fas fa-book"></i>
-                    <span>${assignment.subject || 'عام'}</span>
-                </div>
-                <div class="card-meta">
-                    <i class="far fa-calendar-alt"></i>
-                    <span>تاريخ الإسناد: ${dateStr}</span>
-                </div>
-                ${isPending ? `
-                <div class="card-meta" style="color:#dc3545;">
-                    <i class="far fa-clock"></i>
-                    <span>آخر موعد: ${dueStr}</span>
-                </div>` : `
-                <div class="card-meta" style="color:#28a745;">
-                    <i class="fas fa-check-circle"></i>
-                    <span>الدرجة: ${assignment.score || 0}%</span>
-                </div>
-                `}
+                <div class="card-meta"><i class="fas fa-book"></i> <span>${assignment.subject || 'عام'}</span></div>
+                <div class="card-meta"><i class="far fa-calendar-alt"></i> <span>الإسناد: ${dateStr}</span></div>
+                ${isPending ? 
+                `<div class="card-meta" style="color:#dc3545;"><i class="far fa-clock"></i> <span>آخر موعد: ${dueStr}</span></div>` : 
+                `<div class="card-meta" style="color:#28a745;"><i class="fas fa-check-circle"></i> <span>الدرجة: ${assignment.score || 0}%</span></div>`
+                }
             </div>
-
             <div class="card-footer">
-                <button class="btn-card ${isPending ? 'btn-solve' : 'btn-review'}" 
-                    onclick="${isPending ? `solveAssignment(${assignment.id})` : `viewAssignmentResult(${assignment.id})`}">
+                <button class="btn-card" onclick="${isPending ? `solveAssignment(${assignment.id})` : `viewAssignmentResult(${assignment.id})`}">
                     ${isPending ? '<i class="fas fa-pencil-alt"></i> ابدأ الحل' : '<i class="fas fa-eye"></i> مراجعة الحل'}
                 </button>
             </div>
-        </div>
-        `;
+        </div>`;
     }).join('');
 }
 
@@ -292,38 +252,38 @@ function updateCurrentAssignmentSection() {
     
     if (!urgent) { section.style.display = 'none'; return; }
     
+    // 🔥 HTML الهيكل الجديد للتنبيه (نظيف ومتناسق) 🔥
     section.style.display = 'block';
     section.innerHTML = `
-        <div class="urgent-alert">
-            <div class="urgent-info">
-                <h4>🚀 تذكير سريع!</h4>
-                <p>لديك واجب بعنوان "<strong>${urgent.title}</strong>" بانتظار الحل.</p>
+        <div class="hero-section">
+            <div class="hero-content">
+                <h2>👋 أهلاً بك! لديك واجب جديد</h2>
+                <p>الواجب: <strong>${urgent.title}</strong> بانتظار الحل.</p>
             </div>
-            <button class="btn-urgent" onclick="solveAssignment(${urgent.id})">
-                ابدأ الآن <i class="fas fa-arrow-left"></i>
-            </button>
+            <div class="hero-action">
+                <button class="btn-hero" onclick="solveAssignment(${urgent.id})">
+                    ابدأ الحل الآن <i class="fas fa-arrow-left"></i>
+                </button>
+            </div>
         </div>`;
 }
 
 // ==========================================
-// 🔥 4. محرك الحل (نفس المنطق القوي السابق)
+// 🔥 4. محرك الحل (متوافق مع كل أنواع الأسئلة)
 // ==========================================
 
-function printAssignment() {
-    window.print();
-}
+function printAssignment() { window.print(); }
 
 function solveAssignment(assignmentId) {
     const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
     let assignment = studentAssignments.find(a => a.id === assignmentId);
-    
     if (!assignment) { alert('الواجب غير موجود'); return; }
 
-    // جلب الأسئلة من المكتبة إذا كانت مفقودة
+    // إصلاح فقدان الأسئلة
     if (!assignment.questions || assignment.questions.length === 0) {
         const allLibraryAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
         const originalAssignment = allLibraryAssignments.find(a => a.title.trim() === assignment.title.trim());
-        if (originalAssignment && originalAssignment.questions && originalAssignment.questions.length > 0) {
+        if (originalAssignment && originalAssignment.questions) {
             assignment.questions = originalAssignment.questions;
             assignment.description = originalAssignment.description;
         }
@@ -347,8 +307,7 @@ function solveAssignment(assignmentId) {
     if(uploadSection) {
         if (isCompleted) {
             uploadSection.innerHTML = assignment.attachedSolution ? 
-                `<div class="alert alert-success">📎 <strong>تم إرفاق حل ورقي.</strong> <a href="${assignment.attachedSolution}" target="_blank" class="btn btn-sm btn-outline-success">عرض الملف</a></div>` :
-                '';
+                `<div class="alert alert-success">📎 <strong>تم إرفاق حل ورقي.</strong> <a href="${assignment.attachedSolution}" target="_blank" class="btn btn-sm btn-outline-success">عرض الملف</a></div>` : '';
         } else {
             uploadSection.style.display = 'block';
             uploadSection.innerHTML = `
@@ -366,7 +325,7 @@ function solveAssignment(assignmentId) {
         contentDiv.innerHTML += `
             <div class="text-center p-5" style="background:#fff3cd; border:1px solid #ffeeba; border-radius:10px;">
                 <h3 style="color:#856404;">⚠️ لا توجد أسئلة مسجلة</h3>
-                <p>يمكنك رفع الحل الورقي بالأسفل إذا طلب المعلم ذلك.</p>
+                <p>يمكنك رفع الحل الورقي بالأسفل.</p>
             </div>`;
     } else {
         let questionsHtml = '<form id="studentAnswersForm">';
@@ -458,7 +417,7 @@ async function submitAssignment() {
     if (idx === -1) return;
 
     const assignment = studentAssignments[idx];
-    
+
     // حفظ الأسئلة لضمان عدم ضياعها
     if (!assignment.questions || assignment.questions.length === 0) {
         const allLibraryAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');

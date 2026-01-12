@@ -1,4 +1,8 @@
-// نظام مراسلة الطلاب
+// ============================================
+// 📁 المسار: messages.js
+// الوصف: نظام مراسلة المعلم (يظهر طلاب المعلم الحالي فقط)
+// ============================================
+
 let currentViewingMessageId = null;
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -19,7 +23,7 @@ function loadMessages() {
     const currentTeacher = getCurrentUser();
     
     // تصفية الرسائل الخاصة بالمعلم الحالي فقط
-    const teacherMessages = messages.filter(msg => msg.teacherId === currentTeacher.id);
+    const teacherMessages = messages.filter(msg => msg.teacherId == currentTeacher.id);
     
     if (teacherMessages.length === 0) {
         messagesList.innerHTML = `
@@ -69,18 +73,46 @@ function loadMessages() {
     }).join('');
 }
 
+// 🔥 الدالة المعدلة: تظهر فقط الطلاب المرتبطين بالمعلم الحالي 🔥
 function loadStudentsForMessaging() {
     const recipientSelect = document.getElementById('messageRecipient');
-    const students = JSON.parse(localStorage.getItem('students') || '[]');
     const currentTeacher = getCurrentUser();
+
+    // 1. جلب قائمة الطلاب (من المصدرين المحتملين لضمان وجود البيانات)
+    let allStudents = JSON.parse(localStorage.getItem('students') || '[]');
     
-    const teacherStudents = students.filter(student => student.teacherId === currentTeacher.id);
+    // دمج الطلاب من جدول المستخدمين أيضاً إذا كانوا غير موجودين في جدول الطلاب
+    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const studentUsers = allUsers.filter(u => u.role === 'student');
+    
+    // دمج القائمتين مع تجنب التكرار
+    const mergedStudents = [...allStudents];
+    studentUsers.forEach(u => {
+        if (!mergedStudents.find(s => s.id == u.id)) {
+            mergedStudents.push(u);
+        }
+    });
+    
+    // 2. التصفية: الطلاب المرتبطين بهذا المعلم فقط
+    // نستخدم (==) بدلاً من (===) لتفادي مشاكل النصوص والأرقام
+    const teacherStudents = mergedStudents.filter(student => student.teacherId == currentTeacher.id);
     
     recipientSelect.innerHTML = '<option value="">اختر الطالب</option>';
+    
+    if (teacherStudents.length === 0) {
+        recipientSelect.innerHTML += '<option value="" disabled>لا يوجد طلاب مرتبطين بك حالياً</option>';
+        // طباعة للتوضيح في حال لم يظهر أحد (للمطور فقط)
+        console.log("Teacher ID:", currentTeacher.id);
+        console.log("Total Students Found:", mergedStudents.length);
+        return;
+    }
+
     teacherStudents.forEach(student => {
         const option = document.createElement('option');
         option.value = student.id;
-        option.textContent = `${student.name} - ${student.grade}`;
+        const name = student.name || 'طالب بدون اسم';
+        const grade = student.grade || '';
+        option.textContent = `${name} ${grade ? '- ' + grade : ''}`;
         recipientSelect.appendChild(option);
     });
 }
@@ -88,15 +120,15 @@ function loadStudentsForMessaging() {
 function updateMessagesStats() {
     const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
     const currentTeacher = getCurrentUser();
-    const teacherMessages = messages.filter(msg => msg.teacherId === currentTeacher.id);
+    const teacherMessages = messages.filter(msg => msg.teacherId == currentTeacher.id);
     
     const totalMessages = teacherMessages.length;
     const unreadMessages = teacherMessages.filter(msg => !msg.isRead).length;
     const pendingReplies = teacherMessages.filter(msg => !msg.hasReply).length;
     
-    document.getElementById('totalMessages').textContent = totalMessages;
-    document.getElementById('unreadMessages').textContent = unreadMessages;
-    document.getElementById('pendingReplies').textContent = pendingReplies;
+    if(document.getElementById('totalMessages')) document.getElementById('totalMessages').textContent = totalMessages;
+    if(document.getElementById('unreadMessages')) document.getElementById('unreadMessages').textContent = unreadMessages;
+    if(document.getElementById('pendingReplies')) document.getElementById('pendingReplies').textContent = pendingReplies;
 }
 
 function showNewMessageModal() {
@@ -114,7 +146,7 @@ function sendNewMessage() {
     const content = document.getElementById('messageContent').value.trim();
     
     if (!studentId || !subject || !content) {
-        showAuthNotification('يرجى ملء جميع الحقول الإجبارية', 'error');
+        alert('يرجى ملء جميع الحقول الإجبارية');
         return;
     }
     
@@ -122,7 +154,7 @@ function sendNewMessage() {
     const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
     
     const newMessage = {
-        id: generateId(),
+        id: Date.now(),
         teacherId: currentTeacher.id,
         studentId: studentId,
         subject: subject,
@@ -130,7 +162,7 @@ function sendNewMessage() {
         sentAt: new Date().toISOString(),
         isRead: false,
         hasReply: false,
-        attachment: null // يمكن تطوير رفع المرفقات لاحقاً
+        attachment: null
     };
     
     messages.push(newMessage);
@@ -139,7 +171,7 @@ function sendNewMessage() {
     // إضافة الرسالة إلى صندوق وارد الطالب أيضاً
     addMessageToStudentInbox(newMessage);
     
-    showAuthNotification('تم إرسال الرسالة بنجاح', 'success');
+    alert('تم إرسال الرسالة بنجاح');
     closeNewMessageModal();
     loadMessages();
     updateMessagesStats();
@@ -149,7 +181,7 @@ function addMessageToStudentInbox(teacherMessage) {
     const studentMessages = JSON.parse(localStorage.getItem('studentMessages') || '[]');
     
     const studentMessage = {
-        id: generateId(),
+        id: Date.now() + 1, // ID مختلف قليلاً لتجنب التكرار
         studentId: teacherMessage.studentId,
         teacherId: teacherMessage.teacherId,
         subject: teacherMessage.subject,
@@ -168,10 +200,7 @@ function viewMessage(messageId) {
     const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
     const message = messages.find(msg => msg.id === messageId);
     
-    if (!message) {
-        showAuthNotification('الرسالة غير موجودة', 'error');
-        return;
-    }
+    if (!message) { alert('الرسالة غير موجودة'); return; }
     
     currentViewingMessageId = messageId;
     const student = getStudentById(message.studentId);
@@ -181,7 +210,6 @@ function viewMessage(messageId) {
     document.getElementById('viewMessageDate').textContent = `التاريخ: ${formatDate(message.sentAt)}`;
     document.getElementById('viewMessageContent').textContent = message.content;
     
-    // إظهار/إخفاء منطقة الرد
     const replySection = document.getElementById('replySection');
     if (message.hasReply) {
         replySection.style.display = 'none';
@@ -190,20 +218,15 @@ function viewMessage(messageId) {
         document.getElementById('replyContent').value = '';
     }
     
-    // عرض المرفقات إذا وجدت
     const attachmentDiv = document.getElementById('viewMessageAttachment');
     if (message.attachment) {
-        attachmentDiv.innerHTML = `
-            <strong>المرفق:</strong>
-            <a href="${message.attachment}" target="_blank">عرض الملف</a>
-        `;
+        attachmentDiv.innerHTML = `<strong>المرفق:</strong> <a href="${message.attachment}" target="_blank">عرض الملف</a>`;
     } else {
         attachmentDiv.innerHTML = '';
     }
     
     document.getElementById('viewMessageModal').classList.add('show');
     
-    // تعليم الرسالة كمقروءة إذا لم تكن مقروءة
     if (!message.isRead) {
         markMessageAsRead(messageId);
     }
@@ -217,34 +240,21 @@ function closeViewMessageModal() {
 function sendReply() {
     const replyContent = document.getElementById('replyContent').value.trim();
     
-    if (!replyContent) {
-        showAuthNotification('يرجى كتابة محتوى الرد', 'error');
-        return;
-    }
-    
-    if (!currentViewingMessageId) {
-        showAuthNotification('لم يتم تحديد رسالة للرد', 'error');
-        return;
-    }
+    if (!replyContent) { alert('يرجى كتابة محتوى الرد'); return; }
+    if (!currentViewingMessageId) return;
     
     const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
     const messageIndex = messages.findIndex(msg => msg.id === currentViewingMessageId);
     
-    if (messageIndex === -1) {
-        showAuthNotification('الرسالة غير موجودة', 'error');
-        return;
-    }
+    if (messageIndex === -1) return;
     
-    // تحديث الرسالة الأصلية
     messages[messageIndex].hasReply = true;
     messages[messageIndex].repliedAt = new Date().toISOString();
     
-    // إرسال الرد إلى الطالب
     sendReplyToStudent(messages[messageIndex], replyContent);
-    
     localStorage.setItem('teacherMessages', JSON.stringify(messages));
     
-    showAuthNotification('تم إرسال الرد بنجاح', 'success');
+    alert('تم إرسال الرد بنجاح');
     closeViewMessageModal();
     loadMessages();
     updateMessagesStats();
@@ -254,7 +264,7 @@ function sendReplyToStudent(originalMessage, replyContent) {
     const studentMessages = JSON.parse(localStorage.getItem('studentMessages') || '[]');
     
     const replyMessage = {
-        id: generateId(),
+        id: Date.now(),
         studentId: originalMessage.studentId,
         teacherId: originalMessage.teacherId,
         subject: `رد على: ${originalMessage.subject}`,
@@ -283,15 +293,12 @@ function markMessageAsRead(messageId) {
 }
 
 function deleteMessage(messageId) {
-    if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) {
-        return;
-    }
+    if (!confirm('هل أنت متأكد من حذف هذه الرسالة؟')) return;
     
     const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
     const updatedMessages = messages.filter(msg => msg.id !== messageId);
     localStorage.setItem('teacherMessages', JSON.stringify(updatedMessages));
     
-    showAuthNotification('تم حذف الرسالة بنجاح', 'success');
     loadMessages();
     updateMessagesStats();
 }
@@ -302,18 +309,10 @@ function filterMessages() {
     
     messageItems.forEach(item => {
         switch (filter) {
-            case 'all':
-                item.style.display = 'flex';
-                break;
-            case 'unread':
-                item.style.display = item.classList.contains('unread') ? 'flex' : 'none';
-                break;
-            case 'read':
-                item.style.display = item.classList.contains('read') ? 'flex' : 'none';
-                break;
-            case 'replied':
-                item.style.display = item.classList.contains('replied') ? 'flex' : 'none';
-                break;
+            case 'all': item.style.display = 'flex'; break;
+            case 'unread': item.style.display = item.classList.contains('unread') ? 'flex' : 'none'; break;
+            case 'read': item.style.display = item.classList.contains('read') ? 'flex' : 'none'; break;
+            case 'replied': item.style.display = item.classList.contains('replied') ? 'flex' : 'none'; break;
         }
     });
 }
@@ -336,23 +335,31 @@ function searchMessages() {
 }
 
 function getStudentById(studentId) {
-    const students = JSON.parse(localStorage.getItem('students') || '[]');
-    return students.find(s => s.id === studentId);
+    // البحث في الجدولين
+    let students = JSON.parse(localStorage.getItem('students') || '[]');
+    let student = students.find(s => s.id == studentId);
+    
+    if (!student) {
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        student = users.find(u => u.id == studentId && u.role === 'student');
+    }
+    return student;
+}
+
+function getCurrentUser() {
+    return JSON.parse(sessionStorage.getItem('currentUser')).user;
 }
 
 function formatDate(dateString) {
     if (!dateString) return 'غير محدد';
     const date = new Date(dateString);
     return date.toLocaleDateString('ar-SA', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+        year: 'numeric', month: 'long', day: 'numeric',
+        hour: '2-digit', minute: '2-digit'
     });
 }
 
-// تصدير الدوال للاستخدام العالمي
+// تصدير الدوال
 window.showNewMessageModal = showNewMessageModal;
 window.closeNewMessageModal = closeNewMessageModal;
 window.sendNewMessage = sendNewMessage;

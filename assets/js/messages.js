@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (إصلاح تضارب ألوان القائمة الجانبية)
+// الوصف: شات المعلم (إصلاح التمييز البصري + مكتبة فيسات موسعة)
 // ============================================
 
 let activeChatStudentId = null;
@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
         renderChatLayout();
         loadConversations();
         
+        // إغلاق الفيسات عند النقر خارجها
         document.addEventListener('click', function(e) {
             const popup = document.getElementById('emojiPopup');
             const btn = document.getElementById('emojiBtn');
@@ -31,7 +32,6 @@ function getCurrentUser() {
 function cleanInterfaceAggressive() {
     const targetContainer = document.getElementById('messagesList');
     if (!targetContainer) return;
-
     const parent = targetContainer.parentElement;
     if (parent) {
         Array.from(parent.children).forEach(child => {
@@ -44,60 +44,39 @@ function cleanInterfaceAggressive() {
 }
 
 // ==========================================
-// 🎨 1. التنسيقات
+// 🎨 1. التنسيقات (التصميم المحسن)
 // ==========================================
 function injectChatStyles() {
     const style = document.createElement('style');
     style.id = 'chatStyles';
     style.innerHTML = `
-        .chat-container { 
-            display: flex; 
-            height: 80vh; 
-            background: #fff; 
-            border-radius: 12px; 
-            box-shadow: 0 5px 25px rgba(0,0,0,0.08); 
-            overflow: hidden; 
-            border: 1px solid #d1d5db; 
-            margin-top: 0px; 
-            font-family: 'Tajawal', sans-serif; 
-        }
+        .chat-container { display: flex; height: 80vh; background: #fff; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #d1d5db; margin-top: 0px; font-family: 'Tajawal', sans-serif; }
         
-        /* القائمة الجانبية للشات */
-        .chat-sidebar { 
-            width: 320px; 
-            background-color: #f1f5f9; 
-            border-left: 1px solid #cbd5e1; 
-            display: flex; 
-            flex-direction: column; 
-            z-index: 2; 
-        }
-        
-        /* 🔥 تم تغيير الاسم هنا لتجنب التضارب مع القائمة الرئيسية 🔥 */
-        .chat-list-header { 
-            padding: 20px; 
-            background: #f1f5f9; 
-            border-bottom: 1px solid #e2e8f0; 
-        }
-        
+        /* القائمة الجانبية */
+        .chat-sidebar { width: 320px; background-color: #f8f9fa; border-left: 1px solid #e5e7eb; display: flex; flex-direction: column; z-index: 2; }
+        .chat-list-header { padding: 20px; background: #f8f9fa; border-bottom: 1px solid #e2e8f0; }
         .chat-list { flex: 1; overflow-y: auto; }
         
+        /* عنصر القائمة (الطالب) */
         .chat-item { 
-            display: flex; 
-            align-items: center; 
-            padding: 15px 20px; 
-            cursor: pointer; 
-            border-bottom: 1px solid #e2e8f0; 
-            transition: 0.2s; 
-            background: #f1f5f9; 
+            display: flex; align-items: center; padding: 15px 20px; cursor: pointer; 
+            border-bottom: 1px solid #e2e8f0; transition: 0.2s; background: #fff; 
         }
-        .chat-item:hover { background: #e2e8f0; }
+        .chat-item:hover { background: #f1f5f9; }
+        
+        /* 🔥 تمييز الطالب النشط بلون أزرق واضح 🔥 */
         .chat-item.active { 
-            background: #fff; 
-            border-right: 4px solid #007bff; 
-            box-shadow: -2px 0 5px rgba(0,0,0,0.05);
+            background: #007bff !important; 
+            color: #fff !important;
+            border-right: 5px solid #004494;
         }
         
-        .avatar { width: 45px; height: 45px; background: #cbd5e1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #fff; margin-left: 12px; font-size: 1.1rem; }
+        /* تعديل ألوان النصوص داخل العنصر النشط */
+        .chat-item.active .chat-name { color: #fff !important; }
+        .chat-item.active .chat-preview { color: #e0e0e0 !important; }
+        .chat-item.active .avatar { background: #fff; color: #007bff; border: 2px solid #007bff; }
+
+        .avatar { width: 45px; height: 45px; background: #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #475569; margin-left: 12px; border: 2px solid #fff; }
         .chat-info { flex: 1; min-width: 0; }
         .chat-name { font-weight: bold; color: #334155; font-size: 0.95rem; display:flex; justify-content:space-between; margin-bottom: 4px; }
         .chat-preview { font-size: 0.85rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -106,29 +85,44 @@ function injectChatStyles() {
         /* منطقة المحادثة */
         .chat-main { flex: 1; display: flex; flex-direction: column; background: #fff; position: relative; }
         .chat-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; align-items: center; background: #fff; font-weight: bold; font-size: 1.1rem; color:#334155; height: 70px; }
+        .messages-area { flex: 1; padding: 20px; overflow-y: auto; background: #fcfcfc; display: flex; flex-direction: column; gap: 15px; }
         
-        .messages-area { flex: 1; padding: 20px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; gap: 15px; }
-        
-        .msg-bubble { max-width: 70%; padding: 12px 18px; border-radius: 15px; position: relative; font-size: 0.95rem; line-height: 1.6; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .msg-bubble { max-width: 70%; padding: 12px 18px; border-radius: 15px; position: relative; font-size: 0.95rem; line-height: 1.6; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .msg-me { align-self: flex-start; background: #007bff; color: white; border-bottom-right-radius: 2px; } 
-        .msg-other { align-self: flex-end; background: #f8fafc; color: #334155; border: 1px solid #e2e8f0; border-bottom-left-radius: 2px; }
+        .msg-other { align-self: flex-end; background: #fff; color: #334155; border: 1px solid #e2e8f0; border-bottom-left-radius: 2px; }
         .msg-time { font-size: 0.7rem; margin-top: 5px; opacity: 0.8; display:block; text-align:left; }
         .msg-attachment { margin-top: 8px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 8px; display: flex; align-items: center; gap: 5px; text-decoration: none; color: inherit; }
         .msg-attachment img { max-width: 200px; border-radius: 5px; }
 
+        /* منطقة الكتابة */
         .chat-input-area { padding: 15px 20px; border-top: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; gap: 12px; position: relative; }
         .chat-input { flex: 1; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 25px; outline: none; transition: 0.2s; font-size: 1rem; background: #f8fafc; }
         .chat-input:focus { border-color: #007bff; background: #fff; }
         
-        .btn-tool { color: #007bff; background: #eff6ff; font-size: 1.2rem; cursor: pointer; padding: 10px; border-radius: 50%; transition: 0.2s; display: flex; align-items: center; justify-content: center; border: 1px solid #dbeafe; }
-        .btn-tool:hover { background: #2563eb; color: white; border-color: #2563eb; }
+        /* 🔥 أزرار الأدوات واضحة وملونة 🔥 */
+        .btn-tool { 
+            font-size: 1.4rem; cursor: pointer; padding: 8px; 
+            transition: 0.2s; display: flex; align-items: center; justify-content: center;
+            border-radius: 50%;
+        }
+        .btn-emoji { color: #f59e0b; } /* أصفر للفيسات */
+        .btn-attach { color: #64748b; } /* رمادي للملف */
+        .btn-cam { color: #007bff; } /* أزرق للكاميرا */
+        
+        .btn-tool:hover { background: #f1f5f9; transform: scale(1.1); }
         
         .btn-send-pill { background-color: #007bff; color: white; border: none; padding: 10px 25px; border-radius: 50px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0, 123, 255, 0.2); }
         .btn-send-pill:hover { background-color: #0069d9; transform: translateY(-1px); }
 
-        .emoji-popup { position: absolute; bottom: 80px; right: 20px; width: 300px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: none; padding: 10px; grid-template-columns: repeat(6, 1fr); gap: 5px; z-index: 100; }
-        .emoji-item { font-size: 1.5rem; cursor: pointer; text-align: center; padding: 5px; border-radius: 5px; transition: 0.2s; }
-        .emoji-item:hover { background: #f1f5f9; }
+        /* قائمة الفيسات الكبيرة */
+        .emoji-popup { 
+            position: absolute; bottom: 80px; right: 20px; width: 320px; height: 250px; 
+            background: white; border: 1px solid #e2e8f0; border-radius: 12px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: none; padding: 10px; 
+            grid-template-columns: repeat(7, 1fr); gap: 5px; overflow-y: auto; z-index: 100; 
+        }
+        .emoji-item { font-size: 1.4rem; cursor: pointer; text-align: center; padding: 5px; border-radius: 5px; transition: 0.2s; }
+        .emoji-item:hover { background: #f1f5f9; transform: scale(1.2); }
 
         .empty-chat { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; }
         .attachment-preview { position: absolute; bottom: 85px; left: 20px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; display: none; z-index: 10; }
@@ -141,7 +135,12 @@ function renderChatLayout() {
     container.innerHTML = '';
     container.className = '';
     
-    const emojis = ['😀','😂','😅','😍','😎','😢','😭','😡','👍','👎','👋','🙏','❤️','💔','🌟','🔥','🎉','📚','✏️','✔️','❌','❓','💡','🏆'];
+    // 🔥 مجموعة فيسات شاملة 🔥
+    const emojis = [
+        '😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','💩','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾',
+        '👋','🤚','d','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦵','🦶','👂','🦻','👃','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸',
+        '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈️','♉️','♊️','♋️','♌️','♍️','♎️','♏️','♐️','♑️','♒️','♓️','🆔','atom','🉑','☢️','☣️','📴','📳','🈶','🈚️','🈸','🈺','🈷️','✴️','🆚','💮','🉐','㊙️','㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕️','🛑','⛔️','📛','🚫','💯','💢','♨️','🚷','🚯','🚳','🚱','🔞','📵','🚭','❗️','❕','❓','❔','‼️','⁉️','🔅','🔆','〽️','⚠️','🚸','🔱','⚜️','🔰','♻️','✅','🈯️','💹','❇️','✳️','❎','🌐','💠','Ⓜ️','🌀','💤','🏧','🚾','♿️','🅿️','🈳','🈂️','🛂','🛃','🛄','🛅','🚹','🚺','🚼','🚻','🚮','🎦','📶','🈁','🔣','ℹ️','🔤','🔡','🔠','🆖','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','#️⃣','*️⃣','⏏️','▶️','⏸','⏯','⏹','⏺','⏭','⏮','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗','✖️','♾','💲','💱','™️','©️','®️','👁‍🗨','🔚','🔙','🔛','🔝','🔜','〰️','➰','➿','✔️','☑️','🔘','🔴','🟠','🟡','🟢','🔵','🟣','⚫️','⚪️','🟤','🔺','🔻','🔸','🔹','🔶','🔷','🔳','🔲','▪️','▫️','◾️','◽️','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛️','⬜️','🟫','🔈','🔇','🔉','🔊','🔔','🔕','📣','📢','💬','💭','🗯','♠️','♣️','♥️','♦️','🃏','🎴','🀄️','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛','🕜','🕝','🕞','🕟','🕠','🕡','🕢','🕣','🕤','🕥','🕦','🕧'
+    ];
     const emojiHtml = emojis.map(e => `<div class="emoji-item" onclick="addEmoji('${e}')">${e}</div>`).join('');
 
     container.innerHTML = `
@@ -153,7 +152,7 @@ function renderChatLayout() {
                     </button>
                 </div>
                 <div class="chat-list" id="chatContactsList">
-                    </div>
+                </div>
             </div>
             
             <div class="chat-main">
@@ -180,23 +179,28 @@ function renderChatLayout() {
                     <span id="attachName" style="font-size:0.85rem; color:#555;"></span>
                 </div>
 
-                <div id="emojiPopup" class="emoji-popup" style="display:none;">
+                <div id="emojiPopup" class="emoji-popup">
                     ${emojiHtml}
                 </div>
 
                 <div class="chat-input-area" id="chatInputArea" style="display:none;">
-                    <button id="emojiBtn" class="btn-tool" onclick="toggleEmojiPopup()" title="رموز تعبيرية">
+                    
+                    <button id="emojiBtn" class="btn-tool btn-emoji" onclick="toggleEmojiPopup()" title="رموز تعبيرية">
                         <i class="far fa-smile"></i>
                     </button>
-                    <label class="btn-tool" title="إرفاق ملف">
+                    
+                    <label class="btn-tool btn-attach" title="إرفاق ملف">
                         <i class="fas fa-paperclip"></i>
                         <input type="file" id="chatFileInput" style="display:none" onchange="handleChatAttachment(this)">
                     </label>
-                    <label class="btn-tool" title="تصوير">
+                    
+                    <label class="btn-tool btn-cam" title="تصوير">
                         <i class="fas fa-camera"></i>
                         <input type="file" id="chatCamInput" accept="image/*" capture="environment" style="display:none" onchange="handleChatAttachment(this)">
                     </label>
+                    
                     <input type="text" class="chat-input" id="chatInput" placeholder="اكتب رسالتك..." onkeypress="handleEnter(event)">
+                    
                     <button class="btn-send-pill" onclick="sendChatMessage()">
                         أرسل <i class="fas fa-paper-plane"></i>
                     </button>
@@ -207,7 +211,7 @@ function renderChatLayout() {
 }
 
 // ==========================================
-// 🧠 2. المنطق
+// 🧠 2. المنطق (Logic)
 // ==========================================
 
 function loadConversations() {
@@ -250,7 +254,7 @@ function renderSidebar(conversations) {
             <div class="chat-item ${activeClass}" onclick="openChat(${convo.studentId})">
                 <div class="avatar">${name.charAt(0)}</div>
                 <div class="chat-info">
-                    <div class="chat-name"><span>${name}</span> <span style="font-size:0.7rem; color:#64748b; font-weight:normal">${timeStr}</span></div>
+                    <div class="chat-name"><span>${name}</span> <span style="font-size:0.7rem; font-weight:normal; color:inherit;">${timeStr}</span></div>
                     <div class="chat-preview">${unreadHtml} ${convo.lastMessage.attachment ? '📎 مرفق' : convo.lastMessage.content}</div>
                 </div>
             </div>`;

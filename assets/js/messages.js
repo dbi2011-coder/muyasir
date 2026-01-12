@@ -1,10 +1,11 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (إصلاح التمييز البصري + مكتبة فيسات موسعة)
+// الوصف: شات المعلم (نظام القائمة المنسدلة للرسائل + فيسات نظيفة)
 // ============================================
 
 let activeChatStudentId = null;
 let attachmentData = null;
+let editingMessageId = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('messages.html')) {
@@ -13,12 +14,20 @@ document.addEventListener('DOMContentLoaded', function() {
         renderChatLayout();
         loadConversations();
         
-        // إغلاق الفيسات عند النقر خارجها
+        // إغلاق القوائم عند النقر في الخارج
         document.addEventListener('click', function(e) {
-            const popup = document.getElementById('emojiPopup');
-            const btn = document.getElementById('emojiBtn');
-            if (popup && btn && !popup.contains(e.target) && !btn.contains(e.target)) {
-                popup.style.display = 'none';
+            // إغلاق الفيسات
+            const emojiPopup = document.getElementById('emojiPopup');
+            const emojiBtn = document.getElementById('emojiBtn');
+            if (emojiPopup && emojiBtn && !emojiPopup.contains(e.target) && !emojiBtn.contains(e.target)) {
+                emojiPopup.style.display = 'none';
+            }
+
+            // إغلاق قوائم الرسائل المفتوحة
+            if (!e.target.closest('.msg-options-btn')) {
+                document.querySelectorAll('.msg-dropdown').forEach(menu => {
+                    menu.style.display = 'none';
+                });
             }
         });
     }
@@ -44,34 +53,21 @@ function cleanInterfaceAggressive() {
 }
 
 // ==========================================
-// 🎨 1. التنسيقات (التصميم المحسن)
+// 🎨 1. التنسيقات (إضافة ستايل القائمة المنسدلة)
 // ==========================================
 function injectChatStyles() {
     const style = document.createElement('style');
     style.id = 'chatStyles';
     style.innerHTML = `
-        .chat-container { display: flex; height: 80vh; background: #fff; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #d1d5db; margin-top: 0px; font-family: 'Tajawal', sans-serif; }
+        .chat-container { display: flex; height: 80vh; background: #fff; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #d1d5db; font-family: 'Tajawal', sans-serif; }
         
-        /* القائمة الجانبية */
         .chat-sidebar { width: 320px; background-color: #f8f9fa; border-left: 1px solid #e5e7eb; display: flex; flex-direction: column; z-index: 2; }
         .chat-list-header { padding: 20px; background: #f8f9fa; border-bottom: 1px solid #e2e8f0; }
         .chat-list { flex: 1; overflow-y: auto; }
         
-        /* عنصر القائمة (الطالب) */
-        .chat-item { 
-            display: flex; align-items: center; padding: 15px 20px; cursor: pointer; 
-            border-bottom: 1px solid #e2e8f0; transition: 0.2s; background: #fff; 
-        }
+        .chat-item { display: flex; align-items: center; padding: 15px 20px; cursor: pointer; border-bottom: 1px solid #e2e8f0; transition: 0.2s; background: #fff; }
         .chat-item:hover { background: #f1f5f9; }
-        
-        /* 🔥 تمييز الطالب النشط بلون أزرق واضح 🔥 */
-        .chat-item.active { 
-            background: #007bff !important; 
-            color: #fff !important;
-            border-right: 5px solid #004494;
-        }
-        
-        /* تعديل ألوان النصوص داخل العنصر النشط */
+        .chat-item.active { background: #007bff !important; color: #fff !important; border-right: 5px solid #004494; }
         .chat-item.active .chat-name { color: #fff !important; }
         .chat-item.active .chat-preview { color: #e0e0e0 !important; }
         .chat-item.active .avatar { background: #fff; color: #007bff; border: 2px solid #007bff; }
@@ -82,45 +78,58 @@ function injectChatStyles() {
         .chat-preview { font-size: 0.85rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .unread-badge { background: #ef4444; color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; }
 
-        /* منطقة المحادثة */
         .chat-main { flex: 1; display: flex; flex-direction: column; background: #fff; position: relative; }
         .chat-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; align-items: center; background: #fff; font-weight: bold; font-size: 1.1rem; color:#334155; height: 70px; }
         .messages-area { flex: 1; padding: 20px; overflow-y: auto; background: #fcfcfc; display: flex; flex-direction: column; gap: 15px; }
         
+        /* 🔥 فقاعات الرسائل والقائمة المنسدلة 🔥 */
         .msg-bubble { max-width: 70%; padding: 12px 18px; border-radius: 15px; position: relative; font-size: 0.95rem; line-height: 1.6; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .msg-me { align-self: flex-start; background: #007bff; color: white; border-bottom-right-radius: 2px; } 
         .msg-other { align-self: flex-end; background: #fff; color: #334155; border: 1px solid #e2e8f0; border-bottom-left-radius: 2px; }
+        
         .msg-time { font-size: 0.7rem; margin-top: 5px; opacity: 0.8; display:block; text-align:left; }
         .msg-attachment { margin-top: 8px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 8px; display: flex; align-items: center; gap: 5px; text-decoration: none; color: inherit; }
         .msg-attachment img { max-width: 200px; border-radius: 5px; }
 
-        /* منطقة الكتابة */
+        /* زر الخيارات (ثلاث نقاط) */
+        .msg-options-btn {
+            position: absolute; top: 5px; left: 8px; /* يسار الفقاعة */
+            color: inherit; opacity: 0.6; cursor: pointer; padding: 2px 5px;
+            font-size: 1.1rem; transition: 0.2s;
+        }
+        .msg-options-btn:hover { opacity: 1; background: rgba(0,0,0,0.1); border-radius: 50%; }
+
+        /* القائمة المنسدلة */
+        .msg-dropdown {
+            position: absolute; top: 25px; left: 5px;
+            background: #fff; color: #333;
+            border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            width: 120px; z-index: 100; display: none; overflow: hidden;
+            border: 1px solid #eee;
+        }
+        .msg-dropdown-item {
+            padding: 10px 15px; font-size: 0.9rem; cursor: pointer;
+            display: flex; align-items: center; gap: 8px; transition: 0.1s;
+        }
+        .msg-dropdown-item:hover { background: #f8f9fa; color: #007bff; }
+        .msg-dropdown-item.delete:hover { color: #dc3545; background: #fff5f5; }
+
         .chat-input-area { padding: 15px 20px; border-top: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; gap: 12px; position: relative; }
         .chat-input { flex: 1; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 25px; outline: none; transition: 0.2s; font-size: 1rem; background: #f8fafc; }
         .chat-input:focus { border-color: #007bff; background: #fff; }
-        
-        /* 🔥 أزرار الأدوات واضحة وملونة 🔥 */
-        .btn-tool { 
-            font-size: 1.4rem; cursor: pointer; padding: 8px; 
-            transition: 0.2s; display: flex; align-items: center; justify-content: center;
-            border-radius: 50%;
-        }
-        .btn-emoji { color: #f59e0b; } /* أصفر للفيسات */
-        .btn-attach { color: #64748b; } /* رمادي للملف */
-        .btn-cam { color: #007bff; } /* أزرق للكاميرا */
-        
+        .chat-input.editing { border-color: #f59e0b; background: #fffbeb; }
+
+        .btn-tool { font-size: 1.4rem; cursor: pointer; padding: 8px; transition: 0.2s; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+        .btn-emoji { color: #f59e0b; }
+        .btn-attach { color: #64748b; }
+        .btn-cam { color: #007bff; }
         .btn-tool:hover { background: #f1f5f9; transform: scale(1.1); }
         
         .btn-send-pill { background-color: #007bff; color: white; border: none; padding: 10px 25px; border-radius: 50px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0, 123, 255, 0.2); }
         .btn-send-pill:hover { background-color: #0069d9; transform: translateY(-1px); }
+        .btn-send-pill.update-mode { background-color: #f59e0b; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2); }
 
-        /* قائمة الفيسات الكبيرة */
-        .emoji-popup { 
-            position: absolute; bottom: 80px; right: 20px; width: 320px; height: 250px; 
-            background: white; border: 1px solid #e2e8f0; border-radius: 12px; 
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: none; padding: 10px; 
-            grid-template-columns: repeat(7, 1fr); gap: 5px; overflow-y: auto; z-index: 100; 
-        }
+        .emoji-popup { position: absolute; bottom: 80px; right: 20px; width: 320px; height: 250px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: none; padding: 10px; grid-template-columns: repeat(7, 1fr); gap: 5px; overflow-y: auto; z-index: 100; }
         .emoji-item { font-size: 1.4rem; cursor: pointer; text-align: center; padding: 5px; border-radius: 5px; transition: 0.2s; }
         .emoji-item:hover { background: #f1f5f9; transform: scale(1.2); }
 
@@ -135,11 +144,11 @@ function renderChatLayout() {
     container.innerHTML = '';
     container.className = '';
     
-    // 🔥 مجموعة فيسات شاملة 🔥
+    // قائمة الفيسات المنقحة
     const emojis = [
-        '😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','💩','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾',
-        '👋','🤚','d','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','🖕','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦵','🦶','👂','🦻','👃','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸',
-        '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈️','♉️','♊️','♋️','♌️','♍️','♎️','♏️','♐️','♑️','♒️','♓️','🆔','atom','🉑','☢️','☣️','📴','📳','🈶','🈚️','🈸','🈺','🈷️','✴️','🆚','💮','🉐','㊙️','㊗️','🈴','🈵','🈹','🈲','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕️','🛑','⛔️','📛','🚫','💯','💢','♨️','🚷','🚯','🚳','🚱','🔞','📵','🚭','❗️','❕','❓','❔','‼️','⁉️','🔅','🔆','〽️','⚠️','🚸','🔱','⚜️','🔰','♻️','✅','🈯️','💹','❇️','✳️','❎','🌐','💠','Ⓜ️','🌀','💤','🏧','🚾','♿️','🅿️','🈳','🈂️','🛂','🛃','🛄','🛅','🚹','🚺','🚼','🚻','🚮','🎦','📶','🈁','🔣','ℹ️','🔤','🔡','🔠','🆖','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','#️⃣','*️⃣','⏏️','▶️','⏸','⏯','⏹','⏺','⏭','⏮','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗','✖️','♾','💲','💱','™️','©️','®️','👁‍🗨','🔚','🔙','🔛','🔝','🔜','〰️','➰','➿','✔️','☑️','🔘','🔴','🟠','🟡','🟢','🔵','🟣','⚫️','⚪️','🟤','🔺','🔻','🔸','🔹','🔶','🔷','🔳','🔲','▪️','▫️','◾️','◽️','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛️','⬜️','🟫','🔈','🔇','🔉','🔊','🔔','🔕','📣','📢','💬','💭','🗯','♠️','♣️','♥️','♦️','🃏','🎴','🀄️','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛','🕜','🕝','🕞','🕟','🕠','🕡','🕢','🕣','🕤','🕥','🕦','🕧'
+        '😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾',
+        '👋','🤚','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦵','🦶','👂','🦻','👃','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸',
+        '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕️','🛑','⛔️','📛','🚫','💯','💢','♨️','❗️','❕','❓','❔','‼️','⁉️','⚠️','✅','❎','🌐','💠','Ⓜ️','🌀','💤','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','#️⃣','*️⃣','▶️','⏸','⏯','⏹','⏺','⏭','⏮','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗','✖️','♾','💲','💱','™️','©️','®️','👁‍🗨','🔚','🔙','🔛','🔝','🔜','✔️','☑️','🔘','🔴','🟠','🟡','🟢','🔵','🟣','⚫️','⚪️','🟤','🔺','🔻','🔸','🔹','🔶','🔷','🔳','🔲','▪️','▫️','◾️','◽️','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛️','⬜️','🟫','🔈','🔇','🔉','🔊','🔔','🔕','📣','📢','💬','💭','🗯','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛'
     ];
     const emojiHtml = emojis.map(e => `<div class="emoji-item" onclick="addEmoji('${e}')">${e}</div>`).join('');
 
@@ -184,24 +193,22 @@ function renderChatLayout() {
                 </div>
 
                 <div class="chat-input-area" id="chatInputArea" style="display:none;">
-                    
                     <button id="emojiBtn" class="btn-tool btn-emoji" onclick="toggleEmojiPopup()" title="رموز تعبيرية">
                         <i class="far fa-smile"></i>
                     </button>
-                    
                     <label class="btn-tool btn-attach" title="إرفاق ملف">
                         <i class="fas fa-paperclip"></i>
                         <input type="file" id="chatFileInput" style="display:none" onchange="handleChatAttachment(this)">
                     </label>
-                    
                     <label class="btn-tool btn-cam" title="تصوير">
                         <i class="fas fa-camera"></i>
                         <input type="file" id="chatCamInput" accept="image/*" capture="environment" style="display:none" onchange="handleChatAttachment(this)">
                     </label>
-                    
                     <input type="text" class="chat-input" id="chatInput" placeholder="اكتب رسالتك..." onkeypress="handleEnter(event)">
                     
-                    <button class="btn-send-pill" onclick="sendChatMessage()">
+                    <button class="btn-tool" onclick="cancelEdit()" id="cancelEditBtn" style="display:none; color:#dc3545;" title="إلغاء التعديل"><i class="fas fa-times"></i></button>
+
+                    <button class="btn-send-pill" id="sendBtn" onclick="sendChatMessage()">
                         أرسل <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
@@ -264,6 +271,7 @@ function renderSidebar(conversations) {
 
 function openChat(studentId) {
     activeChatStudentId = studentId;
+    cancelEdit();
     document.getElementById('chatHeader').style.display = 'flex';
     document.getElementById('chatInputArea').style.display = 'flex';
     
@@ -295,7 +303,23 @@ function loadChatMessages(studentId) {
             attachHtml = `<a href="${msg.attachment}" download="file" class="msg-attachment">${isImg ? `<img src="${msg.attachment}">` : ''} 📎 تحميل</a>`;
         }
         
-        const html = `<div class="msg-bubble ${bubbleClass}">${msg.content} ${attachHtml} <span class="msg-time">${new Date(msg.sentAt).toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'})}</span></div>`;
+        // 🔥 إضافة زر القائمة المنسدلة داخل فقاعة المعلم 🔥
+        let menuHtml = '';
+        if (isMe) {
+            menuHtml = `
+            <div class="msg-options-btn" onclick="toggleMessageMenu(event, ${msg.id})">⋮</div>
+            <div class="msg-dropdown" id="msgMenu_${msg.id}">
+                <div class="msg-dropdown-item" onclick="startEditMessage(${msg.id})"><i class="fas fa-pen"></i> تعديل</div>
+                <div class="msg-dropdown-item delete" onclick="deleteChatMessage(${msg.id})"><i class="fas fa-trash"></i> حذف</div>
+            </div>`;
+        }
+        
+        const html = `
+            <div class="msg-bubble ${bubbleClass}">
+                ${menuHtml}
+                ${msg.content} ${attachHtml} 
+                <span class="msg-time">${new Date(msg.sentAt).toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'})}</span>
+            </div>`;
         area.innerHTML += html;
         
         if (msg.isFromStudent && !msg.isRead) { msg.isRead = true; needsUpdate = true; }
@@ -304,6 +328,72 @@ function loadChatMessages(studentId) {
     if (needsUpdate) localStorage.setItem('teacherMessages', JSON.stringify(messages));
     area.scrollTop = area.scrollHeight;
 }
+
+// ==========================================
+// ⚙️ إدارة القوائم والتعديل والحذف
+// ==========================================
+
+function toggleMessageMenu(e, msgId) {
+    e.stopPropagation();
+    // إغلاق أي قوائم أخرى
+    document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none');
+    
+    const menu = document.getElementById(`msgMenu_${msgId}`);
+    if (menu) menu.style.display = 'block';
+}
+
+function deleteChatMessage(messageId) {
+    if (!confirm('حذف هذه الرسالة من الطرفين؟')) return;
+
+    // حذف من المعلم
+    let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
+    teacherMsgs = teacherMsgs.filter(m => m.id !== messageId);
+    localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
+
+    // حذف من الطالب (تقريبي)
+    let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
+    studentMsgs = studentMsgs.filter(m => m.id !== (messageId + 1)); 
+    localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
+
+    loadChatMessages(activeChatStudentId);
+    loadConversations();
+}
+
+function startEditMessage(messageId) {
+    const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
+    const msg = messages.find(m => m.id === messageId);
+    if (!msg) return;
+
+    const input = document.getElementById('chatInput');
+    input.value = msg.content;
+    input.focus();
+    input.classList.add('editing');
+
+    editingMessageId = messageId;
+    
+    const sendBtn = document.getElementById('sendBtn');
+    sendBtn.innerHTML = 'تحديث <i class="fas fa-check"></i>';
+    sendBtn.classList.add('update-mode');
+    
+    document.getElementById('cancelEditBtn').style.display = 'block';
+}
+
+function cancelEdit() {
+    editingMessageId = null;
+    const input = document.getElementById('chatInput');
+    input.value = '';
+    input.classList.remove('editing');
+    
+    const sendBtn = document.getElementById('sendBtn');
+    sendBtn.innerHTML = 'أرسل <i class="fas fa-paper-plane"></i>';
+    sendBtn.classList.remove('update-mode');
+    
+    document.getElementById('cancelEditBtn').style.display = 'none';
+}
+
+// ==========================================
+// الإرسال والتعامل مع المدخلات
+// ==========================================
 
 function handleChatAttachment(input) {
     if (input.files && input.files[0]) {
@@ -320,11 +410,8 @@ function handleChatAttachment(input) {
 
 function toggleEmojiPopup() {
     const popup = document.getElementById('emojiPopup');
-    if (popup.style.display === 'none') {
-        popup.style.display = 'grid';
-    } else {
-        popup.style.display = 'none';
-    }
+    if (popup.style.display === 'none') popup.style.display = 'grid';
+    else popup.style.display = 'none';
 }
 
 function addEmoji(char) {
@@ -343,9 +430,36 @@ function clearAttachment() {
 function sendChatMessage() {
     const input = document.getElementById('chatInput');
     const content = input.value.trim();
-    if ((!content && !attachmentData) || !activeChatStudentId) return;
     
+    if ((!content && !attachmentData) || !activeChatStudentId) return;
+
+    // 🔥 حالة التعديل
+    if (editingMessageId) {
+        let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
+        const tIndex = teacherMsgs.findIndex(m => m.id === editingMessageId);
+        if (tIndex !== -1) {
+            teacherMsgs[tIndex].content = content;
+            if (attachmentData) teacherMsgs[tIndex].attachment = attachmentData;
+            localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
+        }
+
+        let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
+        const sIndex = studentMsgs.findIndex(m => m.id === (editingMessageId + 1));
+        if (sIndex !== -1) {
+            studentMsgs[sIndex].content = content;
+            if (attachmentData) studentMsgs[sIndex].attachment = attachmentData;
+            localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
+        }
+
+        cancelEdit();
+        loadChatMessages(activeChatStudentId);
+        loadConversations();
+        return;
+    }
+    
+    // 🔥 حالة الإرسال
     const currentUser = getCurrentUser();
+    
     const teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
     const newMsgTeacher = {
         id: Date.now(), teacherId: currentUser.id, studentId: activeChatStudentId,

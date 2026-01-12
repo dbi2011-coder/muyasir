@@ -1,13 +1,14 @@
 // ============================================
 // 📁 المسار: assets/js/student-assignments.js
-// الوصف: واجهة الطالب (تصميم متناسق بالكامل + إصلاحات الأسئلة)
+// الوصف: واجهة الطالب (تصميم البطاقات + حل المشاكل + التصوير المباشر)
 // ============================================
 
 let currentAssignmentId = null;
+let selectedSolutionFile = null; // متغير لتخزين الملف المختار (سواء من الكاميرا أو الرفع)
 
 document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('assignmentsList') || window.location.pathname.includes('my-assignments.html')) {
-        injectCardStyles(); // 🎨 الستايل الجديد
+        injectCardStyles(); 
         injectSolveModal();
         loadStudentAssignments();
         updateCurrentAssignmentSection();
@@ -23,7 +24,7 @@ function getCurrentUser() {
 }
 
 // ==========================================
-// 🏗️ 1. بناء نافذة الحل (Modal)
+// 🏗️ 1. بناء نافذة الحل (مع أزرار التصوير والرفع)
 // ==========================================
 function injectSolveModal() {
     const oldModal = document.getElementById('solveAssignmentModal');
@@ -43,13 +44,27 @@ function injectSolveModal() {
                 <span onclick="closeSolveAssignmentModal()" class="no-print" style="color: #666; font-size: 28px; font-weight: bold; cursor: pointer; line-height: 20px;">&times;</span>
             </div>
             
-            <div id="assignmentContent" style="max-height: 60vh; overflow-y: auto; padding: 10px;">
+            <div id="assignmentContent" style="max-height: 55vh; overflow-y: auto; padding: 10px;">
                 </div>
             
-            <div id="uploadSolutionSection" class="upload-section no-print" style="margin-top:20px; background:#f8f9fa; padding:15px; border:2px dashed #ccc; border-radius:8px; text-align:center;">
-                <label style="display:block; margin-bottom:10px; font-weight:bold; color:#555;">📤 هل قمت بالحل ورقياً؟ ارفع صورة الحل هنا:</label>
-                <input type="file" id="assignmentFileUpload" accept="image/*,application/pdf" class="form-control" style="width:100%; max-width:400px; margin:0 auto;">
-                <small class="text-muted d-block mt-1">يُسمح برفع الصور (JPG, PNG) أو ملفات PDF.</small>
+            <div id="uploadSolutionSection" class="upload-section no-print" style="margin-top:20px; background:#f8f9fa; padding:20px; border:2px dashed #ccc; border-radius:12px; text-align:center;">
+                <label style="display:block; margin-bottom:15px; font-weight:bold; color:#555; font-size:1.1rem;">📤 إرفاق الحل الورقي:</label>
+                
+                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                    <label class="btn-camera-upload" style="background:#007bff; color:white; padding:10px 20px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px; transition:0.2s;">
+                        <i class="fas fa-camera"></i> تصوير مباشر
+                        <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;" onchange="handleFileSelect(this)">
+                    </label>
+
+                    <label class="btn-file-upload" style="background:#fff; color:#333; border:1px solid #ccc; padding:10px 20px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px; transition:0.2s;">
+                        <i class="fas fa-folder-open"></i> رفع ملف / صورة
+                        <input type="file" id="fileInput" accept="image/*,application/pdf" style="display: none;" onchange="handleFileSelect(this)">
+                    </label>
+                </div>
+
+                <div id="selectedFileName" style="margin-top: 15px; color: #28a745; font-weight: bold; display:none;">
+                    <i class="fas fa-check-circle"></i> تم التقاط الملف: <span></span>
+                </div>
             </div>
 
             <div class="modal-footer-custom no-print" style="border-top: 1px solid #eee; padding-top: 20px; margin-top: 20px; text-align: left; display: flex; justify-content: flex-end; gap: 10px;">
@@ -64,8 +79,24 @@ function injectSolveModal() {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
+// دالة لمعالجة اختيار الملف وعرض اسمه
+function handleFileSelect(input) {
+    if (input.files && input.files[0]) {
+        selectedSolutionFile = input.files[0]; // حفظ الملف في المتغير العام
+        const displayEl = document.getElementById('selectedFileName');
+        const spanEl = displayEl.querySelector('span');
+        
+        displayEl.style.display = 'block';
+        spanEl.textContent = selectedSolutionFile.name;
+        
+        // إعادة تعيين المدخل الآخر لتجنب التعارض (بصرياً فقط)
+        if (input.id === 'cameraInput') document.getElementById('fileInput').value = '';
+        else document.getElementById('cameraInput').value = '';
+    }
+}
+
 // ==========================================
-// 🎨 2. التنسيقات (تصميم البطاقات + الهيرو الجديد)
+// 🎨 2. التنسيقات (بما في ذلك تصميم الأزرار الجديدة)
 // ==========================================
 function injectCardStyles() {
     if (document.getElementById('cardAssignmentStyles')) return;
@@ -75,100 +106,39 @@ function injectCardStyles() {
         .assignments-container { max-width: 1200px; margin: 0 auto; padding: 20px; font-family: 'Tajawal', sans-serif; }
         .modal.show { display: block !important; }
         
-        /* 🔥 تصميم منطقة التنبيه الجديد (Hero Section) 🔥 */
-        .hero-section {
-            background: #fff;
-            border-radius: 12px;
-            padding: 30px;
-            margin-bottom: 40px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.05); /* ظل ناعم */
-            border: 1px solid #eaeaea;
-            border-right: 6px solid #007bff; /* خط ملون جانبي */
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            position: relative;
-            overflow: hidden;
-        }
+        /* تأثيرات أزرار الرفع */
+        .btn-camera-upload:hover { background: #0056b3 !important; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+        .btn-file-upload:hover { background: #f8f9fa !important; border-color: #999 !important; transform: translateY(-2px); }
 
+        /* الهيرو سكشن */
+        .hero-section { background: #fff; border-radius: 12px; padding: 30px; margin-bottom: 40px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); border: 1px solid #eaeaea; border-right: 6px solid #007bff; display: flex; align-items: center; justify-content: space-between; position: relative; overflow: hidden; }
         .hero-content h2 { margin: 0 0 8px 0; color: #333; font-size: 1.5rem; font-weight: 800; }
         .hero-content p { margin: 0; color: #666; font-size: 1rem; }
-        
-        .hero-action .btn-hero {
-            background-color: #007bff;
-            color: white;
-            padding: 12px 30px;
-            border-radius: 8px;
-            border: none;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0,123,255,0.3);
-            transition: transform 0.2s ease;
-        }
+        .hero-action .btn-hero { background-color: #007bff; color: white; padding: 12px 30px; border-radius: 8px; border: none; font-size: 1rem; font-weight: bold; cursor: pointer; box-shadow: 0 4px 10px rgba(0,123,255,0.3); transition: transform 0.2s ease; }
         .hero-action .btn-hero:hover { transform: translateY(-2px); background-color: #0069d9; }
 
-        /* شبكة البطاقات */
-        .assignments-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 25px;
-            margin-top: 20px;
-        }
-
-        /* تصميم البطاقة */
-        .assignment-card {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.03);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            border: 1px solid #f0f0f0;
-            position: relative;
-        }
-        
-        .assignment-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
-            border-color: #007bff;
-        }
-
+        /* الشبكة والبطاقات */
+        .assignments-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 25px; margin-top: 20px; }
+        .assignment-card { background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.03); transition: transform 0.3s ease, box-shadow 0.3s ease; display: flex; flex-direction: column; overflow: hidden; border: 1px solid #f0f0f0; position: relative; }
+        .assignment-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); border-color: #007bff; }
         .card-status-bar { height: 4px; width: 100%; }
         .status-pending .card-status-bar { background: #ffc107; }
         .status-completed .card-status-bar { background: #28a745; }
-
         .card-body { padding: 20px; flex-grow: 1; }
         .card-title { margin: 0 0 10px 0; font-size: 1.1rem; font-weight: bold; color: #333; }
-        
         .card-meta { font-size: 0.9rem; color: #666; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-        
         .card-badge { position: absolute; top: 15px; left: 15px; padding: 4px 10px; border-radius: 15px; font-size: 0.75rem; font-weight: bold; }
         .badge-pending { background: #fff3cd; color: #856404; }
         .badge-completed { background: #d4edda; color: #155724; }
-
         .card-footer { padding: 15px; background: #fbfbfb; border-top: 1px solid #f0f0f0; text-align: center; }
         .btn-card { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #ddd; font-weight: 600; cursor: pointer; transition: 0.2s; background: white; color: #555; }
         .btn-card:hover { background: #f0f0f0; border-color: #ccc; }
-        
         .status-pending .btn-card { background: #007bff; color: white; border: none; }
         .status-pending .btn-card:hover { background: #0069d9; }
-
         .empty-list { text-align: center; padding: 60px; color: #888; grid-column: 1/-1; }
-
-        @media (max-width: 768px) {
-            .hero-section { flex-direction: column; text-align: center; gap: 20px; }
-            .hero-section { border-right: 1px solid #eaeaea; border-top: 5px solid #007bff; }
-        }
-
-        @media print {
-            body * { visibility: hidden; }
-            #solveAssignmentModal, #solveAssignmentModal * { visibility: visible; }
-            #solveAssignmentModal { position: absolute; left: 0; top: 0; width: 100%; }
-            .no-print { display: none !important; }
-            .question-box { border: 1px solid #000 !important; color: black !important; }
-        }
+        
+        @media (max-width: 768px) { .hero-section { flex-direction: column; text-align: center; gap: 20px; border-right: 1px solid #eaeaea; border-top: 5px solid #007bff; } }
+        @media print { body * { visibility: hidden; } #solveAssignmentModal, #solveAssignmentModal * { visibility: visible; } #solveAssignmentModal { position: absolute; left: 0; top: 0; width: 100%; } .no-print { display: none !important; } .question-box { border: 1px solid #000 !important; color: black !important; } }
     `;
     document.head.appendChild(style);
 }
@@ -252,7 +222,6 @@ function updateCurrentAssignmentSection() {
     
     if (!urgent) { section.style.display = 'none'; return; }
     
-    // 🔥 HTML الهيكل الجديد للتنبيه (نظيف ومتناسق) 🔥
     section.style.display = 'block';
     section.innerHTML = `
         <div class="hero-section">
@@ -269,17 +238,17 @@ function updateCurrentAssignmentSection() {
 }
 
 // ==========================================
-// 🔥 4. محرك الحل (متوافق مع كل أنواع الأسئلة)
+// 🔥 4. محرك الحل
 // ==========================================
 
 function printAssignment() { window.print(); }
 
 function solveAssignment(assignmentId) {
+    selectedSolutionFile = null; // تصفير الملف المختار
     const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
     let assignment = studentAssignments.find(a => a.id === assignmentId);
     if (!assignment) { alert('الواجب غير موجود'); return; }
 
-    // إصلاح فقدان الأسئلة
     if (!assignment.questions || assignment.questions.length === 0) {
         const allLibraryAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
         const originalAssignment = allLibraryAssignments.find(a => a.title.trim() === assignment.title.trim());
@@ -310,10 +279,22 @@ function solveAssignment(assignmentId) {
                 `<div class="alert alert-success">📎 <strong>تم إرفاق حل ورقي.</strong> <a href="${assignment.attachedSolution}" target="_blank" class="btn btn-sm btn-outline-success">عرض الملف</a></div>` : '';
         } else {
             uploadSection.style.display = 'block';
+            // إعادة ضبط القسم ليظهر الأزرار
             uploadSection.innerHTML = `
-                <label style="display:block; margin-bottom:10px; font-weight:bold; color:#555;">📤 هل قمت بالحل ورقياً؟ ارفع صورة الحل هنا:</label>
-                <input type="file" id="assignmentFileUpload" accept="image/*,application/pdf" class="form-control" style="width:100%; max-width:400px; margin:0 auto;">
-                <small class="text-muted d-block mt-1">يُسمح برفع الصور (JPG, PNG) أو ملفات PDF.</small>`;
+                <label style="display:block; margin-bottom:15px; font-weight:bold; color:#555; font-size:1.1rem;">📤 إرفاق الحل الورقي:</label>
+                <div style="display: flex; gap: 15px; justify-content: center; flex-wrap: wrap;">
+                    <label class="btn-camera-upload" style="background:#007bff; color:white; padding:10px 20px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px; transition:0.2s;">
+                        <i class="fas fa-camera"></i> تصوير مباشر
+                        <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;" onchange="handleFileSelect(this)">
+                    </label>
+                    <label class="btn-file-upload" style="background:#fff; color:#333; border:1px solid #ccc; padding:10px 20px; border-radius:8px; cursor:pointer; display:flex; align-items:center; gap:8px; transition:0.2s;">
+                        <i class="fas fa-folder-open"></i> رفع ملف / صورة
+                        <input type="file" id="fileInput" accept="image/*,application/pdf" style="display: none;" onchange="handleFileSelect(this)">
+                    </label>
+                </div>
+                <div id="selectedFileName" style="margin-top: 15px; color: #28a745; font-weight: bold; display:none;">
+                    <i class="fas fa-check-circle"></i> تم التقاط الملف: <span></span>
+                </div>`;
         }
     }
 
@@ -325,7 +306,7 @@ function solveAssignment(assignmentId) {
         contentDiv.innerHTML += `
             <div class="text-center p-5" style="background:#fff3cd; border:1px solid #ffeeba; border-radius:10px;">
                 <h3 style="color:#856404;">⚠️ لا توجد أسئلة مسجلة</h3>
-                <p>يمكنك رفع الحل الورقي بالأسفل.</p>
+                <p>يمكنك تصوير الحل الورقي بالأسفل.</p>
             </div>`;
     } else {
         let questionsHtml = '<form id="studentAnswersForm">';
@@ -401,10 +382,9 @@ async function submitAssignment() {
     if (!currentAssignmentId) return;
     
     const form = document.getElementById('studentAnswersForm');
-    const fileInput = document.getElementById('assignmentFileUpload');
     
     const hasDigitalAnswers = form && (form.querySelectorAll('input:checked').length > 0 || form.querySelectorAll('textarea, input[type=text]').length > 0);
-    const hasFile = fileInput && fileInput.files.length > 0;
+    const hasFile = selectedSolutionFile !== null; // التحقق من المتغير العام
 
     if (!hasDigitalAnswers && !hasFile) {
         if(!confirm('تنبيه: أنت لم تجب على أي سؤال ولم ترفع ملفاً. هل تريد التسليم على أي حال؟')) return;
@@ -418,18 +398,16 @@ async function submitAssignment() {
 
     const assignment = studentAssignments[idx];
 
-    // حفظ الأسئلة لضمان عدم ضياعها
+    // حفظ الأسئلة
     if (!assignment.questions || assignment.questions.length === 0) {
         const allLibraryAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
         const originalAssignment = allLibraryAssignments.find(a => a.title.trim() === assignment.title.trim());
-        if (originalAssignment) {
-            assignment.questions = originalAssignment.questions;
-        }
+        if (originalAssignment) assignment.questions = originalAssignment.questions;
     }
 
     let attachedFile = null;
     if (hasFile) {
-        try { attachedFile = await readFileAsBase64(fileInput.files[0]); } catch (e) { alert('خطأ في الملف'); return; }
+        try { attachedFile = await readFileAsBase64(selectedSolutionFile); } catch (e) { alert('خطأ في الملف'); return; }
     }
 
     let totalScore = 0;
@@ -494,3 +472,4 @@ window.submitAssignment = submitAssignment;
 window.closeSolveAssignmentModal = closeSolveAssignmentModal;
 window.viewAssignmentResult = viewAssignmentResult;
 window.printAssignment = printAssignment;
+window.handleFileSelect = handleFileSelect;

@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: messages.js
-// الوصف: شات المعلم (إزالة الإحصائيات + زر إرسال نصي واضح)
+// الوصف: شات المعلم (إزالة إجبارية للإحصائيات القديمة + تصميم الشات)
 // ============================================
 
 let activeChatStudentId = null;
@@ -8,7 +8,7 @@ let attachmentData = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('messages.html')) {
-        cleanInterface(); // 🧹 تنظيف الواجهة من العناصر القديمة
+        cleanInterfaceAggressive(); // 🧹 تنظيف جذري للواجهة
         injectChatStyles();
         renderChatLayout();
         loadConversations();
@@ -19,24 +19,33 @@ function getCurrentUser() {
     return JSON.parse(sessionStorage.getItem('currentUser')).user;
 }
 
-// 🧹 دالة لإزالة البطاقات القديمة والفلاتر من HTML
-function cleanInterface() {
-    // محاولة إخفاء أي صفوف تحتوي على إحصائيات أو فلاتر
-    const rows = document.querySelectorAll('.row, .card');
-    rows.forEach(row => {
-        if (row.innerText.includes('إجمالي الرسائل') || 
-            row.innerText.includes('تصفية حسب') || 
-            row.innerText.includes('في انتظار الرد')) {
-            row.style.display = 'none';
+// 🧹 دالة التنظيف الجذرية (Aggressive Cleanup)
+function cleanInterfaceAggressive() {
+    const targetContainer = document.getElementById('messagesList');
+    if (!targetContainer) return;
+
+    // 1. إخفاء جميع "أشقاء" عنصر القائمة (البطاقات والفلاتر الموجودة معه في نفس الحاوية)
+    const parent = targetContainer.parentElement;
+    if (parent) {
+        Array.from(parent.children).forEach(child => {
+            if (child.id !== 'messagesList' && child.tagName !== 'SCRIPT' && child.tagName !== 'STYLE') {
+                child.style.display = 'none';
+                child.classList.add('hidden-by-script'); // علامة للتأكد
+            }
+        });
+    }
+
+    // 2. خطوة احتياطية: البحث عن أي كروت إحصائيات متبقية في الصفحة وإخفاؤها
+    const allCards = document.querySelectorAll('.card, .row');
+    allCards.forEach(el => {
+        // إذا كان العنصر يحتوي على كلمات مفتاحية للإحصائيات القديمة
+        if ((el.innerText.includes('إجمالي الرسائل') || 
+             el.innerText.includes('غير مقروءة') || 
+             el.innerText.includes('تصفية حسب')) && 
+             !el.closest('.chat-container')) { // نتأكد أننا لا نخفي الشات الجديد
+            el.style.display = 'none';
         }
     });
-    
-    // إخفاء أي حاويات قديمة قد تسبب تشويشاً
-    const oldFilters = document.getElementById('messageFilter');
-    if(oldFilters) {
-        const parent = oldFilters.closest('.row') || oldFilters.closest('.card');
-        if(parent) parent.style.display = 'none';
-    }
 }
 
 // ==========================================
@@ -46,6 +55,9 @@ function injectChatStyles() {
     const style = document.createElement('style');
     style.id = 'chatStyles';
     style.innerHTML = `
+        /* إخفاء العناصر القديمة بقوة */
+        .hidden-by-script { display: none !important; }
+
         .chat-container { display: flex; height: 80vh; background: #fff; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #d1d5db; margin-top: 0px; font-family: 'Tajawal', sans-serif; }
         
         /* القائمة الجانبية */
@@ -111,9 +123,7 @@ function injectChatStyles() {
 
 function renderChatLayout() {
     const container = document.getElementById('messagesList');
-    // تنظيف تام للحاوية
     container.innerHTML = '';
-    // إزالة الكلاسات القديمة إذا وجدت
     container.className = '';
     
     container.innerHTML = `

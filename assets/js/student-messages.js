@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-messages.js
-// الوصف: شات الطالب (ألوان غامقة + إصلاح الأيقونات)
+// الوصف: شات الطالب (أزرار تسجيل غامقة)
 // ============================================
 
 let attachmentData = null;
@@ -79,20 +79,20 @@ function injectChatStyles() {
         .chat-input:focus { border-color: #007bff; background: #fff; }
         .chat-input.editing { border-color: #f59e0b; background: #fffbeb; }
 
-        /* 🔥 أزرار داكنة (Dark High Contrast) 🔥 */
+        /* 🔥 الأزرار الملونة الغامقة (Solid Dark) 🔥 */
         .btn-tool { 
             width: 45px; height: 45px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
             font-size: 1.2rem; cursor: pointer; transition: 0.2s; border: none;
-            color: white !important;
+            color: white !important; /* الرمز أبيض */
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         .btn-tool:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.3); filter: brightness(1.1); }
         
-        .btn-emoji { background: #f57f17; } /* ذهبي غامق */
-        .btn-attach { background: #37474f; } /* رصاصي غامق */
+        .btn-emoji { background: #f57f17; } /* برتقالي غامق */
+        .btn-attach { background: #37474f; } /* رمادي غامق */
         .btn-cam { background: #0d47a1; }    /* أزرق غامق */
-        .btn-mic { background: #b71c1c; }    /* أحمر قاني */
+        .btn-mic { background: #b71c1c; }    /* أحمر غامق */
 
         .btn-send-pill { background-color: #28a745; color: white; border: none; padding: 10px 25px; border-radius: 50px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(40, 167, 69, 0.2); }
         .btn-send-pill:hover { background-color: #218838; transform: translateY(-1px); }
@@ -122,7 +122,7 @@ function renderStudentChatLayout() {
     container.innerHTML = '';
     container.className = '';
     
-    // فيسات منقحة
+    // قائمة الفيسات
     const emojis = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾','👋','🤚','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦵','🦶','👂','🦻','👃','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','✅','❌','❓','❗️','✔️','🆗'];
     const emojiHtml = emojis.map(e => `<div class="emoji-item" onclick="addEmoji('${e}')">${e}</div>`).join('');
 
@@ -160,8 +160,12 @@ function renderStudentChatLayout() {
                             <span id="recordTimer">00:00</span>
                         </div>
                         <div style="display:flex; gap:10px;">
-                            <button class="btn-tool" style="background:#ffebee; color:red;" onclick="cancelRecording()"><i class="fas fa-times"></i></button>
-                            <button class="btn-tool" style="background:#e8f5e9; color:green;" onclick="stopRecording()"><i class="fas fa-check"></i></button>
+                            <button class="btn-tool" style="background:#dc3545; color:white;" onclick="cancelRecording()" title="إلغاء">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <button class="btn-tool" style="background:#28a745; color:white;" onclick="stopRecording()" title="إرسال">
+                                <i class="fas fa-check"></i>
+                            </button>
                         </div>
                     </div>
 

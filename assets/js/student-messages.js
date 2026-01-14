@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-messages.js
-// الوصف: شات الطالب (النسخة النهائية: MP3 - بدون زر تنزيل - أيقونات غامقة)
+// الوصف: شات الطالب (واجهة نظيفة بدون إحصائيات + MP3 + ألوان غامقة)
 // ============================================
 
 let attachmentData = null;
@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('messages.html')) {
         try {
             injectFontAwesome();
+            cleanInterfaceAggressive(); // 🔥 دالة تنظيف الواجهة من الإحصائيات والفلاتر 🔥
             injectChatStyles();
             renderStudentChatLayout();
             loadChatWithTeacher();
@@ -32,6 +33,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// 🔥 دالة لإخفاء الإحصائيات والفلاتر القديمة 🔥
+function cleanInterfaceAggressive() {
+    const targetContainer = document.getElementById('messagesList');
+    if (!targetContainer) return;
+    
+    // إخفاء جميع العناصر المجاورة (إحصائيات، فلاتر)
+    const parent = targetContainer.parentElement;
+    if (parent) {
+        Array.from(parent.children).forEach(child => {
+            if (child.id !== 'messagesList' && child.tagName !== 'SCRIPT' && child.tagName !== 'STYLE') {
+                child.style.display = 'none';
+            }
+        });
+    }
+    
+    // إخفاء أي عناصر تحمل كلاسات الإحصائيات المعروفة
+    document.querySelectorAll('.stat-card, .filter-group, .row.mb-4, .card-body h5, .d-flex.justify-content-between').forEach(el => {
+        // التأكد من عدم إخفاء الشات نفسه
+        if (!el.contains(targetContainer) && el.id !== 'chatHeader') {
+            el.style.display = 'none';
+        }
+    });
+}
+
 function injectFontAwesome() {
     if (!document.getElementById('fontAwesomeLink')) {
         const link = document.createElement('link');
@@ -46,13 +71,12 @@ function getCurrentUser() {
     return JSON.parse(sessionStorage.getItem('currentUser')).user;
 }
 
-// نفس الستايل المعلم (غامق)
 function injectChatStyles() {
     if (document.getElementById('chatStyles')) return;
     const style = document.createElement('style');
     style.id = 'chatStyles';
     style.innerHTML = `
-        .chat-container { display: flex; height: 80vh; background: #fff; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #d1d5db; margin-top: 10px; font-family: 'Tajawal', sans-serif; }
+        .chat-container { display: flex; height: 80vh; background: #fff; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #d1d5db; margin-top: 0px; font-family: 'Tajawal', sans-serif; }
         .chat-main { flex: 1; display: flex; flex-direction: column; background: #fff; }
         .messages-area { flex: 1; padding: 20px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 15px; }
         
@@ -79,20 +103,20 @@ function injectChatStyles() {
         .chat-input:focus { border-color: #007bff; background: #fff; }
         .chat-input.editing { border-color: #f59e0b; background: #fffbeb; }
 
-        /* 🔥 الأزرار الملونة الغامقة (Solid Dark) 🔥 */
+        /* الأزرار الملونة الغامقة */
         .btn-tool { 
             width: 45px; height: 45px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
             font-size: 1.2rem; cursor: pointer; transition: 0.2s; border: none;
-            color: white !important; /* الرمز أبيض */
+            color: white !important; 
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         .btn-tool:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.3); filter: brightness(1.1); }
         
-        .btn-emoji { background: #f57f17; } /* برتقالي غامق */
-        .btn-attach { background: #37474f; } /* رمادي غامق */
-        .btn-cam { background: #0d47a1; }    /* أزرق غامق */
-        .btn-mic { background: #b71c1c; }    /* أحمر غامق */
+        .btn-emoji { background: #f57f17; }
+        .btn-attach { background: #37474f; }
+        .btn-cam { background: #0d47a1; }
+        .btn-mic { background: #b71c1c; }
 
         .btn-send-pill { background-color: #28a745; color: white; border: none; padding: 10px 25px; border-radius: 50px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(40, 167, 69, 0.2); }
         .btn-send-pill:hover { background-color: #218838; transform: translateY(-1px); }
@@ -122,7 +146,7 @@ function renderStudentChatLayout() {
     container.innerHTML = '';
     container.className = '';
     
-    // قائمة الفيسات
+    // فيسات
     const emojis = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾','👋','🤚','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦵','🦶','👂','🦻','👃','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','✅','❌','❓','❗️','✔️','🆗'];
     const emojiHtml = emojis.map(e => `<div class="emoji-item" onclick="addEmoji('${e}')">${e}</div>`).join('');
 
@@ -225,7 +249,7 @@ function loadChatWithTeacher() {
         const bubbleClass = isMe ? 'msg-me' : 'msg-other';
         let contentHtml = msg.content;
         
-        // 🔥 فقط مشغل الصوت (بدون زر تنزيل) 🔥
+        // مشغل الصوت فقط (MP3)
         if (msg.isVoice) {
             contentHtml = `
             <div style="display:flex; align-items:center; gap:5px;">
@@ -258,7 +282,6 @@ function startRecording() {
         audioChunks = [];
         mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
         mediaRecorder.onstop = () => {
-            // 🔥 تغيير النوع إلى mp3 🔥
             const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
             const reader = new FileReader();
             reader.onload = function(e) { sendVoiceMessage(e.target.result); };

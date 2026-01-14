@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-messages.js
-// الوصف: شات الطالب (أزرار تسجيل غامقة)
+// الوصف: شات الطالب (إضافة زر التنزيل .mp3)
 // ============================================
 
 let attachmentData = null;
@@ -224,7 +224,18 @@ function loadChatWithTeacher() {
         const isMe = !msg.isFromTeacher;
         const bubbleClass = isMe ? 'msg-me' : 'msg-other';
         let contentHtml = msg.content;
-        if (msg.isVoice) contentHtml = `<div style="display:flex; align-items:center; gap:5px;"><i class="fas fa-microphone"></i> <audio controls src="${msg.content}"></audio></div>`;
+        
+        // 🔥 إضافة زر تنزيل MP3 للطالب أيضاً 🔥
+        if (msg.isVoice) {
+            contentHtml = `
+            <div style="display:flex; align-items:center; gap:5px;">
+                <audio controls src="${msg.content}"></audio>
+                <a href="${msg.content}" download="voice_message_${msg.id}.mp3" class="btn-tool audio-download-btn" style="width:30px; height:30px; font-size:0.8rem; background:#607d8b; color:white; text-decoration:none;" title="تنزيل">
+                    <i class="fas fa-download"></i>
+                </a>
+            </div>`;
+        }
+
         let attachHtml = '';
         if (msg.attachment) { const isImg = msg.attachment.startsWith('data:image'); attachHtml = `<a href="${msg.attachment}" download="file" class="msg-attachment">${isImg ? `<img src="${msg.attachment}">` : ''} 📎 فتح</a>`; }
         let menuHtml = '';
@@ -243,7 +254,6 @@ function loadChatWithTeacher() {
     area.scrollTop = area.scrollHeight;
 }
 
-// ... بقية دوال التحكم ...
 function startRecording() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { alert('المتصفح لا يدعم التسجيل'); return; }
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {

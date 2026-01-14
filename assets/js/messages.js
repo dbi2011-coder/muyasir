@@ -1,13 +1,12 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (أزرار صلبة عالية الوضوح + ترتيب المايكروفون)
+// الوصف: شات المعلم (أيقونات طبيعية على خلفية بيضاء)
 // ============================================
 
 let activeChatStudentId = null;
 let attachmentData = null;
 let editingMessageId = null;
 
-// متغيرات الصوت
 let mediaRecorder = null;
 let audioChunks = [];
 let recordingInterval = null;
@@ -52,7 +51,7 @@ function cleanInterfaceAggressive() {
 }
 
 // ==========================================
-// 🎨 1. التنسيقات (ألوان قوية Solid Colors)
+// 🎨 1. التنسيقات (Natural Colors Icons)
 // ==========================================
 function injectChatStyles() {
     const style = document.createElement('style');
@@ -102,20 +101,21 @@ function injectChatStyles() {
 
         .chat-input-area { padding: 15px 20px; border-top: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; gap: 10px; position: relative; min-height: 80px; }
         
-        /* 🔥 تصميم الأزرار (ألوان صلبة واضحة) 🔥 */
+        /* 🔥 تصميم الأزرار: خلفية بيضاء وأيقونات ملونة 🔥 */
         .btn-tool { 
             width: 42px; height: 42px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
-            font-size: 1.2rem; cursor: pointer; transition: 0.2s; border: none;
-            color: white; /* أيقونة بيضاء */
-            box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+            font-size: 1.3rem; cursor: pointer; transition: 0.2s; 
+            background: #fff; border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
-        .btn-tool:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.2); }
+        .btn-tool:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.1); background: #fdfdfd; }
         
-        .btn-emoji { background: #f59e0b; } /* برتقالي غامق */
-        .btn-attach { background: #546e7a; } /* رمادي مزرق */
-        .btn-cam { background: #007bff; }    /* أزرق */
-        .btn-mic { background: #d32f2f; }    /* أحمر */
+        /* الألوان الطبيعية للأيقونات */
+        .btn-emoji { color: #fbc02d; } /* أصفر ذهبي */
+        .btn-attach { color: #546e7a; } /* رمادي معدني */
+        .btn-cam { color: #0288d1; }    /* أزرق */
+        .btn-mic { color: #d32f2f; }    /* أحمر */
 
         .chat-input { flex: 1; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 25px; outline: none; transition: 0.2s; font-size: 1rem; background: #f8fafc; margin: 0 5px; }
         .chat-input:focus { border-color: #007bff; background: #fff; }
@@ -149,7 +149,6 @@ function renderChatLayout() {
     container.innerHTML = '';
     container.className = '';
     
-    // قائمة الفيسات
     const emojis = [
         '😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾',
         '👋','🤚','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦵','🦶','👂','🦻','👃','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸',
@@ -243,11 +242,7 @@ function renderChatLayout() {
     `;
 }
 
-// ... (بقية منطق الجافاسكربت: loadConversations, Recording Logic, etc. مطابق للكود السابق) ...
-
-// ==========================================
-// 🧠 بقية المنطق (نفس المنطق السابق، معاد للتأكيد)
-// ==========================================
+// ... (بقية منطق الجافاسكريبت مطابق للكود السابق) ...
 function loadConversations() {
     const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
     const currentUser = getCurrentUser();
@@ -261,7 +256,6 @@ function loadConversations() {
     const sortedConvos = Object.values(conversations).sort((a, b) => new Date(b.lastMessage.sentAt) - new Date(a.lastMessage.sentAt));
     renderSidebar(sortedConvos);
 }
-
 function renderSidebar(conversations) {
     const listEl = document.getElementById('chatContactsList');
     listEl.innerHTML = '';
@@ -281,7 +275,6 @@ function renderSidebar(conversations) {
         listEl.innerHTML += html;
     });
 }
-
 function openChat(studentId) {
     activeChatStudentId = studentId;
     cancelEdit();
@@ -293,7 +286,6 @@ function openChat(studentId) {
     loadChatMessages(studentId);
     loadConversations();
 }
-
 function loadChatMessages(studentId) {
     const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
     const currentUser = getCurrentUser();
@@ -308,10 +300,7 @@ function loadChatMessages(studentId) {
         let contentHtml = msg.content;
         if (msg.isVoice) contentHtml = `<div style="display:flex; align-items:center; gap:5px;"><i class="fas fa-microphone"></i> <audio controls src="${msg.content}"></audio></div>`;
         let attachHtml = '';
-        if (msg.attachment) {
-            const isImg = msg.attachment.startsWith('data:image');
-            attachHtml = `<a href="${msg.attachment}" download="file" class="msg-attachment">${isImg ? `<img src="${msg.attachment}">` : ''} 📎 تحميل</a>`;
-        }
+        if (msg.attachment) { const isImg = msg.attachment.startsWith('data:image'); attachHtml = `<a href="${msg.attachment}" download="file" class="msg-attachment">${isImg ? `<img src="${msg.attachment}">` : ''} 📎 تحميل</a>`; }
         let menuHtml = '';
         if (isMe) {
             menuHtml = `<div class="msg-options-btn" onclick="toggleMessageMenu(event, ${msg.id})">⋮</div>
@@ -327,7 +316,6 @@ function loadChatMessages(studentId) {
     if (needsUpdate) localStorage.setItem('teacherMessages', JSON.stringify(messages));
     area.scrollTop = area.scrollHeight;
 }
-
 function startRecording() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { alert('المتصفح لا يدعم التسجيل'); return; }
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {

@@ -1,11 +1,12 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (تعديل صيغة التنزيل إلى mp3)
+// الوصف: شات المعلم (النسخة النهائية: MP3 - بدون زر تنزيل - أيقونات غامقة - PDF)
 // ============================================
 
 let activeChatStudentId = null;
 let attachmentData = null;
 let editingMessageId = null;
+
 let mediaRecorder = null;
 let audioChunks = [];
 let recordingInterval = null;
@@ -144,8 +145,7 @@ function renderChatLayout() {
     const container = document.getElementById('messagesList');
     container.innerHTML = '';
     container.className = '';
-    
-    const emojis = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾','👋','🤚','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦵','🦶','👂','🦻','👃','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','✅','❌','❓','❗️','✔️','🆗'];
+    const emojis = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾','👋','🤚','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦵','🦶','👂','🦻','👃','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕️','🛑','⛔️','📛','🚫','💯','💢','♨️','❗️','❕','❓','❔','‼️','⁉️','⚠️','✅','❎','🌐','💠','Ⓜ️','🌀','💤','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','#️⃣','*️⃣','▶️','⏸','⏯','⏹','⏺','⏭','⏮','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗','✖️','♾','💲','💱','™️','©️','®️','👁‍🗨','🔚','🔙','🔛','🔝','🔜','✔️','☑️','🔘','🔴','🟠','🟡','🟢','🔵','🟣','⚫️','⚪️','🟤','🔺','🔻','🔸','🔹','🔶','🔷','🔳','🔲','▪️','▫️','◾️','◽️','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛️','⬜️','🟫','🔈','🔇','🔉','🔊','🔔','🔕','📣','📢','💬','💭','🗯','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛'];
     const emojiHtml = emojis.map(e => `<div class="emoji-item" onclick="addEmoji('${e}')">${e}</div>`).join('');
 
     container.innerHTML = `
@@ -214,50 +214,27 @@ function renderChatLayout() {
                         </div>
                     </div>
 
-                    <button id="emojiBtn" class="btn-tool btn-emoji" onclick="toggleEmojiPopup()" title="رموز">
-                        <i class="far fa-smile"></i>
-                    </button>
-                    
-                    <label class="btn-tool btn-attach" title="ملف">
-                        <i class="fas fa-paperclip"></i>
-                        <input type="file" id="chatFileInput" style="display:none" onchange="handleChatAttachment(this)">
-                    </label>
-                    
-                    <label class="btn-tool btn-cam" title="كاميرا">
-                        <i class="fas fa-camera"></i>
-                        <input type="file" id="chatCamInput" accept="image/*" capture="environment" style="display:none" onchange="handleChatAttachment(this)">
-                    </label>
-
+                    <button id="emojiBtn" class="btn-tool btn-emoji" onclick="toggleEmojiPopup()" title="رموز"><i class="far fa-smile"></i></button>
+                    <label class="btn-tool btn-attach" title="ملف"><i class="fas fa-paperclip"></i><input type="file" id="chatFileInput" style="display:none" onchange="handleChatAttachment(this)"></label>
+                    <label class="btn-tool btn-cam" title="كاميرا"><i class="fas fa-camera"></i><input type="file" id="chatCamInput" accept="image/*" capture="environment" style="display:none" onchange="handleChatAttachment(this)"></label>
                     <input type="text" class="chat-input" id="chatInput" placeholder="اكتب رسالتك..." onkeypress="handleEnter(event)">
-                    
-                    <button class="btn-tool btn-mic" onclick="startRecording()" title="تسجيل صوتي">
-                        <i class="fas fa-microphone"></i>
-                    </button>
-                    
+                    <button class="btn-tool btn-mic" onclick="startRecording()" title="تسجيل صوتي"><i class="fas fa-microphone"></i></button>
                     <button class="btn-tool" onclick="cancelEdit()" id="cancelEditBtn" style="display:none; background:#ffebee; color:red;" title="إلغاء التعديل"><i class="fas fa-times"></i></button>
-
-                    <button class="btn-send-pill" id="sendBtn" onclick="sendChatMessage()">
-                        أرسل <i class="fas fa-paper-plane"></i>
-                    </button>
+                    <button class="btn-send-pill" id="sendBtn" onclick="sendChatMessage()">أرسل <i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
         </div>
     `;
 }
 
-// ... (الدوال المنطقية) ...
 function loadConversations() {
     const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
     const currentUser = getCurrentUser();
     const conversations = {};
     messages.forEach(msg => {
         if (msg.teacherId !== currentUser.id) return;
-        if (!conversations[msg.studentId]) {
-            conversations[msg.studentId] = { studentId: msg.studentId, lastMessage: msg, unreadCount: 0 };
-        }
-        if (new Date(msg.sentAt) > new Date(conversations[msg.studentId].lastMessage.sentAt)) {
-            conversations[msg.studentId].lastMessage = msg;
-        }
+        if (!conversations[msg.studentId]) conversations[msg.studentId] = { studentId: msg.studentId, lastMessage: msg, unreadCount: 0 };
+        if (new Date(msg.sentAt) > new Date(conversations[msg.studentId].lastMessage.sentAt)) conversations[msg.studentId].lastMessage = msg;
         if (msg.isFromStudent && !msg.isRead) conversations[msg.studentId].unreadCount++;
     });
     const sortedConvos = Object.values(conversations).sort((a, b) => new Date(b.lastMessage.sentAt) - new Date(a.lastMessage.sentAt));
@@ -267,24 +244,19 @@ function loadConversations() {
 function renderSidebar(conversations) {
     const listEl = document.getElementById('chatContactsList');
     listEl.innerHTML = '';
-    if (conversations.length === 0) {
-        listEl.innerHTML = '<div class="text-center p-4 text-muted"><small>لا توجد محادثات نشطة</small></div>';
-        return;
-    }
+    if (conversations.length === 0) { listEl.innerHTML = '<div class="text-center p-4 text-muted"><small>لا توجد محادثات نشطة</small></div>'; return; }
     conversations.forEach(convo => {
         const student = getStudentById(convo.studentId);
         const name = student ? student.name : 'طالب';
         const activeClass = activeChatStudentId === convo.studentId ? 'active' : '';
         const unreadHtml = convo.unreadCount > 0 ? `<span class="unread-badge">${convo.unreadCount}</span>` : '';
         const timeStr = new Date(convo.lastMessage.sentAt).toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'});
-        const html = `
-            <div class="chat-item ${activeClass}" onclick="openChat(${convo.studentId})">
-                <div class="avatar">${name.charAt(0)}</div>
-                <div class="chat-info">
-                    <div class="chat-name"><span>${name}</span> <span style="font-size:0.7rem; font-weight:normal; color:inherit;">${timeStr}</span></div>
-                    <div class="chat-preview">${unreadHtml} ${convo.lastMessage.isVoice ? '🎤 تسجيل صوتي' : (convo.lastMessage.attachment ? '📎 مرفق' : convo.lastMessage.content)}</div>
-                </div>
-            </div>`;
+        const html = `<div class="chat-item ${activeClass}" onclick="openChat(${convo.studentId})">
+            <div class="avatar">${name.charAt(0)}</div>
+            <div class="chat-info">
+                <div class="chat-name"><span>${name}</span> <span style="font-size:0.7rem; font-weight:normal; color:inherit;">${timeStr}</span></div>
+                <div class="chat-preview">${unreadHtml} ${convo.lastMessage.isVoice ? '🎤 تسجيل صوتي' : (convo.lastMessage.attachment ? '📎 مرفق' : convo.lastMessage.content)}</div>
+            </div></div>`;
         listEl.innerHTML += html;
     });
 }
@@ -314,26 +286,19 @@ function loadChatMessages(studentId) {
         const bubbleClass = isMe ? 'msg-me' : 'msg-other';
         let contentHtml = msg.content;
         
-        // 🔥 إضافة زر التنزيل بصيغة MP3 🔥
+        // 🔥 فقط مشغل الصوت (بدون زر تنزيل) 🔥
         if (msg.isVoice) {
             contentHtml = `
             <div style="display:flex; align-items:center; gap:5px;">
                 <audio controls src="${msg.content}"></audio>
-                <a href="${msg.content}" download="voice_message_${msg.id}.mp3" class="btn-tool audio-download-btn" style="width:30px; height:30px; font-size:0.8rem; background:#607d8b; color:white; text-decoration:none;" title="تنزيل">
-                    <i class="fas fa-download"></i>
-                </a>
             </div>`;
         }
 
         let attachHtml = '';
-        if (msg.attachment) {
-            const isImg = msg.attachment.startsWith('data:image');
-            attachHtml = `<a href="${msg.attachment}" download="file" class="msg-attachment">${isImg ? `<img src="${msg.attachment}">` : ''} 📎 تحميل</a>`;
-        }
+        if (msg.attachment) { const isImg = msg.attachment.startsWith('data:image'); attachHtml = `<a href="${msg.attachment}" download="file" class="msg-attachment">${isImg ? `<img src="${msg.attachment}">` : ''} 📎 تحميل</a>`; }
         let menuHtml = '';
         if (isMe) {
-            menuHtml = `
-            <div class="msg-options-btn" onclick="toggleMessageMenu(event, ${msg.id})">⋮</div>
+            menuHtml = `<div class="msg-options-btn" onclick="toggleMessageMenu(event, ${msg.id})">⋮</div>
             <div class="msg-dropdown" id="msgMenu_${msg.id}">
                 ${!msg.isVoice ? `<div class="msg-dropdown-item" onclick="startEditMessage(${msg.id})"><i class="fas fa-pen"></i> تعديل</div>` : ''}
                 <div class="msg-dropdown-item delete" onclick="deleteChatMessage(${msg.id})"><i class="fas fa-trash"></i> حذف</div>
@@ -367,7 +332,7 @@ function exportChatToPDF() {
         clone.style.overflow = 'visible';
         clone.style.padding = '20px';
         
-        clone.querySelectorAll('.msg-options-btn, .msg-dropdown, .audio-download-btn').forEach(el => el.remove());
+        clone.querySelectorAll('.msg-options-btn, .msg-dropdown').forEach(el => el.remove());
 
         clone.querySelectorAll('audio').forEach(audio => {
             const placeholder = document.createElement('div');
@@ -403,7 +368,8 @@ function startRecording() {
         audioChunks = [];
         mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
         mediaRecorder.onstop = () => {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            // 🔥 تغيير النوع إلى mp3 🔥
+            const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
             const reader = new FileReader();
             reader.onload = function(e) { sendVoiceMessage(e.target.result); };
             reader.readAsDataURL(audioBlob);

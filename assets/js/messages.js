@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (أيقونات غامقة + ميزة حذف المحادثة كاملة)
+// الوصف: شات المعلم (أزرار تسجيل غامقة وواضحة)
 // ============================================
 
 let activeChatStudentId = null;
@@ -64,7 +64,7 @@ function cleanInterfaceAggressive() {
 }
 
 // ==========================================
-// 🎨 1. التنسيقات (محدثة لزر الحذف في الهيدر)
+// 🎨 1. التنسيقات
 // ==========================================
 function injectChatStyles() {
     const style = document.createElement('style');
@@ -89,15 +89,13 @@ function injectChatStyles() {
         .chat-preview { font-size: 0.85rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .unread-badge { background: #ef4444; color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; }
 
-        /* تعديل الهيدر ليشمل زر الحذف */
         .chat-main { flex: 1; display: flex; flex-direction: column; background: #fff; position: relative; }
         .chat-header { 
             padding: 15px 20px; border-bottom: 1px solid #eee; 
-            display: flex; align-items: center; justify-content: space-between; /* توزيع العناصر */
+            display: flex; align-items: center; justify-content: space-between;
             background: #fff; font-weight: bold; font-size: 1.1rem; color:#334155; height: 70px; 
         }
         
-        /* 🔥 زر حذف المحادثة 🔥 */
         .btn-delete-chat {
             background: #ffebee; color: #c62828; border: none;
             width: 40px; height: 40px; border-radius: 50%;
@@ -132,12 +130,12 @@ function injectChatStyles() {
         .chat-input:focus { border-color: #007bff; background: #fff; }
         .chat-input.editing { border-color: #f59e0b; background: #fffbeb; }
 
-        /* 🔥 الأزرار الملونة الغامقة (Solid Dark) 🔥 */
+        /* 🔥 الأزرار الملونة (Solid Dark) 🔥 */
         .btn-tool { 
             width: 45px; height: 45px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
             font-size: 1.2rem; cursor: pointer; transition: 0.2s; border: none;
-            color: white !important; /* الرمز أبيض */
+            color: white !important; 
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         .btn-tool:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.3); filter: brightness(1.1); }
@@ -234,10 +232,10 @@ function renderChatLayout() {
                             <span id="recordTimer">00:00</span>
                         </div>
                         <div style="display:flex; gap:10px;">
-                            <button class="btn-tool" style="background:#ffebee; color:red;" onclick="cancelRecording()" title="إلغاء">
+                            <button class="btn-tool" style="background:#dc3545; color:white;" onclick="cancelRecording()" title="إلغاء">
                                 <i class="fas fa-times"></i>
                             </button>
-                            <button class="btn-tool" style="background:#e8f5e9; color:green;" onclick="stopRecording()" title="إرسال">
+                            <button class="btn-tool" style="background:#28a745; color:white;" onclick="stopRecording()" title="إرسال">
                                 <i class="fas fa-check"></i>
                             </button>
                         </div>
@@ -390,7 +388,6 @@ function loadChatMessages(studentId) {
     area.scrollTop = area.scrollHeight;
 }
 
-// 🔥 دالة حذف المحادثة بالكامل 🔥
 function deleteEntireConversation() {
     if (!activeChatStudentId) return;
     if (!confirm('هل أنت متأكد من حذف كامل سجل المحادثة مع هذا الطالب؟\nلا يمكن التراجع عن هذا الإجراء.')) return;
@@ -402,15 +399,14 @@ function deleteEntireConversation() {
     teacherMsgs = teacherMsgs.filter(m => !(m.teacherId === currentUser.id && m.studentId === activeChatStudentId));
     localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
 
-    // 2. حذف من الطالب (لمسح السجل نهائياً)
+    // 2. حذف من الطالب
     let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
     studentMsgs = studentMsgs.filter(m => !(m.teacherId === currentUser.id && m.studentId === activeChatStudentId));
     localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
 
-    // 3. تحديث الواجهة
-    document.getElementById('chatMessagesArea').innerHTML = ''; // تفريغ الشات
-    loadConversations(); // تحديث القائمة الجانبية
-    loadChatMessages(activeChatStudentId); // إعادة التحميل (ستظهر فارغة)
+    document.getElementById('chatMessagesArea').innerHTML = '';
+    loadConversations();
+    loadChatMessages(activeChatStudentId);
 }
 
 function startRecording() {

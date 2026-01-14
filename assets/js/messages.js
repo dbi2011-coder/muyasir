@@ -1,12 +1,13 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (أزرار تسجيل غامقة وواضحة)
+// الوصف: شات المعلم (النسخة النهائية: أيقونات غامقة + تسجيل صوتي + تصدير PDF)
 // ============================================
 
 let activeChatStudentId = null;
 let attachmentData = null;
 let editingMessageId = null;
 
+// متغيرات التسجيل
 let mediaRecorder = null;
 let audioChunks = [];
 let recordingInterval = null;
@@ -16,6 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('messages.html')) {
         try {
             injectFontAwesome();
+            injectHtml2Pdf(); // 🔥 استدعاء مكتبة PDF تلقائياً
             cleanInterfaceAggressive(); 
             injectChatStyles();
             renderChatLayout();
@@ -45,6 +47,16 @@ function injectFontAwesome() {
     }
 }
 
+// 🔥 دالة تحميل مكتبة PDF 🔥
+function injectHtml2Pdf() {
+    if (!document.getElementById('html2pdfScript')) {
+        const script = document.createElement('script');
+        script.id = 'html2pdfScript';
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        document.body.appendChild(script);
+    }
+}
+
 function getCurrentUser() {
     return JSON.parse(sessionStorage.getItem('currentUser')).user;
 }
@@ -64,7 +76,7 @@ function cleanInterfaceAggressive() {
 }
 
 // ==========================================
-// 🎨 1. التنسيقات
+// 🎨 1. التنسيقات (محدثة لزر PDF)
 // ==========================================
 function injectChatStyles() {
     const style = document.createElement('style');
@@ -90,19 +102,31 @@ function injectChatStyles() {
         .unread-badge { background: #ef4444; color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; }
 
         .chat-main { flex: 1; display: flex; flex-direction: column; background: #fff; position: relative; }
+        
+        /* تحديث الهيدر لاستيعاب الأزرار الجديدة */
         .chat-header { 
             padding: 15px 20px; border-bottom: 1px solid #eee; 
             display: flex; align-items: center; justify-content: space-between;
             background: #fff; font-weight: bold; font-size: 1.1rem; color:#334155; height: 70px; 
         }
         
-        .btn-delete-chat {
-            background: #ffebee; color: #c62828; border: none;
+        /* حاوية أزرار الإجراءات في الهيدر */
+        .header-actions { display: flex; gap: 10px; }
+
+        /* زر حذف المحادثة (أحمر) */
+        .btn-header-action {
             width: 40px; height: 40px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            cursor: pointer; transition: 0.2s; font-size: 1rem;
+            cursor: pointer; transition: 0.2s; font-size: 1.1rem; border: none;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        .btn-delete-chat:hover { background: #c62828; color: white; transform: scale(1.1); }
+        .btn-delete-chat { background: #c62828; }
+        .btn-delete-chat:hover { background: #b71c1c; transform: scale(1.1); }
+
+        /* 🔥 زر PDF الجديد (أزرق غامق) 🔥 */
+        .btn-pdf-chat { background: #1565c0; }
+        .btn-pdf-chat:hover { background: #0d47a1; transform: scale(1.1); }
 
         .messages-area { flex: 1; padding: 20px; overflow-y: auto; background: #fcfcfc; display: flex; flex-direction: column; gap: 15px; }
         
@@ -130,7 +154,7 @@ function injectChatStyles() {
         .chat-input:focus { border-color: #007bff; background: #fff; }
         .chat-input.editing { border-color: #f59e0b; background: #fffbeb; }
 
-        /* 🔥 الأزرار الملونة (Solid Dark) 🔥 */
+        /* 🔥 الأزرار الملونة الغامقة (High Contrast) 🔥 */
         .btn-tool { 
             width: 45px; height: 45px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
@@ -173,12 +197,8 @@ function renderChatLayout() {
     container.innerHTML = '';
     container.className = '';
     
-    // قائمة الفيسات
-    const emojis = [
-        '😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾',
-        '👋','🤚','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦵','🦶','👂','🦻','👃','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸',
-        '❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕️','🛑','⛔️','📛','🚫','💯','💢','♨️','❗️','❕','❓','❔','‼️','⁉️','⚠️','✅','❎','🌐','💠','Ⓜ️','🌀','💤','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','#️⃣','*️⃣','▶️','⏸','⏯','⏹','⏺','⏭','⏮','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗','✖️','♾','💲','💱','™️','©️','®️','👁‍🗨','🔚','🔙','🔛','🔝','🔜','✔️','☑️','🔘','🔴','🟠','🟡','🟢','🔵','🟣','⚫️','⚪️','🟤','🔺','🔻','🔸','🔹','🔶','🔷','🔳','🔲','▪️','▫️','◾️','◽️','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛️','⬜️','🟫','🔈','🔇','🔉','🔊','🔔','🔕','📣','📢','💬','💭','🗯','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛'
-    ];
+    // الفيسات
+    const emojis = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾','👋','🤚','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦵','🦶','👂','🦻','👃','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','✅','❌','❓','❗️','✔️','🆗'];
     const emojiHtml = emojis.map(e => `<div class="emoji-item" onclick="addEmoji('${e}')">${e}</div>`).join('');
 
     container.innerHTML = `
@@ -201,9 +221,15 @@ function renderChatLayout() {
                             <span style="font-size:0.75rem; color:#10b981; font-weight:normal;">● متصل</span>
                         </div>
                     </div>
-                    <button class="btn-delete-chat" onclick="deleteEntireConversation()" title="حذف المحادثة بالكامل">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
+                    
+                    <div class="header-actions">
+                        <button class="btn-header-action btn-pdf-chat" onclick="exportChatToPDF()" title="حفظ المحادثة PDF">
+                            <i class="fas fa-file-pdf"></i>
+                        </button>
+                        <button class="btn-header-action btn-delete-chat" onclick="deleteEntireConversation()" title="حذف المحادثة بالكامل">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </div>
                 </div>
                 
                 <div class="messages-area" id="chatMessagesArea">
@@ -388,6 +414,41 @@ function loadChatMessages(studentId) {
     area.scrollTop = area.scrollHeight;
 }
 
+// 🔥 دالة تصدير المحادثة إلى PDF 🔥
+function exportChatToPDF() {
+    if (!activeChatStudentId) return;
+    
+    const student = getStudentById(activeChatStudentId);
+    const studentName = student ? student.name : 'طالب';
+    const element = document.getElementById('chatMessagesArea');
+    
+    // إعدادات الملف
+    const opt = {
+        margin: 1,
+        filename: `محادثة_${studentName}_${new Date().toLocaleDateString()}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+    };
+
+    // استدعاء المكتبة
+    if (window.html2pdf) {
+        // إنشاء نسخة مؤقتة لتعديل الستايل قبل الطباعة (لتظهر الخلفية بيضاء والنصوص واضحة)
+        const clone = element.cloneNode(true);
+        clone.style.background = 'white';
+        clone.style.height = 'auto';
+        clone.style.overflow = 'visible';
+        
+        // إزالة أزرار التحكم من النسخة
+        clone.querySelectorAll('.msg-options-btn, .msg-dropdown').forEach(el => el.remove());
+
+        html2pdf().set(opt).from(clone).save();
+    } else {
+        alert("جاري تحميل أداة التصدير، يرجى المحاولة بعد قليل...");
+    }
+}
+
+// 🔥 دالة حذف المحادثة بالكامل 🔥
 function deleteEntireConversation() {
     if (!activeChatStudentId) return;
     if (!confirm('هل أنت متأكد من حذف كامل سجل المحادثة مع هذا الطالب؟\nلا يمكن التراجع عن هذا الإجراء.')) return;
@@ -399,20 +460,21 @@ function deleteEntireConversation() {
     teacherMsgs = teacherMsgs.filter(m => !(m.teacherId === currentUser.id && m.studentId === activeChatStudentId));
     localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
 
-    // 2. حذف من الطالب
+    // 2. حذف من الطالب (لمسح السجل نهائياً)
     let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
     studentMsgs = studentMsgs.filter(m => !(m.teacherId === currentUser.id && m.studentId === activeChatStudentId));
     localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
 
+    // 3. تحديث الواجهة
     document.getElementById('chatMessagesArea').innerHTML = '';
     loadConversations();
     loadChatMessages(activeChatStudentId);
 }
 
+// ... بقية دوال التسجيل والتحكم (كما في الكود السابق) ...
 function startRecording() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('المتصفح لا يدعم التسجيل');
-        return;
+        alert('المتصفح لا يدعم التسجيل'); return;
     }
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         mediaRecorder = new MediaRecorder(stream);
@@ -466,182 +528,31 @@ function sendVoiceMessage(base64Audio) {
     loadConversations();
 }
 
-function toggleMessageMenu(e, msgId) {
-    e.stopPropagation();
-    document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none');
-    const menu = document.getElementById(`msgMenu_${msgId}`);
-    if (menu) menu.style.display = 'block';
-}
-
-function deleteChatMessage(messageId) {
-    if (!confirm('حذف هذه الرسالة من الطرفين؟')) return;
-    let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
-    teacherMsgs = teacherMsgs.filter(m => m.id !== messageId);
-    localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
-    let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
-    studentMsgs = studentMsgs.filter(m => m.id !== (messageId + 1)); 
-    localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
-    loadChatMessages(activeChatStudentId);
-    loadConversations();
-}
-
-function startEditMessage(messageId) {
-    const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
-    const msg = messages.find(m => m.id === messageId);
-    if (!msg || msg.isVoice) return;
-
-    const input = document.getElementById('chatInput');
-    input.value = msg.content;
-    input.focus();
-    input.classList.add('editing');
-    editingMessageId = messageId;
-    
-    const sendBtn = document.getElementById('sendBtn');
-    sendBtn.innerHTML = 'تحديث <i class="fas fa-check"></i>';
-    sendBtn.classList.add('update-mode');
-    document.getElementById('cancelEditBtn').style.display = 'block';
-}
-
-function cancelEdit() {
-    editingMessageId = null;
-    const input = document.getElementById('chatInput');
-    input.value = '';
-    input.classList.remove('editing');
-    const sendBtn = document.getElementById('sendBtn');
-    sendBtn.innerHTML = 'أرسل <i class="fas fa-paper-plane"></i>';
-    sendBtn.classList.remove('update-mode');
-    document.getElementById('cancelEditBtn').style.display = 'none';
-}
-
-function handleChatAttachment(input) {
-    if (input.files && input.files[0]) {
-        const file = input.files[0];
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            attachmentData = e.target.result;
-            document.getElementById('attachName').textContent = file.name;
-            document.getElementById('attachmentPreviewBox').style.display = 'block';
-        };
-        reader.readAsDataURL(file);
-    }
-}
-
-function toggleEmojiPopup() {
-    const popup = document.getElementById('emojiPopup');
-    if (popup.style.display === 'none') popup.style.display = 'grid';
-    else popup.style.display = 'none';
-}
-
-function addEmoji(char) {
-    const input = document.getElementById('chatInput');
-    input.value += char;
-    input.focus();
-}
-
-function clearAttachment() {
-    attachmentData = null;
-    document.getElementById('attachmentPreviewBox').style.display = 'none';
-    document.getElementById('chatFileInput').value = '';
-    document.getElementById('chatCamInput').value = '';
-}
-
+function toggleMessageMenu(e, msgId) { e.stopPropagation(); document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none'); const menu = document.getElementById(`msgMenu_${msgId}`); if (menu) menu.style.display = 'block'; }
+function deleteChatMessage(messageId) { if (!confirm('حذف هذه الرسالة من الطرفين؟')) return; let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); teacherMsgs = teacherMsgs.filter(m => m.id !== messageId); localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs)); let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); studentMsgs = studentMsgs.filter(m => m.id !== (messageId + 1)); localStorage.setItem('studentMessages', JSON.stringify(studentMsgs)); loadChatMessages(activeChatStudentId); loadConversations(); }
+function startEditMessage(messageId) { const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); const msg = messages.find(m => m.id === messageId); if (!msg || msg.isVoice) return; const input = document.getElementById('chatInput'); input.value = msg.content; input.focus(); input.classList.add('editing'); editingMessageId = messageId; const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'تحديث <i class="fas fa-check"></i>'; sendBtn.classList.add('update-mode'); document.getElementById('cancelEditBtn').style.display = 'block'; }
+function cancelEdit() { editingMessageId = null; const input = document.getElementById('chatInput'); input.value = ''; input.classList.remove('editing'); const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'أرسل <i class="fas fa-paper-plane"></i>'; sendBtn.classList.remove('update-mode'); document.getElementById('cancelEditBtn').style.display = 'none'; }
+function handleChatAttachment(input) { if (input.files && input.files[0]) { const file = input.files[0]; const reader = new FileReader(); reader.onload = function(e) { attachmentData = e.target.result; document.getElementById('attachName').textContent = file.name; document.getElementById('attachmentPreviewBox').style.display = 'block'; }; reader.readAsDataURL(file); } }
+function toggleEmojiPopup() { const popup = document.getElementById('emojiPopup'); if (popup.style.display === 'none') popup.style.display = 'grid'; else popup.style.display = 'none'; }
+function addEmoji(char) { const input = document.getElementById('chatInput'); input.value += char; input.focus(); }
+function clearAttachment() { attachmentData = null; document.getElementById('attachmentPreviewBox').style.display = 'none'; document.getElementById('chatFileInput').value = ''; document.getElementById('chatCamInput').value = ''; }
 function sendChatMessage() {
-    const input = document.getElementById('chatInput');
-    const content = input.value.trim();
+    const input = document.getElementById('chatInput'); const content = input.value.trim();
     if ((!content && !attachmentData) || !activeChatStudentId) return;
-
     if (editingMessageId) {
-        let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
-        const tIndex = teacherMsgs.findIndex(m => m.id === editingMessageId);
-        if (tIndex !== -1) {
-            teacherMsgs[tIndex].content = content;
-            if (attachmentData) teacherMsgs[tIndex].attachment = attachmentData;
-            localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
-        }
-        let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
-        const sIndex = studentMsgs.findIndex(m => m.id === (editingMessageId + 1));
-        if (sIndex !== -1) {
-            studentMsgs[sIndex].content = content;
-            if (attachmentData) studentMsgs[sIndex].attachment = attachmentData;
-            localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
-        }
-        cancelEdit();
-        loadChatMessages(activeChatStudentId);
-        loadConversations();
-        return;
+        let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); const tIndex = teacherMsgs.findIndex(m => m.id === editingMessageId); if (tIndex !== -1) { teacherMsgs[tIndex].content = content; if (attachmentData) teacherMsgs[tIndex].attachment = attachmentData; localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs)); }
+        let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); const sIndex = studentMsgs.findIndex(m => m.id === (editingMessageId + 1)); if (sIndex !== -1) { studentMsgs[sIndex].content = content; if (attachmentData) studentMsgs[sIndex].attachment = attachmentData; localStorage.setItem('studentMessages', JSON.stringify(studentMsgs)); }
+        cancelEdit(); loadChatMessages(activeChatStudentId); loadConversations(); return;
     }
-    
     const currentUser = getCurrentUser();
-    const teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
-    teacherMsgs.push({
-        id: Date.now(), teacherId: currentUser.id, studentId: activeChatStudentId,
-        content: content || (attachmentData ? '📎 مرفق' : ''), attachment: attachmentData, isVoice: false,
-        sentAt: new Date().toISOString(), isRead: true, isFromStudent: false
-    });
-    localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
-    
-    const studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
-    studentMsgs.push({
-        id: Date.now() + 1, studentId: activeChatStudentId, teacherId: currentUser.id,
-        content: content || (attachmentData ? '📎 مرفق' : ''), attachment: attachmentData, isVoice: false,
-        sentAt: new Date().toISOString(), isRead: false, isFromTeacher: true
-    });
-    localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
-    
-    input.value = '';
-    clearAttachment();
-    document.getElementById('emojiPopup').style.display = 'none';
-    loadChatMessages(activeChatStudentId);
-    loadConversations();
+    const teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); teacherMsgs.push({ id: Date.now(), teacherId: currentUser.id, studentId: activeChatStudentId, content: content || (attachmentData ? '📎 مرفق' : ''), attachment: attachmentData, isVoice: false, sentAt: new Date().toISOString(), isRead: true, isFromStudent: false }); localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
+    const studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); studentMsgs.push({ id: Date.now() + 1, studentId: activeChatStudentId, teacherId: currentUser.id, content: content || (attachmentData ? '📎 مرفق' : ''), attachment: attachmentData, isVoice: false, sentAt: new Date().toISOString(), isRead: false, isFromTeacher: true }); localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
+    input.value = ''; clearAttachment(); document.getElementById('emojiPopup').style.display = 'none'; loadChatMessages(activeChatStudentId); loadConversations();
 }
-
 function handleEnter(e) { if (e.key === 'Enter') sendChatMessage(); }
-
-function getStudentById(id) {
-    let students = JSON.parse(localStorage.getItem('students') || '[]');
-    let s = students.find(s => s.id == id);
-    if(!s) {
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        s = users.find(u => u.id == id && u.role === 'student');
-    }
-    return s;
-}
-
-function showNewMessageModal() {
-    const currentUser = getCurrentUser();
-    const recipientSelect = document.getElementById('messageRecipient'); 
-    if(recipientSelect) {
-        loadStudentsForMessaging(); 
-        document.getElementById('newMessageModal').classList.add('show');
-    } else {
-        alert("يرجى اختيار الطالب من القائمة.");
-    }
-}
-
-function loadStudentsForMessaging() {
-    const recipientSelect = document.getElementById('messageRecipient');
-    if(!recipientSelect) return;
-    const currentTeacher = getCurrentUser();
-    let allStudents = JSON.parse(localStorage.getItem('students') || '[]');
-    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    const studentUsers = allUsers.filter(u => u.role === 'student');
-    const merged = [...allStudents];
-    studentUsers.forEach(u => { if(!merged.find(s => s.id == u.id)) merged.push(u); });
-    const myStudents = merged.filter(s => s.teacherId == currentTeacher.id);
-    recipientSelect.innerHTML = '<option value="">اختر الطالب</option>';
-    myStudents.forEach(s => {
-        recipientSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`;
-    });
-}
-
-// تصدير الدوال
-window.showNewMessageModal = showNewMessageModal; 
-window.sendNewMessage = function() {
-    const sId = document.getElementById('messageRecipient').value;
-    if(sId) {
-        document.getElementById('newMessageModal').classList.remove('show');
-        openChat(parseInt(sId));
-    }
-};
-window.closeNewMessageModal = function() { document.getElementById('newMessageModal').classList.remove('show'); };
+function getStudentById(id) { let students = JSON.parse(localStorage.getItem('students') || '[]'); let s = students.find(s => s.id == id); if(!s) { const users = JSON.parse(localStorage.getItem('users') || '[]'); s = users.find(u => u.id == id && u.role === 'student'); } return s; }
+function showNewMessageModal() { const currentUser = getCurrentUser(); const recipientSelect = document.getElementById('messageRecipient'); if(recipientSelect) { loadStudentsForMessaging(); document.getElementById('newMessageModal').classList.add('show'); } else { alert("يرجى اختيار الطالب من القائمة."); } }
+function loadStudentsForMessaging() { const recipientSelect = document.getElementById('messageRecipient'); if(!recipientSelect) return; const currentTeacher = getCurrentUser(); let allStudents = JSON.parse(localStorage.getItem('students') || '[]'); const allUsers = JSON.parse(localStorage.getItem('users') || '[]'); const studentUsers = allUsers.filter(u => u.role === 'student'); const merged = [...allStudents]; studentUsers.forEach(u => { if(!merged.find(s => s.id == u.id)) merged.push(u); }); const myStudents = merged.filter(s => s.teacherId == currentTeacher.id); recipientSelect.innerHTML = '<option value="">اختر الطالب</option>'; myStudents.forEach(s => { recipientSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`; }); }
+window.showNewMessageModal = showNewMessageModal; window.sendNewMessage = function() { const sId = document.getElementById('messageRecipient').value; if(sId) { document.getElementById('newMessageModal').classList.remove('show'); openChat(parseInt(sId)); } }; window.closeNewMessageModal = function() { document.getElementById('newMessageModal').classList.remove('show'); };
 window.deleteEntireConversation = deleteEntireConversation;
+window.exportChatToPDF = exportChatToPDF;

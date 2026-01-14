@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-messages.js
-// الوصف: شات الطالب (أيقونات ملونة + مايكروفون قبل الإرسال)
+// الوصف: شات الطالب (أيقونات طبيعية على خلفية بيضاء)
 // ============================================
 
 let attachmentData = null;
@@ -33,7 +33,7 @@ function getCurrentUser() {
     return JSON.parse(sessionStorage.getItem('currentUser')).user;
 }
 
-// نفس ستايل المعلم (Solid Colors)
+// نفس الستايل المحدث
 function injectChatStyles() {
     if (document.getElementById('chatStyles')) return;
     const style = document.createElement('style');
@@ -62,25 +62,24 @@ function injectChatStyles() {
         .msg-dropdown-item.delete:hover { color: #dc3545; background: #fff5f5; }
 
         .chat-input-area { padding: 15px 20px; border-top: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; gap: 10px; position: relative; min-height: 80px; }
-        
-        /* 🔥 الأزرار الملونة والواضحة 🔥 */
+        .chat-input { flex: 1; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 25px; outline: none; font-size: 1rem; background: #f8fafc; margin: 0 5px; }
+        .chat-input:focus { border-color: #007bff; background: #fff; }
+        .chat-input.editing { border-color: #f59e0b; background: #fffbeb; }
+
+        /* 🔥 الأزرار الطبيعية 🔥 */
         .btn-tool { 
             width: 42px; height: 42px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
-            font-size: 1.2rem; cursor: pointer; transition: 0.2s; border: none;
-            color: white; /* أيقونة بيضاء */
-            box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+            font-size: 1.3rem; cursor: pointer; transition: 0.2s; 
+            background: #fff; border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
         }
-        .btn-tool:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.2); }
+        .btn-tool:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.1); background: #fdfdfd; }
         
-        .btn-emoji { background: #f59e0b; } /* برتقالي غامق */
-        .btn-attach { background: #546e7a; } /* رمادي مزرق */
-        .btn-cam { background: #007bff; }    /* أزرق */
-        .btn-mic { background: #d32f2f; }    /* أحمر */
-
-        .chat-input { flex: 1; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 25px; outline: none; transition: 0.2s; font-size: 1rem; background: #f8fafc; margin: 0 5px; }
-        .chat-input:focus { border-color: #007bff; background: #fff; }
-        .chat-input.editing { border-color: #f59e0b; background: #fffbeb; }
+        .btn-emoji { color: #fbc02d; }
+        .btn-attach { color: #546e7a; }
+        .btn-cam { color: #0288d1; }
+        .btn-mic { color: #d32f2f; }
 
         .btn-send-pill { background-color: #28a745; color: white; border: none; padding: 10px 25px; border-radius: 50px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(40, 167, 69, 0.2); }
         .btn-send-pill:hover { background-color: #218838; transform: translateY(-1px); }
@@ -184,8 +183,6 @@ function renderStudentChatLayout() {
     `;
 }
 
-// ... (بقية منطق الطالب: نفس منطق المعلم مع تغييرات studentId/teacherId) ...
-
 function getMyTeacherId() {
     const me = getCurrentUser();
     if (me.teacherId) return me.teacherId;
@@ -229,6 +226,7 @@ function loadChatWithTeacher() {
     area.scrollTop = area.scrollHeight;
 }
 
+// ... بقية منطق التسجيل والتحكم (نفس المعلم) ...
 function startRecording() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { alert('المتصفح لا يدعم التسجيل'); return; }
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {

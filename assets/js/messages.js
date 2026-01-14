@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (أيقونات طبيعية على خلفية بيضاء)
+// الوصف: شات المعلم (دوائر ملونة مصمتة - Solid Colors)
 // ============================================
 
 let activeChatStudentId = null;
@@ -51,7 +51,7 @@ function cleanInterfaceAggressive() {
 }
 
 // ==========================================
-// 🎨 1. التنسيقات (Natural Colors Icons)
+// 🎨 1. التنسيقات (الدوائر الملونة)
 // ==========================================
 function injectChatStyles() {
     const style = document.createElement('style');
@@ -101,21 +101,20 @@ function injectChatStyles() {
 
         .chat-input-area { padding: 15px 20px; border-top: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; gap: 10px; position: relative; min-height: 80px; }
         
-        /* 🔥 تصميم الأزرار: خلفية بيضاء وأيقونات ملونة 🔥 */
+        /* 🔥 الدوائر الملونة المصمتة (Solid Circles) 🔥 */
         .btn-tool { 
-            width: 42px; height: 42px; border-radius: 50%; 
+            width: 45px; height: 45px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
-            font-size: 1.3rem; cursor: pointer; transition: 0.2s; 
-            background: #fff; border: 1px solid #e2e8f0;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            font-size: 1.2rem; cursor: pointer; transition: 0.2s; border: none;
+            color: white !important; /* الرمز أبيض دائماً */
+            box-shadow: 0 3px 6px rgba(0,0,0,0.15);
         }
-        .btn-tool:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.1); background: #fdfdfd; }
+        .btn-tool:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.2); filter: brightness(1.1); }
         
-        /* الألوان الطبيعية للأيقونات */
-        .btn-emoji { color: #fbc02d; } /* أصفر ذهبي */
-        .btn-attach { color: #546e7a; } /* رمادي معدني */
-        .btn-cam { color: #0288d1; }    /* أزرق */
-        .btn-mic { color: #d32f2f; }    /* أحمر */
+        .btn-emoji { background: #ffc107; } /* أصفر ذهبي */
+        .btn-attach { background: #546e7a; } /* رمادي معدني */
+        .btn-cam { background: #007bff; }    /* أزرق */
+        .btn-mic { background: #dc3545; }    /* أحمر */
 
         .chat-input { flex: 1; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 25px; outline: none; transition: 0.2s; font-size: 1rem; background: #f8fafc; margin: 0 5px; }
         .chat-input:focus { border-color: #007bff; background: #fff; }
@@ -130,8 +129,8 @@ function injectChatStyles() {
             background: #fff; display: none; align-items: center; justify-content: space-between;
             padding: 0 20px; z-index: 50; border-radius: 12px;
         }
-        .recording-timer { font-weight: bold; color: #d32f2f; font-size: 1.1rem; display:flex; align-items:center; gap:10px; }
-        .recording-wave { width: 12px; height: 12px; background: #d32f2f; border-radius: 50%; animation: pulse 1s infinite; }
+        .recording-timer { font-weight: bold; color: #dc3545; font-size: 1.1rem; display:flex; align-items:center; gap:10px; }
+        .recording-wave { width: 12px; height: 12px; background: #dc3545; border-radius: 50%; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
 
         .emoji-popup { position: absolute; bottom: 85px; right: 20px; width: 320px; height: 250px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: none; padding: 10px; grid-template-columns: repeat(7, 1fr); gap: 5px; overflow-y: auto; z-index: 100; }
@@ -149,6 +148,7 @@ function renderChatLayout() {
     container.innerHTML = '';
     container.className = '';
     
+    // قائمة الفيسات
     const emojis = [
         '😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾',
         '👋','🤚','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦵','🦶','👂','🦻','👃','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸',
@@ -242,7 +242,7 @@ function renderChatLayout() {
     `;
 }
 
-// ... (بقية منطق الجافاسكريبت مطابق للكود السابق) ...
+// ... بقية دوال الجافاسكريبت (Load Conversations, Send Logic, etc. - مطابق تماماً للكود السابق) ...
 function loadConversations() {
     const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
     const currentUser = getCurrentUser();
@@ -326,59 +326,4 @@ function startRecording() {
             const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
             const reader = new FileReader();
             reader.onload = function(e) { sendVoiceMessage(e.target.result); };
-            reader.readAsDataURL(audioBlob);
-            stream.getTracks().forEach(track => track.stop());
-        };
-        mediaRecorder.start();
-        document.getElementById('recordingArea').style.display = 'flex';
-        recordingStartTime = Date.now();
-        recordingInterval = setInterval(updateRecordTimer, 1000);
-        updateRecordTimer();
-    }).catch(() => alert('تعذر الوصول للمايكروفون'));
-}
-function updateRecordTimer() {
-    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
-    const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
-    const secs = (elapsed % 60).toString().padStart(2, '0');
-    document.getElementById('recordTimer').textContent = `${mins}:${secs}`;
-}
-function stopRecording() { if (mediaRecorder && mediaRecorder.state === 'recording') { mediaRecorder.stop(); clearInterval(recordingInterval); document.getElementById('recordingArea').style.display = 'none'; } }
-function cancelRecording() { if (mediaRecorder && mediaRecorder.state === 'recording') { mediaRecorder.onstop = null; mediaRecorder.stop(); clearInterval(recordingInterval); document.getElementById('recordingArea').style.display = 'none'; } }
-function sendVoiceMessage(base64Audio) {
-    if (!activeChatStudentId) return;
-    const currentUser = getCurrentUser();
-    const teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
-    teacherMsgs.push({ id: Date.now(), teacherId: currentUser.id, studentId: activeChatStudentId, content: base64Audio, attachment: null, isVoice: true, sentAt: new Date().toISOString(), isRead: true, isFromStudent: false });
-    localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
-    const studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
-    studentMsgs.push({ id: Date.now() + 1, studentId: activeChatStudentId, teacherId: currentUser.id, content: base64Audio, attachment: null, isVoice: true, sentAt: new Date().toISOString(), isRead: false, isFromTeacher: true });
-    localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
-    loadChatMessages(activeChatStudentId);
-    loadConversations();
-}
-function toggleMessageMenu(e, msgId) { e.stopPropagation(); document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none'); const menu = document.getElementById(`msgMenu_${msgId}`); if (menu) menu.style.display = 'block'; }
-function deleteChatMessage(messageId) { if (!confirm('حذف هذه الرسالة من الطرفين؟')) return; let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); teacherMsgs = teacherMsgs.filter(m => m.id !== messageId); localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs)); let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); studentMsgs = studentMsgs.filter(m => m.id !== (messageId + 1)); localStorage.setItem('studentMessages', JSON.stringify(studentMsgs)); loadChatMessages(activeChatStudentId); loadConversations(); }
-function startEditMessage(messageId) { const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); const msg = messages.find(m => m.id === messageId); if (!msg || msg.isVoice) return; const input = document.getElementById('chatInput'); input.value = msg.content; input.focus(); input.classList.add('editing'); editingMessageId = messageId; const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'تحديث <i class="fas fa-check"></i>'; sendBtn.classList.add('update-mode'); document.getElementById('cancelEditBtn').style.display = 'block'; }
-function cancelEdit() { editingMessageId = null; const input = document.getElementById('chatInput'); input.value = ''; input.classList.remove('editing'); const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'أرسل <i class="fas fa-paper-plane"></i>'; sendBtn.classList.remove('update-mode'); document.getElementById('cancelEditBtn').style.display = 'none'; }
-function handleChatAttachment(input) { if (input.files && input.files[0]) { const file = input.files[0]; const reader = new FileReader(); reader.onload = function(e) { attachmentData = e.target.result; document.getElementById('attachName').textContent = file.name; document.getElementById('attachmentPreviewBox').style.display = 'block'; }; reader.readAsDataURL(file); } }
-function toggleEmojiPopup() { const popup = document.getElementById('emojiPopup'); if (popup.style.display === 'none') popup.style.display = 'grid'; else popup.style.display = 'none'; }
-function addEmoji(char) { const input = document.getElementById('chatInput'); input.value += char; input.focus(); }
-function clearAttachment() { attachmentData = null; document.getElementById('attachmentPreviewBox').style.display = 'none'; document.getElementById('chatFileInput').value = ''; document.getElementById('chatCamInput').value = ''; }
-function sendChatMessage() {
-    const input = document.getElementById('chatInput'); const content = input.value.trim();
-    if ((!content && !attachmentData) || !activeChatStudentId) return;
-    if (editingMessageId) {
-        let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); const tIndex = teacherMsgs.findIndex(m => m.id === editingMessageId); if (tIndex !== -1) { teacherMsgs[tIndex].content = content; if (attachmentData) teacherMsgs[tIndex].attachment = attachmentData; localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs)); }
-        let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); const sIndex = studentMsgs.findIndex(m => m.id === (editingMessageId + 1)); if (sIndex !== -1) { studentMsgs[sIndex].content = content; if (attachmentData) studentMsgs[sIndex].attachment = attachmentData; localStorage.setItem('studentMessages', JSON.stringify(studentMsgs)); }
-        cancelEdit(); loadChatMessages(activeChatStudentId); loadConversations(); return;
-    }
-    const currentUser = getCurrentUser();
-    const teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); teacherMsgs.push({ id: Date.now(), teacherId: currentUser.id, studentId: activeChatStudentId, content: content || (attachmentData ? '📎 مرفق' : ''), attachment: attachmentData, isVoice: false, sentAt: new Date().toISOString(), isRead: true, isFromStudent: false }); localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
-    const studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); studentMsgs.push({ id: Date.now() + 1, studentId: activeChatStudentId, teacherId: currentUser.id, content: content || (attachmentData ? '📎 مرفق' : ''), attachment: attachmentData, isVoice: false, sentAt: new Date().toISOString(), isRead: false, isFromTeacher: true }); localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
-    input.value = ''; clearAttachment(); document.getElementById('emojiPopup').style.display = 'none'; loadChatMessages(activeChatStudentId); loadConversations();
-}
-function handleEnter(e) { if (e.key === 'Enter') sendChatMessage(); }
-function getStudentById(id) { let students = JSON.parse(localStorage.getItem('students') || '[]'); let s = students.find(s => s.id == id); if(!s) { const users = JSON.parse(localStorage.getItem('users') || '[]'); s = users.find(u => u.id == id && u.role === 'student'); } return s; }
-function showNewMessageModal() { const currentUser = getCurrentUser(); const recipientSelect = document.getElementById('messageRecipient'); if(recipientSelect) { loadStudentsForMessaging(); document.getElementById('newMessageModal').classList.add('show'); } else { alert("يرجى اختيار الطالب من القائمة."); } }
-function loadStudentsForMessaging() { const recipientSelect = document.getElementById('messageRecipient'); if(!recipientSelect) return; const currentTeacher = getCurrentUser(); let allStudents = JSON.parse(localStorage.getItem('students') || '[]'); const allUsers = JSON.parse(localStorage.getItem('users') || '[]'); const studentUsers = allUsers.filter(u => u.role === 'student'); const merged = [...allStudents]; studentUsers.forEach(u => { if(!merged.find(s => s.id == u.id)) merged.push(u); }); const myStudents = merged.filter(s => s.teacherId == currentTeacher.id); recipientSelect.innerHTML = '<option value="">اختر الطالب</option>'; myStudents.forEach(s => { recipientSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`; }); }
-window.showNewMessageModal = showNewMessageModal; window.sendNewMessage = function() { const sId = document.getElementById('messageRecipient').value; if(sId) { document.getElementById('newMessageModal').classList.remove('show'); openChat(parseInt(sId)); } }; window.closeNewMessageModal = function() { document.getElementById('newMessageModal').classList.remove('show'); };
+            reader.readAsDataURL(audioBlob

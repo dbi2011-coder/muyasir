@@ -68,7 +68,7 @@ function injectChatStyles() {
 
         /* 🔥 الأزرار الطبيعية 🔥 */
         .btn-tool { 
-            width: 42px; height: 42px; border-radius: 50%; 
+            width: 45px; height: 45px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
             font-size: 1.3rem; cursor: pointer; transition: 0.2s; 
             background: #fff; border: 1px solid #e2e8f0;

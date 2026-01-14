@@ -1,13 +1,12 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (إصلاح ظهور الرموز + ألوان غامقة)
+// الوصف: شات المعلم (أيقونات غامقة + ميزة حذف المحادثة كاملة)
 // ============================================
 
 let activeChatStudentId = null;
 let attachmentData = null;
 let editingMessageId = null;
 
-// متغيرات الصوت
 let mediaRecorder = null;
 let audioChunks = [];
 let recordingInterval = null;
@@ -16,7 +15,7 @@ let recordingStartTime = null;
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('messages.html')) {
         try {
-            injectFontAwesome(); // 🔥 تحميل مكتبة الرموز تلقائياً
+            injectFontAwesome();
             cleanInterfaceAggressive(); 
             injectChatStyles();
             renderChatLayout();
@@ -36,7 +35,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// 🔥 دالة جديدة لجلب الرموز إذا لم تكن موجودة 🔥
 function injectFontAwesome() {
     if (!document.getElementById('fontAwesomeLink')) {
         const link = document.createElement('link');
@@ -66,7 +64,7 @@ function cleanInterfaceAggressive() {
 }
 
 // ==========================================
-// 🎨 1. التنسيقات (الدوائر الغامقة + رموز بيضاء)
+// 🎨 1. التنسيقات (محدثة لزر الحذف في الهيدر)
 // ==========================================
 function injectChatStyles() {
     const style = document.createElement('style');
@@ -91,8 +89,23 @@ function injectChatStyles() {
         .chat-preview { font-size: 0.85rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .unread-badge { background: #ef4444; color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; }
 
+        /* تعديل الهيدر ليشمل زر الحذف */
         .chat-main { flex: 1; display: flex; flex-direction: column; background: #fff; position: relative; }
-        .chat-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; align-items: center; background: #fff; font-weight: bold; font-size: 1.1rem; color:#334155; height: 70px; }
+        .chat-header { 
+            padding: 15px 20px; border-bottom: 1px solid #eee; 
+            display: flex; align-items: center; justify-content: space-between; /* توزيع العناصر */
+            background: #fff; font-weight: bold; font-size: 1.1rem; color:#334155; height: 70px; 
+        }
+        
+        /* 🔥 زر حذف المحادثة 🔥 */
+        .btn-delete-chat {
+            background: #ffebee; color: #c62828; border: none;
+            width: 40px; height: 40px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: 0.2s; font-size: 1rem;
+        }
+        .btn-delete-chat:hover { background: #c62828; color: white; transform: scale(1.1); }
+
         .messages-area { flex: 1; padding: 20px; overflow-y: auto; background: #fcfcfc; display: flex; flex-direction: column; gap: 15px; }
         
         .msg-bubble { max-width: 70%; padding: 12px 18px; border-radius: 15px; position: relative; font-size: 0.95rem; line-height: 1.6; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
@@ -119,20 +132,20 @@ function injectChatStyles() {
         .chat-input:focus { border-color: #007bff; background: #fff; }
         .chat-input.editing { border-color: #f59e0b; background: #fffbeb; }
 
-        /* 🔥 الأزرار: دوائر غامقة + رموز بيضاء 🔥 */
+        /* 🔥 الأزرار الملونة الغامقة (Solid Dark) 🔥 */
         .btn-tool { 
             width: 45px; height: 45px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
             font-size: 1.2rem; cursor: pointer; transition: 0.2s; border: none;
-            color: white !important; /* لون الرمز أبيض */
+            color: white !important; /* الرمز أبيض */
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
         .btn-tool:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.3); filter: brightness(1.1); }
         
-        .btn-emoji { background: #f57c00; } /* برتقالي غامق */
-        .btn-attach { background: #455a64; } /* رصاصي غامق */
-        .btn-cam { background: #1565c0; }    /* أزرق غامق */
-        .btn-mic { background: #c62828; }    /* أحمر غامق */
+        .btn-emoji { background: #f57f17; } /* ذهبي غامق */
+        .btn-attach { background: #37474f; } /* رصاصي غامق */
+        .btn-cam { background: #0d47a1; }    /* أزرق غامق */
+        .btn-mic { background: #b71c1c; }    /* أحمر قاني */
 
         .btn-send-pill { background-color: #007bff; color: white; border: none; padding: 10px 25px; border-radius: 50px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0, 123, 255, 0.2); }
         .btn-send-pill:hover { background-color: #0069d9; transform: translateY(-1px); }
@@ -143,8 +156,8 @@ function injectChatStyles() {
             background: #fff; display: none; align-items: center; justify-content: space-between;
             padding: 0 20px; z-index: 50; border-radius: 12px;
         }
-        .recording-timer { font-weight: bold; color: #c62828; font-size: 1.1rem; display:flex; align-items:center; gap:10px; }
-        .recording-wave { width: 12px; height: 12px; background: #c62828; border-radius: 50%; animation: pulse 1s infinite; }
+        .recording-timer { font-weight: bold; color: #b71c1c; font-size: 1.1rem; display:flex; align-items:center; gap:10px; }
+        .recording-wave { width: 12px; height: 12px; background: #b71c1c; border-radius: 50%; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
 
         .attachment-preview { position: absolute; bottom: 85px; right: 20px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; display: none; z-index: 10; }
@@ -183,11 +196,16 @@ function renderChatLayout() {
             
             <div class="chat-main">
                 <div class="chat-header" id="chatHeader" style="display:none;">
-                    <div class="avatar" id="chatHeaderAvatar"></div>
-                    <div style="display:flex; flex-direction:column;">
-                        <span id="chatHeaderName" style="line-height:1.2;">اسم الطالب</span>
-                        <span style="font-size:0.75rem; color:#10b981; font-weight:normal;">● متصل</span>
+                    <div style="display:flex; align-items:center;">
+                        <div class="avatar" id="chatHeaderAvatar"></div>
+                        <div style="display:flex; flex-direction:column; margin-right:10px;">
+                            <span id="chatHeaderName" style="line-height:1.2;">اسم الطالب</span>
+                            <span style="font-size:0.75rem; color:#10b981; font-weight:normal;">● متصل</span>
+                        </div>
                     </div>
+                    <button class="btn-delete-chat" onclick="deleteEntireConversation()" title="حذف المحادثة بالكامل">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
                 </div>
                 
                 <div class="messages-area" id="chatMessagesArea">
@@ -245,7 +263,7 @@ function renderChatLayout() {
                         <i class="fas fa-microphone"></i>
                     </button>
                     
-                    <button class="btn-tool" onclick="cancelEdit()" id="cancelEditBtn" style="display:none; background:#ffebee; color:red;" title="إلغاء"><i class="fas fa-times"></i></button>
+                    <button class="btn-tool" onclick="cancelEdit()" id="cancelEditBtn" style="display:none; background:#ffebee; color:red;" title="إلغاء التعديل"><i class="fas fa-times"></i></button>
 
                     <button class="btn-send-pill" id="sendBtn" onclick="sendChatMessage()">
                         أرسل <i class="fas fa-paper-plane"></i>
@@ -256,82 +274,150 @@ function renderChatLayout() {
     `;
 }
 
-// ... بقية دوال المنطق (نفس السابق) ...
+// ==========================================
+// 🧠 2. المنطق (Logic)
+// ==========================================
+
 function loadConversations() {
     const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
     const currentUser = getCurrentUser();
     const conversations = {};
+    
     messages.forEach(msg => {
         if (msg.teacherId !== currentUser.id) return;
-        if (!conversations[msg.studentId]) conversations[msg.studentId] = { studentId: msg.studentId, lastMessage: msg, unreadCount: 0 };
-        if (new Date(msg.sentAt) > new Date(conversations[msg.studentId].lastMessage.sentAt)) conversations[msg.studentId].lastMessage = msg;
+        if (!conversations[msg.studentId]) {
+            conversations[msg.studentId] = { studentId: msg.studentId, lastMessage: msg, unreadCount: 0 };
+        }
+        if (new Date(msg.sentAt) > new Date(conversations[msg.studentId].lastMessage.sentAt)) {
+            conversations[msg.studentId].lastMessage = msg;
+        }
         if (msg.isFromStudent && !msg.isRead) conversations[msg.studentId].unreadCount++;
     });
+    
     const sortedConvos = Object.values(conversations).sort((a, b) => new Date(b.lastMessage.sentAt) - new Date(a.lastMessage.sentAt));
     renderSidebar(sortedConvos);
 }
+
 function renderSidebar(conversations) {
     const listEl = document.getElementById('chatContactsList');
     listEl.innerHTML = '';
-    if (conversations.length === 0) { listEl.innerHTML = '<div class="text-center p-4 text-muted"><small>لا توجد محادثات نشطة</small></div>'; return; }
+    
+    if (conversations.length === 0) {
+        listEl.innerHTML = '<div class="text-center p-4 text-muted"><small>لا توجد محادثات نشطة</small></div>';
+        return;
+    }
+    
     conversations.forEach(convo => {
         const student = getStudentById(convo.studentId);
         const name = student ? student.name : 'طالب';
         const activeClass = activeChatStudentId === convo.studentId ? 'active' : '';
         const unreadHtml = convo.unreadCount > 0 ? `<span class="unread-badge">${convo.unreadCount}</span>` : '';
         const timeStr = new Date(convo.lastMessage.sentAt).toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'});
-        const html = `<div class="chat-item ${activeClass}" onclick="openChat(${convo.studentId})">
-            <div class="avatar">${name.charAt(0)}</div>
-            <div class="chat-info">
-                <div class="chat-name"><span>${name}</span> <span style="font-size:0.7rem; font-weight:normal; color:inherit;">${timeStr}</span></div>
-                <div class="chat-preview">${unreadHtml} ${convo.lastMessage.isVoice ? '🎤 تسجيل صوتي' : (convo.lastMessage.attachment ? '📎 مرفق' : convo.lastMessage.content)}</div>
-            </div></div>`;
+        
+        const html = `
+            <div class="chat-item ${activeClass}" onclick="openChat(${convo.studentId})">
+                <div class="avatar">${name.charAt(0)}</div>
+                <div class="chat-info">
+                    <div class="chat-name"><span>${name}</span> <span style="font-size:0.7rem; font-weight:normal; color:inherit;">${timeStr}</span></div>
+                    <div class="chat-preview">${unreadHtml} ${convo.lastMessage.isVoice ? '🎤 تسجيل صوتي' : (convo.lastMessage.attachment ? '📎 مرفق' : convo.lastMessage.content)}</div>
+                </div>
+            </div>`;
         listEl.innerHTML += html;
     });
 }
+
 function openChat(studentId) {
     activeChatStudentId = studentId;
     cancelEdit();
     document.getElementById('chatHeader').style.display = 'flex';
     document.getElementById('chatInputArea').style.display = 'flex';
+    
     const student = getStudentById(studentId);
     document.getElementById('chatHeaderName').textContent = student ? student.name : 'طالب';
     document.getElementById('chatHeaderAvatar').textContent = student ? student.name.charAt(0) : '?';
+    
     loadChatMessages(studentId);
     loadConversations();
 }
+
 function loadChatMessages(studentId) {
     const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
     const currentUser = getCurrentUser();
     const chatMsgs = messages.filter(m => m.teacherId === currentUser.id && m.studentId === studentId);
     chatMsgs.sort((a, b) => new Date(a.sentAt) - new Date(b.sentAt));
+    
     const area = document.getElementById('chatMessagesArea');
     area.innerHTML = '';
+    
     let needsUpdate = false;
     chatMsgs.forEach(msg => {
         const isMe = !msg.isFromStudent; 
         const bubbleClass = isMe ? 'msg-me' : 'msg-other';
+        
         let contentHtml = msg.content;
-        if (msg.isVoice) contentHtml = `<div style="display:flex; align-items:center; gap:5px;"><i class="fas fa-microphone"></i> <audio controls src="${msg.content}"></audio></div>`;
+        if (msg.isVoice) {
+            contentHtml = `<div style="display:flex; align-items:center; gap:5px;"><i class="fas fa-microphone"></i> <audio controls src="${msg.content}"></audio></div>`;
+        }
+
         let attachHtml = '';
-        if (msg.attachment) { const isImg = msg.attachment.startsWith('data:image'); attachHtml = `<a href="${msg.attachment}" download="file" class="msg-attachment">${isImg ? `<img src="${msg.attachment}">` : ''} 📎 تحميل</a>`; }
+        if (msg.attachment) {
+            const isImg = msg.attachment.startsWith('data:image');
+            attachHtml = `<a href="${msg.attachment}" download="file" class="msg-attachment">${isImg ? `<img src="${msg.attachment}">` : ''} 📎 تحميل</a>`;
+        }
+        
         let menuHtml = '';
         if (isMe) {
-            menuHtml = `<div class="msg-options-btn" onclick="toggleMessageMenu(event, ${msg.id})">⋮</div>
+            menuHtml = `
+            <div class="msg-options-btn" onclick="toggleMessageMenu(event, ${msg.id})">⋮</div>
             <div class="msg-dropdown" id="msgMenu_${msg.id}">
                 ${!msg.isVoice ? `<div class="msg-dropdown-item" onclick="startEditMessage(${msg.id})"><i class="fas fa-pen"></i> تعديل</div>` : ''}
                 <div class="msg-dropdown-item delete" onclick="deleteChatMessage(${msg.id})"><i class="fas fa-trash"></i> حذف</div>
             </div>`;
         }
-        const html = `<div class="msg-bubble ${bubbleClass}">${menuHtml} ${contentHtml} ${attachHtml} <span class="msg-time">${new Date(msg.sentAt).toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'})}</span></div>`;
+        
+        const html = `
+            <div class="msg-bubble ${bubbleClass}">
+                ${menuHtml}
+                ${contentHtml} ${attachHtml} 
+                <span class="msg-time">${new Date(msg.sentAt).toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'})}</span>
+            </div>`;
         area.innerHTML += html;
+        
         if (msg.isFromStudent && !msg.isRead) { msg.isRead = true; needsUpdate = true; }
     });
+    
     if (needsUpdate) localStorage.setItem('teacherMessages', JSON.stringify(messages));
     area.scrollTop = area.scrollHeight;
 }
+
+// 🔥 دالة حذف المحادثة بالكامل 🔥
+function deleteEntireConversation() {
+    if (!activeChatStudentId) return;
+    if (!confirm('هل أنت متأكد من حذف كامل سجل المحادثة مع هذا الطالب؟\nلا يمكن التراجع عن هذا الإجراء.')) return;
+
+    const currentUser = getCurrentUser();
+
+    // 1. حذف من المعلم
+    let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
+    teacherMsgs = teacherMsgs.filter(m => !(m.teacherId === currentUser.id && m.studentId === activeChatStudentId));
+    localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
+
+    // 2. حذف من الطالب (لمسح السجل نهائياً)
+    let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
+    studentMsgs = studentMsgs.filter(m => !(m.teacherId === currentUser.id && m.studentId === activeChatStudentId));
+    localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
+
+    // 3. تحديث الواجهة
+    document.getElementById('chatMessagesArea').innerHTML = ''; // تفريغ الشات
+    loadConversations(); // تحديث القائمة الجانبية
+    loadChatMessages(activeChatStudentId); // إعادة التحميل (ستظهر فارغة)
+}
+
 function startRecording() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { alert('المتصفح لا يدعم التسجيل'); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('المتصفح لا يدعم التسجيل');
+        return;
+    }
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         mediaRecorder = new MediaRecorder(stream);
         audioChunks = [];
@@ -350,49 +436,216 @@ function startRecording() {
         updateRecordTimer();
     }).catch(() => alert('تعذر الوصول للمايكروفون'));
 }
+
 function updateRecordTimer() {
     const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
     const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
     const secs = (elapsed % 60).toString().padStart(2, '0');
     document.getElementById('recordTimer').textContent = `${mins}:${secs}`;
 }
+
 function stopRecording() { if (mediaRecorder && mediaRecorder.state === 'recording') { mediaRecorder.stop(); clearInterval(recordingInterval); document.getElementById('recordingArea').style.display = 'none'; } }
 function cancelRecording() { if (mediaRecorder && mediaRecorder.state === 'recording') { mediaRecorder.onstop = null; mediaRecorder.stop(); clearInterval(recordingInterval); document.getElementById('recordingArea').style.display = 'none'; } }
+
 function sendVoiceMessage(base64Audio) {
     if (!activeChatStudentId) return;
     const currentUser = getCurrentUser();
     const teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
-    teacherMsgs.push({ id: Date.now(), teacherId: currentUser.id, studentId: activeChatStudentId, content: base64Audio, attachment: null, isVoice: true, sentAt: new Date().toISOString(), isRead: true, isFromStudent: false });
+    teacherMsgs.push({
+        id: Date.now(), teacherId: currentUser.id, studentId: activeChatStudentId,
+        content: base64Audio, attachment: null, isVoice: true,
+        sentAt: new Date().toISOString(), isRead: true, isFromStudent: false
+    });
     localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
+    
     const studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
-    studentMsgs.push({ id: Date.now() + 1, studentId: activeChatStudentId, teacherId: currentUser.id, content: base64Audio, attachment: null, isVoice: true, sentAt: new Date().toISOString(), isRead: false, isFromTeacher: true });
+    studentMsgs.push({
+        id: Date.now() + 1, studentId: activeChatStudentId, teacherId: currentUser.id,
+        content: base64Audio, attachment: null, isVoice: true,
+        sentAt: new Date().toISOString(), isRead: false, isFromTeacher: true
+    });
+    localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
+    
+    loadChatMessages(activeChatStudentId);
+    loadConversations();
+}
+
+function toggleMessageMenu(e, msgId) {
+    e.stopPropagation();
+    document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none');
+    const menu = document.getElementById(`msgMenu_${msgId}`);
+    if (menu) menu.style.display = 'block';
+}
+
+function deleteChatMessage(messageId) {
+    if (!confirm('حذف هذه الرسالة من الطرفين؟')) return;
+    let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
+    teacherMsgs = teacherMsgs.filter(m => m.id !== messageId);
+    localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
+    let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
+    studentMsgs = studentMsgs.filter(m => m.id !== (messageId + 1)); 
     localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
     loadChatMessages(activeChatStudentId);
     loadConversations();
 }
-function toggleMessageMenu(e, msgId) { e.stopPropagation(); document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none'); const menu = document.getElementById(`msgMenu_${msgId}`); if (menu) menu.style.display = 'block'; }
-function deleteChatMessage(messageId) { if (!confirm('حذف هذه الرسالة من الطرفين؟')) return; let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); teacherMsgs = teacherMsgs.filter(m => m.id !== messageId); localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs)); let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); studentMsgs = studentMsgs.filter(m => m.id !== (messageId + 1)); localStorage.setItem('studentMessages', JSON.stringify(studentMsgs)); loadChatMessages(activeChatStudentId); loadConversations(); }
-function startEditMessage(messageId) { const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); const msg = messages.find(m => m.id === messageId); if (!msg || msg.isVoice) return; const input = document.getElementById('chatInput'); input.value = msg.content; input.focus(); input.classList.add('editing'); editingMessageId = messageId; const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'تحديث <i class="fas fa-check"></i>'; sendBtn.classList.add('update-mode'); document.getElementById('cancelEditBtn').style.display = 'block'; }
-function cancelEdit() { editingMessageId = null; const input = document.getElementById('chatInput'); input.value = ''; input.classList.remove('editing'); const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'أرسل <i class="fas fa-paper-plane"></i>'; sendBtn.classList.remove('update-mode'); document.getElementById('cancelEditBtn').style.display = 'none'; }
-function handleChatAttachment(input) { if (input.files && input.files[0]) { const file = input.files[0]; const reader = new FileReader(); reader.onload = function(e) { attachmentData = e.target.result; document.getElementById('attachName').textContent = file.name; document.getElementById('attachmentPreviewBox').style.display = 'block'; }; reader.readAsDataURL(file); } }
-function toggleEmojiPopup() { const popup = document.getElementById('emojiPopup'); if (popup.style.display === 'none') popup.style.display = 'grid'; else popup.style.display = 'none'; }
-function addEmoji(char) { const input = document.getElementById('chatInput'); input.value += char; input.focus(); }
-function clearAttachment() { attachmentData = null; document.getElementById('attachmentPreviewBox').style.display = 'none'; document.getElementById('chatFileInput').value = ''; document.getElementById('chatCamInput').value = ''; }
-function sendChatMessage() {
-    const input = document.getElementById('chatInput'); const content = input.value.trim();
-    if ((!content && !attachmentData) || !activeChatStudentId) return;
-    if (editingMessageId) {
-        let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); const tIndex = teacherMsgs.findIndex(m => m.id === editingMessageId); if (tIndex !== -1) { teacherMsgs[tIndex].content = content; if (attachmentData) teacherMsgs[tIndex].attachment = attachmentData; localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs)); }
-        let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); const sIndex = studentMsgs.findIndex(m => m.id === (editingMessageId + 1)); if (sIndex !== -1) { studentMsgs[sIndex].content = content; if (attachmentData) studentMsgs[sIndex].attachment = attachmentData; localStorage.setItem('studentMessages', JSON.stringify(studentMsgs)); }
-        cancelEdit(); loadChatMessages(activeChatStudentId); loadConversations(); return;
-    }
-    const currentUser = getCurrentUser();
-    const teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); teacherMsgs.push({ id: Date.now(), teacherId: currentUser.id, studentId: activeChatStudentId, content: content || (attachmentData ? '📎 مرفق' : ''), attachment: attachmentData, isVoice: false, sentAt: new Date().toISOString(), isRead: true, isFromStudent: false }); localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
-    const studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); studentMsgs.push({ id: Date.now() + 1, studentId: activeChatStudentId, teacherId: currentUser.id, content: content || (attachmentData ? '📎 مرفق' : ''), attachment: attachmentData, isVoice: false, sentAt: new Date().toISOString(), isRead: false, isFromTeacher: true }); localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
-    input.value = ''; clearAttachment(); document.getElementById('emojiPopup').style.display = 'none'; loadChatMessages(activeChatStudentId); loadConversations();
+
+function startEditMessage(messageId) {
+    const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
+    const msg = messages.find(m => m.id === messageId);
+    if (!msg || msg.isVoice) return;
+
+    const input = document.getElementById('chatInput');
+    input.value = msg.content;
+    input.focus();
+    input.classList.add('editing');
+    editingMessageId = messageId;
+    
+    const sendBtn = document.getElementById('sendBtn');
+    sendBtn.innerHTML = 'تحديث <i class="fas fa-check"></i>';
+    sendBtn.classList.add('update-mode');
+    document.getElementById('cancelEditBtn').style.display = 'block';
 }
+
+function cancelEdit() {
+    editingMessageId = null;
+    const input = document.getElementById('chatInput');
+    input.value = '';
+    input.classList.remove('editing');
+    const sendBtn = document.getElementById('sendBtn');
+    sendBtn.innerHTML = 'أرسل <i class="fas fa-paper-plane"></i>';
+    sendBtn.classList.remove('update-mode');
+    document.getElementById('cancelEditBtn').style.display = 'none';
+}
+
+function handleChatAttachment(input) {
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            attachmentData = e.target.result;
+            document.getElementById('attachName').textContent = file.name;
+            document.getElementById('attachmentPreviewBox').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function toggleEmojiPopup() {
+    const popup = document.getElementById('emojiPopup');
+    if (popup.style.display === 'none') popup.style.display = 'grid';
+    else popup.style.display = 'none';
+}
+
+function addEmoji(char) {
+    const input = document.getElementById('chatInput');
+    input.value += char;
+    input.focus();
+}
+
+function clearAttachment() {
+    attachmentData = null;
+    document.getElementById('attachmentPreviewBox').style.display = 'none';
+    document.getElementById('chatFileInput').value = '';
+    document.getElementById('chatCamInput').value = '';
+}
+
+function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const content = input.value.trim();
+    if ((!content && !attachmentData) || !activeChatStudentId) return;
+
+    if (editingMessageId) {
+        let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
+        const tIndex = teacherMsgs.findIndex(m => m.id === editingMessageId);
+        if (tIndex !== -1) {
+            teacherMsgs[tIndex].content = content;
+            if (attachmentData) teacherMsgs[tIndex].attachment = attachmentData;
+            localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
+        }
+        let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
+        const sIndex = studentMsgs.findIndex(m => m.id === (editingMessageId + 1));
+        if (sIndex !== -1) {
+            studentMsgs[sIndex].content = content;
+            if (attachmentData) studentMsgs[sIndex].attachment = attachmentData;
+            localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
+        }
+        cancelEdit();
+        loadChatMessages(activeChatStudentId);
+        loadConversations();
+        return;
+    }
+    
+    const currentUser = getCurrentUser();
+    const teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
+    teacherMsgs.push({
+        id: Date.now(), teacherId: currentUser.id, studentId: activeChatStudentId,
+        content: content || (attachmentData ? '📎 مرفق' : ''), attachment: attachmentData, isVoice: false,
+        sentAt: new Date().toISOString(), isRead: true, isFromStudent: false
+    });
+    localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
+    
+    const studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
+    studentMsgs.push({
+        id: Date.now() + 1, studentId: activeChatStudentId, teacherId: currentUser.id,
+        content: content || (attachmentData ? '📎 مرفق' : ''), attachment: attachmentData, isVoice: false,
+        sentAt: new Date().toISOString(), isRead: false, isFromTeacher: true
+    });
+    localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
+    
+    input.value = '';
+    clearAttachment();
+    document.getElementById('emojiPopup').style.display = 'none';
+    loadChatMessages(activeChatStudentId);
+    loadConversations();
+}
+
 function handleEnter(e) { if (e.key === 'Enter') sendChatMessage(); }
-function getStudentById(id) { let students = JSON.parse(localStorage.getItem('students') || '[]'); let s = students.find(s => s.id == id); if(!s) { const users = JSON.parse(localStorage.getItem('users') || '[]'); s = users.find(u => u.id == id && u.role === 'student'); } return s; }
-function showNewMessageModal() { const currentUser = getCurrentUser(); const recipientSelect = document.getElementById('messageRecipient'); if(recipientSelect) { loadStudentsForMessaging(); document.getElementById('newMessageModal').classList.add('show'); } else { alert("يرجى اختيار الطالب من القائمة."); } }
-function loadStudentsForMessaging() { const recipientSelect = document.getElementById('messageRecipient'); if(!recipientSelect) return; const currentTeacher = getCurrentUser(); let allStudents = JSON.parse(localStorage.getItem('students') || '[]'); const allUsers = JSON.parse(localStorage.getItem('users') || '[]'); const studentUsers = allUsers.filter(u => u.role === 'student'); const merged = [...allStudents]; studentUsers.forEach(u => { if(!merged.find(s => s.id == u.id)) merged.push(u); }); const myStudents = merged.filter(s => s.teacherId == currentTeacher.id); recipientSelect.innerHTML = '<option value="">اختر الطالب</option>'; myStudents.forEach(s => { recipientSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`; }); }
-window.showNewMessageModal = showNewMessageModal; window.sendNewMessage = function() { const sId = document.getElementById('messageRecipient').value; if(sId) { document.getElementById('newMessageModal').classList.remove('show'); openChat(parseInt(sId)); } }; window.closeNewMessageModal = function() { document.getElementById('newMessageModal').classList.remove('show'); };
+
+function getStudentById(id) {
+    let students = JSON.parse(localStorage.getItem('students') || '[]');
+    let s = students.find(s => s.id == id);
+    if(!s) {
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        s = users.find(u => u.id == id && u.role === 'student');
+    }
+    return s;
+}
+
+function showNewMessageModal() {
+    const currentUser = getCurrentUser();
+    const recipientSelect = document.getElementById('messageRecipient'); 
+    if(recipientSelect) {
+        loadStudentsForMessaging(); 
+        document.getElementById('newMessageModal').classList.add('show');
+    } else {
+        alert("يرجى اختيار الطالب من القائمة.");
+    }
+}
+
+function loadStudentsForMessaging() {
+    const recipientSelect = document.getElementById('messageRecipient');
+    if(!recipientSelect) return;
+    const currentTeacher = getCurrentUser();
+    let allStudents = JSON.parse(localStorage.getItem('students') || '[]');
+    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const studentUsers = allUsers.filter(u => u.role === 'student');
+    const merged = [...allStudents];
+    studentUsers.forEach(u => { if(!merged.find(s => s.id == u.id)) merged.push(u); });
+    const myStudents = merged.filter(s => s.teacherId == currentTeacher.id);
+    recipientSelect.innerHTML = '<option value="">اختر الطالب</option>';
+    myStudents.forEach(s => {
+        recipientSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`;
+    });
+}
+
+// تصدير الدوال
+window.showNewMessageModal = showNewMessageModal; 
+window.sendNewMessage = function() {
+    const sId = document.getElementById('messageRecipient').value;
+    if(sId) {
+        document.getElementById('newMessageModal').classList.remove('show');
+        openChat(parseInt(sId));
+    }
+};
+window.closeNewMessageModal = function() { document.getElementById('newMessageModal').classList.remove('show'); };
+window.deleteEntireConversation = deleteEntireConversation;

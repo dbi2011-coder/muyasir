@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-messages.js
-// الوصف: شات الطالب (إضافة زر التنزيل .mp3)
+// الوصف: شات الطالب (النسخة النهائية: MP3 - بدون زر تنزيل - أيقونات غامقة)
 // ============================================
 
 let attachmentData = null;
@@ -225,14 +225,11 @@ function loadChatWithTeacher() {
         const bubbleClass = isMe ? 'msg-me' : 'msg-other';
         let contentHtml = msg.content;
         
-        // 🔥 إضافة زر تنزيل MP3 للطالب أيضاً 🔥
+        // 🔥 فقط مشغل الصوت (بدون زر تنزيل) 🔥
         if (msg.isVoice) {
             contentHtml = `
             <div style="display:flex; align-items:center; gap:5px;">
                 <audio controls src="${msg.content}"></audio>
-                <a href="${msg.content}" download="voice_message_${msg.id}.mp3" class="btn-tool audio-download-btn" style="width:30px; height:30px; font-size:0.8rem; background:#607d8b; color:white; text-decoration:none;" title="تنزيل">
-                    <i class="fas fa-download"></i>
-                </a>
             </div>`;
         }
 
@@ -261,7 +258,8 @@ function startRecording() {
         audioChunks = [];
         mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
         mediaRecorder.onstop = () => {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            // 🔥 تغيير النوع إلى mp3 🔥
+            const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
             const reader = new FileReader();
             reader.onload = function(e) { sendVoiceMessage(e.target.result); };
             reader.readAsDataURL(audioBlob);

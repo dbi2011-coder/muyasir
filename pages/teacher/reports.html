@@ -9,78 +9,92 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="assets/css/main.css">
-    <link rel="stylesheet" href="assets/css/dashboard.css">
-
     <style>
         /* =========================================
-           🔥 تصميم خاص بصفحة التقارير (مدمج) 🔥
+           🔥 التصميم المدمج (CSS) 🔥
            ========================================= */
-        body { font-family: 'Tajawal', sans-serif; background-color: #f4f6f9; margin: 0; }
+        :root { --primary: #2c3e50; --secondary: #34495e; --accent: #007bff; --light: #ecf0f1; --success: #27ae60; --danger: #c0392b; }
         
-        /* تحسينات لوحة التحكم */
-        .reports-controls {
-            background: white; padding: 25px; border-radius: 15px; 
-            box-shadow: 0 5px 20px rgba(0,0,0,0.05); margin-bottom: 30px;
-            display: grid; grid-template-columns: 1fr 2fr auto; gap: 20px; align-items: start;
-            border: 1px solid #eef2f7;
-        }
+        body { font-family: 'Tajawal', sans-serif; background-color: #f4f6f9; margin: 0; display: flex; height: 100vh; overflow: hidden; }
         
-        .control-group label { display: block; font-weight: bold; margin-bottom: 10px; color: #2c3e50; }
-        .control-group select { 
-            width: 100%; padding: 12px; border: 2px solid #e9ecef; border-radius: 8px; 
-            font-family: 'Tajawal'; font-size: 1rem; transition: 0.3s;
-        }
-        .control-group select:focus { border-color: #007bff; outline: none; }
+        /* الشريط الجانبي */
+        .sidebar { width: 260px; background: var(--primary); color: white; display: flex; flex-direction: column; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
+        .sidebar-header { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); background: var(--secondary); }
+        .logo h2 { margin: 10px 0 0; font-size: 1.4rem; }
+        .logo i { font-size: 2.5rem; color: var(--accent); } /* شعار أيقونة بدلاً من صورة */
+        
+        .sidebar-menu { list-style: none; padding: 0; margin: 20px 0; flex: 1; }
+        .sidebar-menu li a { display: flex; align-items: center; padding: 15px 25px; color: #bdc3c7; text-decoration: none; transition: 0.3s; font-size: 1rem; }
+        .sidebar-menu li a:hover, .sidebar-menu li a.active { background: rgba(0,0,0,0.2); color: white; border-right: 4px solid var(--accent); }
+        .menu-icon { margin-left: 10px; width: 25px; text-align: center; }
 
-        /* قائمة اختيار الطلاب */
+        /* المحتوى الرئيسي */
+        .main-content-dashboard { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+        .dashboard-header { background: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .user-welcome { font-weight: bold; color: var(--primary); }
+        
+        .dashboard-content { padding: 30px; }
+
+        /* لوحة التحكم بالتقارير */
+        .reports-controls {
+            background: white; padding: 25px; border-radius: 12px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px;
+            display: grid; grid-template-columns: 1fr 1.5fr auto; gap: 20px; align-items: end;
+            border: 1px solid #e9ecef;
+        }
+        
+        .control-group label { display: block; font-weight: bold; margin-bottom: 8px; color: var(--secondary); font-size: 0.9rem; }
+        .control-group select { 
+            width: 100%; padding: 10px; border: 2px solid #dfe6e9; border-radius: 8px; 
+            font-family: 'Tajawal'; font-size: 0.95rem; outline: none; transition: 0.3s;
+        }
+        .control-group select:focus { border-color: var(--accent); }
+
+        /* قائمة الطلاب */
         .student-selector {
             max-height: 120px; overflow-y: auto; background: #f8f9fa; 
-            padding: 10px; border: 2px solid #e9ecef; border-radius: 8px;
+            padding: 10px; border: 2px solid #dfe6e9; border-radius: 8px;
         }
         .student-checkbox { 
-            display: flex; align-items: center; gap: 10px; margin-bottom: 8px; 
-            padding: 8px; background: white; border-radius: 5px; cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; gap: 10px; margin-bottom: 5px; 
+            padding: 6px; background: white; border-radius: 5px; cursor: pointer; transition: 0.2s; border: 1px solid #eee;
         }
-        .student-checkbox:hover { background: #e3f2fd; }
-        .student-checkbox input { transform: scale(1.2); cursor: pointer; }
+        .student-checkbox:hover { background: #e3f2fd; border-color: var(--accent); }
+        .student-checkbox label { cursor: pointer; margin: 0; width: 100%; }
 
         /* الأزرار */
-        .btn { padding: 10px 25px; border: none; border-radius: 8px; cursor: pointer; font-family: 'Tajawal'; font-weight: bold; font-size: 1rem; transition: 0.2s; display: flex; align-items: center; gap: 8px; }
-        .btn-primary { background: #007bff; color: white; }
-        .btn-primary:hover { background: #0056b3; transform: translateY(-2px); }
-        .btn-success { background: #28a745; color: white; }
-        .btn-success:hover { background: #218838; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-family: 'Tajawal'; font-weight: bold; transition: 0.2s; display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem; }
+        .btn-primary { background: var(--accent); color: white; }
+        .btn-primary:hover { background: #0056b3; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,123,255,0.3); }
+        .btn-success { background: var(--success); color: white; }
+        .btn-success:hover { background: #219150; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(39,174,96,0.3); }
 
-        /* منطقة الورقة A4 */
+        /* منطقة المعاينة (A4) */
         .report-preview-bg {
             background: #525659; padding: 40px; border-radius: 12px;
-            display: flex; justify-content: center; overflow-x: auto; min-height: 600px;
+            display: flex; justify-content: center; overflow-x: auto; min-height: 500px;
         }
         
         .report-paper {
             background: white; width: 210mm; min-height: 297mm; padding: 20mm;
             box-shadow: 0 0 25px rgba(0,0,0,0.5); position: relative;
-            color: #000; /* للطباعة */
+            color: black;
         }
 
-        /* جداول التقارير */
+        /* الجداول داخل التقرير */
         .report-table { width: 100%; border-collapse: collapse; margin-top: 30px; font-size: 14px; }
-        .report-table th, .report-table td { border: 1px solid #333; padding: 10px; text-align: center; vertical-align: middle; }
-        .report-table th { background-color: #f2f2f2; font-weight: bold; color: #000; }
+        .report-table th, .report-table td { border: 1px solid #000; padding: 10px; text-align: center; vertical-align: middle; }
+        .report-table th { background-color: #f0f0f0; font-weight: bold; color: #000; }
         
-        /* ترويسة التقرير */
-        .report-header { text-align: center; margin-bottom: 40px; border-bottom: 3px double #333; padding-bottom: 20px; }
-        .report-header h1 { margin: 0 0 10px 0; font-size: 24px; color: #000; }
-        .report-header h2 { margin: 5px 0; font-size: 18px; color: #444; }
-        .report-meta { display: flex; justify-content: space-between; margin-top: 20px; font-size: 14px; }
+        .report-header { text-align: center; margin-bottom: 30px; border-bottom: 2px double #000; padding-bottom: 20px; }
+        .report-header h1 { margin: 0; font-size: 22px; color: #000; }
+        .report-header h2 { margin: 5px 0; font-size: 16px; color: #333; font-weight: normal; }
+        .report-meta { display: flex; justify-content: space-between; margin-top: 25px; font-size: 14px; color: #000; }
 
-        /* حالات الألوان في الجدول */
         .status-good { color: #155724; background-color: #d4edda; font-weight: bold; }
-        .status-warn { color: #856404; background-color: #fff3cd; font-weight: bold; }
         .status-bad { color: #721c24; background-color: #f8d7da; font-weight: bold; }
 
-        /* إخفاء العناصر عند الطباعة */
+        /* الطباعة */
         @media print {
             body * { visibility: hidden; }
             #reportPaper, #reportPaper * { visibility: visible; }
@@ -89,76 +103,379 @@
     </style>
 </head>
 <body>
-    <div class="dashboard-container">
-        <aside class="sidebar" style="/* يرجى التأكد من وجود كلاسات الـ css للشريط الجانبي أو نسخه من الملفات السابقة */">
-            <div class="sidebar-header" style="padding:20px; text-align:center; border-bottom:1px solid #444; background:#2c3e50; color:white;">
-                <h3>ميسر التعلم</h3>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-book-open"></i> <h2>ميسر التعلم</h2>
             </div>
-            <ul class="sidebar-menu" style="list-style:none; padding:0; margin:20px 0;">
-                <li style="padding:15px; border-bottom:1px solid #ddd;"><a href="dashboard.html" style="text-decoration:none; color:#333;">🏠 الرئيسية</a></li>
-                <li style="padding:15px; background:#e3f2fd;"><a href="reports.html" style="text-decoration:none; color:#007bff; font-weight:bold;">📊 التقارير</a></li>
-                <li style="padding:15px;"><a href="#" onclick="alert('الرجوع للقائمة الرئيسية')">🚪 خروج</a></li>
-            </ul>
-        </aside>
+        </div>
+        <ul class="sidebar-menu">
+            <li><a href="dashboard.html"><span class="menu-icon"><i class="fas fa-home"></i></span>الرئيسية</a></li>
+            <li><a href="reports.html" class="active"><span class="menu-icon"><i class="fas fa-chart-pie"></i></span>التقارير</a></li>
+            <li><a href="#" onclick="alert('خروج')"><span class="menu-icon"><i class="fas fa-sign-out-alt"></i></span>خروج</a></li>
+        </ul>
+    </aside>
 
-        <main class="main-content-dashboard" style="flex:1; padding:20px;">
-            <div class="dashboard-content">
-                <h2 style="margin-bottom:20px; color:#2c3e50;">مركز التقارير والإحصائيات</h2>
+    <main class="main-content-dashboard">
+        <header class="dashboard-header">
+            <div class="user-welcome">
+                <span>مرحباً بك، </span>
+                <span id="currentUserName" style="color:var(--accent);">المعلم</span>
+            </div>
+            <div>
+                <button class="btn btn-primary" style="padding: 5px 15px; font-size:0.8rem;">🔔</button>
+            </div>
+        </header>
 
-                <div class="reports-controls">
-                    <div class="control-group">
-                        <label>نوع التقرير:</label>
-                        <select id="reportTypeSelector" onchange="toggleStudentSelector()">
-                            <option value="">-- اختر نوع التقرير --</option>
-                            <option value="attendance">📋 تقرير متابعة الغياب</option>
-                            <option value="progress">📈 تقرير نسب الإنجاز</option>
-                            <option value="assignments">📝 تقرير الواجبات</option>
-                            <option value="iep">🗂️ تقرير الخطط التربوية (IEP)</option>
-                            <option value="diagnostic">🔍 تقرير الاختبارات التشخيصية</option>
-                            <option value="schedule">📅 تقرير الجدول الدراسي</option>
-                            <option value="balance" id="optSessionBalance">⚖️ تقرير رصيد الحصص (خاص)</option> 
-                            <option value="committee">🤝 تقرير لجنة صعوبات التعلم</option>
-                            <option value="certificate">🏆 شهادة إنجاز مهارة</option>
-                        </select>
-                    </div>
+        <div class="dashboard-content">
+            <div class="reports-controls">
+                <div class="control-group">
+                    <label><i class="fas fa-file-alt"></i> نوع التقرير:</label>
+                    <select id="reportTypeSelector">
+                        <option value="">-- اختر التقرير المطلوب --</option>
+                        <option value="attendance">📋 تقرير الغياب</option>
+                        <option value="progress">📈 تقرير نسب الإنجاز</option>
+                        <option value="assignments">📝 تقرير الواجبات</option>
+                        <option value="iep">🗂️ تقرير الخطط التربوية (IEP)</option>
+                        <option value="diagnostic">🔍 تقرير الاختبارات التشخيصية</option>
+                        <option value="schedule">📅 تقرير الجدول الدراسي</option>
+                        <option value="balance" id="optSessionBalance">⚖️ تقرير رصيد الحصص (خاص)</option> 
+                        <option value="committee">🤝 تقرير لجنة صعوبات التعلم</option>
+                        <option value="certificate">🏆 شهادة إنجاز مهارة</option>
+                    </select>
+                </div>
 
-                    <div class="control-group" id="studentSelectorGroup">
-                        <label>تحديد الطلاب:</label>
-                        <div class="student-selector" id="studentCheckboxes">
-                            </div>
-                        <div style="margin-top:8px;">
-                            <label style="font-weight:normal; cursor:pointer;">
-                                <input type="checkbox" onchange="selectAllStudents(this)"> تحديد الكل
-                            </label>
+                <div class="control-group" id="studentSelectorGroup">
+                    <label><i class="fas fa-users"></i> تحديد الطلاب:</label>
+                    <div class="student-selector" id="studentCheckboxes">
                         </div>
-                    </div>
-
-                    <div>
-                        <label>&nbsp;</label>
-                        <button class="btn btn-primary" onclick="generateReport()">
-                            <i class="fas fa-search"></i> عرض التقرير
-                        </button>
+                    <div style="margin-top:5px;">
+                        <label style="cursor:pointer; font-size:0.9rem;">
+                            <input type="checkbox" onchange="selectAllStudents(this)"> تحديد الكل
+                        </label>
                     </div>
                 </div>
 
-                <div id="reportActions" style="display:none; margin-bottom:15px; text-align:left;">
-                    <button class="btn btn-success" onclick="downloadPDF()" style="display:inline-flex;">
-                        <i class="fas fa-file-pdf"></i> حفظ كملف PDF / طباعة
+                <div>
+                    <button class="btn btn-primary" onclick="generateReport()">
+                        <i class="fas fa-search"></i> عرض التقرير
                     </button>
                 </div>
+            </div>
 
-                <div class="report-preview-bg">
-                    <div id="reportPaper" class="report-paper">
-                        <div style="text-align:center; color:#bbb; margin-top:50%;">
-                            <i class="fas fa-print fa-4x mb-3"></i>
-                            <p style="font-size:1.2rem;">اختر نوع التقرير والطلاب لعرض البيانات هنا</p>
-                        </div>
+            <div id="reportActions" style="display:none; margin-bottom:15px;">
+                <button class="btn btn-success" onclick="downloadPDF()">
+                    <i class="fas fa-file-pdf"></i> حفظ كملف PDF / طباعة
+                </button>
+            </div>
+
+            <div class="report-preview-bg">
+                <div id="reportPaper" class="report-paper">
+                    <div style="text-align:center; color:#999; margin-top:50%;">
+                        <i class="fas fa-print fa-3x mb-3"></i>
+                        <p>اختر نوع التقرير والطلاب لعرض البيانات هنا</p>
                     </div>
                 </div>
             </div>
-        </main>
-    </div>
+        </div>
+    </main>
 
-    <script src="assets/js/reports.js"></script>
+    <script>
+        // =========================================
+        // 🔥 البرمجة المدمجة (JS) 🔥
+        // =========================================
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initMockData(); // إنشاء بيانات وهمية للتجربة فوراً
+            checkPermissions();
+            loadStudentList();
+        });
+
+        // 1. تجهيز بيانات وهمية (لحل مشكلة الصفحة الفارغة)
+        function initMockData() {
+            if (!sessionStorage.getItem('currentUser')) {
+                const teacher = { id: 1, name: "أ. محمد العتيبي", role: "teacher" };
+                sessionStorage.setItem('currentUser', JSON.stringify({ user: teacher }));
+            }
+            if (!localStorage.getItem('students')) {
+                const mockStudents = [
+                    { id: 101, name: "نايف محمد", grade: "الرابع", diagnosis: "عسر قراءة" },
+                    { id: 102, name: "سعود فيصل", grade: "الخامس", diagnosis: "تشتت انتباه" },
+                    { id: 103, name: "عبدالله أحمد", grade: "الثالث", diagnosis: "عسر حساب" }
+                ];
+                localStorage.setItem('students', JSON.stringify(mockStudents));
+            }
+        }
+
+        // 2. الصلاحيات
+        function getCurrentUser() {
+            return JSON.parse(sessionStorage.getItem('currentUser') || '{"user":{"role":"guest","name":"زائر"}}').user;
+        }
+
+        function checkPermissions() {
+            const user = getCurrentUser();
+            if(document.getElementById('currentUserName')) document.getElementById('currentUserName').innerText = user.name;
+            
+            const balanceOption = document.getElementById('optSessionBalance');
+            if (user.role !== 'teacher' && user.role !== 'admin') {
+                if(balanceOption) balanceOption.remove();
+            }
+        }
+
+        // 3. القوائم
+        function getStudentById(id) {
+            const students = JSON.parse(localStorage.getItem('students') || '[]');
+            return students.find(s => s.id == id) || {name: 'طالب'};
+        }
+
+        function loadStudentList() {
+            const students = JSON.parse(localStorage.getItem('students') || '[]');
+            const container = document.getElementById('studentCheckboxes');
+            
+            if (students.length === 0) {
+                container.innerHTML = '<div style="color:red; padding:5px;">لا يوجد طلاب</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            students.forEach(student => {
+                const div = document.createElement('div');
+                div.className = 'student-checkbox';
+                div.innerHTML = `
+                    <input type="checkbox" name="selectedStudent" value="${student.id}" id="st_${student.id}">
+                    <label for="st_${student.id}">${student.name}</label>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function selectAllStudents(source) {
+            const checkboxes = document.getElementsByName('selectedStudent');
+            for(let i=0; i<checkboxes.length; i++) { checkboxes[i].checked = source.checked; }
+        }
+
+        // 4. توليد التقرير
+        function generateReport() {
+            const type = document.getElementById('reportTypeSelector').value;
+            const checkboxes = document.querySelectorAll('input[name="selectedStudent"]:checked');
+            const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+
+            if (!type) { alert("الرجاء اختيار نوع التقرير"); return; }
+            if (selectedIds.length === 0 && type !== 'schedule') {
+                alert("الرجاء اختيار طالب واحد على الأقل"); return;
+            }
+
+            const paper = document.getElementById('reportPaper');
+            document.getElementById('reportActions').style.display = 'block';
+            
+            const headerHtml = `
+                <div class="report-header">
+                    <h1>المملكة العربية السعودية</h1>
+                    <h2>وزارة التعليم - برنامج صعوبات التعلم</h2>
+                    <br>
+                    <h1 style="color:#2c3e50;">${getReportTitle(type)}</h1>
+                    <div class="report-meta">
+                        <span><strong>المعلم:</strong> ${getCurrentUser().name}</span>
+                        <span><strong>تاريخ الطباعة:</strong> ${new Date().toLocaleDateString('ar-SA')}</span>
+                    </div>
+                </div>
+            `;
+
+            let bodyHtml = '';
+            switch(type) {
+                case 'attendance': bodyHtml = generateAttendanceReport(selectedIds); break;
+                case 'progress': bodyHtml = generateProgressReport(selectedIds); break;
+                case 'assignments': bodyHtml = generateAssignmentsReport(selectedIds); break;
+                case 'iep': bodyHtml = generateIEPReport(selectedIds); break;
+                case 'diagnostic': bodyHtml = generateDiagnosticReport(selectedIds); break;
+                case 'schedule': bodyHtml = generateScheduleReport(); break;
+                case 'balance': bodyHtml = generateSessionBalanceReport(selectedIds); break;
+                case 'committee': bodyHtml = generateCommitteeReport(selectedIds); break;
+                case 'certificate': bodyHtml = generateCertificates(selectedIds); break;
+            }
+
+            paper.innerHTML = headerHtml + bodyHtml;
+        }
+
+        function getReportTitle(type) {
+            const titles = {
+                'attendance': 'تقرير متابعة الغياب والحضور',
+                'progress': 'تقرير نسب الإنجاز للمهارات',
+                'assignments': 'تقرير متابعة الواجبات',
+                'iep': 'الخطة التربوية الفردية (IEP)',
+                'diagnostic': 'نتائج الاختبارات التشخيصية',
+                'schedule': 'الجدول الدراسي لغرفة المصادر',
+                'balance': 'سجل رصيد الحصص (داخلي)',
+                'committee': 'محاضر لجنة صعوبات التعلم',
+                'certificate': 'شهادة شكر وتقدير'
+            };
+            return titles[type] || 'تقرير';
+        }
+
+        // --- دوال بناء الجداول (بيانات تجريبية) ---
+
+        function generateAttendanceReport(ids) {
+            let html = `<table class="report-table"><thead><tr><th>م</th><th>الطالب</th><th>أيام الغياب</th><th>التواريخ</th><th>الملاحظات</th></tr></thead><tbody>`;
+            ids.forEach((id, index) => {
+                const st = getStudentById(id);
+                const days = Math.floor(Math.random() * 6);
+                html += `<tr>
+                    <td>${index + 1}</td>
+                    <td>${st.name}</td>
+                    <td class="${days > 3 ? 'status-bad' : ''}">${days} أيام</td>
+                    <td>${days > 0 ? '2023-10-01, 2023-10-15' : '-'}</td>
+                    <td>${days > 3 ? 'تنبيه: الغياب أثر على التحسن' : 'منتظم'}</td>
+                </tr>`;
+            });
+            return html + `</tbody></table>`;
+        }
+
+        function generateProgressReport(ids) {
+            let html = `<table class="report-table"><thead><tr><th>الطالب</th><th>الدرس الحالي</th><th>نسبة الإنجاز</th><th>الحالة</th></tr></thead><tbody>`;
+            ids.forEach(id => {
+                const st = getStudentById(id);
+                const progress = Math.floor(Math.random() * 100);
+                html += `<tr>
+                    <td>${st.name}</td>
+                    <td>التمييز بين الحروف المتشابهة</td>
+                    <td>
+                        <div style="background:#eee; height:10px; width:100px; margin:auto; border-radius:5px;">
+                            <div style="background:${progress>50?'#28a745':'#ffc107'}; height:100%; width:${progress}%; border-radius:5px;"></div>
+                        </div>
+                        ${progress}%
+                    </td>
+                    <td>${progress > 70 ? 'متقدم' : 'يحتاج دعم'}</td>
+                </tr>`;
+            });
+            return html + `</tbody></table>`;
+        }
+
+        function generateAssignmentsReport(ids) {
+            let html = `<table class="report-table"><thead><tr><th>الطالب</th><th>المسندة</th><th>المحلولة</th><th>غير المحلولة</th><th>نسبة الالتزام</th></tr></thead><tbody>`;
+            ids.forEach(id => {
+                const st = getStudentById(id);
+                const total = 12;
+                const solved = Math.floor(Math.random() * 13);
+                const missed = total - solved;
+                html += `<tr>
+                    <td>${st.name}</td>
+                    <td>${total}</td>
+                    <td class="status-good">${solved}</td>
+                    <td class="status-bad">${Math.max(0, missed)}</td>
+                    <td>${Math.round((solved/total)*100)}%</td>
+                </tr>`;
+            });
+            return html + `</tbody></table>`;
+        }
+
+        function generateIEPReport(ids) {
+            let html = '';
+            ids.forEach(id => {
+                const st = getStudentById(id);
+                html += `
+                <div style="border:1px solid #333; padding:15px; margin-bottom:20px; text-align:right;">
+                    <h3 style="border-bottom:1px solid #ccc; padding-bottom:5px; margin-top:0;">بيانات الطالب: ${st.name}</h3>
+                    <p><strong>التشخيص:</strong> ${st.diagnosis || 'غير محدد'}</p>
+                    <p><strong>نقاط القوة:</strong> التعاون، حب الرسم.</p>
+                    <p><strong>نقاط الاحتياج:</strong> التمييز السمعي، الانتباه.</p>
+                    <table class="report-table" style="margin-top:10px;">
+                        <thead><tr><th>الهدف التدريسي</th><th>تاريخ البدء</th><th>تاريخ المتوقع للإنجاز</th><th>حالة الهدف</th></tr></thead>
+                        <tbody>
+                            <tr><td>أن يقرأ الطالب كلمات ثلاثية بحركة الفتح</td><td>2023-09-01</td><td>2023-09-30</td><td>✅ تم الإتقان</td></tr>
+                            <tr><td>أن يميز الطالب بين التاء المفتوحة والمربوطة</td><td>2023-10-01</td><td>2023-10-20</td><td>🔄 قيد التدريب</td></tr>
+                        </tbody>
+                    </table>
+                </div>`;
+            });
+            return html;
+        }
+
+        function generateDiagnosticReport(ids) {
+            let html = `<table class="report-table"><thead><tr><th>الطالب</th><th>نوع الاختبار</th><th>الدرجة</th><th>النتيجة</th><th>التوصية</th></tr></thead><tbody>`;
+            ids.forEach(id => {
+                const st = getStudentById(id);
+                html += `<tr>
+                    <td>${st.name}</td>
+                    <td>اختبار نمائي (انتباه)</td>
+                    <td>6/10</td>
+                    <td>متوسط</td>
+                    <td>يحتاج تدريبات تركيز بصري</td>
+                </tr>`;
+            });
+            return html + `</tbody></table>`;
+        }
+
+        function generateScheduleReport() {
+            return `
+            <table class="report-table">
+                <thead><tr><th>الحصة / اليوم</th><th>الأحد</th><th>الاثنين</th><th>الثلاثاء</th><th>الأربعاء</th><th>الخميس</th></tr></thead>
+                <tbody>
+                    <tr><td><strong>الأولى</strong></td><td>نايف محمد</td><td>-</td><td>سعود فيصل</td><td>-</td><td>عبدالله أحمد</td></tr>
+                    <tr><td><strong>الثانية</strong></td><td>-</td><td>عبدالله أحمد</td><td>-</td><td>نايف محمد</td><td>-</td></tr>
+                    <tr><td><strong>الثالثة</strong></td><td>سعود فيصل</td><td>-</td><td>عبدالله أحمد</td><td>-</td><td>سعود فيصل</td></tr>
+                </tbody>
+            </table>`;
+        }
+
+        function generateSessionBalanceReport(ids) {
+            if (getCurrentUser().role !== 'teacher' && getCurrentUser().role !== 'admin') return '';
+            let html = `<table class="report-table"><thead><tr><th>الطالب</th><th>المقرر</th><th>المنفذ</th><th>الرصيد</th><th>الحالة</th></tr></thead><tbody>`;
+            ids.forEach(id => {
+                const st = getStudentById(id);
+                const req = 15;
+                const done = Math.floor(Math.random() * 20);
+                const balance = done - req;
+                let status = balance < 0 ? `<span class="status-bad">نقص (${balance})</span>` : `<span class="status-good">زيادة (+${balance})</span>`;
+                if(balance === 0) status = 'منتظم';
+                html += `<tr><td>${st.name}</td><td>${req}</td><td>${done}</td><td style="direction:ltr">${balance}</td><td>${status}</td></tr>`;
+            });
+            return html + `</tbody></table>`;
+        }
+
+        function generateCommitteeReport(ids) {
+            let html = `<table class="report-table"><thead><tr><th>الطالب</th><th>تاريخ الاجتماع</th><th>الأعضاء</th><th>التوصيات</th><th>التوقيع</th></tr></thead><tbody>`;
+            ids.forEach(id => {
+                const st = getStudentById(id);
+                html += `<tr>
+                    <td>${st.name}</td>
+                    <td>2023-12-01</td>
+                    <td>المدير، المرشد، المعلم</td>
+                    <td>استمرار الطالب في البرنامج مع تكثيف الخطط السلوكية</td>
+                    <td style="font-family:'Reem Kufi', cursive; color:#007bff;">(تم التوقيع إلكترونياً)</td>
+                </tr>`;
+            });
+            return html + `</tbody></table>`;
+        }
+
+        function generateCertificates(ids) {
+            let html = '';
+            ids.forEach(id => {
+                const st = getStudentById(id);
+                html += `
+                <div style="border: 10px double #1565c0; padding: 40px; margin-bottom: 30px; text-align: center; height: 200mm; position: relative;">
+                    <div style="position: absolute; top:0; left:0; width:100%; height:100%; opacity:0.05; background:url('assets/images/logo.png') no-repeat center center; background-size:contain;"></div>
+                    <h1 style="color:#d4af37; font-size:40px; margin-bottom:10px;">شهادة شكر وتقدير</h1>
+                    <p style="font-size:18px;">يسر إدارة برنامج صعوبات التعلم أن تتقدم بأجمل عبارات الشكر للبطل:</p>
+                    <h2 style="color:#1565c0; font-size:35px; margin: 30px 0; border-bottom:2px solid #eee; display:inline-block; padding-bottom:10px;">${st.name}</h2>
+                    <p style="font-size:20px;">وذلك لتميزه وإتقانه لمهارة:</p>
+                    <h3 style="background:#f9f9f9; padding:10px; display:inline-block;">( قراءة الكلمات البصرية )</h3>
+                    <div style="margin-top: 80px; display:flex; justify-content:space-between; padding:0 50px;">
+                        <div style="text-align:center;"><p><strong>معلم الصعوبات</strong></p><p style="color:#777;">أ. محمد العتيبي</p></div>
+                        <div style="text-align:center;"><p><strong>مدير المدرسة</strong></p><p style="color:#777;">....................</p></div>
+                    </div>
+                </div>
+                <div style="page-break-after: always;"></div>
+                `;
+            });
+            return html;
+        }
+
+        function downloadPDF() {
+            const element = document.getElementById('reportPaper');
+            const opt = { margin: 0, filename: 'تقرير_ميسر_التعلم.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } };
+            html2pdf().set(opt).from(element).save();
+        }
+    </script>
 </body>
 </html>

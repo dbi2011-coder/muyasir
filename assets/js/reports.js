@@ -1,41 +1,62 @@
 // ============================================
 // 📁 المسار: assets/js/reports.js
-// الوصف: محرك التقارير الذكي + نظام الصلاحيات
+// الوصف: محرك التقارير + مولد بيانات تلقائي
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    checkPermissions(); // 🔒 تطبيق الصلاحيات فوراً
-    loadStudentList();  // تحميل قائمة الطلاب
+    initMockData(); // 🔥 خطوة مهمة: تجهيز بيانات وهمية إذا كانت الذاكرة فارغة
+    checkPermissions();
+    loadStudentList();
 });
 
 // ==========================================
-// 🔒 1. نظام الصلاحيات (Security Layer)
+// 🛠️ 0. تجهيز بيانات وهمية (لحل مشكلة الصفحة الفارغة)
 // ==========================================
-function getCurrentUser() {
-    return JSON.parse(sessionStorage.getItem('currentUser') || '{"user":{"role":"guest"}}').user;
-}
+function initMockData() {
+    // 1. إنشاء مستخدم (معلم)
+    if (!sessionStorage.getItem('currentUser')) {
+        const teacher = { id: 1, name: "أ. محمد العتيبي", role: "teacher", email: "teacher@school.com" };
+        sessionStorage.setItem('currentUser', JSON.stringify({ user: teacher }));
+    }
 
-function checkPermissions() {
-    const user = getCurrentUser();
-    const balanceOption = document.getElementById('optSessionBalance');
-    
-    // إذا لم يكن المستخدم "معلم" (Teacher) -> احذف خيار رصيد الحصص
-    // افترضنا أن admin هو المعلم، وأي شيء آخر هو عضو لجنة
-    if (user.role !== 'teacher' && user.role !== 'admin') {
-        if(balanceOption) balanceOption.remove(); // ❌ حذف العنصر تماماً من DOM
+    // 2. إنشاء قائمة طلاب وهمية
+    if (!localStorage.getItem('students')) {
+        const mockStudents = [
+            { id: 101, name: "نايف محمد", grade: "الرابع", diagnosis: "عسر قراءة" },
+            { id: 102, name: "سعود فيصل", grade: "الخامس", diagnosis: "تشتت انتباه" },
+            { id: 103, name: "عبدالله أحمد", grade: "الثالث", diagnosis: "عسر حساب" }
+        ];
+        localStorage.setItem('students', JSON.stringify(mockStudents));
+        console.log("تم إنشاء بيانات طلاب وهمية للتجربة");
     }
 }
 
 // ==========================================
-// 👥 2. إدارة قائمة الطلاب (Data Layer)
+// 🔒 1. الصلاحيات
+// ==========================================
+function getCurrentUser() {
+    return JSON.parse(sessionStorage.getItem('currentUser') || '{"user":{"role":"guest", "name":"زائر"}}').user;
+}
+
+function checkPermissions() {
+    const user = getCurrentUser();
+    document.getElementById('currentUserName') ? document.getElementById('currentUserName').innerText = user.name : null;
+    
+    const balanceOption = document.getElementById('optSessionBalance');
+    if (user.role !== 'teacher' && user.role !== 'admin') {
+        if(balanceOption) balanceOption.remove();
+    }
+}
+
+// ==========================================
+// 👥 2. القوائم
 // ==========================================
 function loadStudentList() {
-    // جلب الطلاب من قاعدة البيانات المحلية (Mock Data)
     const students = JSON.parse(localStorage.getItem('students') || '[]');
     const container = document.getElementById('studentCheckboxes');
     
     if (students.length === 0) {
-        container.innerHTML = '<div style="color:red; padding:5px;">لا يوجد طلاب مسجلين</div>';
+        container.innerHTML = '<div style="color:red;">لا يوجد طلاب</div>';
         return;
     }
 
@@ -45,7 +66,7 @@ function loadStudentList() {
         div.className = 'student-checkbox';
         div.innerHTML = `
             <input type="checkbox" name="selectedStudent" value="${student.id}" id="st_${student.id}">
-            <label for="st_${student.id}" style="cursor:pointer; margin:0;">${student.name}</label>
+            <label for="st_${student.id}">${student.name}</label>
         `;
         container.appendChild(div);
     });
@@ -53,22 +74,15 @@ function loadStudentList() {
 
 function selectAllStudents(source) {
     const checkboxes = document.getElementsByName('selectedStudent');
-    for(let i=0; i<checkboxes.length; i++) {
-        checkboxes[i].checked = source.checked;
-    }
+    for(let i=0; i<checkboxes.length; i++) { checkboxes[i].checked = source.checked; }
 }
 
 function toggleStudentSelector() {
-    const type = document.getElementById('reportTypeSelector').value;
-    const selector = document.getElementById('studentSelectorGroup');
-    // بعض التقارير عامة (مثل الجدول الدراسي) قد لا تحتاج اختيار طالب، لكن سنجعله متاحاً للتصفية
-    if (type === 'schedule' || type === 'committee') {
-        // يمكن إخفاؤه هنا لو أردت، لكن سنبقيه للمرونة
-    }
+    // يمكن إضافة منطق لإخفاء قائمة الطلاب في تقارير معينة
 }
 
 // ==========================================
-// 📊 3. محرك توليد التقارير (Engine)
+// 📊 3. توليد التقرير
 // ==========================================
 function generateReport() {
     const type = document.getElementById('reportTypeSelector').value;
@@ -76,28 +90,28 @@ function generateReport() {
     const selectedIds = Array.from(checkboxes).map(cb => cb.value);
 
     if (!type) { alert("الرجاء اختيار نوع التقرير"); return; }
-    if (selectedIds.length === 0 && type !== 'schedule' && type !== 'committee') {
+    if (selectedIds.length === 0 && type !== 'schedule') { // الجدول الدراسي عام
         alert("الرجاء اختيار طالب واحد على الأقل"); return;
     }
 
-    // تجهيز الورقة
     const paper = document.getElementById('reportPaper');
     document.getElementById('reportActions').style.display = 'block';
     
-    // الترويسة العامة
+    // الترويسة
     const headerHtml = `
         <div class="report-header">
-            <h2>${getReportTitle(type)}</h2>
+            <h1>المملكة العربية السعودية</h1>
+            <h2>وزارة التعليم - برنامج صعوبات التعلم</h2>
+            <br>
+            <h1>${getReportTitle(type)}</h1>
             <div class="report-meta">
-                <span><strong>المعلم:</strong> ${getCurrentUser().name || 'معلم صعوبات التعلم'}</span>
-                <span><strong>تاريخ التقرير:</strong> ${new Date().toLocaleDateString('ar-SA')}</span>
+                <span><strong>المعلم:</strong> ${getCurrentUser().name}</span>
+                <span><strong>التاريخ:</strong> ${new Date().toLocaleDateString('ar-SA')}</span>
             </div>
         </div>
     `;
 
-    // جسم التقرير (يختلف حسب النوع)
     let bodyHtml = '';
-    
     switch(type) {
         case 'attendance': bodyHtml = generateAttendanceReport(selectedIds); break;
         case 'progress': bodyHtml = generateProgressReport(selectedIds); break;
@@ -105,7 +119,7 @@ function generateReport() {
         case 'iep': bodyHtml = generateIEPReport(selectedIds); break;
         case 'diagnostic': bodyHtml = generateDiagnosticReport(selectedIds); break;
         case 'schedule': bodyHtml = generateScheduleReport(); break;
-        case 'balance': bodyHtml = generateSessionBalanceReport(selectedIds); break; // 🔒 خاص
+        case 'balance': bodyHtml = generateSessionBalanceReport(selectedIds); break;
         case 'committee': bodyHtml = generateCommitteeReport(selectedIds); break;
         case 'certificate': bodyHtml = generateCertificates(selectedIds); break;
     }
@@ -115,165 +129,209 @@ function generateReport() {
 
 function getReportTitle(type) {
     const titles = {
-        'attendance': 'تقرير متابعة الغياب',
+        'attendance': 'تقرير متابعة الغياب والحضور',
         'progress': 'تقرير نسب الإنجاز للمهارات',
         'assignments': 'تقرير متابعة الواجبات',
-        'iep': 'الخطة التربوية الفردية',
-        'diagnostic': 'تقرير الاختبارات التشخيصية',
+        'iep': 'الخطة التربوية الفردية (IEP)',
+        'diagnostic': 'نتائج الاختبارات التشخيصية',
         'schedule': 'الجدول الدراسي لغرفة المصادر',
         'balance': 'سجل رصيد الحصص (داخلي)',
-        'committee': 'محاضر لجنة صعوبات التعلم',
-        'certificate': 'شهادات شكر وتقدير'
+        'committee': 'محاضر وقرارات لجنة صعوبات التعلم',
+        'certificate': 'شهادة شكر وتقدير'
     };
-    return titles[type] || 'تقرير عام';
+    return titles[type] || 'تقرير';
 }
 
-// ----------------------------------------------------
-// 🏗️ دوال بناء الجداول (Logic Functions)
-// ----------------------------------------------------
+// ------------------------------------------
+// 🏗️ دوال بناء الجداول (مع بيانات عشوائية للعرض)
+// ------------------------------------------
 
-// 1. تقرير الغياب
+function getStudentById(id) {
+    const students = JSON.parse(localStorage.getItem('students') || '[]');
+    return students.find(s => s.id == id) || {name: 'طالب'};
+}
+
+// 1. الغياب
 function generateAttendanceReport(ids) {
-    // محاكاة بيانات
-    let html = `<table class="report-table"><thead><tr><th>الطالب</th><th>عدد أيام الغياب</th><th>تواريخ الغياب</th><th>ملاحظات</th></tr></thead><tbody>`;
-    
-    ids.forEach(id => {
-        const student = getStudentById(id);
-        // هنا يتم جلب البيانات الحقيقية من LocalStorage لاحقاً
-        const absDays = Math.floor(Math.random() * 5); // رقم عشوائي للتجربة
-        const dates = absDays > 0 ? '2023-10-01, 2023-10-15' : 'لا يوجد';
-        
+    let html = `<table class="report-table"><thead><tr><th>م</th><th>الطالب</th><th>أيام الغياب</th><th>التواريخ</th><th>الملاحظات</th></tr></thead><tbody>`;
+    ids.forEach((id, index) => {
+        const st = getStudentById(id);
+        const days = Math.floor(Math.random() * 6);
         html += `<tr>
-            <td>${student.name}</td>
-            <td class="${absDays > 3 ? 'status-bad' : ''}">${absDays} أيام</td>
-            <td>${dates}</td>
-            <td>${absDays > 3 ? 'تنبيه: الغياب أثر على المستوى' : '-'}</td>
+            <td>${index + 1}</td>
+            <td>${st.name}</td>
+            <td class="${days > 3 ? 'status-bad' : ''}">${days} أيام</td>
+            <td>${days > 0 ? '2023-10-01, 2023-10-15' : '-'}</td>
+            <td>${days > 3 ? 'تنبيه: الغياب أثر على التحسن' : 'منتظم'}</td>
         </tr>`;
     });
     return html + `</tbody></table>`;
 }
 
-// 2. تقرير نسب الإنجاز
+// 2. الإنجاز
 function generateProgressReport(ids) {
     let html = `<table class="report-table"><thead><tr><th>الطالب</th><th>الدرس الحالي</th><th>نسبة الإنجاز</th><th>الحالة</th></tr></thead><tbody>`;
     ids.forEach(id => {
-        const student = getStudentById(id);
+        const st = getStudentById(id);
         const progress = Math.floor(Math.random() * 100);
         html += `<tr>
-            <td>${student.name}</td>
-            <td>المدود (مثال)</td>
+            <td>${st.name}</td>
+            <td>التمييز بين الحروف المتشابهة</td>
             <td>
-                <div style="background:#eee; width:100px; height:10px; margin:auto; border-radius:5px;">
-                    <div style="background:${progress > 50 ? 'green' : 'orange'}; width:${progress}%; height:100%; border-radius:5px;"></div>
+                <div style="background:#eee; height:10px; width:100px; margin:auto; border-radius:5px;">
+                    <div style="background:${progress>50?'#28a745':'#ffc107'}; height:100%; width:${progress}%; border-radius:5px;"></div>
                 </div>
                 ${progress}%
             </td>
-            <td>${progress > 80 ? 'متقدم' : 'يحتاج دعم'}</td>
+            <td>${progress > 70 ? 'متقدم' : 'يحتاج دعم'}</td>
         </tr>`;
     });
     return html + `</tbody></table>`;
 }
 
-// 3. تقرير الواجبات
+// 3. الواجبات
 function generateAssignmentsReport(ids) {
-    let html = `<table class="report-table"><thead><tr><th>الطالب</th><th>إجمالي المسندة</th><th>تم حلها</th><th>لم تحل</th><th>نسبة الالتزام</th></tr></thead><tbody>`;
+    let html = `<table class="report-table"><thead><tr><th>الطالب</th><th>المسندة</th><th>المحلولة</th><th>غير المحلولة</th><th>نسبة الالتزام</th></tr></thead><tbody>`;
     ids.forEach(id => {
-        const student = getStudentById(id);
-        const total = 10;
-        const solved = Math.floor(Math.random() * 11);
+        const st = getStudentById(id);
+        const total = 12;
+        const solved = Math.floor(Math.random() * 13);
         const missed = total - solved;
         html += `<tr>
-            <td>${student.name}</td>
+            <td>${st.name}</td>
             <td>${total}</td>
             <td class="status-good">${solved}</td>
-            <td class="status-bad">${missed}</td>
-            <td>${(solved/total)*100}%</td>
+            <td class="status-bad">${Math.max(0, missed)}</td>
+            <td>${Math.round((solved/total)*100)}%</td>
         </tr>`;
     });
     return html + `</tbody></table>`;
 }
 
-// 7. 🔒 تقرير رصيد الحصص (خاص بالمعلم)
-function generateSessionBalanceReport(ids) {
-    // تحقق أمني إضافي (Double Check)
-    if(getCurrentUser().role !== 'teacher' && getCurrentUser().role !== 'admin') {
-        return `<div style="text-align:center; color:red; padding:20px; border:2px dashed red;">
-            🚫 عذراً، ليس لديك صلاحية للاطلاع على هذا السجل التنظيمي.
+// 4. الخطة (IEP)
+function generateIEPReport(ids) {
+    let html = '';
+    ids.forEach(id => {
+        const st = getStudentById(id);
+        html += `
+        <div style="border:1px solid #333; padding:15px; margin-bottom:20px; text-align:right;">
+            <h3 style="border-bottom:1px solid #ccc; padding-bottom:5px;">بيانات الطالب: ${st.name}</h3>
+            <p><strong>التشخيص:</strong> ${st.diagnosis || 'غير محدد'}</p>
+            <p><strong>نقاط القوة:</strong> التعاون، حب الرسم.</p>
+            <p><strong>نقاط الاحتياج:</strong> التمييز السمعي، الانتباه.</p>
+            <table class="report-table" style="margin-top:10px;">
+                <thead><tr><th>الهدف التدريسي</th><th>تاريخ البدء</th><th>تاريخ المتوقع للإنجاز</th><th>حالة الهدف</th></tr></thead>
+                <tbody>
+                    <tr><td>أن يقرأ الطالب كلمات ثلاثية بحركة الفتح</td><td>2023-09-01</td><td>2023-09-30</td><td>✅ تم الإتقان</td></tr>
+                    <tr><td>أن يميز الطالب بين التاء المفتوحة والمربوطة</td><td>2023-10-01</td><td>2023-10-20</td><td>🔄 قيد التدريب</td></tr>
+                </tbody>
+            </table>
         </div>`;
-    }
+    });
+    return html;
+}
 
-    let html = `<table class="report-table"><thead><tr><th>الطالب</th><th>الحصص المقررة</th><th>الحصص المنفذة</th><th>الرصيد</th><th>التوجيه</th></tr></thead><tbody>`;
+// 5. التشخيص
+function generateDiagnosticReport(ids) {
+    let html = `<table class="report-table"><thead><tr><th>الطالب</th><th>نوع الاختبار</th><th>الدرجة</th><th>النتيجة</th><th>التوصية</th></tr></thead><tbody>`;
     ids.forEach(id => {
-        const student = getStudentById(id);
-        const required = 12; // مثال: المفروض أخذ 12 حصة
-        const actual = Math.floor(Math.random() * 15); // كم أخذ فعلياً
-        const balance = actual - required;
+        const st = getStudentById(id);
+        html += `<tr>
+            <td>${st.name}</td>
+            <td>اختبار نمائي (انتباه)</td>
+            <td>6/10</td>
+            <td>متوسط</td>
+            <td>يحتاج تدريبات تركيز بصري</td>
+        </tr>`;
+    });
+    return html + `</tbody></table>`;
+}
+
+// 6. الجدول الدراسي
+function generateScheduleReport() {
+    return `
+    <table class="report-table">
+        <thead><tr><th>الحصة / اليوم</th><th>الأحد</th><th>الاثنين</th><th>الثلاثاء</th><th>الأربعاء</th><th>الخميس</th></tr></thead>
+        <tbody>
+            <tr><td><strong>الأولى</strong></td><td>نايف محمد</td><td>-</td><td>سعود فيصل</td><td>-</td><td>عبدالله أحمد</td></tr>
+            <tr><td><strong>الثانية</strong></td><td>-</td><td>عبدالله أحمد</td><td>-</td><td>نايف محمد</td><td>-</td></tr>
+            <tr><td><strong>الثالثة</strong></td><td>سعود فيصل</td><td>-</td><td>عبدالله أحمد</td><td>-</td><td>سعود فيصل</td></tr>
+        </tbody>
+    </table>
+    <p style="margin-top:10px; text-align:right;">* هذا الجدول يوضح توزيع الطلاب على حصص غرفة المصادر.</p>
+    `;
+}
+
+// 7. رصيد الحصص
+function generateSessionBalanceReport(ids) {
+    // فحص أمان إضافي
+    if (getCurrentUser().role !== 'teacher' && getCurrentUser().role !== 'admin') return '';
+
+    let html = `<table class="report-table"><thead><tr><th>الطالب</th><th>المقرر</th><th>المنفذ</th><th>الرصيد</th><th>الحالة</th></tr></thead><tbody>`;
+    ids.forEach(id => {
+        const st = getStudentById(id);
+        const req = 15;
+        const done = Math.floor(Math.random() * 20);
+        const balance = done - req;
+        let status = balance < 0 ? `<span class="status-bad">نقص (${balance})</span>` : `<span class="status-good">زيادة (+${balance})</span>`;
+        if(balance === 0) status = 'منتظم';
         
-        let status = '';
-        if (balance < 0) status = `<span class="status-bad">يحتاج تعويض (${Math.abs(balance)})</span>`;
-        else if (balance > 0) status = `<span class="status-good">رصيد إضافي (+${balance})</span>`;
-        else status = 'منتظم';
-
-        html += `<tr>
-            <td>${student.name}</td>
-            <td>${required}</td>
-            <td>${actual}</td>
-            <td style="direction:ltr">${balance}</td>
-            <td>${status}</td>
-        </tr>`;
+        html += `<tr><td>${st.name}</td><td>${req}</td><td>${done}</td><td style="direction:ltr">${balance}</td><td>${status}</td></tr>`;
     });
     return html + `</tbody></table>`;
 }
 
-// 8. تقرير اللجنة
+// 8. اللجنة
 function generateCommitteeReport(ids) {
-    let html = `<table class="report-table"><thead><tr><th>الطالب</th><th>تاريخ الاجتماع</th><th>الأعضاء الحاضرون</th><th>أهم التوصيات</th><th>التوقيع</th></tr></thead><tbody>`;
+    let html = `<table class="report-table"><thead><tr><th>الطالب</th><th>تاريخ الاجتماع</th><th>الأعضاء</th><th>التوصيات</th><th>التوقيع</th></tr></thead><tbody>`;
     ids.forEach(id => {
-        const student = getStudentById(id);
+        const st = getStudentById(id);
         html += `<tr>
-            <td>${student.name}</td>
-            <td>2023-10-20</td>
-            <td>مدير المدرسة، المرشد، معلم الصعوبات</td>
-            <td>تحويل الطالب لمسار التعليم العام مع المتابعة</td>
-            <td>(تم التوقيع إلكترونياً)</td>
+            <td>${st.name}</td>
+            <td>2023-12-01</td>
+            <td>المدير، المرشد، المعلم</td>
+            <td>استمرار الطالب في البرنامج مع تكثيف الخطط السلوكية</td>
+            <td style="font-family:'Reem Kufi', cursive; color:#007bff;">(تم التوقيع إلكترونياً)</td>
         </tr>`;
     });
     return html + `</tbody></table>`;
 }
 
-// 9. 🏆 شهادات الإنجاز (تصميم مختلف)
+// 9. الشهادة
 function generateCertificates(ids) {
     let html = '';
     ids.forEach(id => {
-        const student = getStudentById(id);
+        const st = getStudentById(id);
         html += `
-        <div style="border: 5px double #1565c0; padding: 30px; margin-bottom: 20px; text-align: center; background:#fff;">
-            <h1 style="color:#d4af37; font-family:'Tajawal', serif;">شهادة شكر وتقدير</h1>
-            <p>يسر إدارة برنامج صعوبات التعلم أن تتقدم بالشكر للطالب البطل:</p>
-            <h2 style="color:#1565c0; margin: 20px 0;">${student.name}</h2>
-            <p>وذلك لتميزه وإتقانه لمهارة: <strong>(التاء المفتوحة والتاء المربوطة)</strong></p>
-            <div style="margin-top: 40px; display:flex; justify-content:space-around;">
-                <div><strong>معلم الصعوبات</strong><br>....................</div>
-                <div><strong>مدير المدرسة</strong><br>....................</div>
+        <div style="border: 10px double #1565c0; padding: 40px; margin-bottom: 30px; text-align: center; height: 200mm; position: relative;">
+            <div style="position: absolute; top:0; left:0; width:100%; height:100%; opacity:0.05; background:url('assets/images/logo.png') no-repeat center center; background-size:contain;"></div>
+            
+            <h1 style="color:#d4af37; font-size:40px; margin-bottom:10px;">شهادة شكر وتقدير</h1>
+            <p style="font-size:18px;">يسر إدارة برنامج صعوبات التعلم أن تتقدم بأجمل عبارات الشكر للبطل:</p>
+            
+            <h2 style="color:#1565c0; font-size:35px; margin: 30px 0; border-bottom:2px solid #eee; display:inline-block; padding-bottom:10px;">${st.name}</h2>
+            
+            <p style="font-size:20px;">وذلك لتميزه وإتقانه لمهارة:</p>
+            <h3 style="background:#f9f9f9; padding:10px; display:inline-block;">( قراءة الكلمات البصرية )</h3>
+            
+            <div style="margin-top: 80px; display:flex; justify-content:space-between; padding:0 50px;">
+                <div style="text-align:center;">
+                    <p><strong>معلم الصعوبات</strong></p>
+                    <p style="color:#777;">أ. محمد العتيبي</p>
+                </div>
+                <div style="text-align:center;">
+                    <p><strong>مدير المدرسة</strong></p>
+                    <p style="color:#777;">....................</p>
+                </div>
             </div>
         </div>
-        <hr style="border-top: 1px dashed #ccc; margin: 20px 0;">
+        <div style="page-break-after: always;"></div>
         `;
     });
     return html;
 }
 
-// دوال فارغة (Placeholder) لبقية التقارير للحفاظ على هيكل الكود
-function generateIEPReport(ids) { return `<div style="text-align:center; padding:20px;">سيتم عرض تفاصيل الخطة هنا (نسخة للطباعة)</div>`; }
-function generateDiagnosticReport(ids) { return `<div style="text-align:center; padding:20px;">نتائج الاختبارات القبلية والبعدية</div>`; }
-function generateScheduleReport() { return `<div style="text-align:center; padding:20px;">جدول الحصص الأسبوعي (يظهر جميع الطلاب)</div>`; }
-
-// مساعدات
-function getStudentById(id) {
-    const students = JSON.parse(localStorage.getItem('students') || '[]');
-    return students.find(s => s.id == id) || {name: 'طالب غير معروف'};
-}
-
+// تحميل PDF
 function downloadPDF() {
     const element = document.getElementById('reportPaper');
     const opt = {

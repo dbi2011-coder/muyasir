@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إدارة الطلاب - ميسر التعلم</title>
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../assets/css/teacher.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
+                    <h2>ميسر التعلم</h2>
+                </div>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
+                <li><a href="students.html" class="active"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
+                <li><a href="content-library.html"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
+                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
+                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
+                <li><a href="reports.html"><span class="menu-icon">📋</span>التقارير</a></li>
+                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة الصعوبات</a></li>
+                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content-dashboard">
+            <header class="dashboard-header">
+                <button class="mobile-menu-btn">☰</button>
+                <div class="user-info">
+                    <div class="user-welcome">
+                        <div class="welcome-text">مرحباً بعودتك</div>
+                        <div class="user-name" id="userName">أ/ اسم المعلم</div>
+                    </div>
+                    <div class="user-avatar" id="userAvatar">م</div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary" onclick="showNotifications()">🔔 الإشعارات</button>
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+                <div class="content-header">
+                    <h1>إدارة ومتابعة الطلاب</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-success" onclick="showAddStudentModal()">
+                            <span>+ إضافة طالب جديد</span>
+                        </button>
+                        <button class="btn btn-primary" onclick="showImportStudentModal()">
+                            <span>📁 استيراد طالب</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="filters-section">
+                    <div class="search-box">
+                        <input type="text" id="studentSearch" placeholder="ابحث عن طالب..." class="form-control" onkeyup="searchStudents()">
+                        <button class="btn btn-primary" onclick="searchStudents()"><i class="fas fa-search"></i></button>
+                    </div>
+                    <div class="filter-options">
+                        <select id="gradeFilter" class="form-control" onchange="filterStudents()">
+                            <option value="all">جميع الصفوف</option>
+                            <option value="1">الصف الأول</option>
+                            <option value="2">الصف الثاني</option>
+                            <option value="3">الصف الثالث</option>
+                            <option value="4">الصف الرابع</option>
+                            <option value="5">الصف الخامس</option>
+                            <option value="6">الصف السادس</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table class="table" id="studentsTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>اسم الطالب</th>
+                                <th>الصف</th>
+                                <th>المادة</th>
+                                <th>نسبة التقدم</th>
+                                <th style="min-width: 350px;">الإجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsTableBody">
+                            </tbody>
+                    </table>
+                    
+                    <div id="loadingState" class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <p>جاري تحميل البيانات...</p>
+                    </div>
+
+                    <div id="emptyState" class="empty-state" style="display: none;">
+                        <div class="empty-icon">👨‍🎓</div>
+                        <h3>لا يوجد طلاب</h3>
+                        <button class="btn btn-success" onclick="showAddStudentModal()">إضافة طالب جديد</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="addStudentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>إضافة طالب جديد</h3>
+                <button class="modal-close" onclick="closeAddStudentModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addStudentForm">
+                    <div class="form-group">
+                        <label class="form-label">اسم الطالب</label>
+                        <input type="text" id="studentName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">الصف</label>
+                        <select id="studentGrade" class="form-control" required>
+                            <option value="">اختر الصف</option>
+                            <option value="1">الصف الأول</option>
+                            <option value="2">الصف الثاني</option>
+                            <option value="3">الصف الثالث</option>
+                            <option value="4">الصف الرابع</option>
+                            <option value="5">الصف الخامس</option>
+                            <option value="6">الصف السادس</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">المادة</label>
+                        <select id="studentSubject" class="form-control" required>
+                            <option value="لغتي">لغتي</option>
+                            <option value="رياضيات">رياضيات</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeAddStudentModal()">إلغاء</button>
+                <button class="btn btn-success" onclick="addNewStudent()">حفظ الطالب</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="editStudentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>تعديل بيانات الطالب</h3>
+                <button class="modal-close" onclick="document.getElementById('editStudentModal').classList.remove('show')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editStudentId">
+                <div class="form-group">
+                    <label class="form-label">اسم الطالب</label>
+                    <input type="text" id="editStudentName" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">الصف</label>
+                    <select id="editStudentGrade" class="form-control">
+                        <option value="1">الصف الأول</option>
+                        <option value="2">الصف الثاني</option>
+                        <option value="3">الصف الثالث</option>
+                        <option value="4">الصف الرابع</option>
+                        <option value="5">الصف الخامس</option>
+                        <option value="6">الصف السادس</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">المادة</label>
+                    <select id="editStudentSubject" class="form-control">
+                        <option value="لغتي">لغتي</option>
+                        <option value="رياضيات">رياضيات</option>
+                    </select>
+                </div>
+                <hr>
+                <h4 style="margin-bottom: 10px; font-size: 1rem; color: var(--secondary-color);">بيانات الدخول</h4>
+                <div class="form-group">
+                    <label class="form-label">اسم المستخدم</label>
+                    <input type="text" id="editStudentUsername" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">كلمة المرور</label>
+                    <input type="text" id="editStudentPassword" class="form-control" placeholder="اتركه فارغاً لعدم التغيير">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="document.getElementById('editStudentModal').classList.remove('show')">إلغاء</button>
+                <button class="btn btn-success" onclick="updateStudentData()">حفظ التعديلات</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="studentLoginDataModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>بيانات الدخول للطالب</h3>
+                <button class="modal-close" onclick="document.getElementById('studentLoginDataModal').classList.remove('show')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="credentials-info">
+                    <div class="credential-item">
+                        <span class="credential-label">اسم المستخدم:</span>
+                        <div style="display: flex; gap: 5px; flex: 1;">
+                            <input type="text" id="loginDataUsername" class="form-control" readonly style="background: white;">
+                            <button class="btn btn-sm btn-info" onclick="copyToClipboard('loginDataUsername')"><i class="fas fa-copy"></i></button>
+                        </div>
+                    </div>
+                    <div class="credential-item" style="margin-top: 15px;">
+                        <span class="credential-label">كلمة المرور:</span>
+                        <div style="display: flex; gap: 5px; flex: 1;">
+                            <input type="text" id="loginDataPassword" class="form-control" readonly style="background: white;">
+                            <button class="btn btn-sm btn-info" onclick="copyToClipboard('loginDataPassword')"><i class="fas fa-copy"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="document.getElementById('studentLoginDataModal').classList.remove('show')">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../assets/js/dashboard.js"></script>
+    <script src="../../assets/js/teacher.js"></script>
+    <script src="../../assets/js/auth.js"></script>
+</body>
+</html>

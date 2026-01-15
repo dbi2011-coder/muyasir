@@ -3,97 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>التقارير - ميسر التعلم</title>
-    <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/teacher.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>التقارير والإحصائيات - ميسر التعلم</title>
+    <link rel="stylesheet" href="assets/css/main.css">
+    <link rel="stylesheet" href="assets/css/dashboard.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* تنسيقات خاصة بالتقارير */
+        .reports-controls {
+            background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+            margin-bottom: 25px; display: grid; grid-template-columns: 1fr 2fr auto; gap: 20px; align-items: end;
+        }
+        .control-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #333; }
+        .control-group select, .student-selector { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 8px; }
+        
+        /* قائمة اختيار الطلاب (Checkboxes) */
+        .student-selector {
+            max-height: 150px; overflow-y: auto; background: #f9f9f9; padding: 10px; border: 1px solid #eee;
+        }
+        .student-checkbox { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; padding: 5px; cursor: pointer; transition: 0.2s; }
+        .student-checkbox:hover { background: #eef2ff; }
+        
+        /* منطقة المعاينة (الورقة A4) */
+        .report-preview-container {
+            background: #525659; padding: 40px; display: flex; justify-content: center; overflow-x: auto;
+        }
+        .report-paper {
+            background: white; width: 210mm; min-height: 297mm; padding: 20mm;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3); position: relative;
+        }
+        
+        /* جداول التقارير الرسمية */
+        .report-table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 0.9rem; }
+        .report-table th, .report-table td { border: 1px solid #000; padding: 8px 12px; text-align: center; }
+        .report-table th { background-color: #f0f0f0; font-weight: bold; }
+        .report-header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+        .report-header h2 { margin: 0 0 10px 0; font-size: 1.5rem; }
+        .report-meta { display: flex; justify-content: space-between; font-size: 0.9rem; color: #555; }
+        
+        .status-good { color: green; font-weight: bold; }
+        .status-warn { color: orange; font-weight: bold; }
+        .status-bad { color: red; font-weight: bold; }
+
+        @media print {
+            body * { visibility: hidden; }
+            #reportPaper, #reportPaper * { visibility: visible; }
+            #reportPaper { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; box-shadow: none; }
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard-container">
         <aside class="sidebar">
-            <div class="sidebar-header"><div class="logo"><h2>ميسر التعلم</h2></div></div>
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="assets/images/logo.png" alt="شعار">
+                    <h2>ميسر التعلم</h2>
+                </div>
+            </div>
             <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
+                <li><a href="dashboard.html"><span class="menu-icon">🏠</span>الرئيسية</a></li>
                 <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
-                <li><a href="content-library.html"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
-                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
-                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
-                <li><a href="reports.html" class="active"><span class="menu-icon">📋</span>التقارير</a></li>
-                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة الصعوبات</a></li>
+                <li><a href="iep.html"><span class="menu-icon">📝</span>الخطط التربوية</a></li>
+                <li><a href="reports.html" class="active"><span class="menu-icon">📊</span>التقارير</a></li>
+                <li><a href="committee.html"><span class="menu-icon">👥</span>اللجنة</a></li>
                 <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>خروج</a></li>
             </ul>
         </aside>
 
         <main class="main-content-dashboard">
             <header class="dashboard-header">
-                <button class="mobile-menu-btn">☰</button>
-                <div class="user-info"><div class="user-name" id="userName">أ/ المعلم</div><div class="user-avatar">م</div></div>
+                <div class="user-info">
+                    <div class="user-welcome">
+                        <div class="welcome-text">قسم التقارير</div>
+                        <div class="user-name" id="currentUserName">المعلم</div>
+                    </div>
+                </div>
             </header>
 
             <div class="dashboard-content">
-                <div class="content-header">
-                    <h1>التقارير والإحصائيات</h1>
-                </div>
-
-                <div class="reports-filters">
-                    <div class="filter-card">
-                        <h3>تحديد الطلاب</h3>
-                        <div class="filter-options">
-                            <div class="form-group"><label>الصف</label><select id="gradeFilter" class="form-control" onchange="filterStudents()"><option value="all">الكل</option><option value="1">الأول</option><option value="2">الثاني</option></select></div>
-                            <div class="form-group"><label>المادة</label><select id="subjectFilter" class="form-control" onchange="filterStudents()"><option value="all">الكل</option><option value="لغتي">لغتي</option><option value="رياضيات">رياضيات</option></select></div>
-                        </div>
+                <div class="reports-controls">
+                    <div class="control-group">
+                        <label>نوع التقرير:</label>
+                        <select id="reportTypeSelector" onchange="toggleStudentSelector()">
+                            <option value="">-- اختر التقرير --</option>
+                            <option value="attendance">📋 تقرير الغياب</option>
+                            <option value="progress">📈 تقرير نسب الإنجاز</option>
+                            <option value="assignments">📝 تقرير الواجبات</option>
+                            <option value="iep">🗂️ تقرير الخطط التربوية (IEP)</option>
+                            <option value="diagnostic">🔍 تقرير الاختبارات التشخيصية</option>
+                            <option value="schedule">📅 تقرير الجدول الدراسي</option>
+                            <option value="balance" id="optSessionBalance">⚖️ تقرير رصيد الحصص (خاص)</option> 
+                            <option value="committee">🤝 تقرير لجنة صعوبات التعلم</option>
+                            <option value="certificate">🏆 شهادة إنجاز مهارة</option>
+                        </select>
                     </div>
-                </div>
 
-                <div class="students-list-section">
-                    <div class="section-header">
-                        <h2>قائمة الطلاب</h2>
-                        <div class="header-actions">
-                            <button class="btn btn-primary btn-sm" onclick="selectAllStudents()">تحديد الكل</button>
-                            <button class="btn btn-success btn-sm" onclick="generateReportForSelected()">إنشاء تقرير</button>
-                        </div>
-                    </div>
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead><tr><th><input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()"></th><th>الاسم</th><th>الصف</th><th>المادة</th><th>التقدم</th><th>إجراء</th></tr></thead>
-                            <tbody id="studentsTableBody"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <div class="report-options-section" id="reportOptionsSection" style="display: none; margin-top: 30px;">
-                    <div class="report-options card p-4">
-                        <h3>خيارات التقرير</h3>
-                        <div class="form-group">
-                            <label>نوع التقرير</label>
-                            <div style="display:flex; gap:15px; flex-wrap:wrap;">
-                                <label><input type="radio" name="reportType" value="studentData" checked> بيانات</label>
-                                <label><input type="radio" name="reportType" value="diagnosticTest"> اختبار تشخيصي</label>
-                                <label><input type="radio" name="reportType" value="iep"> خطة تربوية</label>
-                                <label><input type="radio" name="reportType" value="assignments"> واجبات</label>
+                    <div class="control-group" id="studentSelectorGroup">
+                        <label>تحديد الطلاب:</label>
+                        <div class="student-selector" id="studentCheckboxes">
                             </div>
+                        <div style="margin-top:5px; font-size:0.8rem;">
+                            <label><input type="checkbox" onchange="selectAllStudents(this)"> تحديد الكل</label>
                         </div>
-                        <div class="form-group mt-2"><textarea id="reportNotes" class="form-control" placeholder="ملاحظات..."></textarea></div>
-                        <div class="mt-3"><button class="btn btn-success" onclick="generateReport()">📄 إصدار PDF</button></div>
+                    </div>
+
+                    <button class="btn btn-primary" onclick="generateReport()" style="height: 45px;">
+                        <i class="fas fa-eye"></i> عرض التقرير
+                    </button>
+                </div>
+
+                <div class="report-actions" style="margin-bottom: 10px; display: none;" id="reportActions">
+                    <button class="btn btn-success" onclick="downloadPDF()">
+                        <i class="fas fa-file-pdf"></i> تحميل PDF / طباعة
+                    </button>
+                </div>
+
+                <div class="report-preview-container">
+                    <div id="reportPaper" class="report-paper">
+                        <div style="text-align:center; color:#999; margin-top:50%;">
+                            الرجاء اختيار نوع التقرير والطلاب لعرض البيانات
+                        </div>
                     </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <div id="viewReportModal" class="modal">
-        <div class="modal-content large">
-            <div class="modal-header"><h3>معاينة التقرير</h3><button class="modal-close" onclick="closeReportModal()">×</button></div>
-            <div class="modal-body"><div id="reportPreview"></div></div>
-            <div class="modal-footer"><button class="btn btn-primary" onclick="printReport()">طباعة</button></div>
-        </div>
-    </div>
-
-    <script src="../../assets/js/auth.js"></script>
-    <script src="../../assets/js/dashboard.js"></script>
-    <script src="../../assets/js/teacher.js"></script>
-    <script src="../../assets/js/committee-reports.js"></script> 
+    <script src="assets/js/reports.js"></script>
 </body>
 </html>

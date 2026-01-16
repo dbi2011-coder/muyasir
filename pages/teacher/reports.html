@@ -51,7 +51,7 @@
         }
         .form-select-custom:focus { border-color: #4361ee; outline: none; }
 
-        /* صندوق اختيار الطلاب */
+        /* قائمة اختيار الطلاب */
         .students-selection-box {
             background: #fafafa;
             border: 2px solid #f1f1f1;
@@ -131,28 +131,31 @@
                 <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
                 <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
                 <li><a href="content-library.html"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
-                <li><a href="iep-plans.html"><span class="menu-icon">📝</span>الخطط التربوية</a></li>
-                <li><a href="tests.html"><span class="menu-icon">✅</span>الاختبارات</a></li>
                 <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
+                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
                 
-                <li><a href="reports.html" class="active"><span class="menu-icon">📈</span>التقارير</a></li>
+                <li><a href="reports.html" class="active"><span class="menu-icon">📋</span>التقارير</a></li>
                 
-                <li><a href="messages.html"><span class="menu-icon">💬</span>المراسلة</a></li>
-                <li><a href="settings.html"><span class="menu-icon">⚙️</span>الإعدادات</a></li>
+                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة الصعوبات</a></li>
                 <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
             </ul>
         </aside>
 
-        <main class="main-content">
+        <main class="main-content-dashboard">
             <header class="dashboard-header">
+                <button class="mobile-menu-btn">☰</button>
                 <div class="user-info">
                     <div class="user-welcome">
                         <div class="welcome-text">مركز التقارير</div>
                         <div class="user-name" id="teacherName">أ. المعلم</div>
                     </div>
+                    <div class="user-avatar" id="userAvatar">م</div>
                 </div>
                 <div class="header-actions">
-                    <button class="btn btn-outline"><i class="far fa-bell"></i></button>
+                    <button class="btn btn-primary">
+                        <span class="notification-icon">🔔</span>
+                        <span class="notification-badge">0</span>
+                    </button>
                 </div>
             </header>
 
@@ -213,9 +216,9 @@
         </main>
     </div>
 
-    <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/dashboard.js"></script>
     <script src="../../assets/js/teacher.js"></script>
+    <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/reports.js"></script>
 </body>
 </html>

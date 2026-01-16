@@ -18,7 +18,7 @@
            ========================================= */
         .reports-layout {
             display: grid;
-            grid-template-columns: 350px 1fr; /* عمود للتحكم وعمود للمعاينة */
+            grid-template-columns: 350px 1fr;
             gap: 25px;
             align-items: start;
         }
@@ -56,7 +56,7 @@
             background: #fafafa;
             border: 2px solid #f1f1f1;
             border-radius: 8px;
-            max-height: 300px; /* ارتفاع مناسب للقائمة */
+            max-height: 300px;
             overflow-y: auto;
             padding: 10px;
         }
@@ -74,19 +74,8 @@
         }
         .student-item:hover { background: #f0f7ff; border-color: #4361ee; }
         
-        .student-item input { 
-            margin-left: 10px; 
-            width: 18px; 
-            height: 18px; 
-            cursor: pointer; 
-        }
-        .student-item label { 
-            cursor: pointer; 
-            width: 100%; 
-            margin: 0; 
-            font-size: 0.9rem; 
-            font-weight: 500;
-        }
+        .student-item input { margin-left: 10px; width: 18px; height: 18px; cursor: pointer; }
+        .student-item label { cursor: pointer; width: 100%; margin: 0; font-size: 0.9rem; font-weight: 500; }
 
         /* زر العرض */
         .btn-generate {
@@ -113,7 +102,7 @@
         #reportPreviewArea {
             background: white;
             border-radius: 12px;
-            min-height: 600px; /* ارتفاع الورقة */
+            min-height: 600px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -123,7 +112,6 @@
             position: relative;
         }
 
-        /* استجابة للشاشات الصغيرة */
         @media (max-width: 992px) {
             .reports-layout { grid-template-columns: 1fr; }
         }
@@ -145,7 +133,7 @@
                 <li><a href="content-library.html"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
                 <li><a href="iep-plans.html"><span class="menu-icon">📝</span>الخطط التربوية</a></li>
                 <li><a href="tests.html"><span class="menu-icon">✅</span>الاختبارات</a></li>
-                <li><a href="schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
+                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
                 
                 <li><a href="reports.html" class="active"><span class="menu-icon">📈</span>التقارير</a></li>
                 

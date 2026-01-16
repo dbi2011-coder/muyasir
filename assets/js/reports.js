@@ -1,45 +1,40 @@
-// ============================================
-// 📁 الملف: assets/js/reports.js
-// الوصف: إدارة صفحة التقارير واختيار الطلاب
-// ============================================
-
 document.addEventListener('DOMContentLoaded', function() {
-    loadStudentsForSelection();
-    
-    // عرض اسم المعلم
-    const user = JSON.parse(sessionStorage.getItem('currentUser'));
-    if (user && user.user.name) {
-        document.getElementById('teacherName').textContent = user.user.name;
-    }
+    loadStudentsList();
 });
 
-/**
- * تحميل قائمة الطلاب من LocalStorage وإنشاء مربعات اختيار (Checkboxes)
- */
-function loadStudentsForSelection() {
+// 1. دالة جلب وعرض الطلاب
+function loadStudentsList() {
     const container = document.getElementById('studentsListContainer');
+    // جلب البيانات من LocalStorage
     const students = JSON.parse(localStorage.getItem('students') || '[]');
 
+    // تنظيف القائمة (حالة التحميل)
     container.innerHTML = '';
 
     if (students.length === 0) {
-        container.innerHTML = '<div class="p-3 text-center text-danger">لا يوجد طلاب مسجلين حالياً.</div>';
+        container.innerHTML = `
+            <div style="text-align:center; padding:15px; color:#888;">
+                <i class="fas fa-user-slash" style="display:block; margin-bottom:5px;"></i>
+                لا يوجد طلاب مسجلين
+            </div>`;
         return;
     }
 
+    // إنشاء عناصر القائمة
     students.forEach(student => {
         const itemDiv = document.createElement('div');
-        itemDiv.className = 'student-checkbox-item';
-        
+        itemDiv.className = 'student-item';
+
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.id = `student_${student.id}`;
-        checkbox.value = student.id;
         checkbox.name = 'selectedStudents';
+        checkbox.value = student.id;
+        checkbox.id = `st_${student.id}`;
 
         const label = document.createElement('label');
-        label.htmlFor = `student_${student.id}`;
-        label.textContent = `${student.name} (${student.grade || 'غير محدد'})`;
+        label.htmlFor = `st_${student.id}`;
+        // عرض الاسم والصف إذا وجد
+        label.textContent = student.name + (student.grade ? ` (${student.grade})` : '');
 
         itemDiv.appendChild(checkbox);
         itemDiv.appendChild(label);
@@ -47,63 +42,51 @@ function loadStudentsForSelection() {
     });
 }
 
-/**
- * تحديد الكل أو إلغاء تحديد الكل
- * @param {boolean} select - true للتحديد، false للإلغاء
- */
-function toggleSelectAll(select) {
+// 2. دالة تحديد الكل / إلغاء التحديد
+window.toggleSelectAll = function(selectAll) {
     const checkboxes = document.querySelectorAll('input[name="selectedStudents"]');
-    checkboxes.forEach(cb => cb.checked = select);
-}
+    checkboxes.forEach(cb => cb.checked = selectAll);
+};
 
-/**
- * دالة البدء في إنشاء التقرير (الهيكل الأساسي)
- */
-function initiateReport() {
+// 3. دالة التحقق والعرض المبدئي (سيتم تطويرها لكل تقرير لاحقاً)
+window.initiateReport = function() {
     const reportType = document.getElementById('reportType').value;
-    
-    // الحصول على معرفات الطلاب المحددين
-    const selectedCheckboxes = document.querySelectorAll('input[name="selectedStudents"]:checked');
-    const selectedStudentIds = Array.from(selectedCheckboxes).map(cb => cb.value);
+    const checkboxes = document.querySelectorAll('input[name="selectedStudents"]:checked');
+    const selectedIds = Array.from(checkboxes).map(cb => cb.value);
 
     // التحقق من المدخلات
     if (!reportType) {
-        alert("الرجاء اختيار نوع التقرير أولاً.");
+        alert("⚠️ الرجاء اختيار نوع التقرير أولاً.");
         return;
     }
 
-    if (selectedStudentIds.length === 0) {
-        alert("الرجاء اختيار طالب واحد على الأقل.");
+    if (selectedIds.length === 0) {
+        alert("⚠️ الرجاء اختيار طالب واحد على الأقل.");
         return;
     }
 
-    // عرض رسالة مؤقتة (هنا ستقوم لاحقاً ببرمجة منطق كل تقرير)
+    // تجهيز منطقة المعاينة (Placeholder)
     const previewArea = document.getElementById('reportPreviewArea');
     const reportNames = {
         'attendance': 'تقرير الغياب',
         'achievement': 'تقرير نسب الإنجاز',
         'assignments': 'تقرير الواجبات',
         'iep': 'تقرير الخطط التربوية الفردية',
-        'diagnostic': 'تقرير الاختبارات التشخيصية',
+        'diagnostic': 'تقرير التشخيص',
         'schedule': 'تقرير الجدول الدراسي',
         'balance': 'تقرير رصيد الحصص',
         'committee': 'تقرير لجنة صعوبات التعلم'
     };
 
+    // عرض رسالة نجاح مؤقتة
     previewArea.innerHTML = `
-        <div style="text-align: right; width: 100%;">
-            <h3 style="color: var(--primary-color); border-bottom: 2px solid #eee; padding-bottom: 10px;">
-                ${reportNames[reportType]}
-            </h3>
-            <div class="alert alert-info mt-3">
-                <strong>تم اختيار ${selectedStudentIds.length} طالب/طلاب لهذا التقرير.</strong>
-                <br>
-                (سيتم عرض التفاصيل والبيانات هنا لاحقاً عند برمجة تفاصيل التقرير)
-            </div>
-            <div style="margin-top: 20px;">
-                <h5>المعرفات المختارة (للمطور):</h5>
-                <code>${JSON.stringify(selectedStudentIds)}</code>
+        <div style="text-align: center; padding: 30px;">
+            <div style="color: green; font-size: 3rem; margin-bottom: 20px;"><i class="fas fa-check-circle"></i></div>
+            <h3>جاري إعداد ${reportNames[reportType]}...</h3>
+            <p>تم اختيار <strong>${selectedIds.length}</strong> طالب/طلاب.</p>
+            <div style="margin-top: 20px; color: #555; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
+                (هنا سيتم بناء الجدول وتفاصيل التقرير في الخطوات القادمة)
             </div>
         </div>
     `;
-}
+};

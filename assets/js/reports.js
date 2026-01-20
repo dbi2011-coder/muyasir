@@ -1,40 +1,56 @@
+// ============================================
+// 📁 الملف: assets/js/reports.js
+// الوصف: إدارة صفحة التقارير واختيار الطلاب الفعليين
+// ============================================
+
 document.addEventListener('DOMContentLoaded', function() {
-    loadStudentsList();
+    loadStudentsForSelection();
+    
+    // عرض اسم المعلم من الجلسة الحالية
+    const user = JSON.parse(sessionStorage.getItem('currentUser'));
+    if (user && user.user && user.user.name) {
+        document.getElementById('teacherName').textContent = user.user.name;
+    }
 });
 
-// 1. دالة جلب وعرض الطلاب
-function loadStudentsList() {
+/**
+ * تحميل قائمة الطلاب الفعليين من LocalStorage
+ */
+function loadStudentsForSelection() {
     const container = document.getElementById('studentsListContainer');
-    // جلب البيانات من LocalStorage
-    const students = JSON.parse(localStorage.getItem('students') || '[]');
+    
+    // جلب كافة المستخدمين من القائمة الموحدة
+    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    
+    // جلب بيانات المعلم الحالي
+    const currentUserData = JSON.parse(sessionStorage.getItem('currentUser'));
+    const currentTeacherId = currentUserData && currentUserData.user ? currentUserData.user.id : null;
 
-    // تنظيف القائمة (حالة التحميل)
+    // تصفية المستخدمين: جلب الطلاب المرتبطين بهذا المعلم فقط
+    const students = allUsers.filter(u => u.role === 'student' && u.teacherId === currentTeacherId);
+
     container.innerHTML = '';
 
+    // إذا لم يتم العثور على طلاب حقيقيين
     if (students.length === 0) {
-        container.innerHTML = `
-            <div style="text-align:center; padding:15px; color:#888;">
-                <i class="fas fa-user-slash" style="display:block; margin-bottom:5px;"></i>
-                لا يوجد طلاب مسجلين
-            </div>`;
+        container.innerHTML = '<div class="p-3 text-center text-danger">لا يوجد طلاب مسجلين تابعين لك حالياً.</div>';
         return;
     }
 
-    // إنشاء عناصر القائمة
+    // عرض الطلاب الحقيقيين في القائمة
     students.forEach(student => {
         const itemDiv = document.createElement('div');
-        itemDiv.className = 'student-item';
-
+        itemDiv.className = 'student-item'; // تم تعديل الكلاس ليتوافق مع CSS في ملف HTML
+        
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
-        checkbox.name = 'selectedStudents';
+        checkbox.id = `student_${student.id}`;
         checkbox.value = student.id;
-        checkbox.id = `st_${student.id}`;
+        checkbox.name = 'selectedStudents';
 
         const label = document.createElement('label');
-        label.htmlFor = `st_${student.id}`;
-        // عرض الاسم والصف إذا وجد
-        label.textContent = student.name + (student.grade ? ` (${student.grade})` : '');
+        label.htmlFor = `student_${student.id}`;
+        label.textContent = `${student.name} - ${student.grade || 'بدون صف'}`;
 
         itemDiv.appendChild(checkbox);
         itemDiv.appendChild(label);
@@ -42,51 +58,54 @@ function loadStudentsList() {
     });
 }
 
-// 2. دالة تحديد الكل / إلغاء التحديد
-window.toggleSelectAll = function(selectAll) {
+/**
+ * تحديد الكل أو إلغاء تحديد الكل
+ */
+function toggleSelectAll(select) {
     const checkboxes = document.querySelectorAll('input[name="selectedStudents"]');
-    checkboxes.forEach(cb => cb.checked = selectAll);
-};
+    checkboxes.forEach(cb => cb.checked = select);
+}
 
-// 3. دالة التحقق والعرض المبدئي (سيتم تطويرها لكل تقرير لاحقاً)
-window.initiateReport = function() {
+/**
+ * دالة البدء في إنشاء التقرير
+ */
+function initiateReport() {
     const reportType = document.getElementById('reportType').value;
-    const checkboxes = document.querySelectorAll('input[name="selectedStudents"]:checked');
-    const selectedIds = Array.from(checkboxes).map(cb => cb.value);
+    const selectedCheckboxes = document.querySelectorAll('input[name="selectedStudents"]:checked');
+    const selectedStudentIds = Array.from(selectedCheckboxes).map(cb => cb.value);
 
-    // التحقق من المدخلات
     if (!reportType) {
-        alert("⚠️ الرجاء اختيار نوع التقرير أولاً.");
+        alert("الرجاء اختيار نوع التقرير أولاً.");
         return;
     }
 
-    if (selectedIds.length === 0) {
-        alert("⚠️ الرجاء اختيار طالب واحد على الأقل.");
+    if (selectedStudentIds.length === 0) {
+        alert("الرجاء اختيار طالب واحد على الأقل.");
         return;
     }
 
-    // تجهيز منطقة المعاينة (Placeholder)
     const previewArea = document.getElementById('reportPreviewArea');
     const reportNames = {
         'attendance': 'تقرير الغياب',
         'achievement': 'تقرير نسب الإنجاز',
         'assignments': 'تقرير الواجبات',
         'iep': 'تقرير الخطط التربوية الفردية',
-        'diagnostic': 'تقرير التشخيص',
+        'diagnostic': 'تقرير الاختبارات التشخيصية',
         'schedule': 'تقرير الجدول الدراسي',
         'balance': 'تقرير رصيد الحصص',
         'committee': 'تقرير لجنة صعوبات التعلم'
     };
 
-    // عرض رسالة نجاح مؤقتة
+    // عرض المعاينة الأولية للطلاب المختارين
     previewArea.innerHTML = `
-        <div style="text-align: center; padding: 30px;">
-            <div style="color: green; font-size: 3rem; margin-bottom: 20px;"><i class="fas fa-check-circle"></i></div>
-            <h3>جاري إعداد ${reportNames[reportType]}...</h3>
-            <p>تم اختيار <strong>${selectedIds.length}</strong> طالب/طلاب.</p>
-            <div style="margin-top: 20px; color: #555; background: #f9f9f9; padding: 15px; border-radius: 8px; border: 1px solid #eee;">
-                (هنا سيتم بناء الجدول وتفاصيل التقرير في الخطوات القادمة)
+        <div style="text-align: right; width: 100%; padding: 20px;">
+            <h3 style="color: #4361ee; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+                ${reportNames[reportType]}
+            </h3>
+            <div class="alert alert-info mt-3" style="background: #e7f0ff; padding: 15px; border-radius: 8px;">
+                <strong>تم اختيار ${selectedStudentIds.length} طالب/طلاب.</strong>
+                <p>جاري استخراج البيانات من سجلات النظام...</p>
             </div>
         </div>
     `;
-};
+}

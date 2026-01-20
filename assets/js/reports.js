@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: النسخة الكاملة والنهائية لإدارة التقارير واستخراج الغياب
+// الوصف: النسخة الشاملة والنهائية لاستخراج تقارير الطلاب والغياب الفعلي
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -15,20 +15,24 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 /**
- * 1. تحميل قائمة الطلاب الفعليين
+ * 1. تحميل قائمة الطلاب الفعليين المضافين في النظام
  */
 function loadStudentsForSelection() {
     const container = document.getElementById('studentsListContainer');
     if (!container) return;
 
-    // جلب الطلاب من القائمة الموحدة users
+    // جلب الطلاب من مصفوفة users الموحدة (التي يستخدمها ملف teacher.js)
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    const students = allUsers.filter(u => u.role === 'student');
+    const sessionData = JSON.parse(sessionStorage.getItem('currentUser'));
+    const currentTeacherId = sessionData && sessionData.user ? sessionData.user.id : null;
+
+    // تصفية الطلاب التابعين لهذا المعلم فقط
+    const students = allUsers.filter(u => u.role === 'student' && u.teacherId === currentTeacherId);
 
     container.innerHTML = '';
 
     if (students.length === 0) {
-        container.innerHTML = '<div class="p-3 text-center text-danger">لا يوجد طلاب مضافين في النظام حالياً.</div>';
+        container.innerHTML = '<div class="p-3 text-center text-danger">لا يوجد طلاب مضافين تابعين لك.</div>';
         return;
     }
 
@@ -37,7 +41,7 @@ function loadStudentsForSelection() {
         itemDiv.className = 'student-checkbox-item';
         itemDiv.style.display = "flex";
         itemDiv.style.alignItems = "center";
-        itemDiv.style.padding = "10px";
+        itemDiv.style.padding = "8px";
         itemDiv.style.borderBottom = "1px solid #f0f0f0";
         
         const checkbox = document.createElement('input');
@@ -60,7 +64,7 @@ function loadStudentsForSelection() {
 }
 
 /**
- * 2. التحكم في الاختيارات
+ * 2. التحكم في تحديد وإلغاء تحديد الكل
  */
 function toggleSelectAll(select) {
     const checkboxes = document.querySelectorAll('input[name="selectedStudents"]');
@@ -68,51 +72,59 @@ function toggleSelectAll(select) {
 }
 
 /**
- * 3. معالجة زر عرض التقرير
+ * 3. معالجة زر "عرض التقرير"
  */
 function initiateReport() {
     const reportType = document.getElementById('reportType').value;
     const selectedCheckboxes = document.querySelectorAll('input[name="selectedStudents"]:checked');
     const selectedStudentIds = Array.from(selectedCheckboxes).map(cb => cb.value);
 
-    if (!reportType) { alert("الرجاء اختيار نوع التقرير."); return; }
-    if (selectedStudentIds.length === 0) { alert("الرجاء اختيار طالب واحد على الأقل."); return; }
+    if (!reportType) {
+        alert("الرجاء اختيار نوع التقرير.");
+        return;
+    }
 
+    if (selectedStudentIds.length === 0) {
+        alert("الرجاء اختيار طالب واحد على الأقل.");
+        return;
+    }
+
+    // استدعاء التقرير المطلوب
     if (reportType === 'attendance') {
         generateAttendanceReport(selectedStudentIds);
     } else {
         document.getElementById('reportPreviewArea').innerHTML = `
             <div style="padding:40px; text-align:center;">
-                <i class="fas fa-tools fa-3x" style="color:#ccc;"></i>
-                <p style="margin-top:15px; color:#666;">تقرير (${reportType}) جاري العمل على ربط بياناته...</p>
+                <i class="fas fa-tools fa-3x" style="color:#ccc; margin-bottom:15px;"></i>
+                <p style="color:#666;">تقرير (${reportType}) قيد التطوير وربط البيانات حالياً.</p>
             </div>`;
     }
 }
 
 /**
- * 4. توليد تقرير الغياب (البحث الذكي في السجلات)
+ * 4. توليد تقرير الغياب (يرتبط بسجلات studentProgress و studentActivities)
  */
 function generateAttendanceReport(studentIds) {
     const previewArea = document.getElementById('reportPreviewArea');
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
     
-    // البحث عن بيانات الغياب في كل المصادر الممكنة
-    const logs = JSON.parse(localStorage.getItem('dailyTrackingLogs') || 
-                            localStorage.getItem('attendance') || 
-                            localStorage.getItem('studentActivities') || '[]');
+    // جلب السجلات التي يستخدمها ملف student-profile.js
+    const progressLogs = JSON.parse(localStorage.getItem('studentProgress') || '[]');
+    const activities = JSON.parse(localStorage.getItem('studentActivities') || '[]');
 
     let reportHTML = `
-        <div id="printableArea" style="direction:rtl; font-family:'Tajawal',sans-serif; padding:20px;">
-            <div style="text-align:center; border-bottom:2px solid #4361ee; padding-bottom:15px; margin-bottom:20px;">
-                <h2 style="color:#4361ee;">سجل غياب الطلاب</h2>
-                <span>تاريخ التقرير: ${new Date().toLocaleDateString('ar-EG')}</span>
+        <div id="printableArea" style="direction:rtl; font-family:'Tajawal',sans-serif; padding:20px; background:white;">
+            <div style="text-align:center; border-bottom:3px double #4361ee; padding-bottom:15px; margin-bottom:20px;">
+                <h2 style="color:#4361ee; margin:0;">سجل حضور وغياب الطلاب</h2>
+                <small>تاريخ الاستخراج: ${new Date().toLocaleDateString('ar-EG')}</small>
             </div>
-            <table style="width:100%; border-collapse:collapse; background:white;">
+            
+            <table style="width:100%; border-collapse:collapse; margin-top:10px;">
                 <thead>
-                    <tr style="background:#f8f9fa;">
+                    <tr style="background:#f4f7fe; color:#4361ee;">
                         <th style="padding:12px; border:1px solid #ddd; text-align:right;">اسم الطالب</th>
-                        <th style="padding:12px; border:1px solid #ddd; text-align:center;">أيام الغياب</th>
-                        <th style="padding:12px; border:1px solid #ddd; text-align:right;">التواريخ</th>
+                        <th style="padding:12px; border:1px solid #ddd; text-align:center; width:120px;">أيام الغياب</th>
+                        <th style="padding:12px; border:1px solid #ddd; text-align:right;">التواريخ المسجلة</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -121,25 +133,29 @@ function generateAttendanceReport(studentIds) {
     studentIds.forEach(id => {
         const student = allUsers.find(u => String(u.id) === String(id));
         if (student) {
-            // البحث عن حالات الغياب المرتبطة بهذا الطالب
-            const studentAbsences = logs.filter(entry => {
-                const matchId = String(entry.studentId) === String(id);
-                const isAbsent = entry.status === 'absent' || 
-                                 entry.status === 'غياب' || 
-                                 entry.attendance === 'غياب' ||
-                                 entry.type === 'absence';
-                return matchId && isAbsent;
-            });
+            // البحث عن حالات الغياب في سجل المتابعة اليومية
+            const absInProgress = progressLogs.filter(p => 
+                String(p.studentId) === String(id) && (p.status === 'absent' || p.attendance === 'غياب')
+            );
 
-            const dates = studentAbsences.length > 0 
-                ? studentAbsences.map(a => `<span style="background:#fff5f5; color:#c92a2a; padding:2px 6px; border-radius:4px; border:1px solid #ffc9c9; margin:2px; display:inline-block; font-size:12px;">${a.date || a.timestamp || 'غير مؤرخ'}</span>`).join('')
-                : '<span style="color:#2b8a3e;">لا يوجد غياب مسجل</span>';
+            // البحث عن كلمة "غياب" في تفاصيل الأنشطة (لضمان الشمولية)
+            const absInActivities = activities.filter(a => 
+                String(a.studentId) === String(id) && 
+                (a.type === 'absence' || (a.details && a.details.includes('غياب')))
+            );
+
+            // دمج النتائج وحذف التكرار بناءً على التاريخ
+            const allAbsences = [...absInProgress, ...absInActivities];
+            
+            const datesList = allAbsences.length > 0 
+                ? allAbsences.map(a => `<span style="background:#fff5f5; color:#e03131; border:1px solid #ffa8a8; padding:2px 6px; border-radius:4px; margin:2px; display:inline-block; font-size:12px;">${a.date || a.timestamp || 'غير مؤرخ'}</span>`).join('')
+                : '<span style="color:#2f9e44; font-size:13px;">لا يوجد غياب مسجل</span>';
 
             reportHTML += `
                 <tr>
                     <td style="padding:12px; border:1px solid #ddd; font-weight:bold;">${student.name}</td>
-                    <td style="padding:12px; border:1px solid #ddd; text-align:center; background:#fffcf0;">${studentAbsences.length}</td>
-                    <td style="padding:12px; border:1px solid #ddd;">${dates}</td>
+                    <td style="padding:12px; border:1px solid #ddd; text-align:center; background:#fffcf0; font-size:18px;">${allAbsences.length}</td>
+                    <td style="padding:12px; border:1px solid #ddd;">${datesList}</td>
                 </tr>
             `;
         }
@@ -148,9 +164,12 @@ function generateAttendanceReport(studentIds) {
     reportHTML += `
                 </tbody>
             </table>
-            <button onclick="window.print()" style="margin-top:20px; background:#4361ee; color:white; border:none; padding:10px 25px; border-radius:6px; cursor:pointer;">
-                <i class="fas fa-print"></i> طباعة التقرير
-            </button>
+            
+            <div style="margin-top:30px; text-align:center;" class="no-print">
+                <button onclick="window.print()" style="background:#4361ee; color:white; border:none; padding:12px 30px; border-radius:8px; cursor:pointer; font-weight:bold; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+                    <i class="fas fa-print"></i> طباعة هذا التقرير
+                </button>
+            </div>
         </div>
     `;
 

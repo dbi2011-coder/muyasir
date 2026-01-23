@@ -1,9 +1,76 @@
-// ===========================================
-// كود توليد تقرير الغياب (يضاف داخل reports.js)
-// ===========================================
+// ============================================
+// 📁 الملف: assets/js/reports.js
+// الوصف: إدارة صفحة التقارير (تم الإصلاح ليتوافق مع HTML)
+// ============================================
 
-document.getElementById('generateReportBtn').addEventListener('click', function() {
-    const reportType = document.getElementById('reportType').value;
+document.addEventListener('DOMContentLoaded', function() {
+    loadStudentsForSelection();
+    
+    // عرض اسم المعلم من الجلسة الحالية
+    const user = JSON.parse(sessionStorage.getItem('currentUser'));
+    if (user && user.user && user.user.name) {
+        const teacherNameElem = document.getElementById('teacherName');
+        if (teacherNameElem) teacherNameElem.textContent = user.user.name;
+    }
+});
+
+/**
+ * تحميل قائمة الطلاب الفعليين
+ */
+function loadStudentsForSelection() {
+    const container = document.getElementById('studentsListContainer');
+    if (!container) return;
+
+    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const currentUserData = JSON.parse(sessionStorage.getItem('currentUser'));
+    const currentTeacherId = currentUserData && currentUserData.user ? currentUserData.user.id : null;
+
+    // تصفية الطلاب التابعين للمعلم
+    const students = allUsers.filter(u => u.role === 'student' && u.teacherId === currentTeacherId);
+
+    container.innerHTML = '';
+
+    if (students.length === 0) {
+        container.innerHTML = '<div class="p-3 text-center text-danger">لا يوجد طلاب مسجلين تابعين لك حالياً.</div>';
+        return;
+    }
+
+    students.forEach(student => {
+        const div = document.createElement('div');
+        div.className = 'student-checkbox-item';
+        div.innerHTML = `
+            <label style="display: block; padding: 5px; cursor: pointer;">
+                <input type="checkbox" name="selectedStudents" value="${student.id}">
+                <span style="margin-right: 10px; font-weight: bold;">${student.name}</span>
+                <span style="color: #666; font-size: 0.9em;">(${student.grade || 'غير محدد'})</span>
+            </label>
+        `;
+        container.appendChild(div);
+    });
+}
+
+/**
+ * دالة تحديد الكل / إلغاء تحديد الكل
+ * تم ربطها بـ window لتعمل مع onclick في HTML
+ */
+window.toggleSelectAll = function() {
+    const checkboxes = document.querySelectorAll('input[name="selectedStudents"]');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    
+    checkboxes.forEach(cb => {
+        cb.checked = !allChecked;
+    });
+};
+
+/**
+ * الدالة الرئيسية لتوليد التقرير
+ * تم ربطها بـ window لتعمل مع onclick="initiateReport()"
+ */
+window.initiateReport = function() {
+    const reportTypeElem = document.getElementById('reportType');
+    if (!reportTypeElem) return;
+
+    const reportType = reportTypeElem.value;
     const selectedCheckboxes = document.querySelectorAll('input[name="selectedStudents"]:checked');
     const selectedStudentIds = Array.from(selectedCheckboxes).map(cb => cb.value);
 
@@ -18,76 +85,83 @@ document.getElementById('generateReportBtn').addEventListener('click', function(
     }
 
     const previewArea = document.getElementById('reportPreviewArea');
-    
-    // --- هنا يبدأ التعديل الخاص بتقرير الغياب ---
+    if (!previewArea) return;
+
+    // توجيه الطلب حسب نوع التقرير
     if (reportType === 'attendance') {
         generateAttendanceReport(selectedStudentIds, previewArea);
     } else {
-        // يمكنك إضافة بقية التقارير لاحقاً هنا
-        previewArea.innerHTML = `<div class="alert alert-warning">عفواً، تقرير "${reportType}" قيد التطوير حالياً.</div>`;
+        previewArea.innerHTML = `
+            <div class="alert alert-warning" style="text-align:center; margin-top:20px;">
+                عفواً، تقرير "${reportType}" قيد التطوير حالياً.
+            </div>`;
     }
-});
+};
 
 /**
- * دالة خاصة لحساب الغياب وتوليد الجدول
+ * منطق حساب وتوليد تقرير الغياب
  */
 function generateAttendanceReport(studentIds, container) {
-    // 1. جلب البيانات من LocalStorage
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    // نفترض أن سجل المتابعة اليومي مخزن باسم 'student_events'
+    // جلب سجلات الأحداث (تأكد أن الاسم student_events مطابق لما يحفظ في بروفايل الطالب)
     const allEvents = JSON.parse(localStorage.getItem('student_events') || '[]');
 
     let tableHTML = `
-        <div style="text-align: right; width: 100%; padding: 20px;">
-            <h3 style="color: #4361ee; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom:20px;">
-                تقرير الغياب
-            </h3>
-            <table class="table table-bordered" style="width:100%; text-align:right; border-collapse:collapse; margin-top:10px;">
+        <div style="text-align: right; width: 100%; padding: 20px; background: #fff; border-radius: 8px;">
+            <div class="report-header" style="text-align: center; margin-bottom: 30px;">
+                <h2 style="color: #4361ee; margin-bottom: 10px;">تقرير متابعة الغياب</h2>
+                <p style="color: #666;">تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}</p>
+            </div>
+            
+            <table class="table table-bordered" style="width:100%; text-align:right; border-collapse:collapse; margin-top:10px;" border="1">
                 <thead style="background-color: #f8f9fa;">
                     <tr>
                         <th style="padding:12px; border:1px solid #dee2e6;">اسم الطالب</th>
-                        <th style="padding:12px; border:1px solid #dee2e6;">الصف</th>
-                        <th style="padding:12px; border:1px solid #dee2e6; width: 100px;">عدد الأيام</th>
-                        <th style="padding:12px; border:1px solid #dee2e6;">تواريخ الغياب</th>
+                        <th style="padding:12px; border:1px solid #dee2e6;">عدد أيام الغياب</th>
+                        <th style="padding:12px; border:1px solid #dee2e6;">التواريخ</th>
                     </tr>
                 </thead>
                 <tbody>
     `;
 
-    let hasData = false;
-
     studentIds.forEach(studentId => {
         const student = allUsers.find(u => u.id == studentId);
         if (!student) return;
 
-        // 2. فلترة السجلات: نبحث عن سجلات الطالب التي حالتها "غائب"
-        // ملاحظة: نتأكد من مطابقة الكلمة المستخدمة في سجل التقدم (غائب / غياب / Absent)
+        // البحث عن حالات الغياب
+        // نبحث عن كلمة "غائب" أو نوع "absence"
         const absences = allEvents.filter(event => 
             event.studentId == studentId && 
-            (event.status === 'غائب' || event.title?.includes('غائب') || event.type === 'absence')
+            (
+                (event.status && event.status.includes('غائب')) || 
+                (event.title && event.title.includes('غائب')) ||
+                event.type === 'absence'
+            )
         );
 
-        const absenceCount = absences.length;
-        
-        // استخراج التواريخ وتنسيقها
-        const absenceDates = absences.map(e => e.date).sort().join(' ، ');
+        const count = absences.length;
+        // تنسيق التواريخ
+        const dates = absences.map(e => `<span style="display:inline-block; background:#ffebee; padding:2px 6px; border-radius:4px; margin:2px; font-size:0.85em;">${e.date}</span>`).join(' ');
 
         tableHTML += `
             <tr>
                 <td style="padding:10px; border:1px solid #dee2e6; font-weight:bold;">${student.name}</td>
-                <td style="padding:10px; border:1px solid #dee2e6;">${student.grade || '-'}</td>
-                <td style="padding:10px; border:1px solid #dee2e6; text-align:center; color:${absenceCount > 0 ? 'red' : 'green'}">${absenceCount}</td>
-                <td style="padding:10px; border:1px solid #dee2e6; font-size:0.9em;">${absenceCount > 0 ? absenceDates : 'لا يوجد غياب'}</td>
+                <td style="padding:10px; border:1px solid #dee2e6; text-align:center; font-size:1.1em; color:${count > 0 ? '#e74c3c' : '#2ecc71'}">
+                    ${count}
+                </td>
+                <td style="padding:10px; border:1px solid #dee2e6;">
+                    ${count > 0 ? dates : 'لا يوجد غياب'}
+                </td>
             </tr>
         `;
-        hasData = true;
     });
 
     tableHTML += `
                 </tbody>
             </table>
+            
             <div style="margin-top: 30px; text-align: left;">
-                <button onclick="window.print()" class="btn btn-primary no-print">طباعة التقرير</button>
+                <button onclick="window.print()" class="btn btn-primary no-print" style="padding: 10px 20px; background: #4361ee; color: white; border: none; border-radius: 5px; cursor: pointer;">طباعة التقرير</button>
             </div>
         </div>
     `;

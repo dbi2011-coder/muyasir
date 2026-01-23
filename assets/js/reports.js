@@ -1,9 +1,85 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: إدارة التقارير (متوافق مع student-profile.js)
+// الوصف: إدارة التقارير (منطق الغياب + تنسيق الطباعة الاحترافي)
 // ============================================
 
-// 1. التعريفات العامة (لتعمل مع أزرار HTML)
+// 1. حقن أنماط الطباعة (CSS) فور تحميل الملف
+// هذا يضمن أن الطباعة ستكون منسقة دائماً
+(function injectPrintStyles() {
+    const style = document.createElement('style');
+    style.innerHTML = `
+        @media print {
+            /* إخفاء كل عناصر الواجهة */
+            body * {
+                visibility: hidden;
+            }
+            .main-sidebar, .header, .sidebar, .no-print, button, input, select {
+                display: none !important;
+            }
+            
+            /* إظهار منطقة التقرير فقط */
+            #reportPreviewArea, #reportPreviewArea * {
+                visibility: visible;
+            }
+            
+            #reportPreviewArea {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                background: white;
+                direction: rtl;
+            }
+
+            /* تنسيق الجدول للطباعة */
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                border: 2px solid #000 !important;
+                font-family: 'Times New Roman', serif;
+                font-size: 14pt;
+            }
+            th, td {
+                border: 1px solid #000 !important;
+                padding: 8px !important;
+                color: #000 !important;
+            }
+            th {
+                background-color: #f0f0f0 !important;
+                -webkit-print-color-adjust: exact; /* لضمان طباعة اللون الرمادي */
+                font-weight: bold;
+                text-align: center;
+            }
+
+            /* تنسيق الترويسة والعنوان */
+            .report-header-print {
+                display: flex !important;
+                justify-content: space-between;
+                align-items: center;
+                border-bottom: 2px solid #000;
+                margin-bottom: 20px;
+                padding-bottom: 10px;
+                text-align: center;
+            }
+            .report-title-main {
+                font-size: 24pt;
+                font-weight: bold;
+                text-decoration: underline;
+                margin: 20px 0;
+                text-align: center !important;
+                width: 100%;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+})();
+
+// ============================================
+// 2. التعريفات الأساسية والدوال
+// ============================================
+
 window.toggleSelectAll = function() {
     const checkboxes = document.querySelectorAll('input[name="selectedStudents"]');
     const allChecked = Array.from(checkboxes).every(cb => cb.checked);
@@ -23,7 +99,7 @@ window.initiateReport = function() {
     if (reportType === 'attendance') {
         generateAttendanceReport(selectedStudentIds, previewArea);
     } else {
-        previewArea.innerHTML = `<div class="alert alert-warning text-center">عفواً، هذا التقرير قيد التطوير.</div>`;
+        previewArea.innerHTML = `<div class="alert alert-warning text-center no-print">عفواً، هذا التقرير قيد التطوير.</div>`;
     }
 };
 
@@ -32,7 +108,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadStudentsForSelection();
 });
 
-// 2. دوال التحميل
 function updateTeacherName() {
     try {
         const sessionData = JSON.parse(sessionStorage.getItem('currentUser'));
@@ -50,7 +125,6 @@ function loadStudentsForSelection() {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
     const sessionData = JSON.parse(sessionStorage.getItem('currentUser'));
     
-    // تحديد هوية المعلم
     let teacherId = null; 
     let isAdmin = false;
 
@@ -64,14 +138,12 @@ function loadStudentsForSelection() {
         }
     }
 
-    // تصفية الطلاب
     let students = allUsers.filter(u => {
         if (u.role !== 'student') return false;
         if (isAdmin) return true;
         return String(u.teacherId) === teacherId;
     });
 
-    // شبكة أمان: إذا لم يجد طلاباً، يعرض الكل (للتجربة)
     if (students.length === 0 && !isAdmin) {
         students = allUsers.filter(u => u.role === 'student');
     }
@@ -95,25 +167,44 @@ function loadStudentsForSelection() {
     });
 }
 
-// 3. منطق تقرير الغياب (المصحح بناءً على ملفك)
+// ============================================
+// 3. منطق تقرير الغياب (مع التصميم الرسمي)
+// ============================================
 function generateAttendanceReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const allEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]'); // المفتاح الصحيح
     
-    // ✅ تصحيح: استخدام المفتاح الصحيح 'studentEvents' كما هو في ملفك
-    const allEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]');
-    
+    // إعداد الترويسة الرسمية (تظهر في الطباعة فقط بشكل منسق)
+    const printHeader = `
+        <div class="report-header-print" style="display:none;">
+            <div style="text-align:right; font-size:12px;">
+                <strong>المملكة العربية السعودية</strong><br>
+                <strong>وزارة التعليم</strong><br>
+                <strong>برنامج صعوبات التعلم</strong>
+            </div>
+            <div style="text-align:center;">
+                <h2 style="margin:0;">بسم الله الرحمن الرحيم</h2>
+            </div>
+            <div style="text-align:left; font-size:12px;">
+                <strong>التاريخ:</strong> ${new Date().toLocaleDateString('ar-SA')}<br>
+                <strong>الفصل الدراسي:</strong> الثاني
+            </div>
+        </div>
+    `;
+
     let tableHTML = `
+        ${printHeader}
         <div style="background:white; padding:20px; border-radius:8px;">
             <div class="text-center mb-4">
-                <h3 style="color:#4361ee;">تقرير متابعة الغياب</h3>
-                <small style="color:#666">تاريخ: ${new Date().toLocaleDateString('ar-SA')}</small>
+                <h1 class="report-title-main" style="color:#4361ee; margin-bottom:10px; text-align:center;">تقرير متابعة الغياب</h1>
             </div>
-            <table class="table table-bordered" style="width:100%; text-align:right; direction:rtl;" border="1">
+            
+            <table class="table table-bordered" style="width:100%; text-align:right; direction:rtl; border:1px solid #000;" border="1">
                 <thead style="background:#f8f9fa;">
                     <tr>
-                        <th style="padding:10px;">الطالب</th>
-                        <th style="padding:10px; width:100px; text-align:center;">عدد الأيام</th>
-                        <th style="padding:10px;">تواريخ الغياب</th>
+                        <th style="padding:10px; width:25%;">اسم الطالب</th>
+                        <th style="padding:10px; width:10%;">عدد الأيام</th>
+                        <th style="padding:10px;">تواريخ وتفاصيل الغياب</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -123,53 +214,56 @@ function generateAttendanceReport(studentIds, container) {
         const student = allUsers.find(u => u.id == studentId);
         if (!student) return;
 
-        // البحث عن سجلات الطالب
+        // البحث الدقيق عن الغياب
         const studentRecords = allEvents.filter(e => e.studentId == studentId);
-
-        // ✅ تصحيح: البحث عن نوع 'auto-absence' أو كلمة غائب
         const absences = studentRecords.filter(e => {
-            // 1. هل النوع هو غياب تلقائي؟ (حسب student-profile.js)
             if (e.type === 'auto-absence') return true;
-            
-            // 2. هل الحالة هي غياب؟
             if (e.status === 'absence' || e.status === 'غائب') return true;
-
-            // 3. بحث نصي احتياطي
             const str = (e.title + ' ' + e.note).toLowerCase();
             return str.includes('غائب') || str.includes('absence');
         });
 
         const count = absences.length;
         
-        // تنسيق التواريخ
+        // تنسيق التواريخ بشكل نصي بسيط للطباعة
         const details = absences.map(a => {
-            // استخراج التاريخ بدقة
             let dateStr = a.date || '';
             if(dateStr.includes('T')) dateStr = dateStr.split('T')[0];
-            
-            return `<span style="background:#ffebee; color:#c0392b; padding:2px 6px; border-radius:4px; font-size:0.9em; margin:2px; display:inline-block; border:1px solid #ffcdd2;">
-                ${dateStr}
-            </span>`;
-        }).join(' ');
+            const reason = a.note && a.note !== 'undefined' ? `(${a.note})` : '';
+            return `${dateStr} ${reason}`;
+        }).join(' ، ');
 
         tableHTML += `
             <tr>
                 <td style="padding:10px; font-weight:bold;">${student.name}</td>
-                <td style="padding:10px; text-align:center; font-weight:bold; font-size:1.2em; color:${count>0?'red':'green'}">
-                    ${count}
-                </td>
-                <td style="padding:10px;">
-                    ${count > 0 ? details : '<span style="color:green">منتظم (لا يوجد غياب)</span>'}
+                <td style="padding:10px; text-align:center; font-weight:bold;">${count}</td>
+                <td style="padding:10px; font-size:0.95em;">
+                    ${count > 0 ? details : 'منتظم'}
                 </td>
             </tr>
         `;
     });
 
-    tableHTML += `</tbody></table>
-        <div class="mt-4">
-            <button onclick="window.print()" class="btn btn-primary no-print">طباعة التقرير</button>
+    tableHTML += `
+                </tbody>
+            </table>
+            
+            <div style="margin-top: 50px; display: flex; justify-content: space-between; padding: 0 50px;">
+                <div style="text-align: center;">
+                    <strong>معلم الصعوبات</strong><br><br>
+                    ..........................
+                </div>
+                <div style="text-align: center;">
+                    <strong>مدير المدرسة</strong><br><br>
+                    ..........................
+                </div>
+            </div>
+
+            <div class="mt-4 text-left no-print">
+                <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px;">🖨️ طباعة التقرير</button>
+            </div>
         </div>
-    </div>`;
+    `;
 
     container.innerHTML = tableHTML;
 }

@@ -1,109 +1,9 @@
-// ============================================
-// 📁 الملف: assets/js/reports.js
-// الوصف: إدارة صفحة التقارير (تم الإصلاح ليتوافق مع HTML)
-// ============================================
-
-document.addEventListener('DOMContentLoaded', function() {
-    loadStudentsForSelection();
-    
-    // عرض اسم المعلم من الجلسة الحالية
-    const user = JSON.parse(sessionStorage.getItem('currentUser'));
-    if (user && user.user && user.user.name) {
-        const teacherNameElem = document.getElementById('teacherName');
-        if (teacherNameElem) teacherNameElem.textContent = user.user.name;
-    }
-});
-
 /**
- * تحميل قائمة الطلاب الفعليين
- */
-function loadStudentsForSelection() {
-    const container = document.getElementById('studentsListContainer');
-    if (!container) return;
-
-    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    const currentUserData = JSON.parse(sessionStorage.getItem('currentUser'));
-    const currentTeacherId = currentUserData && currentUserData.user ? currentUserData.user.id : null;
-
-    // تصفية الطلاب التابعين للمعلم
-    const students = allUsers.filter(u => u.role === 'student' && u.teacherId === currentTeacherId);
-
-    container.innerHTML = '';
-
-    if (students.length === 0) {
-        container.innerHTML = '<div class="p-3 text-center text-danger">لا يوجد طلاب مسجلين تابعين لك حالياً.</div>';
-        return;
-    }
-
-    students.forEach(student => {
-        const div = document.createElement('div');
-        div.className = 'student-checkbox-item';
-        div.innerHTML = `
-            <label style="display: block; padding: 5px; cursor: pointer;">
-                <input type="checkbox" name="selectedStudents" value="${student.id}">
-                <span style="margin-right: 10px; font-weight: bold;">${student.name}</span>
-                <span style="color: #666; font-size: 0.9em;">(${student.grade || 'غير محدد'})</span>
-            </label>
-        `;
-        container.appendChild(div);
-    });
-}
-
-/**
- * دالة تحديد الكل / إلغاء تحديد الكل
- * تم ربطها بـ window لتعمل مع onclick في HTML
- */
-window.toggleSelectAll = function() {
-    const checkboxes = document.querySelectorAll('input[name="selectedStudents"]');
-    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-    
-    checkboxes.forEach(cb => {
-        cb.checked = !allChecked;
-    });
-};
-
-/**
- * الدالة الرئيسية لتوليد التقرير
- * تم ربطها بـ window لتعمل مع onclick="initiateReport()"
- */
-window.initiateReport = function() {
-    const reportTypeElem = document.getElementById('reportType');
-    if (!reportTypeElem) return;
-
-    const reportType = reportTypeElem.value;
-    const selectedCheckboxes = document.querySelectorAll('input[name="selectedStudents"]:checked');
-    const selectedStudentIds = Array.from(selectedCheckboxes).map(cb => cb.value);
-
-    if (!reportType) {
-        alert("الرجاء اختيار نوع التقرير أولاً.");
-        return;
-    }
-
-    if (selectedStudentIds.length === 0) {
-        alert("الرجاء اختيار طالب واحد على الأقل.");
-        return;
-    }
-
-    const previewArea = document.getElementById('reportPreviewArea');
-    if (!previewArea) return;
-
-    // توجيه الطلب حسب نوع التقرير
-    if (reportType === 'attendance') {
-        generateAttendanceReport(selectedStudentIds, previewArea);
-    } else {
-        previewArea.innerHTML = `
-            <div class="alert alert-warning" style="text-align:center; margin-top:20px;">
-                عفواً، تقرير "${reportType}" قيد التطوير حالياً.
-            </div>`;
-    }
-};
-
-/**
- * منطق حساب وتوليد تقرير الغياب
+ * منطق حساب وتوليد تقرير الغياب (نسخة محسنة)
  */
 function generateAttendanceReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    // جلب سجلات الأحداث (تأكد أن الاسم student_events مطابق لما يحفظ في بروفايل الطالب)
+    // جلب سجلات الأحداث
     const allEvents = JSON.parse(localStorage.getItem('student_events') || '[]');
 
     let tableHTML = `
@@ -117,8 +17,8 @@ function generateAttendanceReport(studentIds, container) {
                 <thead style="background-color: #f8f9fa;">
                     <tr>
                         <th style="padding:12px; border:1px solid #dee2e6;">اسم الطالب</th>
-                        <th style="padding:12px; border:1px solid #dee2e6;">عدد أيام الغياب</th>
-                        <th style="padding:12px; border:1px solid #dee2e6;">التواريخ</th>
+                        <th style="padding:12px; border:1px solid #dee2e6; width:100px;">عدد الأيام</th>
+                        <th style="padding:12px; border:1px solid #dee2e6;">تواريخ الغياب والملاحظات</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -128,29 +28,46 @@ function generateAttendanceReport(studentIds, container) {
         const student = allUsers.find(u => u.id == studentId);
         if (!student) return;
 
-        // البحث عن حالات الغياب
-        // نبحث عن كلمة "غائب" أو نوع "absence"
-        const absences = allEvents.filter(event => 
-            event.studentId == studentId && 
-            (
-                (event.status && event.status.includes('غائب')) || 
-                (event.title && event.title.includes('غائب')) ||
-                event.type === 'absence'
-            )
-        );
+        // --- التحديث هنا: بحث شامل عن الغياب ---
+        const absences = allEvents.filter(event => {
+            // التحقق من تطابق هوية الطالب (مع مراعاة النصوص والأرقام)
+            if (event.studentId != studentId) return false;
+
+            // دمج كل النصوص الموجودة في السجل للبحث داخلها
+            // نبحث في العنوان، النوع، الحالة، التفاصيل، والملاحظات
+            const fullText = `
+                ${event.title || ''} 
+                ${event.type || ''} 
+                ${event.status || ''} 
+                ${event.details || ''} 
+                ${event.note || ''}
+            `.toLowerCase();
+
+            // كلمات مفتاحية تدل على الغياب
+            const keywords = ['غائب', 'غياب', 'absent', 'absence', 'عدم حضور'];
+
+            // هل يوجد أي كلمة مفتاحية داخل النص؟
+            return keywords.some(key => fullText.includes(key));
+        });
 
         const count = absences.length;
-        // تنسيق التواريخ
-        const dates = absences.map(e => `<span style="display:inline-block; background:#ffebee; padding:2px 6px; border-radius:4px; margin:2px; font-size:0.85em;">${e.date}</span>`).join(' ');
+        
+        // تنسيق التواريخ مع عرض سبب الغياب إذا وجد في العنوان
+        const detailsHTML = absences.map(e => {
+            const label = e.title && e.title !== 'غياب' ? `(${e.title})` : '';
+            return `<span style="display:inline-block; background:#ffebee; padding:4px 8px; border-radius:4px; margin:2px; font-size:0.9em; border:1px solid #ffcdd2;">
+                ${e.date} ${label}
+            </span>`;
+        }).join(' ');
 
         tableHTML += `
             <tr>
                 <td style="padding:10px; border:1px solid #dee2e6; font-weight:bold;">${student.name}</td>
-                <td style="padding:10px; border:1px solid #dee2e6; text-align:center; font-size:1.1em; color:${count > 0 ? '#e74c3c' : '#2ecc71'}">
+                <td style="padding:10px; border:1px solid #dee2e6; text-align:center; font-size:1.2em; font-weight:bold; color:${count > 0 ? '#dc3545' : '#28a745'}">
                     ${count}
                 </td>
                 <td style="padding:10px; border:1px solid #dee2e6;">
-                    ${count > 0 ? dates : 'لا يوجد غياب'}
+                    ${count > 0 ? detailsHTML : '<span style="color:#999">منتظم - لا يوجد غياب</span>'}
                 </td>
             </tr>
         `;

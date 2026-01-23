@@ -1,87 +1,77 @@
 /**
- * منطق حساب وتوليد تقرير الغياب (نسخة محسنة)
+ * تحميل قائمة الطلاب (نسخة محسنة لإصلاح مشكلة الاختفاء)
  */
-function generateAttendanceReport(studentIds, container) {
+function loadStudentsForSelection() {
+    const container = document.getElementById('studentsListContainer');
+    if (!container) return; // حماية في حال لم يتم تحميل الصفحة
+
+    // 1. جلب البيانات
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    // جلب سجلات الأحداث
-    const allEvents = JSON.parse(localStorage.getItem('student_events') || '[]');
+    const currentUserData = JSON.parse(sessionStorage.getItem('currentUser'));
+    
+    // تأكد من وجود مستخدم مسجل دخول
+    if (!currentUserData || !currentUserData.user) {
+        container.innerHTML = '<div class="text-danger">يرجى تسجيل الدخول أولاً.</div>';
+        return;
+    }
 
-    let tableHTML = `
-        <div style="text-align: right; width: 100%; padding: 20px; background: #fff; border-radius: 8px;">
-            <div class="report-header" style="text-align: center; margin-bottom: 30px;">
-                <h2 style="color: #4361ee; margin-bottom: 10px;">تقرير متابعة الغياب</h2>
-                <p style="color: #666;">تاريخ التقرير: ${new Date().toLocaleDateString('ar-SA')}</p>
-            </div>
-            
-            <table class="table table-bordered" style="width:100%; text-align:right; border-collapse:collapse; margin-top:10px;" border="1">
-                <thead style="background-color: #f8f9fa;">
-                    <tr>
-                        <th style="padding:12px; border:1px solid #dee2e6;">اسم الطالب</th>
-                        <th style="padding:12px; border:1px solid #dee2e6; width:100px;">عدد الأيام</th>
-                        <th style="padding:12px; border:1px solid #dee2e6;">تواريخ الغياب والملاحظات</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
+    const currentTeacherId = currentUserData.user.id;
+    const currentRole = currentUserData.user.role;
 
-    studentIds.forEach(studentId => {
-        const student = allUsers.find(u => u.id == studentId);
-        if (!student) return;
+    console.log("المعلم الحالي:", currentTeacherId, "عدد المستخدمين الكلي:", allUsers.length);
 
-        // --- التحديث هنا: بحث شامل عن الغياب ---
-        const absences = allEvents.filter(event => {
-            // التحقق من تطابق هوية الطالب (مع مراعاة النصوص والأرقام)
-            if (event.studentId != studentId) return false;
+    // 2. تصفية الطلاب
+    // التعديل: نستخدم (==) بدل (===) لتجاهل الفرق بين النص والرقم
+    let students = [];
 
-            // دمج كل النصوص الموجودة في السجل للبحث داخلها
-            // نبحث في العنوان، النوع، الحالة، التفاصيل، والملاحظات
-            const fullText = `
-                ${event.title || ''} 
-                ${event.type || ''} 
-                ${event.status || ''} 
-                ${event.details || ''} 
-                ${event.note || ''}
-            `.toLowerCase();
+    if (currentRole === 'admin') {
+        // إذا كان مدير، اعرض كل الطلاب
+        students = allUsers.filter(u => u.role === 'student');
+    } else {
+        // إذا كان معلم، اعرض طلابه فقط
+        students = allUsers.filter(u => 
+            u.role === 'student' && 
+            (u.teacherId == currentTeacherId) // مقارنة مرنة
+        );
+    }
 
-            // كلمات مفتاحية تدل على الغياب
-            const keywords = ['غائب', 'غياب', 'absent', 'absence', 'عدم حضور'];
+    // --- تصحيح طوارئ: إذا لم يجد طلاباً للمعلم، ابحث عن أي طالب غير مسند لمعلم ---
+    if (students.length === 0 && currentRole !== 'admin') {
+        console.warn("لم يتم العثور على طلاب مرتبطين بالمعلم، جاري البحث عن طلاب بدون معلم...");
+        const orphanedStudents = allUsers.filter(u => u.role === 'student' && !u.teacherId);
+        if (orphanedStudents.length > 0) {
+            students = orphanedStudents; // عرض الطلاب الذين ليس لهم معلم مؤقتاً
+        }
+    }
 
-            // هل يوجد أي كلمة مفتاحية داخل النص؟
-            return keywords.some(key => fullText.includes(key));
-        });
+    container.innerHTML = '';
 
-        const count = absences.length;
+    if (students.length === 0) {
+        container.innerHTML = `
+            <div class="p-3 text-center text-danger" style="border: 1px dashed #ccc; padding: 20px;">
+                لا يوجد طلاب مسجلين في قائمتك.
+                <br>
+                <small style="color: #666">تأكد من إضافة طلاب من لوحة التحكم.</small>
+            </div>`;
+        return;
+    }
+
+    // 3. رسم القائمة
+    students.forEach(student => {
+        const div = document.createElement('div');
+        div.className = 'student-checkbox-item';
+        // ستايل بسيط لجعل القائمة واضحة
+        div.style.cssText = "padding: 8px; border-bottom: 1px solid #eee; display: flex; align-items: center;";
         
-        // تنسيق التواريخ مع عرض سبب الغياب إذا وجد في العنوان
-        const detailsHTML = absences.map(e => {
-            const label = e.title && e.title !== 'غياب' ? `(${e.title})` : '';
-            return `<span style="display:inline-block; background:#ffebee; padding:4px 8px; border-radius:4px; margin:2px; font-size:0.9em; border:1px solid #ffcdd2;">
-                ${e.date} ${label}
-            </span>`;
-        }).join(' ');
-
-        tableHTML += `
-            <tr>
-                <td style="padding:10px; border:1px solid #dee2e6; font-weight:bold;">${student.name}</td>
-                <td style="padding:10px; border:1px solid #dee2e6; text-align:center; font-size:1.2em; font-weight:bold; color:${count > 0 ? '#dc3545' : '#28a745'}">
-                    ${count}
-                </td>
-                <td style="padding:10px; border:1px solid #dee2e6;">
-                    ${count > 0 ? detailsHTML : '<span style="color:#999">منتظم - لا يوجد غياب</span>'}
-                </td>
-            </tr>
+        div.innerHTML = `
+            <label style="cursor: pointer; width: 100%; display: flex; align-items: center;">
+                <input type="checkbox" name="selectedStudents" value="${student.id}" style="margin-left: 10px; width: 18px; height: 18px;">
+                <span style="font-weight: bold; font-size: 1.1em;">${student.name}</span>
+                <span style="margin-right: auto; color: #666; font-size: 0.9em; background: #f0f0f0; padding: 2px 8px; border-radius: 4px;">
+                    ${student.grade || 'غير محدد'}
+                </span>
+            </label>
         `;
+        container.appendChild(div);
     });
-
-    tableHTML += `
-                </tbody>
-            </table>
-            
-            <div style="margin-top: 30px; text-align: left;">
-                <button onclick="window.print()" class="btn btn-primary no-print" style="padding: 10px 20px; background: #4361ee; color: white; border: none; border-radius: 5px; cursor: pointer;">طباعة التقرير</button>
-            </div>
-        </div>
-    `;
-
-    container.innerHTML = tableHTML;
 }

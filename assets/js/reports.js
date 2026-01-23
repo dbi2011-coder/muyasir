@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: إدارة التقارير (الغياب + نسب الإنجاز) - طباعة احترافية
+// الوصف: إدارة التقارير (الغياب + الإنجاز + الواجبات) - طباعة احترافية
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -82,6 +82,17 @@
                 background: #555 !important;
                 -webkit-print-color-adjust: exact;
             }
+            /* تنسيق حالة الواجب */
+            .status-pending {
+                color: red !important;
+                font-weight: bold;
+                -webkit-print-color-adjust: exact;
+            }
+            .status-completed {
+                color: green !important;
+                font-weight: bold;
+                -webkit-print-color-adjust: exact;
+            }
         }
     `;
     document.head.appendChild(style);
@@ -112,6 +123,8 @@ window.initiateReport = function() {
         generateAttendanceReport(selectedStudentIds, previewArea);
     } else if (reportType === 'achievement') {
         generateAchievementReport(selectedStudentIds, previewArea);
+    } else if (reportType === 'assignments') {
+        generateAssignmentsReport(selectedStudentIds, previewArea);
     } else {
         previewArea.innerHTML = `<div class="alert alert-warning text-center no-print">عفواً، هذا التقرير قيد التطوير.</div>`;
     }
@@ -182,7 +195,7 @@ function loadStudentsForSelection() {
 }
 
 // ============================================
-// 3. تقرير متابعة الغياب (كما اعتمدناه سابقاً)
+// 3. تقرير متابعة الغياب
 // ============================================
 function generateAttendanceReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
@@ -247,7 +260,7 @@ function generateAttendanceReport(studentIds, container) {
 }
 
 // ============================================
-// 4. تقرير نسب الإنجاز (الجديد)
+// 4. تقرير نسب الإنجاز
 // ============================================
 function generateAchievementReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
@@ -275,18 +288,15 @@ function generateAchievementReport(studentIds, container) {
         const student = allUsers.find(u => u.id == studentId);
         if (!student) return;
 
-        // حساب الإنجاز
         const myLessons = allLessons.filter(l => l.studentId == studentId);
         const total = myLessons.length;
         const completed = myLessons.filter(l => l.status === 'completed' || l.status === 'accelerated').length;
         
-        // المعادلة: (المنجز / الكلي) * 100
         const percentage = total === 0 ? 0 : Math.round((completed / total) * 100);
 
-        // تحديد لون الشريط (أخضر للمكتمل، أزرق للمتقدم، برتقالي للبداية)
-        let barColor = '#ffc107'; // برتقالي
-        if (percentage >= 50) barColor = '#17a2b8'; // أزرق سماوي
-        if (percentage >= 80) barColor = '#28a745'; // أخضر
+        let barColor = '#ffc107'; 
+        if (percentage >= 50) barColor = '#17a2b8'; 
+        if (percentage >= 80) barColor = '#28a745'; 
 
         tableHTML += `
             <tr>
@@ -303,6 +313,86 @@ function generateAchievementReport(studentIds, container) {
                 </td>
             </tr>
         `;
+    });
+
+    tableHTML += `</tbody></table>
+            <div class="custom-footer">
+                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
+            </div>
+            <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
+                <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقرير 🖨️</button>
+            </div>
+        </div>`;
+    container.innerHTML = tableHTML;
+}
+
+// ============================================
+// 5. تقرير الواجبات (الجديد)
+// ============================================
+function generateAssignmentsReport(studentIds, container) {
+    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const allAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
+    const printDate = new Date().toLocaleDateString('ar-SA');
+
+    let tableHTML = `
+        <div style="background:white; padding:20px;">
+            <div class="text-center mb-4">
+                <h1 class="report-title-main" style="text-align:center; color:#000;">تقرير متابعة الواجبات</h1>
+            </div>
+            <table class="table table-bordered" style="width:100%; direction:rtl;" border="1">
+                <thead>
+                    <tr style="background-color:#f2f2f2;">
+                        <th style="width:25%;">اسم الطالب</th>
+                        <th style="width:30%;">اسم الواجب</th>
+                        <th style="width:20%;">تاريخ الإسناد</th>
+                        <th style="width:25%;">حالة التسليم / تاريخ الحل</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    studentIds.forEach(studentId => {
+        const student = allUsers.find(u => u.id == studentId);
+        if (!student) return;
+
+        // جلب واجبات الطالب
+        const myAssignments = allAssignments.filter(a => a.studentId == studentId);
+
+        if (myAssignments.length === 0) {
+            tableHTML += `
+                <tr>
+                    <td style="font-weight:bold;">${student.name}</td>
+                    <td colspan="3" style="text-align:center; color:#777;">لا توجد واجبات مسندة لهذا الطالب</td>
+                </tr>
+            `;
+        } else {
+            myAssignments.forEach(assign => {
+                const assignedDate = assign.assignedDate ? new Date(assign.assignedDate).toLocaleDateString('ar-SA') : '-';
+                
+                let statusContent = '';
+                
+                if (assign.status === 'completed') {
+                    // محاولة العثور على تاريخ الحل (إذا كان مسجلاً) أو استخدام تاريخ الإسناد كبديل إذا لم يتوفر
+                    // ملاحظة: إذا كان النظام لا يحفظ تاريخ الحل، ستظهر عبارة "تم الحل"
+                    let completedDate = assign.completedDate 
+                        ? new Date(assign.completedDate).toLocaleDateString('ar-SA') 
+                        : 'تم الحل (مكتمل)';
+                        
+                    statusContent = `<span class="status-completed">${completedDate}</span>`;
+                } else {
+                    statusContent = `<span class="status-pending">لم يتم تسليم الواجب</span>`;
+                }
+
+                tableHTML += `
+                    <tr>
+                        <td style="font-weight:bold;">${student.name}</td>
+                        <td>${assign.title}</td>
+                        <td>${assignedDate}</td>
+                        <td>${statusContent}</td>
+                    </tr>
+                `;
+            });
+        }
     });
 
     tableHTML += `</tbody></table>

@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: إدارة التقارير (الغياب + الإنجاز + الواجبات) - طباعة احترافية
+// الوصف: إدارة التقارير (الغياب + الإنجاز + الواجبات + الخطط الفردية)
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -10,7 +10,7 @@
         @media print {
             @page {
                 size: A4;
-                margin: 20mm;
+                margin: 15mm;
             }
             body * {
                 visibility: hidden;
@@ -31,36 +31,52 @@
                 background: white;
                 direction: rtl;
             }
+            
+            /* تنسيق الجداول */
             table {
                 width: 100% !important;
                 border-collapse: collapse !important;
                 border: 2px solid #000 !important;
                 font-family: 'Times New Roman', serif;
-                font-size: 12pt;
-                margin-top: 20px;
+                font-size: 11pt; /* تصغير الخط قليلاً لاستيعاب الخطة */
+                margin-top: 15px;
+                margin-bottom: 15px;
             }
             th, td {
                 border: 1px solid #000 !important;
-                padding: 10px !important;
+                padding: 6px 10px !important;
                 color: #000 !important;
-                text-align: center;
                 vertical-align: middle;
             }
             th {
                 background-color: #f0f0f0 !important;
                 -webkit-print-color-adjust: exact;
                 font-weight: bold;
-                font-size: 14pt;
+                text-align: center;
             }
+            
+            /* العناوين */
             .report-title-main {
-                font-size: 24pt;
+                font-size: 22pt;
                 font-weight: bold;
                 text-align: center !important;
-                margin-bottom: 30px;
+                margin-bottom: 20px;
                 text-decoration: underline;
                 display: block;
                 width: 100%;
             }
+            .section-title {
+                background-color: #333 !important;
+                color: #fff !important;
+                -webkit-print-color-adjust: exact;
+                padding: 5px;
+                font-weight: bold;
+                text-align: center;
+                margin-top: 10px;
+                border: 1px solid #000;
+            }
+
+            /* التذييل الموحد */
             .custom-footer {
                 position: fixed;
                 bottom: 0;
@@ -70,29 +86,25 @@
                 font-size: 10pt;
                 color: #555;
                 border-top: 1px solid #ccc;
-                padding-top: 10px;
+                padding-top: 5px;
+                background: white;
             }
-            /* شريط التقدم للطباعة */
-            .progress-container {
-                border: 1px solid #000 !important;
-                background: #eee !important;
-                -webkit-print-color-adjust: exact;
+
+            /* فواصل الصفحات */
+            .page-break {
+                page-break-after: always;
+                display: block;
+                height: 1px;
+                margin-top: 20px;
             }
-            .progress-bar-fill {
-                background: #555 !important;
-                -webkit-print-color-adjust: exact;
-            }
-            /* تنسيق حالة الواجب */
-            .status-pending {
-                color: red !important;
-                font-weight: bold;
-                -webkit-print-color-adjust: exact;
-            }
-            .status-completed {
-                color: green !important;
-                font-weight: bold;
-                -webkit-print-color-adjust: exact;
-            }
+
+            /* تنسيق الحالات */
+            .status-pending { color: red !important; font-weight: bold; }
+            .status-completed { color: green !important; font-weight: bold; }
+            
+            /* شريط التقدم */
+            .progress-container { border: 1px solid #000 !important; background: #eee !important; -webkit-print-color-adjust: exact; }
+            .progress-bar-fill { background: #555 !important; -webkit-print-color-adjust: exact; }
         }
     `;
     document.head.appendChild(style);
@@ -117,7 +129,8 @@ window.initiateReport = function() {
     if (selectedStudentIds.length === 0) return alert("الرجاء اختيار طالب واحد على الأقل.");
 
     const previewArea = document.getElementById('reportPreviewArea');
-    
+    previewArea.innerHTML = ''; // تنظيف المنطقة
+
     // توجيه الطلب حسب النوع
     if (reportType === 'attendance') {
         generateAttendanceReport(selectedStudentIds, previewArea);
@@ -125,6 +138,8 @@ window.initiateReport = function() {
         generateAchievementReport(selectedStudentIds, previewArea);
     } else if (reportType === 'assignments') {
         generateAssignmentsReport(selectedStudentIds, previewArea);
+    } else if (reportType === 'iep') { // التقرير الجديد
+        generateIEPReport(selectedStudentIds, previewArea);
     } else {
         previewArea.innerHTML = `<div class="alert alert-warning text-center no-print">عفواً، هذا التقرير قيد التطوير.</div>`;
     }
@@ -327,7 +342,7 @@ function generateAchievementReport(studentIds, container) {
 }
 
 // ============================================
-// 5. تقرير الواجبات (الجديد)
+// 5. تقرير الواجبات
 // ============================================
 function generateAssignmentsReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
@@ -355,7 +370,6 @@ function generateAssignmentsReport(studentIds, container) {
         const student = allUsers.find(u => u.id == studentId);
         if (!student) return;
 
-        // جلب واجبات الطالب
         const myAssignments = allAssignments.filter(a => a.studentId == studentId);
 
         if (myAssignments.length === 0) {
@@ -368,16 +382,12 @@ function generateAssignmentsReport(studentIds, container) {
         } else {
             myAssignments.forEach(assign => {
                 const assignedDate = assign.assignedDate ? new Date(assign.assignedDate).toLocaleDateString('ar-SA') : '-';
-                
                 let statusContent = '';
                 
                 if (assign.status === 'completed') {
-                    // محاولة العثور على تاريخ الحل (إذا كان مسجلاً) أو استخدام تاريخ الإسناد كبديل إذا لم يتوفر
-                    // ملاحظة: إذا كان النظام لا يحفظ تاريخ الحل، ستظهر عبارة "تم الحل"
                     let completedDate = assign.completedDate 
                         ? new Date(assign.completedDate).toLocaleDateString('ar-SA') 
                         : 'تم الحل (مكتمل)';
-                        
                     statusContent = `<span class="status-completed">${completedDate}</span>`;
                 } else {
                     statusContent = `<span class="status-pending">لم يتم تسليم الواجب</span>`;
@@ -404,4 +414,171 @@ function generateAssignmentsReport(studentIds, container) {
             </div>
         </div>`;
     container.innerHTML = tableHTML;
+}
+
+// ============================================
+// 6. تقرير الخطط التربوية الفردية (IEP) - الجديد
+// ============================================
+function generateIEPReport(studentIds, container) {
+    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
+    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
+    const printDate = new Date().toLocaleDateString('ar-SA');
+
+    let fullReportHTML = `<div style="background:white; padding:0;">`;
+
+    studentIds.forEach((studentId, index) => {
+        const student = allUsers.find(u => u.id == studentId);
+        if (!student) return;
+
+        // 1. جلب الاختبار التشخيصي المكتمل
+        const completedDiagnostic = studentTests.find(t => t.studentId == studentId && t.type === 'diagnostic' && t.status === 'completed');
+        const originalTest = completedDiagnostic ? allTests.find(t => t.id == completedDiagnostic.testId) : null;
+
+        // 2. حساب نقاط القوة والاحتياج
+        let strengthHTML = '';
+        let needsObjects = [];
+
+        if (completedDiagnostic && originalTest && originalTest.questions) {
+            originalTest.questions.forEach(q => {
+                const ans = completedDiagnostic.answers ? completedDiagnostic.answers.find(a => a.questionId == q.id) : null;
+                const score = ans ? (ans.score || 0) : 0;
+                if (q.linkedGoalId) {
+                    const obj = allObjectives.find(o => o.id == q.linkedGoalId);
+                    if (obj) {
+                        if (score >= (q.passingScore || 1)) {
+                            if (!strengthHTML.includes(obj.shortTermGoal)) strengthHTML += `<li>${obj.shortTermGoal}</li>`;
+                        } else {
+                            if (!needsObjects.find(o => o.id == obj.id)) needsObjects.push(obj);
+                        }
+                    }
+                }
+            });
+        }
+        
+        if (!strengthHTML) strengthHTML = '<li>لا توجد نقاط قوة مسجلة.</li>';
+        if (needsObjects.length === 0 && !completedDiagnostic) needsObjects = []; // لا يوجد خطة
+
+        // 3. جدول الحصص
+        const dayKeys = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+        let scheduleCells = dayKeys.map(dk => {
+            const session = teacherSchedule.find(s => s.day === dk && (s.students && s.students.includes(studentId.toString())));
+            let content = session ? `حصة ${session.period || 1}` : '-';
+            return `<td style="height:40px; text-align:center;">${content}</td>`;
+        }).join('');
+
+        // 4. بناء صفحة الطالب
+        fullReportHTML += `
+        <div class="student-iep-page">
+            <h1 class="report-title-main">تقرير الخطط التربوية الفردية</h1>
+            
+            <table class="table table-bordered">
+                <tr>
+                    <th style="width:15%;">اسم الطالب</th>
+                    <td style="width:35%;">${student.name}</td>
+                    <th style="width:15%;">الصف</th>
+                    <td>${student.grade || 'غير محدد'}</td>
+                </tr>
+                <tr>
+                    <th>المادة</th>
+                    <td>${originalTest ? originalTest.subject : 'عام'}</td>
+                    <th>تاريخ الخطة</th>
+                    <td>${completedDiagnostic ? new Date(completedDiagnostic.assignedDate).toLocaleDateString('ar-SA') : printDate}</td>
+                </tr>
+            </table>
+
+            <div class="section-title">جدول الحصص الأسبوعي</div>
+            <table class="table table-bordered">
+                <thead>
+                    <tr><th>الأحد</th><th>الاثنين</th><th>الثلاثاء</th><th>الأربعاء</th><th>الخميس</th></tr>
+                </thead>
+                <tbody><tr>${scheduleCells}</tr></tbody>
+            </table>
+
+            <div style="display:flex; gap:10px; margin-top:10px;">
+                <div style="flex:1; border:1px solid #000; padding:10px;">
+                    <div style="font-weight:bold; border-bottom:1px solid #000; margin-bottom:5px; text-align:center; background:#eee;">نقاط القوة</div>
+                    <ul style="margin:0; padding-right:20px; font-size:0.9em;">${strengthHTML}</ul>
+                </div>
+                <div style="flex:1; border:1px solid #000; padding:10px;">
+                    <div style="font-weight:bold; border-bottom:1px solid #000; margin-bottom:5px; text-align:center; background:#eee;">نقاط الاحتياج (الأهداف)</div>
+                    <ul style="margin:0; padding-right:20px; font-size:0.9em;">
+                        ${needsObjects.length > 0 ? needsObjects.map(o => `<li>${o.shortTermGoal}</li>`).join('') : '<li>لا توجد خطة نشطة (يجب إكمال التشخيص)</li>'}
+                    </ul>
+                </div>
+            </div>
+
+            <div class="section-title">الخطة التدريسية التفصيلية</div>
+            <table class="table table-bordered" style="font-size:10pt;">
+                <thead>
+                    <tr style="background:#333; color:white;">
+                        <th style="width:5%;">#</th>
+                        <th style="width:35%;">الهدف قصير المدى</th>
+                        <th style="width:40%;">الهدف التدريسي (الدرس)</th>
+                        <th style="width:20%;">تاريخ التحقق</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        // تعبئة الأهداف
+        let rowCounter = 1;
+        if (needsObjects.length > 0) {
+            needsObjects.forEach(obj => {
+                if (obj.instructionalGoals) {
+                    obj.instructionalGoals.forEach((iGoal, idx) => {
+                        // البحث عن حالة الدرس
+                        const lesson = studentLessons.find(l => l.studentId == studentId && l.objective === iGoal);
+                        let statusText = '-';
+                        if (lesson) {
+                            if (lesson.status === 'completed') statusText = `<span class="status-completed">${new Date(lesson.completedDate).toLocaleDateString('ar-SA')}</span>`;
+                            else if (lesson.status === 'accelerated') statusText = `<span class="status-completed">تجاوز (تفوق)</span>`;
+                            else statusText = '<span class="status-pending">جاري العمل</span>';
+                        }
+                        
+                        fullReportHTML += `
+                            <tr>
+                                <td style="text-align:center;">${rowCounter++}</td>
+                                ${idx === 0 ? `<td rowspan="${obj.instructionalGoals.length}" style="vertical-align:top; background:#fafafa;">${obj.shortTermGoal}</td>` : ''}
+                                <td>${iGoal}</td>
+                                <td style="text-align:center;">${statusText}</td>
+                            </tr>
+                        `;
+                    });
+                }
+            });
+        } else {
+            fullReportHTML += `<tr><td colspan="4" style="text-align:center; padding:20px;">لا توجد أهداف مسجلة في الخطة الحالية.</td></tr>`;
+        }
+
+        fullReportHTML += `
+                </tbody>
+            </table>
+
+            <div style="border:1px solid #000; padding:10px; margin-top:10px; background:#f9f9f9; text-align:center;">
+                <strong>الهدف بعيد المدى:</strong> أن يتقن التلميذ مهارات المادة بنسبة إتقان 80%
+            </div>
+
+            <div class="custom-footer">
+                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
+            </div>
+        </div>
+        `;
+
+        // إضافة فاصل صفحات إلا في الأخير
+        if (index < studentIds.length - 1) {
+            fullReportHTML += `<div class="page-break"></div>`;
+        }
+    });
+
+    fullReportHTML += `
+        <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px; padding:20px;">
+            <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقارير 🖨️</button>
+        </div>
+    </div>`;
+
+    container.innerHTML = fullReportHTML;
 }

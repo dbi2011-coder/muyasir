@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير الشامل (مع حل مشكلة تكرار القائمة)
+// الوصف: نظام التقارير الشامل (مع تنظيف القائمة من التكرار ورمز الميزان)
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -177,27 +177,38 @@ document.addEventListener('DOMContentLoaded', function() {
     updateTeacherName();
     loadStudentsForSelection();
     
-    // ✅ إصلاح التكرار: نقوم بحذف الخيارات القديمة المكررة أولاً ثم نضيف الخيار الصحيح
+    // ✅ تنظيف القائمة: حذف أي خيار يحتوي على "ميزان" أو "رصيد الحصص" (لإزالة القديم)
+    const select = document.getElementById('reportType');
+    if (select) {
+        Array.from(select.options).forEach(opt => {
+            if (opt.textContent.includes('⚖️') || opt.textContent.includes('رصيد الحصص')) {
+                opt.remove();
+            }
+        });
+    }
+
+    // ✅ إعادة إضافة الخيارات الصحيحة (مرة واحدة فقط)
     ensureOptionExists('iep', 'تقرير الخطط التربوية الفردية', '📄');
     ensureOptionExists('diagnostic', 'تقرير الاختبار التشخيصي', '📝');
     ensureOptionExists('schedule', 'تقرير الجدول الدراسي', '📅');
-    ensureOptionExists('credit', 'تقرير رصيد الحصص', '📊');
+    ensureOptionExists('credit', 'تقرير رصيد الحصص', '📊'); // الرمز الجديد الصحيح
 });
 
-// ✅ دالة ذكية لإدارة الخيارات ومنع التكرار
 function ensureOptionExists(value, text, icon) {
     const select = document.getElementById('reportType');
     if (!select) return;
     
-    // 1. البحث عن أي خيارات موجودة بنفس القيمة وحذفها (لتنظيف التكرار)
-    const existingOptions = select.querySelectorAll(`option[value="${value}"]`);
-    existingOptions.forEach(opt => opt.remove());
-
-    // 2. إنشاء الخيار الجديد وإضافته
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = `${icon} ${text}`;
-    select.appendChild(option);
+    // التأكد من عدم وجود الخيار مسبقاً بنفس القيمة (Value)
+    const existingOption = select.querySelector(`option[value="${value}"]`);
+    if (!existingOption) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = `${icon} ${text}`;
+        select.appendChild(option);
+    } else {
+        // تحديث النص والرمز للخيار الموجود
+        existingOption.textContent = `${icon} ${text}`;
+    }
 }
 
 function updateTeacherName() {

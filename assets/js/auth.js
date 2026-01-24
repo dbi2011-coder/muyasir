@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/auth.js
-// الوصف: نظام المصادقة الموحد (معلمين، طلاب، أعضاء لجنة)
+// الوصف: نظام المصادقة الموحد (مع تحديث المسارات)
 // ============================================
 
 function login() {
@@ -23,14 +23,14 @@ function login() {
             name: foundUser.name,
             role: foundUser.role,
             teacherId: foundUser.teacherId || null,
-            user: foundUser // تخزين الكائن كاملاً
+            user: foundUser
         }));
 
-        // التوجيه حسب الصلاحية
+        // التوجيه (مسارات تبدأ من المجلد الرئيسي)
         if (foundUser.role === 'admin') {
-            window.location.href = '../teacher/dashboard.html';
+            window.location.href = 'pages/teacher/dashboard.html';
         } else {
-            window.location.href = '../student/dashboard.html';
+            window.location.href = 'pages/student/dashboard.html';
         }
         return;
     }
@@ -44,21 +44,23 @@ function login() {
         sessionStorage.setItem('currentUser', JSON.stringify({
             id: foundMember.id,
             name: foundMember.name,
-            role: 'committee_member', // دور جديد خاص
-            title: foundMember.role, // الصفة (مدير، مشرف...)
+            role: 'committee_member',
+            title: foundMember.role,
             user: foundMember
         }));
 
         // التوجيه لبوابة الأعضاء
-        window.location.href = '../member/dashboard.html';
+        window.location.href = 'pages/member/dashboard.html';
         return;
     }
 
-    alert("بيانات الدخول غير صحيحة");
+    alert("بيانات الدخول غير صحيحة، يرجى التأكد من الاسم وكلمة المرور.");
 }
 
 function logout() {
     sessionStorage.removeItem('currentUser');
+    // العودة للصفحة الرئيسية (تعديل المسار حسب مكان الملف الذي يتم تسجيل الخروج منه)
+    // إذا كنت داخل مجلد pages/teacher/ ستعود بمستويين للخلف
     window.location.href = '../../index.html';
 }
 

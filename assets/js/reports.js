@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير الشامل (النسخة الكاملة)
+// الوصف: نظام التقارير الشامل (مصحح لمعالجة جميع أنواع الإجابات)
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -140,7 +140,7 @@ window.initiateReport = function() {
         generateAssignmentsReport(selectedStudentIds, previewArea);
     } else if (reportType === 'iep') {
         generateIEPReport(selectedStudentIds, previewArea);
-    } else if (reportType === 'diagnostic') { // التقرير الجديد
+    } else if (reportType === 'diagnostic') {
         generateDiagnosticReport(selectedStudentIds, previewArea);
     } else {
         previewArea.innerHTML = `<div class="alert alert-warning text-center no-print">عفواً، هذا التقرير قيد التطوير.</div>`;
@@ -151,7 +151,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateTeacherName();
     loadStudentsForSelection();
     
-    // تحديث أسماء التقارير في القائمة المنسدلة للحفاظ على الرموز
+    // تحديث أسماء التقارير
     updateDropdownOption('iep', 'تقرير الخطط التربوية الفردية');
     updateDropdownOption('diagnostic', 'تقرير الاختبار التشخيصي');
 });
@@ -161,7 +161,7 @@ function updateDropdownOption(value, newText) {
     if(option) {
         const oldText = option.textContent.trim();
         const icon = oldText.split(' ')[0]; 
-        const finalIcon = (icon.length < 3) ? icon : '📄'; // التأكد أنه رمز وليس كلمة
+        const finalIcon = (icon.length < 3) ? icon : '📄'; 
         option.textContent = `${finalIcon} ${newText}`;
     }
 }
@@ -598,7 +598,7 @@ function generateIEPReport(studentIds, container) {
 }
 
 // ============================================
-// 7. تقرير الاختبار التشخيصي (الجديد)
+// 7. تقرير الاختبار التشخيصي (الجديد والمصحح)
 // ============================================
 function generateDiagnosticReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
@@ -676,18 +676,21 @@ function generateDiagnosticReport(studentIds, container) {
             originalTest.questions.forEach((q, qIndex) => {
                 const answerObj = completedDiagnostic.answers ? completedDiagnostic.answers.find(a => a.questionId == q.id) : null;
                 
-                // معالجة الإجابة (نص أو صورة)
                 let studentAnswerContent = '<span style="color:#999;">لم يجب</span>';
-                if (answerObj && answerObj.answer) {
-                    if (answerObj.answer.startsWith('data:image') || answerObj.answer.match(/\.(jpeg|jpg|gif|png)$/i)) {
-                        studentAnswerContent = `<img src="${answerObj.answer}" class="answer-img" alt="إجابة الطالب">`;
+                
+                // ✅ التصحيح: التحقق من وجود الإجابة وتحويلها لنص لتجنب الخطأ
+                if (answerObj && answerObj.answer !== undefined && answerObj.answer !== null) {
+                    const answerStr = String(answerObj.answer); // تحويل إجباري لنص
+
+                    if (answerStr.startsWith('data:image') || answerStr.match(/\.(jpeg|jpg|gif|png)$/i)) {
+                        studentAnswerContent = `<img src="${answerStr}" class="answer-img" alt="إجابة الطالب">`;
                     } else {
-                        studentAnswerContent = answerObj.answer;
+                        studentAnswerContent = answerStr;
                     }
                 }
 
                 // التقييم
-                const isCorrect = answerObj && answerObj.score > 0; // أو مقارنة الدرجة
+                const isCorrect = answerObj && answerObj.score > 0;
                 const statusIcon = isCorrect ? '<span style="color:green; font-size:1.2em;">✔️</span>' : '<span style="color:red; font-size:1.2em;">❌</span>';
                 
                 // المهارة

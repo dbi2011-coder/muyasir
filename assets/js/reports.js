@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير الشامل (مع إضافة الخيارات تلقائياً للقائمة)
+// الوصف: نظام التقارير الشامل (مع حل مشكلة تكرار القائمة)
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -177,25 +177,27 @@ document.addEventListener('DOMContentLoaded', function() {
     updateTeacherName();
     loadStudentsForSelection();
     
-    // ✅ إضافة الخيارات للقائمة تلقائياً لضمان ظهورها
+    // ✅ إصلاح التكرار: نقوم بحذف الخيارات القديمة المكررة أولاً ثم نضيف الخيار الصحيح
     ensureOptionExists('iep', 'تقرير الخطط التربوية الفردية', '📄');
     ensureOptionExists('diagnostic', 'تقرير الاختبار التشخيصي', '📝');
     ensureOptionExists('schedule', 'تقرير الجدول الدراسي', '📅');
     ensureOptionExists('credit', 'تقرير رصيد الحصص', '📊');
 });
 
-// دالة مساعدة لإنشاء الخيار إذا لم يكن موجوداً
+// ✅ دالة ذكية لإدارة الخيارات ومنع التكرار
 function ensureOptionExists(value, text, icon) {
     const select = document.getElementById('reportType');
     if (!select) return;
     
-    let option = select.querySelector(`option[value="${value}"]`);
-    if (!option) {
-        option = document.createElement('option');
-        option.value = value;
-        select.appendChild(option);
-    }
+    // 1. البحث عن أي خيارات موجودة بنفس القيمة وحذفها (لتنظيف التكرار)
+    const existingOptions = select.querySelectorAll(`option[value="${value}"]`);
+    existingOptions.forEach(opt => opt.remove());
+
+    // 2. إنشاء الخيار الجديد وإضافته
+    const option = document.createElement('option');
+    option.value = value;
     option.textContent = `${icon} ${text}`;
+    select.appendChild(option);
 }
 
 function updateTeacherName() {
@@ -263,50 +265,42 @@ function loadStudentsForSelection() {
 function calculateStudentBalance(studentId, allLessons, allEvents, teacherSchedule) {
     let balance = 0;
     
-    // 1. تصفية بيانات الطالب
     const myList = allLessons.filter(l => l.studentId == studentId);
     let myEvents = allEvents.filter(e => e.studentId == studentId);
     
-    if (myList.length === 0) return 0; // لم تبدأ الخطة
+    if (myList.length === 0) return 0;
 
-    // 2. تحديد تاريخ البداية
     const sortedByDate = [...myList].sort((a, b) => new Date(a.assignedDate) - new Date(b.assignedDate));
     const planStartDate = new Date(sortedByDate[0].assignedDate);
     const today = new Date();
     today.setHours(23, 59, 59, 999);
 
-    // 3. كشف الغياب التلقائي (Auto-Absence)
     const dayMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     
     for (let d = new Date(planStartDate); d < today; d.setDate(d.getDate() + 1)) {
         if (d.toDateString() === new Date().toDateString()) continue;
 
         const dateStr = d.toDateString();
-        // هل يوجد درس أو حدث مسجل في هذا اليوم؟
         const hasLesson = myList.some(l => l.historyLog && l.historyLog.some(log => new Date(log.date).toDateString() === dateStr));
         const hasEvent = myEvents.some(e => new Date(e.date).toDateString() === dateStr);
         
         if (hasLesson || hasEvent) continue;
 
-        // هل هذا يوم دراسي للطالب في الجدول؟
         const dayKey = dayMap[d.getDay()];
         const isScheduledDay = teacherSchedule.some(s => 
             s.day === dayKey && (s.students && s.students.map(String).includes(String(studentId)))
         );
 
         if (isScheduledDay) {
-            balance--; // غياب تلقائي
+            balance--;
         }
     }
 
-    // 4. الحساب من السجلات الفعلية
-    // أ. الأحداث (غياب/عذر)
     myEvents.forEach(e => {
         if (e.status === 'excused') balance--; 
         else if (e.type === 'auto-absence' || e.status === 'absence') balance--;
     });
 
-    // ب. الدروس (تعويض/إضافي)
     myList.forEach(l => {
         if (l.historyLog) {
             l.historyLog.forEach(log => {

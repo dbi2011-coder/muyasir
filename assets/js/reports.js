@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير الشامل (مصحح لمعالجة جميع أنواع الإجابات)
+// الوصف: نظام التقارير الشامل (الغياب، الإنجاز، الواجبات، الخطط، التشخيص، الجدول الدراسي)
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -9,8 +9,8 @@
     style.innerHTML = `
         @media print {
             @page {
-                size: A4;
-                margin: 15mm;
+                size: A4 landscape; /* جعل الصفحة بالعرض للجدول الدراسي */
+                margin: 10mm;
             }
             body * {
                 visibility: hidden;
@@ -44,15 +44,15 @@
             }
             th, td {
                 border: 1px solid #000 !important;
-                padding: 6px 10px !important;
+                padding: 6px 5px !important;
                 color: #000 !important;
                 vertical-align: middle;
+                text-align: center;
             }
             th {
                 background-color: #f0f0f0 !important;
                 -webkit-print-color-adjust: exact;
                 font-weight: bold;
-                text-align: center;
             }
             
             /* العناوين */
@@ -98,6 +98,10 @@
                 margin-top: 20px;
             }
 
+            /* تنسيق خاص للجدول الدراسي */
+            .schedule-cell { font-size: 0.9em; line-height: 1.4; }
+            .student-tag { display: block; margin-bottom: 2px; }
+
             /* تنسيق الحالات والصور */
             .status-pending { color: red !important; font-weight: bold; }
             .status-completed { color: green !important; font-weight: bold; }
@@ -142,6 +146,8 @@ window.initiateReport = function() {
         generateIEPReport(selectedStudentIds, previewArea);
     } else if (reportType === 'diagnostic') {
         generateDiagnosticReport(selectedStudentIds, previewArea);
+    } else if (reportType === 'schedule') { // التقرير الجديد للجدول
+        generateScheduleReport(selectedStudentIds, previewArea);
     } else {
         previewArea.innerHTML = `<div class="alert alert-warning text-center no-print">عفواً، هذا التقرير قيد التطوير.</div>`;
     }
@@ -151,9 +157,10 @@ document.addEventListener('DOMContentLoaded', function() {
     updateTeacherName();
     loadStudentsForSelection();
     
-    // تحديث أسماء التقارير
+    // تحديث أسماء التقارير في القائمة المنسدلة
     updateDropdownOption('iep', 'تقرير الخطط التربوية الفردية');
     updateDropdownOption('diagnostic', 'تقرير الاختبار التشخيصي');
+    updateDropdownOption('schedule', 'تقرير الجدول الدراسي');
 });
 
 function updateDropdownOption(value, newText) {
@@ -161,7 +168,7 @@ function updateDropdownOption(value, newText) {
     if(option) {
         const oldText = option.textContent.trim();
         const icon = oldText.split(' ')[0]; 
-        const finalIcon = (icon.length < 3) ? icon : '📄'; 
+        const finalIcon = (icon.length < 3) ? icon : '📅'; 
         option.textContent = `${finalIcon} ${newText}`;
     }
 }
@@ -598,7 +605,7 @@ function generateIEPReport(studentIds, container) {
 }
 
 // ============================================
-// 7. تقرير الاختبار التشخيصي (الجديد والمصحح)
+// 7. تقرير الاختبار التشخيصي
 // ============================================
 function generateDiagnosticReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
@@ -613,7 +620,6 @@ function generateDiagnosticReport(studentIds, container) {
         const student = allUsers.find(u => u.id == studentId);
         if (!student) return;
 
-        // البحث عن آخر اختبار تشخيصي مكتمل
         const completedDiagnostic = studentTests
             .filter(t => t.studentId == studentId && t.type === 'diagnostic' && t.status === 'completed')
             .sort((a, b) => new Date(b.completedDate) - new Date(a.completedDate))[0];
@@ -642,7 +648,6 @@ function generateDiagnosticReport(studentIds, container) {
                 </div>
             `;
         } else {
-            // حساب النسبة
             const score = completedDiagnostic.score || 0;
             const total = completedDiagnostic.totalScore || originalTest.questions.length || 1;
             const percent = Math.round((score / total) * 100);
@@ -678,9 +683,8 @@ function generateDiagnosticReport(studentIds, container) {
                 
                 let studentAnswerContent = '<span style="color:#999;">لم يجب</span>';
                 
-                // ✅ التصحيح: التحقق من وجود الإجابة وتحويلها لنص لتجنب الخطأ
                 if (answerObj && answerObj.answer !== undefined && answerObj.answer !== null) {
-                    const answerStr = String(answerObj.answer); // تحويل إجباري لنص
+                    const answerStr = String(answerObj.answer); 
 
                     if (answerStr.startsWith('data:image') || answerStr.match(/\.(jpeg|jpg|gif|png)$/i)) {
                         studentAnswerContent = `<img src="${answerStr}" class="answer-img" alt="إجابة الطالب">`;
@@ -689,11 +693,9 @@ function generateDiagnosticReport(studentIds, container) {
                     }
                 }
 
-                // التقييم
                 const isCorrect = answerObj && answerObj.score > 0;
                 const statusIcon = isCorrect ? '<span style="color:green; font-size:1.2em;">✔️</span>' : '<span style="color:red; font-size:1.2em;">❌</span>';
                 
-                // المهارة
                 let skillName = '-';
                 if (q.linkedGoalId) {
                     const obj = allObjectives.find(o => o.id == q.linkedGoalId);
@@ -733,4 +735,84 @@ function generateDiagnosticReport(studentIds, container) {
     </div>`;
 
     container.innerHTML = fullReportHTML;
+}
+
+// ============================================
+// 8. تقرير الجدول الدراسي (الجديد)
+// ============================================
+function generateScheduleReport(studentIds, container) {
+    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const scheduleData = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
+    const printDate = new Date().toLocaleDateString('ar-SA');
+
+    // 1. تحديد الطلاب المختارين
+    const selectedStudents = allUsers.filter(u => studentIds.includes(String(u.id)));
+
+    // 2. إنشاء قائمة أسماء الطلاب في الأعلى
+    const studentsHeaderList = selectedStudents.map(s => `
+        <span style="display:inline-block; margin: 0 10px; font-weight:bold; color:#333;">
+            ${s.name} <span style="font-weight:normal; color:#666;">(${s.grade || '-'})</span>
+        </span>
+    `).join(' ، ');
+
+    let html = `
+        <div style="background:white; padding:10px;">
+            <h1 class="report-title-main">تقرير الجدول الدراسي</h1>
+            
+            <div style="margin-bottom: 20px; border: 2px solid #ddd; padding: 15px; background: #fafafa; border-radius:8px;">
+                <div style="font-weight:bold; margin-bottom:10px; text-decoration:underline;">الطلاب في هذا التقرير:</div>
+                <div style="line-height:1.6;">${studentsHeaderList}</div>
+            </div>
+
+            <table class="table table-bordered" style="direction:rtl; font-size:12px;">
+                <thead>
+                    <tr>
+                        <th style="width:10%; background:#333; color:white;">اليوم / الحصة</th>
+                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+    
+    days.forEach(day => {
+        html += `<tr><td style="font-weight:bold; background:#f0f0f0;">${day}</td>`;
+        
+        for (let period = 1; period <= 7; period++) {
+            const session = scheduleData.find(s => s.day === day && s.period === period);
+            let cellContent = '';
+
+            if (session && session.students && session.students.length > 0) {
+                // تقاطع: الطلاب الموجودين في الحصة AND الطلاب المختارين في التقرير
+                const sessionStudentIds = session.students.map(String);
+                const studentsToShow = selectedStudents.filter(s => sessionStudentIds.includes(String(s.id)));
+
+                if (studentsToShow.length > 0) {
+                    cellContent = studentsToShow.map(s => 
+                        `<span class="student-tag">• ${s.name} <small>(${s.grade})</small></span>`
+                    ).join('');
+                }
+            }
+            
+            html += `<td class="schedule-cell" style="vertical-align:top; text-align:right;">${cellContent}</td>`;
+        }
+        html += `</tr>`;
+    });
+
+    html += `
+                </tbody>
+            </table>
+            
+            <div class="custom-footer">
+                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
+            </div>
+
+            <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
+                <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقرير 🖨️</button>
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = html;
 }

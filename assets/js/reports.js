@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: إدارة التقارير (النسخة النهائية - مع الحفاظ على أيقونات القائمة)
+// الوصف: نظام التقارير الشامل (النسخة الكاملة)
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -98,9 +98,10 @@
                 margin-top: 20px;
             }
 
-            /* تنسيق الحالات */
+            /* تنسيق الحالات والصور */
             .status-pending { color: red !important; font-weight: bold; }
             .status-completed { color: green !important; font-weight: bold; }
+            .answer-img { max-width: 150px; max-height: 80px; border: 1px solid #ccc; }
             
             /* شريط التقدم */
             .progress-container { border: 1px solid #000 !important; background: #eee !important; -webkit-print-color-adjust: exact; }
@@ -129,9 +130,8 @@ window.initiateReport = function() {
     if (selectedStudentIds.length === 0) return alert("الرجاء اختيار طالب واحد على الأقل.");
 
     const previewArea = document.getElementById('reportPreviewArea');
-    previewArea.innerHTML = ''; // تنظيف المنطقة
+    previewArea.innerHTML = ''; 
 
-    // توجيه الطلب حسب النوع
     if (reportType === 'attendance') {
         generateAttendanceReport(selectedStudentIds, previewArea);
     } else if (reportType === 'achievement') {
@@ -140,6 +140,8 @@ window.initiateReport = function() {
         generateAssignmentsReport(selectedStudentIds, previewArea);
     } else if (reportType === 'iep') {
         generateIEPReport(selectedStudentIds, previewArea);
+    } else if (reportType === 'diagnostic') { // التقرير الجديد
+        generateDiagnosticReport(selectedStudentIds, previewArea);
     } else {
         previewArea.innerHTML = `<div class="alert alert-warning text-center no-print">عفواً، هذا التقرير قيد التطوير.</div>`;
     }
@@ -148,20 +150,21 @@ window.initiateReport = function() {
 document.addEventListener('DOMContentLoaded', function() {
     updateTeacherName();
     loadStudentsForSelection();
-
-    // ✅ التعديل هنا: تحديث الاسم مع الحفاظ على الرمز (الأيقونة)
-    const iepOption = document.querySelector('#reportType option[value="iep"]');
-    if(iepOption) {
-        const oldText = iepOption.textContent.trim();
-        // نفترض أن الرمز هو الجزء الأول قبل المسافة (مثل: 📋 تقرير...)
-        const icon = oldText.split(' ')[0]; 
-        
-        // نتأكد أن الرمز ليس كلمة "تقرير" نفسها، فإذا كان كذلك نضيف رمزاً افتراضياً
-        const finalIcon = (icon === 'تقرير' || icon === 'Report') ? '📋' : icon;
-        
-        iepOption.textContent = `${finalIcon} تقرير الخطط التربوية الفردية`;
-    }
+    
+    // تحديث أسماء التقارير في القائمة المنسدلة للحفاظ على الرموز
+    updateDropdownOption('iep', 'تقرير الخطط التربوية الفردية');
+    updateDropdownOption('diagnostic', 'تقرير الاختبار التشخيصي');
 });
+
+function updateDropdownOption(value, newText) {
+    const option = document.querySelector(`#reportType option[value="${value}"]`);
+    if(option) {
+        const oldText = option.textContent.trim();
+        const icon = oldText.split(' ')[0]; 
+        const finalIcon = (icon.length < 3) ? icon : '📄'; // التأكد أنه رمز وليس كلمة
+        option.textContent = `${finalIcon} ${newText}`;
+    }
+}
 
 function updateTeacherName() {
     try {
@@ -430,7 +433,7 @@ function generateAssignmentsReport(studentIds, container) {
 }
 
 // ============================================
-// 6. تقرير الخطط التربوية الفردية (IEP) - النهائي
+// 6. تقرير الخطط التربوية الفردية (IEP)
 // ============================================
 function generateIEPReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
@@ -473,7 +476,6 @@ function generateIEPReport(studentIds, container) {
         if (!strengthHTML) strengthHTML = '<li>لا توجد نقاط قوة مسجلة.</li>';
         if (needsObjects.length === 0 && !completedDiagnostic) needsObjects = [];
 
-        // جدول الحصص الشريطي (المطابق لملف الطالب)
         const dayKeys = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
         let scheduleCells = dayKeys.map(dk => {
             const session = teacherSchedule.find(s => 
@@ -575,6 +577,141 @@ function generateIEPReport(studentIds, container) {
                 <strong>الهدف بعيد المدى:</strong> أن يتقن التلميذ مهارات المادة بنسبة إتقان 80%
             </div>
 
+            <div class="custom-footer">
+                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
+            </div>
+        </div>
+        `;
+
+        if (index < studentIds.length - 1) {
+            fullReportHTML += `<div class="page-break"></div>`;
+        }
+    });
+
+    fullReportHTML += `
+        <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px; padding:20px;">
+            <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقارير 🖨️</button>
+        </div>
+    </div>`;
+
+    container.innerHTML = fullReportHTML;
+}
+
+// ============================================
+// 7. تقرير الاختبار التشخيصي (الجديد)
+// ============================================
+function generateDiagnosticReport(studentIds, container) {
+    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+    const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
+    const printDate = new Date().toLocaleDateString('ar-SA');
+
+    let fullReportHTML = `<div style="background:white; padding:0;">`;
+
+    studentIds.forEach((studentId, index) => {
+        const student = allUsers.find(u => u.id == studentId);
+        if (!student) return;
+
+        // البحث عن آخر اختبار تشخيصي مكتمل
+        const completedDiagnostic = studentTests
+            .filter(t => t.studentId == studentId && t.type === 'diagnostic' && t.status === 'completed')
+            .sort((a, b) => new Date(b.completedDate) - new Date(a.completedDate))[0];
+        
+        const originalTest = completedDiagnostic ? allTests.find(t => t.id == completedDiagnostic.testId) : null;
+
+        fullReportHTML += `
+        <div class="student-diagnostic-page">
+            <h1 class="report-title-main">تقرير الاختبار التشخيصي</h1>
+            
+            <table class="table table-bordered">
+                <tr>
+                    <th style="width:15%;">اسم الطالب</th>
+                    <td style="width:35%; font-weight:bold;">${student.name}</td>
+                    <th style="width:15%;">الصف</th>
+                    <td>${student.grade || 'غير محدد'}</td>
+                </tr>
+            </table>
+        `;
+
+        if (!completedDiagnostic || !originalTest) {
+            fullReportHTML += `
+                <div style="text-align:center; padding:50px; border:1px solid #ccc; background:#fafafa; margin-top:20px;">
+                    <h3>لم يتم إجراء اختبار تشخيصي لهذا الطالب حتى الآن</h3>
+                    <p style="color:#777;">أو لم يتم اعتماد النتيجة كـ "مكتمل"</p>
+                </div>
+            `;
+        } else {
+            // حساب النسبة
+            const score = completedDiagnostic.score || 0;
+            const total = completedDiagnostic.totalScore || originalTest.questions.length || 1;
+            const percent = Math.round((score / total) * 100);
+
+            fullReportHTML += `
+                <div style="border:2px solid #333; padding:15px; margin:20px 0; text-align:center; background:#f0f0f0;">
+                    <div style="font-size:1.2em; font-weight:bold;">${originalTest.title}</div>
+                    <div style="margin-top:10px; font-size:1.1em;">
+                        الدرجة: <span style="color:${percent >= 50 ? 'green' : 'red'}; font-weight:bold;">${score} / ${total}</span> 
+                        (${percent}%)
+                    </div>
+                    <div style="font-size:0.9em; color:#555; margin-top:5px;">
+                        تاريخ الاختبار: ${new Date(completedDiagnostic.completedDate).toLocaleDateString('ar-SA')}
+                    </div>
+                </div>
+
+                <div class="section-title">تفاصيل الإجابات</div>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr style="background:#333; color:white;">
+                            <th style="width:5%;">#</th>
+                            <th style="width:40%;">السؤال</th>
+                            <th style="width:30%;">إجابة الطالب</th>
+                            <th style="width:10%;">التقييم</th>
+                            <th style="width:15%;">المهارة / الهدف</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            originalTest.questions.forEach((q, qIndex) => {
+                const answerObj = completedDiagnostic.answers ? completedDiagnostic.answers.find(a => a.questionId == q.id) : null;
+                
+                // معالجة الإجابة (نص أو صورة)
+                let studentAnswerContent = '<span style="color:#999;">لم يجب</span>';
+                if (answerObj && answerObj.answer) {
+                    if (answerObj.answer.startsWith('data:image') || answerObj.answer.match(/\.(jpeg|jpg|gif|png)$/i)) {
+                        studentAnswerContent = `<img src="${answerObj.answer}" class="answer-img" alt="إجابة الطالب">`;
+                    } else {
+                        studentAnswerContent = answerObj.answer;
+                    }
+                }
+
+                // التقييم
+                const isCorrect = answerObj && answerObj.score > 0; // أو مقارنة الدرجة
+                const statusIcon = isCorrect ? '<span style="color:green; font-size:1.2em;">✔️</span>' : '<span style="color:red; font-size:1.2em;">❌</span>';
+                
+                // المهارة
+                let skillName = '-';
+                if (q.linkedGoalId) {
+                    const obj = allObjectives.find(o => o.id == q.linkedGoalId);
+                    if (obj) skillName = obj.shortTermGoal;
+                }
+
+                fullReportHTML += `
+                    <tr>
+                        <td style="text-align:center;">${qIndex + 1}</td>
+                        <td>${q.text}</td>
+                        <td style="text-align:center;">${studentAnswerContent}</td>
+                        <td style="text-align:center;">${statusIcon}</td>
+                        <td style="font-size:0.9em;">${skillName}</td>
+                    </tr>
+                `;
+            });
+
+            fullReportHTML += `</tbody></table>`;
+        }
+
+        fullReportHTML += `
             <div class="custom-footer">
                 تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
             </div>

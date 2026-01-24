@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير الشامل (النسخة الاحترافية - جدول الرموز)
+// الوصف: نظام التقارير الشامل (النسخة النهائية مع مطابقة رصيد الحصص لملف الطالب)
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -9,7 +9,7 @@
     style.innerHTML = `
         @media print {
             @page {
-                size: A4 landscape; /* الصفحة بالعرض للجدول */
+                size: A4;
                 margin: 10mm;
             }
             body * {
@@ -38,13 +38,13 @@
                 border-collapse: collapse !important;
                 border: 2px solid #000 !important;
                 font-family: 'Times New Roman', serif;
-                font-size: 11pt;
+                font-size: 12pt;
                 margin-top: 15px;
                 margin-bottom: 15px;
             }
             th, td {
                 border: 1px solid #000 !important;
-                padding: 6px 5px !important;
+                padding: 8px 10px !important;
                 color: #000 !important;
                 vertical-align: middle;
                 text-align: center;
@@ -57,15 +57,15 @@
             
             /* تنسيق خاص لجدول الحصص (ثبات العرض) */
             .schedule-table {
-                table-layout: fixed; /* يجعل الأعمدة متساوية تماماً */
+                table-layout: fixed;
             }
             .schedule-table td {
-                height: 40px; /* ارتفاع ثابت للخلية */
+                height: 40px;
                 font-size: 14pt;
                 font-weight: bold;
             }
 
-            /* تنسيق الأرقام داخل الجدول */
+            /* تنسيق الأرقام والرموز */
             .student-code-badge {
                 display: inline-block;
                 border: 1px solid #000;
@@ -77,6 +77,11 @@
                 margin: 2px;
                 background-color: #fff;
             }
+
+            /* ألوان الرصيد - واضحة للطباعة */
+            .balance-positive { color: green !important; font-weight: bold; direction: ltr; unicode-bidi: embed; }
+            .balance-negative { color: red !important; font-weight: bold; direction: ltr; unicode-bidi: embed; }
+            .balance-neutral { color: black !important; font-weight: bold; direction: ltr; unicode-bidi: embed; }
 
             /* العناوين */
             .report-title-main {
@@ -113,7 +118,6 @@
                 background: white;
             }
 
-            /* فواصل الصفحات */
             .page-break {
                 page-break-after: always;
                 display: block;
@@ -121,12 +125,7 @@
                 margin-top: 20px;
             }
             
-            /* تنسيق الحالات والصور */
-            .status-pending { color: red !important; font-weight: bold; }
-            .status-completed { color: green !important; font-weight: bold; }
             .answer-img { max-width: 150px; max-height: 80px; border: 1px solid #ccc; }
-            
-            /* شريط التقدم */
             .progress-container { border: 1px solid #000 !important; background: #eee !important; -webkit-print-color-adjust: exact; }
             .progress-bar-fill { background: #555 !important; -webkit-print-color-adjust: exact; }
         }
@@ -167,6 +166,8 @@ window.initiateReport = function() {
         generateDiagnosticReport(selectedStudentIds, previewArea);
     } else if (reportType === 'schedule') {
         generateScheduleReport(selectedStudentIds, previewArea);
+    } else if (reportType === 'credit') { // التقرير الجديد (رصيد الحصص)
+        generateCreditReport(selectedStudentIds, previewArea);
     } else {
         previewArea.innerHTML = `<div class="alert alert-warning text-center no-print">عفواً، هذا التقرير قيد التطوير.</div>`;
     }
@@ -179,6 +180,7 @@ document.addEventListener('DOMContentLoaded', function() {
     updateDropdownOption('iep', 'تقرير الخطط التربوية الفردية');
     updateDropdownOption('diagnostic', 'تقرير الاختبار التشخيصي');
     updateDropdownOption('schedule', 'تقرير الجدول الدراسي');
+    updateDropdownOption('credit', 'تقرير رصيد الحصص');
 });
 
 function updateDropdownOption(value, newText) {
@@ -186,7 +188,7 @@ function updateDropdownOption(value, newText) {
     if(option) {
         const oldText = option.textContent.trim();
         const icon = oldText.split(' ')[0]; 
-        const finalIcon = (icon.length < 3) ? icon : '📅'; 
+        const finalIcon = (icon.length < 3) ? icon : '📊'; 
         option.textContent = `${finalIcon} ${newText}`;
     }
 }
@@ -251,8 +253,75 @@ function loadStudentsForSelection() {
 }
 
 // ============================================
-// 3. تقرير متابعة الغياب
+// 📊 معادلة حساب الرصيد (مطابقة لملف الطالب)
 // ============================================
+function calculateStudentBalance(studentId, allLessons, allEvents, teacherSchedule) {
+    let balance = 0;
+    
+    // 1. تصفية بيانات الطالب
+    const myList = allLessons.filter(l => l.studentId == studentId);
+    let myEvents = allEvents.filter(e => e.studentId == studentId);
+    
+    if (myList.length === 0) return 0; // لم تبدأ الخطة
+
+    // 2. تحديد تاريخ البداية (كما في ملف الطالب)
+    const sortedByDate = [...myList].sort((a, b) => new Date(a.assignedDate) - new Date(b.assignedDate));
+    const planStartDate = new Date(sortedByDate[0].assignedDate);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+
+    // 3. كشف الغياب التلقائي (Auto-Absence) للأيام التي لم تسجل
+    const dayMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+    
+    for (let d = new Date(planStartDate); d < today; d.setDate(d.getDate() + 1)) {
+        if (d.toDateString() === new Date().toDateString()) continue; // تجاوز اليوم
+
+        const dateStr = d.toDateString();
+        // هل يوجد درس مسجل في هذا اليوم؟
+        const hasLesson = myList.some(l => l.historyLog && l.historyLog.some(log => new Date(log.date).toDateString() === dateStr));
+        // هل يوجد حدث (غياب/عذر) مسجل؟
+        const hasEvent = myEvents.some(e => new Date(e.date).toDateString() === dateStr);
+        
+        if (hasLesson || hasEvent) continue;
+
+        // هل هذا يوم دراسي للطالب في الجدول؟
+        const dayKey = dayMap[d.getDay()];
+        const isScheduledDay = teacherSchedule.some(s => 
+            s.day === dayKey && (s.students && s.students.map(String).includes(String(studentId)))
+        );
+
+        if (isScheduledDay) {
+            // نعتبره غياب تلقائي لأغراض الحساب
+            balance--; 
+        }
+    }
+
+    // 4. الحساب من السجلات الفعلية
+    
+    // أ. الأحداث المسجلة (غياب/عذر/غياب تلقائي محفوظ)
+    myEvents.forEach(e => {
+        if (e.status === 'excused') balance--; // عذر = خصم
+        else if (e.type === 'auto-absence' || e.status === 'absence') balance--; // غياب = خصم
+    });
+
+    // ب. الدروس المسجلة (تعويض/إضافي)
+    myList.forEach(l => {
+        if (l.historyLog) {
+            l.historyLog.forEach(log => {
+                // حصة تعويضية أو إضافية تزيد الرصيد
+                if (log.cachedSessionType === 'compensation') balance++; 
+                else if (log.cachedSessionType === 'additional') balance++; 
+            });
+        }
+    });
+
+    return balance;
+}
+
+// ============================================
+// 3. تقارير النظام (الغياب، الإنجاز، الواجبات...)
+// ============================================
+
 function generateAttendanceReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
     const allEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]');
@@ -756,17 +825,15 @@ function generateDiagnosticReport(studentIds, container) {
 }
 
 // ============================================
-// 8. تقرير الجدول الدراسي (نظام الرموز) - النهائي
+// 8. تقرير الجدول الدراسي
 // ============================================
 function generateScheduleReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
     const scheduleData = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     const printDate = new Date().toLocaleDateString('ar-SA');
 
-    // تحديد الطلاب المختارين
     const selectedStudents = allUsers.filter(u => studentIds.includes(String(u.id)));
 
-    // 1. إنشاء جدول الرموز (Key Table)
     let keyTableHTML = `
         <div class="section-title" style="background:#444 !important; color:white; margin-bottom:0;">دليل رموز الطلاب</div>
         <table class="table table-bordered key-table" style="margin-top:0;">
@@ -780,11 +847,10 @@ function generateScheduleReport(studentIds, container) {
             <tbody>
     `;
     
-    // خريطة لتخزين الرمز الخاص بكل طالب لاستخدامه لاحقاً
     const studentCodes = {};
 
     selectedStudents.forEach((student, index) => {
-        const code = index + 1; // الرمز هو الرقم التسلسلي (1، 2، 3...)
+        const code = index + 1;
         studentCodes[student.id] = code;
         keyTableHTML += `
             <tr>
@@ -796,7 +862,6 @@ function generateScheduleReport(studentIds, container) {
     });
     keyTableHTML += `</tbody></table>`;
 
-    // 2. إنشاء الجدول الدراسي (Schedule Matrix)
     let scheduleHTML = `
         <h2 style="text-align:center; margin-top:20px;">الجدول الدراسي</h2>
         <table class="table table-bordered schedule-table" border="1" style="border: 2px solid black;">
@@ -825,10 +890,7 @@ function generateScheduleReport(studentIds, container) {
             let cellContent = '';
 
             if (session && session.students && session.students.length > 0) {
-                // البحث عن الطلاب في هذه الحصة ومطابقتهم مع القائمة المختارة
                 const studentsInSession = session.students.map(String);
-                
-                // تصفية للحصول فقط على رموز الطلاب المختارين الموجودين في هذه الحصة
                 const codesToShow = [];
                 selectedStudents.forEach(s => {
                     if (studentsInSession.includes(String(s.id))) {
@@ -837,7 +899,6 @@ function generateScheduleReport(studentIds, container) {
                 });
 
                 if (codesToShow.length > 0) {
-                    // عرض الأرقام مفصولة بفواصل
                     cellContent = codesToShow.join(' ، ');
                 }
             }
@@ -849,7 +910,6 @@ function generateScheduleReport(studentIds, container) {
 
     scheduleHTML += `</tbody></table>`;
 
-    // تجميع التقرير النهائي
     let finalHTML = `
         <div style="background:white; padding:10px;">
             <h1 class="report-title-main">تقرير الجدول الدراسي</h1>
@@ -868,4 +928,80 @@ function generateScheduleReport(studentIds, container) {
     `;
 
     container.innerHTML = finalHTML;
+}
+
+// ============================================
+// 9. تقرير رصيد الحصص (الجديد)
+// ============================================
+function generateCreditReport(studentIds, container) {
+    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const allLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    const allEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]');
+    const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
+    const printDate = new Date().toLocaleDateString('ar-SA');
+
+    let tableHTML = `
+        <div style="background:white; padding:20px;">
+            <div class="text-center mb-4">
+                <h1 class="report-title-main" style="text-align:center; color:#000;">تقرير رصيد الحصص</h1>
+            </div>
+            
+            <table class="table table-bordered" style="width:100%; direction:rtl;" border="1">
+                <thead>
+                    <tr style="background-color:#333; color:white;">
+                        <th style="width:60%;">اسم الطالب</th>
+                        <th style="width:40%;">رصيد الحصص</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    studentIds.forEach(studentId => {
+        const student = allUsers.find(u => u.id == studentId);
+        if (!student) return;
+
+        // حساب الرصيد باستخدام نفس دالة ملف الطالب
+        const balance = calculateStudentBalance(studentId, allLessons, allEvents, teacherSchedule);
+
+        // تنسيق اللون والرمز
+        let balanceClass = 'balance-neutral';
+        let balanceText = balance;
+
+        if (balance > 0) {
+            balanceClass = 'balance-positive';
+            balanceText = `+${balance}`;
+        } else if (balance < 0) {
+            balanceClass = 'balance-negative';
+            balanceText = `${balance}`;
+        }
+
+        tableHTML += `
+            <tr>
+                <td style="font-weight:bold; font-size:1.1em; text-align:right; padding-right:20px;">${student.name}</td>
+                <td class="${balanceClass}" style="font-size:1.4em; direction:ltr;">${balanceText}</td>
+            </tr>
+        `;
+    });
+
+    tableHTML += `</tbody></table>
+            
+            <div style="margin-top:20px; font-size:0.9em; color:#555; border:1px solid #ccc; padding:10px; border-radius:5px;">
+                <strong>دليل التقرير:</strong>
+                <ul style="margin-top:5px; margin-bottom:0;">
+                    <li><span style="color:red; font-weight:bold;">الرقم السالب (-):</span> يعني أن الطالب يحتاج لتعويض حصص.</li>
+                    <li><span style="color:green; font-weight:bold;">الرقم الموجب (+):</span> يعني أن الطالب متقدم في الخطة.</li>
+                    <li><span style="color:black; font-weight:bold;">الصفر (0):</span> يعني أن الطالب يسير وفق الخطة تماماً.</li>
+                </ul>
+            </div>
+
+            <div class="custom-footer">
+                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
+            </div>
+
+            <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
+                <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقرير 🖨️</button>
+            </div>
+        </div>`;
+    
+    container.innerHTML = tableHTML;
 }

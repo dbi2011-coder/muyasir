@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير الشامل (الغياب، الإنجاز، الواجبات، الخطط، التشخيص، الجدول الدراسي)
+// الوصف: نظام التقارير الشامل (النسخة الاحترافية - جدول الرموز)
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -9,7 +9,7 @@
     style.innerHTML = `
         @media print {
             @page {
-                size: A4 landscape; /* جعل الصفحة بالعرض للجدول الدراسي */
+                size: A4 landscape; /* الصفحة بالعرض للجدول */
                 margin: 10mm;
             }
             body * {
@@ -32,7 +32,7 @@
                 direction: rtl;
             }
             
-            /* تنسيق الجداول */
+            /* تنسيق الجداول العامة */
             table {
                 width: 100% !important;
                 border-collapse: collapse !important;
@@ -55,6 +55,29 @@
                 font-weight: bold;
             }
             
+            /* تنسيق خاص لجدول الحصص (ثبات العرض) */
+            .schedule-table {
+                table-layout: fixed; /* يجعل الأعمدة متساوية تماماً */
+            }
+            .schedule-table td {
+                height: 40px; /* ارتفاع ثابت للخلية */
+                font-size: 14pt;
+                font-weight: bold;
+            }
+
+            /* تنسيق الأرقام داخل الجدول */
+            .student-code-badge {
+                display: inline-block;
+                border: 1px solid #000;
+                border-radius: 50%;
+                width: 25px;
+                height: 25px;
+                line-height: 23px;
+                text-align: center;
+                margin: 2px;
+                background-color: #fff;
+            }
+
             /* العناوين */
             .report-title-main {
                 font-size: 22pt;
@@ -97,11 +120,7 @@
                 height: 1px;
                 margin-top: 20px;
             }
-
-            /* تنسيق خاص للجدول الدراسي */
-            .schedule-cell { font-size: 0.9em; line-height: 1.4; }
-            .student-tag { display: block; margin-bottom: 2px; }
-
+            
             /* تنسيق الحالات والصور */
             .status-pending { color: red !important; font-weight: bold; }
             .status-completed { color: green !important; font-weight: bold; }
@@ -146,7 +165,7 @@ window.initiateReport = function() {
         generateIEPReport(selectedStudentIds, previewArea);
     } else if (reportType === 'diagnostic') {
         generateDiagnosticReport(selectedStudentIds, previewArea);
-    } else if (reportType === 'schedule') { // التقرير الجديد للجدول
+    } else if (reportType === 'schedule') {
         generateScheduleReport(selectedStudentIds, previewArea);
     } else {
         previewArea.innerHTML = `<div class="alert alert-warning text-center no-print">عفواً، هذا التقرير قيد التطوير.</div>`;
@@ -157,7 +176,6 @@ document.addEventListener('DOMContentLoaded', function() {
     updateTeacherName();
     loadStudentsForSelection();
     
-    // تحديث أسماء التقارير في القائمة المنسدلة
     updateDropdownOption('iep', 'تقرير الخطط التربوية الفردية');
     updateDropdownOption('diagnostic', 'تقرير الاختبار التشخيصي');
     updateDropdownOption('schedule', 'تقرير الجدول الدراسي');
@@ -738,71 +756,106 @@ function generateDiagnosticReport(studentIds, container) {
 }
 
 // ============================================
-// 8. تقرير الجدول الدراسي (الجديد)
+// 8. تقرير الجدول الدراسي (نظام الرموز) - النهائي
 // ============================================
 function generateScheduleReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
     const scheduleData = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     const printDate = new Date().toLocaleDateString('ar-SA');
 
-    // 1. تحديد الطلاب المختارين
+    // تحديد الطلاب المختارين
     const selectedStudents = allUsers.filter(u => studentIds.includes(String(u.id)));
 
-    // 2. إنشاء قائمة أسماء الطلاب في الأعلى
-    const studentsHeaderList = selectedStudents.map(s => `
-        <span style="display:inline-block; margin: 0 10px; font-weight:bold; color:#333;">
-            ${s.name} <span style="font-weight:normal; color:#666;">(${s.grade || '-'})</span>
-        </span>
-    `).join(' ، ');
+    // 1. إنشاء جدول الرموز (Key Table)
+    let keyTableHTML = `
+        <div class="section-title" style="background:#444 !important; color:white; margin-bottom:0;">دليل رموز الطلاب</div>
+        <table class="table table-bordered key-table" style="margin-top:0;">
+            <thead>
+                <tr style="background:#f0f0f0;">
+                    <th style="width:10%;">م (الرمز)</th>
+                    <th style="width:50%;">اسم الطالب</th>
+                    <th style="width:40%;">الصف</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    // خريطة لتخزين الرمز الخاص بكل طالب لاستخدامه لاحقاً
+    const studentCodes = {};
 
-    let html = `
-        <div style="background:white; padding:10px;">
-            <h1 class="report-title-main">تقرير الجدول الدراسي</h1>
-            
-            <div style="margin-bottom: 20px; border: 2px solid #ddd; padding: 15px; background: #fafafa; border-radius:8px;">
-                <div style="font-weight:bold; margin-bottom:10px; text-decoration:underline;">الطلاب في هذا التقرير:</div>
-                <div style="line-height:1.6;">${studentsHeaderList}</div>
-            </div>
+    selectedStudents.forEach((student, index) => {
+        const code = index + 1; // الرمز هو الرقم التسلسلي (1، 2، 3...)
+        studentCodes[student.id] = code;
+        keyTableHTML += `
+            <tr>
+                <td style="font-weight:bold; font-size:1.2em;">${code}</td>
+                <td style="text-align:right; padding-right:15px !important;">${student.name}</td>
+                <td>${student.grade || '-'}</td>
+            </tr>
+        `;
+    });
+    keyTableHTML += `</tbody></table>`;
 
-            <table class="table table-bordered" style="direction:rtl; font-size:12px;">
-                <thead>
-                    <tr>
-                        <th style="width:10%; background:#333; color:white;">اليوم / الحصة</th>
-                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th>
-                    </tr>
-                </thead>
-                <tbody>
+    // 2. إنشاء الجدول الدراسي (Schedule Matrix)
+    let scheduleHTML = `
+        <h2 style="text-align:center; margin-top:20px;">الجدول الدراسي</h2>
+        <table class="table table-bordered schedule-table" border="1" style="border: 2px solid black;">
+            <thead>
+                <tr style="background:#333; color:white;">
+                    <th style="width:12%;">اليوم / الحصة</th>
+                    <th style="width:12.5%;">1</th>
+                    <th style="width:12.5%;">2</th>
+                    <th style="width:12.5%;">3</th>
+                    <th style="width:12.5%;">4</th>
+                    <th style="width:12.5%;">5</th>
+                    <th style="width:12.5%;">6</th>
+                    <th style="width:12.5%;">7</th>
+                </tr>
+            </thead>
+            <tbody>
     `;
 
     const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
     
     days.forEach(day => {
-        html += `<tr><td style="font-weight:bold; background:#f0f0f0;">${day}</td>`;
+        scheduleHTML += `<tr><td style="font-weight:bold; background:#f0f0f0; border:1px solid #000;">${day}</td>`;
         
         for (let period = 1; period <= 7; period++) {
             const session = scheduleData.find(s => s.day === day && s.period === period);
             let cellContent = '';
 
             if (session && session.students && session.students.length > 0) {
-                // تقاطع: الطلاب الموجودين في الحصة AND الطلاب المختارين في التقرير
-                const sessionStudentIds = session.students.map(String);
-                const studentsToShow = selectedStudents.filter(s => sessionStudentIds.includes(String(s.id)));
+                // البحث عن الطلاب في هذه الحصة ومطابقتهم مع القائمة المختارة
+                const studentsInSession = session.students.map(String);
+                
+                // تصفية للحصول فقط على رموز الطلاب المختارين الموجودين في هذه الحصة
+                const codesToShow = [];
+                selectedStudents.forEach(s => {
+                    if (studentsInSession.includes(String(s.id))) {
+                        codesToShow.push(studentCodes[s.id]);
+                    }
+                });
 
-                if (studentsToShow.length > 0) {
-                    cellContent = studentsToShow.map(s => 
-                        `<span class="student-tag">• ${s.name} <small>(${s.grade})</small></span>`
-                    ).join('');
+                if (codesToShow.length > 0) {
+                    // عرض الأرقام مفصولة بفواصل
+                    cellContent = codesToShow.join(' ، ');
                 }
             }
             
-            html += `<td class="schedule-cell" style="vertical-align:top; text-align:right;">${cellContent}</td>`;
+            scheduleHTML += `<td style="border:1px solid #000;">${cellContent}</td>`;
         }
-        html += `</tr>`;
+        scheduleHTML += `</tr>`;
     });
 
-    html += `
-                </tbody>
-            </table>
+    scheduleHTML += `</tbody></table>`;
+
+    // تجميع التقرير النهائي
+    let finalHTML = `
+        <div style="background:white; padding:10px;">
+            <h1 class="report-title-main">تقرير الجدول الدراسي</h1>
+            
+            ${keyTableHTML}
+            ${scheduleHTML}
             
             <div class="custom-footer">
                 تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
@@ -814,5 +867,5 @@ function generateScheduleReport(studentIds, container) {
         </div>
     `;
 
-    container.innerHTML = html;
+    container.innerHTML = finalHTML;
 }

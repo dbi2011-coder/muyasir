@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير الشامل (النسخة النهائية مع مطابقة رصيد الحصص لملف الطالب)
+// الوصف: نظام التقارير الشامل (مع إضافة الخيارات تلقائياً للقائمة)
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -166,7 +166,7 @@ window.initiateReport = function() {
         generateDiagnosticReport(selectedStudentIds, previewArea);
     } else if (reportType === 'schedule') {
         generateScheduleReport(selectedStudentIds, previewArea);
-    } else if (reportType === 'credit') { // التقرير الجديد (رصيد الحصص)
+    } else if (reportType === 'credit') {
         generateCreditReport(selectedStudentIds, previewArea);
     } else {
         previewArea.innerHTML = `<div class="alert alert-warning text-center no-print">عفواً، هذا التقرير قيد التطوير.</div>`;
@@ -177,20 +177,25 @@ document.addEventListener('DOMContentLoaded', function() {
     updateTeacherName();
     loadStudentsForSelection();
     
-    updateDropdownOption('iep', 'تقرير الخطط التربوية الفردية');
-    updateDropdownOption('diagnostic', 'تقرير الاختبار التشخيصي');
-    updateDropdownOption('schedule', 'تقرير الجدول الدراسي');
-    updateDropdownOption('credit', 'تقرير رصيد الحصص');
+    // ✅ إضافة الخيارات للقائمة تلقائياً لضمان ظهورها
+    ensureOptionExists('iep', 'تقرير الخطط التربوية الفردية', '📄');
+    ensureOptionExists('diagnostic', 'تقرير الاختبار التشخيصي', '📝');
+    ensureOptionExists('schedule', 'تقرير الجدول الدراسي', '📅');
+    ensureOptionExists('credit', 'تقرير رصيد الحصص', '📊');
 });
 
-function updateDropdownOption(value, newText) {
-    const option = document.querySelector(`#reportType option[value="${value}"]`);
-    if(option) {
-        const oldText = option.textContent.trim();
-        const icon = oldText.split(' ')[0]; 
-        const finalIcon = (icon.length < 3) ? icon : '📊'; 
-        option.textContent = `${finalIcon} ${newText}`;
+// دالة مساعدة لإنشاء الخيار إذا لم يكن موجوداً
+function ensureOptionExists(value, text, icon) {
+    const select = document.getElementById('reportType');
+    if (!select) return;
+    
+    let option = select.querySelector(`option[value="${value}"]`);
+    if (!option) {
+        option = document.createElement('option');
+        option.value = value;
+        select.appendChild(option);
     }
+    option.textContent = `${icon} ${text}`;
 }
 
 function updateTeacherName() {
@@ -264,22 +269,21 @@ function calculateStudentBalance(studentId, allLessons, allEvents, teacherSchedu
     
     if (myList.length === 0) return 0; // لم تبدأ الخطة
 
-    // 2. تحديد تاريخ البداية (كما في ملف الطالب)
+    // 2. تحديد تاريخ البداية
     const sortedByDate = [...myList].sort((a, b) => new Date(a.assignedDate) - new Date(b.assignedDate));
     const planStartDate = new Date(sortedByDate[0].assignedDate);
     const today = new Date();
     today.setHours(23, 59, 59, 999);
 
-    // 3. كشف الغياب التلقائي (Auto-Absence) للأيام التي لم تسجل
+    // 3. كشف الغياب التلقائي (Auto-Absence)
     const dayMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     
     for (let d = new Date(planStartDate); d < today; d.setDate(d.getDate() + 1)) {
-        if (d.toDateString() === new Date().toDateString()) continue; // تجاوز اليوم
+        if (d.toDateString() === new Date().toDateString()) continue;
 
         const dateStr = d.toDateString();
-        // هل يوجد درس مسجل في هذا اليوم؟
+        // هل يوجد درس أو حدث مسجل في هذا اليوم؟
         const hasLesson = myList.some(l => l.historyLog && l.historyLog.some(log => new Date(log.date).toDateString() === dateStr));
-        // هل يوجد حدث (غياب/عذر) مسجل؟
         const hasEvent = myEvents.some(e => new Date(e.date).toDateString() === dateStr);
         
         if (hasLesson || hasEvent) continue;
@@ -291,24 +295,21 @@ function calculateStudentBalance(studentId, allLessons, allEvents, teacherSchedu
         );
 
         if (isScheduledDay) {
-            // نعتبره غياب تلقائي لأغراض الحساب
-            balance--; 
+            balance--; // غياب تلقائي
         }
     }
 
     // 4. الحساب من السجلات الفعلية
-    
-    // أ. الأحداث المسجلة (غياب/عذر/غياب تلقائي محفوظ)
+    // أ. الأحداث (غياب/عذر)
     myEvents.forEach(e => {
-        if (e.status === 'excused') balance--; // عذر = خصم
-        else if (e.type === 'auto-absence' || e.status === 'absence') balance--; // غياب = خصم
+        if (e.status === 'excused') balance--; 
+        else if (e.type === 'auto-absence' || e.status === 'absence') balance--;
     });
 
-    // ب. الدروس المسجلة (تعويض/إضافي)
+    // ب. الدروس (تعويض/إضافي)
     myList.forEach(l => {
         if (l.historyLog) {
             l.historyLog.forEach(log => {
-                // حصة تعويضية أو إضافية تزيد الرصيد
                 if (log.cachedSessionType === 'compensation') balance++; 
                 else if (log.cachedSessionType === 'additional') balance++; 
             });

@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: إدارة التقارير (الغياب + الإنجاز + الواجبات + الخطط الفردية)
+// الوصف: إدارة التقارير (الغياب + الإنجاز + الواجبات + الخطط الفردية) - الإصدار النهائي
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -38,7 +38,7 @@
                 border-collapse: collapse !important;
                 border: 2px solid #000 !important;
                 font-family: 'Times New Roman', serif;
-                font-size: 11pt; /* تصغير الخط قليلاً لاستيعاب الخطة */
+                font-size: 11pt;
                 margin-top: 15px;
                 margin-bottom: 15px;
             }
@@ -138,7 +138,7 @@ window.initiateReport = function() {
         generateAchievementReport(selectedStudentIds, previewArea);
     } else if (reportType === 'assignments') {
         generateAssignmentsReport(selectedStudentIds, previewArea);
-    } else if (reportType === 'iep') { // التقرير الجديد
+    } else if (reportType === 'iep') {
         generateIEPReport(selectedStudentIds, previewArea);
     } else {
         previewArea.innerHTML = `<div class="alert alert-warning text-center no-print">عفواً، هذا التقرير قيد التطوير.</div>`;
@@ -417,7 +417,7 @@ function generateAssignmentsReport(studentIds, container) {
 }
 
 // ============================================
-// 6. تقرير الخطط التربوية الفردية (IEP) - الجديد
+// 6. تقرير الخطط التربوية الفردية (IEP) - النهائي
 // ============================================
 function generateIEPReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
@@ -434,7 +434,7 @@ function generateIEPReport(studentIds, container) {
         const student = allUsers.find(u => u.id == studentId);
         if (!student) return;
 
-        // 1. جلب الاختبار التشخيصي المكتمل
+        // 1. جلب الاختبار التشخيصي
         const completedDiagnostic = studentTests.find(t => t.studentId == studentId && t.type === 'diagnostic' && t.status === 'completed');
         const originalTest = completedDiagnostic ? allTests.find(t => t.id == completedDiagnostic.testId) : null;
 
@@ -460,13 +460,20 @@ function generateIEPReport(studentIds, container) {
         }
         
         if (!strengthHTML) strengthHTML = '<li>لا توجد نقاط قوة مسجلة.</li>';
-        if (needsObjects.length === 0 && !completedDiagnostic) needsObjects = []; // لا يوجد خطة
+        if (needsObjects.length === 0 && !completedDiagnostic) needsObjects = [];
 
-        // 3. جدول الحصص
+        // 3. جدول الحصص (الشريطي - صف واحد بسيط)
         const dayKeys = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
         let scheduleCells = dayKeys.map(dk => {
-            const session = teacherSchedule.find(s => s.day === dk && (s.students && s.students.includes(studentId.toString())));
-            let content = session ? `حصة ${session.period || 1}` : '-';
+            // البحث عن الطالب في حصص هذا اليوم
+            // teacherSchedule structure: { day: 'الأحد', period: 3, students: [101, 102] }
+            const session = teacherSchedule.find(s => 
+                s.day === dk && 
+                s.students && 
+                s.students.some(id => id == studentId) // مقارنة مرنة
+            );
+            
+            let content = session ? `حصة ${session.period}` : '-';
             return `<td style="height:40px; text-align:center;">${content}</td>`;
         }).join('');
 
@@ -506,7 +513,7 @@ function generateIEPReport(studentIds, container) {
                 <div style="flex:1; border:1px solid #000; padding:10px;">
                     <div style="font-weight:bold; border-bottom:1px solid #000; margin-bottom:5px; text-align:center; background:#eee;">نقاط الاحتياج (الأهداف)</div>
                     <ul style="margin:0; padding-right:20px; font-size:0.9em;">
-                        ${needsObjects.length > 0 ? needsObjects.map(o => `<li>${o.shortTermGoal}</li>`).join('') : '<li>لا توجد خطة نشطة (يجب إكمال التشخيص)</li>'}
+                        ${needsObjects.length > 0 ? needsObjects.map(o => `<li>${o.shortTermGoal}</li>`).join('') : '<li>لا توجد خطة نشطة</li>'}
                     </ul>
                 </div>
             </div>
@@ -530,7 +537,6 @@ function generateIEPReport(studentIds, container) {
             needsObjects.forEach(obj => {
                 if (obj.instructionalGoals) {
                     obj.instructionalGoals.forEach((iGoal, idx) => {
-                        // البحث عن حالة الدرس
                         const lesson = studentLessons.find(l => l.studentId == studentId && l.objective === iGoal);
                         let statusText = '-';
                         if (lesson) {
@@ -551,7 +557,7 @@ function generateIEPReport(studentIds, container) {
                 }
             });
         } else {
-            fullReportHTML += `<tr><td colspan="4" style="text-align:center; padding:20px;">لا توجد أهداف مسجلة في الخطة الحالية.</td></tr>`;
+            fullReportHTML += `<tr><td colspan="4" style="text-align:center; padding:20px;">لا توجد أهداف مسجلة.</td></tr>`;
         }
 
         fullReportHTML += `
@@ -568,7 +574,6 @@ function generateIEPReport(studentIds, container) {
         </div>
         `;
 
-        // إضافة فاصل صفحات إلا في الأخير
         if (index < studentIds.length - 1) {
             fullReportHTML += `<div class="page-break"></div>`;
         }

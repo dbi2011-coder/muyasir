@@ -1,32 +1,59 @@
 // ============================================
-// 📁 الملف: assets/js/auth.js
-// الوصف: نظام المصادقة الموحد (مع تحديث المسارات)
+// 📁 الملف: assets/js/auth.js (نسخة التشخيص)
 // ============================================
 
+// تهيئة النظام وإنشاء حساب افتراضي
+(function initializeSystem() {
+    console.log("بداية تهيئة النظام...");
+    try {
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        const adminExists = users.some(u => u.role === 'admin');
+
+        if (!adminExists) {
+            users.push({
+                id: 1,
+                name: 'الأستاذ صالح العجلان',
+                username: 'admin',
+                password: '123',
+                role: 'admin'
+            });
+            localStorage.setItem('users', JSON.stringify(users));
+            console.log("تم إنشاء حساب المشرف الافتراضي: admin / 123");
+        }
+    } catch (e) {
+        console.error("خطأ في تهيئة النظام:", e);
+        alert("هناك مشكلة في الذاكرة المحلية (LocalStorage).");
+    }
+})();
+
 function login() {
+    // 1. اختبار استجابة الزر
+    console.log("تم ضغط زر الدخول");
+
     const userInp = document.getElementById('username').value.trim();
     const passInp = document.getElementById('password').value.trim();
 
     if (!userInp || !passInp) {
-        alert("الرجاء إدخال اسم المستخدم وكلمة المرور");
+        alert("⚠️ الرجاء إدخال اسم المستخدم وكلمة المرور!");
         return;
     }
 
-    // 1. البحث في جدول المستخدمين (معلمين وطلاب)
+    // 2. البحث في المستخدمين (المعلمين/الطلاب)
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const foundUser = users.find(u => u.username === userInp && u.password === passInp);
 
     if (foundUser) {
+        alert(`✅ تم العثور على المستخدم: ${foundUser.name}\nسيتم التوجيه الآن...`);
+        
         // حفظ الجلسة
         sessionStorage.setItem('currentUser', JSON.stringify({
             id: foundUser.id,
             name: foundUser.name,
             role: foundUser.role,
-            teacherId: foundUser.teacherId || null,
             user: foundUser
         }));
 
-        // التوجيه (مسارات تبدأ من المجلد الرئيسي)
+        // التوجيه (تأكد أن أسماء المجلدات لديك مطابقة لهذه المسارات)
         if (foundUser.role === 'admin') {
             window.location.href = 'pages/teacher/dashboard.html';
         } else {
@@ -35,12 +62,13 @@ function login() {
         return;
     }
 
-    // 2. البحث في جدول أعضاء اللجنة (NEW)
+    // 3. البحث في أعضاء اللجنة
     const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     const foundMember = committeeMembers.find(m => m.username === userInp && m.password === passInp);
 
     if (foundMember) {
-        // حفظ جلسة عضو اللجنة
+        alert(`✅ مرحباً عضو اللجنة: ${foundMember.name}`);
+        
         sessionStorage.setItem('currentUser', JSON.stringify({
             id: foundMember.id,
             name: foundMember.name,
@@ -49,18 +77,16 @@ function login() {
             user: foundMember
         }));
 
-        // التوجيه لبوابة الأعضاء
         window.location.href = 'pages/member/dashboard.html';
         return;
     }
 
-    alert("بيانات الدخول غير صحيحة، يرجى التأكد من الاسم وكلمة المرور.");
+    // 4. فشل الدخول
+    alert(`❌ فشل الدخول!\nلم يتم العثور على حساب بالبيانات:\nالمستخدم: ${userInp}\nالرمز: ${passInp}\n\nجرب الحساب الافتراضي: admin / 123`);
 }
 
 function logout() {
     sessionStorage.removeItem('currentUser');
-    // العودة للصفحة الرئيسية (تعديل المسار حسب مكان الملف الذي يتم تسجيل الخروج منه)
-    // إذا كنت داخل مجلد pages/teacher/ ستعود بمستويين للخلف
     window.location.href = '../../index.html';
 }
 

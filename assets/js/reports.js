@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: إدارة التقارير (الغياب + الإنجاز + الواجبات + الخطط الفردية) - الإصدار النهائي
+// الوصف: إدارة التقارير (الغياب + الإنجاز + الواجبات + الخطط الفردية) - النسخة النهائية
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -148,6 +148,12 @@ window.initiateReport = function() {
 document.addEventListener('DOMContentLoaded', function() {
     updateTeacherName();
     loadStudentsForSelection();
+
+    // ✅ تحديث اسم الخيار في القائمة المنسدلة تلقائياً ليطابق الاسم الجديد
+    const iepOption = document.querySelector('#reportType option[value="iep"]');
+    if(iepOption) {
+        iepOption.textContent = 'تقرير الخطط التربوية الفردية';
+    }
 });
 
 function updateTeacherName() {
@@ -434,11 +440,9 @@ function generateIEPReport(studentIds, container) {
         const student = allUsers.find(u => u.id == studentId);
         if (!student) return;
 
-        // 1. جلب الاختبار التشخيصي
         const completedDiagnostic = studentTests.find(t => t.studentId == studentId && t.type === 'diagnostic' && t.status === 'completed');
         const originalTest = completedDiagnostic ? allTests.find(t => t.id == completedDiagnostic.testId) : null;
 
-        // 2. حساب نقاط القوة والاحتياج
         let strengthHTML = '';
         let needsObjects = [];
 
@@ -462,22 +466,19 @@ function generateIEPReport(studentIds, container) {
         if (!strengthHTML) strengthHTML = '<li>لا توجد نقاط قوة مسجلة.</li>';
         if (needsObjects.length === 0 && !completedDiagnostic) needsObjects = [];
 
-        // 3. جدول الحصص (الشريطي - صف واحد بسيط)
+        // جدول الحصص الشريطي (المطابق لملف الطالب)
         const dayKeys = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
         let scheduleCells = dayKeys.map(dk => {
-            // البحث عن الطالب في حصص هذا اليوم
-            // teacherSchedule structure: { day: 'الأحد', period: 3, students: [101, 102] }
             const session = teacherSchedule.find(s => 
                 s.day === dk && 
                 s.students && 
-                s.students.some(id => id == studentId) // مقارنة مرنة
+                s.students.some(id => id == studentId)
             );
             
             let content = session ? `حصة ${session.period}` : '-';
             return `<td style="height:40px; text-align:center;">${content}</td>`;
         }).join('');
 
-        // 4. بناء صفحة الطالب
         fullReportHTML += `
         <div class="student-iep-page">
             <h1 class="report-title-main">تقرير الخطط التربوية الفردية</h1>
@@ -531,7 +532,6 @@ function generateIEPReport(studentIds, container) {
                 <tbody>
         `;
 
-        // تعبئة الأهداف
         let rowCounter = 1;
         if (needsObjects.length > 0) {
             needsObjects.forEach(obj => {

@@ -1,90 +1,74 @@
 // ============================================
 // 📁 الملف: assets/js/auth.js
-// الوصف: نظام الدخول الموحد (مع توجيه المسارات الصحيح)
+// الوصف: كود الدخول المباشر (يربط زر الدخول بالوظيفة مباشرة)
 // ============================================
 
-document.addEventListener('DOMContentLoaded', function() {
-    // إصلاح زر الدخول تلقائياً
-    const loginBtn = document.querySelector('button');
-    if(loginBtn && (loginBtn.innerText.includes('دخول') || loginBtn.innerText.includes('Login'))) {
-        loginBtn.type = 'button';
-        loginBtn.onclick = login;
-    }
-});
-
+// هذه الدالة هي التي يبحث عنها الزر في صفحتك
 function login() {
-    const userInp = document.getElementById('username').value.trim();
-    const passInp = document.getElementById('password').value.trim();
+    console.log("تم ضغط الزر..."); // للتأكد من الاستجابة
+
+    // 1. جلب البيانات
+    var userInp = document.getElementById('username').value;
+    var passInp = document.getElementById('password').value;
+
+    // تنظيف المسافات الزائدة (إن وجدت)
+    if(userInp) userInp = userInp.trim();
+    if(passInp) passInp = passInp.trim();
 
     if (!userInp || !passInp) {
-        alert("الرجاء إدخال البيانات");
+        alert("الرجاء إدخال اسم المستخدم وكلمة المرور");
         return;
     }
 
-    let user = null;
-    let role = '';
+    // 2. البحث في المعلمين والطلاب (المستخدمين الأساسيين)
+    var users = JSON.parse(localStorage.getItem('users') || '[]');
+    var foundUser = users.find(function(u) {
+        return u.username == userInp && u.password == passInp;
+    });
 
-    // 1. البحث في جدول المستخدمين (المعلم / الطلاب)
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    user = users.find(u => u.username === userInp && u.password === passInp);
+    // 3. إذا لم نجد، نبحث في أعضاء اللجنة
+    if (!foundUser) {
+        var committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
+        var member = committeeMembers.find(function(m) {
+            return m.username == userInp && m.password == passInp;
+        });
 
-    if (user) {
-        role = user.role; // admin, teacher, student
-    } 
-    // 2. البحث في جدول أعضاء اللجنة
-    else {
-        const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-        const member = committeeMembers.find(m => m.username === userInp && m.password === passInp);
-        
         if (member) {
-            user = {
+            foundUser = {
                 id: member.id,
                 name: member.name,
                 username: member.username,
-                role: 'committee_member', // توحيد اسم الدور
+                role: 'committee_member',
                 title: member.role
             };
-            role = 'committee_member';
         }
     }
 
-    // 3. التوجيه
-    if (user) {
-        sessionStorage.setItem('currentUser', JSON.stringify(user));
-        
-        // مصفوفة المسارات الصحيحة (من المجلد الرئيسي)
-        const paths = {
-            'admin': 'pages/teacher/dashboard.html',
-            'teacher': 'pages/teacher/dashboard.html',
-            'student': 'pages/student/dashboard.html',
-            
-            // هنا الحل: نوجه أي دور لجنة إلى مجلد member
-            'committee': 'pages/member/dashboard.html',
-            'committee_member': 'pages/member/dashboard.html' 
-        };
+    // 4. التوجيه
+    if (foundUser) {
+        // حفظ بيانات الجلسة
+        sessionStorage.setItem('currentUser', JSON.stringify(foundUser));
 
-        const targetPath = paths[role];
-
-        if(targetPath) {
-            console.log('جاري التوجيه إلى:', targetPath);
-            window.location.href = targetPath;
+        // تحديد المسار حسب الصلاحية
+        if (foundUser.role === 'admin' || foundUser.role === 'teacher') {
+            window.location.href = 'pages/teacher/dashboard.html';
+        } else if (foundUser.role === 'committee_member') {
+            window.location.href = 'pages/member/dashboard.html';
         } else {
-            alert('يوجد خطأ في تحديد مسار المستخدم، راجع المسؤول.');
+            window.location.href = 'pages/student/dashboard.html';
         }
-
     } else {
-        alert("بيانات الدخول غير صحيحة!");
+        alert("بيانات الدخول غير صحيحة");
     }
 }
 
+// دالة تسجيل الخروج (تعمل في كل الصفحات)
 function logout() {
     sessionStorage.removeItem('currentUser');
-    // العودة للصفحة الرئيسية دائماً
-    window.location.href = '../../index.html';
-}
-
-function checkAuth() {
-    if (!sessionStorage.getItem('currentUser')) {
+    // العودة للصفحة الرئيسية (تلقائياً يحسب المسار)
+    if (window.location.href.indexOf('pages') > -1) {
         window.location.href = '../../index.html';
+    } else {
+        window.location.href = 'index.html';
     }
 }

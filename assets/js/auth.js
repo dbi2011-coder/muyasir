@@ -1,96 +1,85 @@
 // ============================================
 // 📁 الملف: assets/js/auth.js
-// الوصف: نظام الدخول الموحد (إصلاح مشكلة التحديث)
+// الوصف: نظام الدخول المباشر (يدعم المعلم، الطالب، وعضو اللجنة)
 // ============================================
 
+// التأكد من تحميل الصفحة
 document.addEventListener('DOMContentLoaded', function() {
-    // 🛠️ إصلاح تلقائي: تحويل زر الدخول لمنع تحديث الصفحة
-    // يبحث عن أي زر يحتوي على دالة login() ويحوله إلى زر عادي
-    const loginBtn = document.querySelector('button[onclick="login()"]');
-    if(loginBtn) {
-        loginBtn.setAttribute('type', 'button'); 
+    // محاولة إصلاح زر الدخول تلقائياً لمنع تحديث الصفحة
+    const loginBtn = document.querySelector('button');
+    if(loginBtn && loginBtn.innerText.includes('دخول')) {
+        loginBtn.type = 'button'; // تحويله لزر عادي
+        loginBtn.setAttribute('onclick', 'login()'); // التأكد من ربطه بالدالة
     }
-    
-    // التأكد من وجود حساب المعلم (المدير) دائماً
-    ensureAdminExists();
 });
 
+// ✅ دالة الدخول الرئيسية (التي يستدعيها الزر في صفحتك)
 function login() {
-    // 1. جلب البيانات
+    // 1. جلب البيانات من الحقول
     const userInp = document.getElementById('username').value.trim();
     const passInp = document.getElementById('password').value.trim();
 
-    // منع الدخول ببيانات فارغة
+    // التحقق من تعبئة الحقول
     if (!userInp || !passInp) {
         alert("الرجاء إدخال اسم المستخدم وكلمة المرور");
         return;
     }
 
-    // 2. البحث في جدول المستخدمين الأساسيين (المعلم / الطلاب)
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    let user = users.find(u => u.username === userInp && u.password === passInp);
+    let foundUser = null;
+    let redirectUrl = '';
 
-    // 3. إذا لم نجده، نبحث في جدول أعضاء اللجنة (الميزة الجديدة)
-    if (!user) {
+    // 2. البحث أولاً في جدول المستخدمين الأساسيين (المعلم / الطلاب)
+    // المصدر: users
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    foundUser = users.find(u => u.username === userInp && u.password === passInp);
+
+    if (foundUser) {
+        // تحديد التوجيه للمعلم أو الطالب
+        if (foundUser.role === 'admin' || foundUser.role === 'teacher') {
+            redirectUrl = 'pages/teacher/dashboard.html';
+        } else {
+            redirectUrl = 'pages/student/dashboard.html';
+        }
+    } 
+    // 3. إذا لم نجد، نبحث في جدول أعضاء اللجنة (الميزة الجديدة)
+    else {
+        // المصدر: committeeMembers
         const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
         const member = committeeMembers.find(m => m.username === userInp && m.password === passInp);
         
         if (member) {
-            user = {
+            // تجهيز بيانات العضو للجلسة
+            foundUser = {
                 id: member.id,
                 name: member.name,
                 username: member.username,
                 role: 'committee_member', // دور خاص للعضو
                 title: member.role
             };
+            redirectUrl = 'pages/member/dashboard.html'; // توجيه لصفحة العضو
         }
     }
 
-    // 4. التوجيه حسب الصلاحية
-    if (user) {
-        sessionStorage.setItem('currentUser', JSON.stringify(user));
-
-        if (user.role === 'admin') {
-            window.location.href = 'pages/teacher/dashboard.html';
-        } else if (user.role === 'committee_member') {
-            window.location.href = 'pages/member/dashboard.html';
-        } else {
-            window.location.href = 'pages/student/dashboard.html';
-        }
+    // 4. النتيجة النهائية
+    if (foundUser && redirectUrl) {
+        // حفظ الجلسة
+        sessionStorage.setItem('currentUser', JSON.stringify(foundUser));
+        // التوجيه
+        window.location.href = redirectUrl;
     } else {
-        alert("بيانات الدخول غير صحيحة! \n(للمعلم جرب: admin / 123)");
+        alert("بيانات الدخول غير صحيحة.\nتأكد من اسم المستخدم وكلمة المرور.");
     }
 }
 
-// دالة لضمان وجود حساب المدير (المعلم) حتى لو تم مسح البيانات
-function ensureAdminExists() {
-    let users = JSON.parse(localStorage.getItem('users') || '[]');
-    if (!users.some(u => u.role === 'admin')) {
-        users.push({
-            id: 1,
-            name: 'الأستاذ صالح العجلان',
-            username: 'admin',
-            password: '123',
-            role: 'admin'
-        });
-        localStorage.setItem('users', JSON.stringify(users));
-        console.log("تم استعادة حساب المدير الافتراضي: admin / 123");
-    }
-}
-
+// دالة تسجيل الخروج
 function logout() {
     sessionStorage.removeItem('currentUser');
     window.location.href = '../../index.html';
 }
 
+// التحقق من الصلاحية (يوضع في الصفحات الداخلية)
 function checkAuth() {
     if (!sessionStorage.getItem('currentUser')) {
-        // إذا كنا داخل مجلد صفحات، نعود للخلف مرتين
-        if (window.location.href.includes('/pages/')) {
-            window.location.href = '../../index.html';
-        } else {
-            // إذا كنا في الجذر
-            window.location.href = 'index.html';
-        }
+        window.location.href = '../../index.html';
     }
 }

@@ -1,132 +1,0 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة تحكم الطالب - ميسر التعلم</title>
-    <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/student.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-</head>
-<body>
-    <div class="dashboard-container">
-        <!-- الشريط الجانبي -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
-                    <h2>ميسر التعلم</h2>
-                </div>
-            </div>
-            
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.html" class="active"><span class="menu-icon">🏠</span>الرئيسية</a></li>
-                <li><a href="my-tests.html"><span class="menu-icon">📝</span>اختباراتي</a></li>
-                <li><a href="my-iep.html"><span class="menu-icon">📊</span>خطتي التربوية</a></li>
-                <li><a href="my-lessons.html"><span class="menu-icon">📚</span>دروسي</a></li>
-                <li><a href="my-assignments.html"><span class="menu-icon">📋</span>واجباتي</a></li>
-                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة المعلم</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
-            </ul>
-        </aside>
-
-        <!-- المحتوى الرئيسي -->
-        <main class="main-content-dashboard">
-            <!-- رأس اللوحة -->
-            <header class="dashboard-header">
-                <button class="mobile-menu-btn">☰</button>
-                <div class="user-info">
-                    <div class="user-welcome">
-                        <div class="welcome-text">مرحباً</div>
-                        <div class="user-name" id="userName">اسم الطالب</div>
-                    </div>
-                    <div class="user-avatar" id="userAvatar">ط</div>
-                </div>
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="showNotifications()">🔔 الإشعارات</button>
-                </div>
-            </header>
-
-            <!-- محتوى اللوحة -->
-            <div class="dashboard-content">
-                <div class="content-header">
-                    <h1>لوحة التحكم</h1>
-                    <p>مرحباً بك في نظام ميسر التعلم</p>
-                </div>
-
-                <!-- بطاقات الإحصائيات -->
-                <div class="stats-cards">
-                    <div class="stat-card">
-                        <div class="stat-icon">📝</div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="pendingTests">0</div>
-                            <div class="stat-label">اختبارات معلقة</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">📚</div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="currentLessons">0</div>
-                            <div class="stat-label">دروس حالية</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">📋</div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="pendingAssignments">0</div>
-                            <div class="stat-label">واجبات معلقة</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">📊</div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="progressPercentage">0%</div>
-                            <div class="stat-label">نسبة التقدم</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- الإجراءات السريعة -->
-                <div class="quick-actions">
-                    <h2>الإجراءات السريعة</h2>
-                    <div class="actions-grid">
-                        <div class="action-card" onclick="openMyTests()">
-                            <div class="action-icon">📝</div>
-                            <div class="action-title">اختباراتي</div>
-                            <div class="action-description">عرض وحل الاختبارات المخصصة</div>
-                        </div>
-                        <div class="action-card" onclick="openMyLessons()">
-                            <div class="action-icon">📚</div>
-                            <div class="action-title">دروسي</div>
-                            <div class="action-description">متابعة الدروس الحالية والقادمة</div>
-                        </div>
-                        <div class="action-card" onclick="openMyAssignments()">
-                            <div class="action-icon">📋</div>
-                            <div class="action-title">واجباتي</div>
-                            <div class="action-description">حل الواجبات المطلوبة</div>
-                        </div>
-                        <div class="action-card" onclick="openMyIEP()">
-                            <div class="action-icon">📊</div>
-                            <div class="action-title">خطتي التربوية</div>
-                            <div class="action-description">عرض الخطة التربوية الفردية</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- النشاط الأخير -->
-                <div class="recent-activity">
-                    <h2>النشاط الأخير</h2>
-                    <div class="activity-list" id="activityList">
-                        <!-- سيتم تعبئته بواسطة JavaScript -->
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <script src="../../assets/js/dashboard.js"></script>
-    <script src="../../assets/js/student.js"></script>
-    <script src="../../assets/js/auth.js"></script>
-</body>
-</html>

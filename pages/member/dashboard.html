@@ -1,125 +1,0 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>بوابة عضو اللجنة - ميسر التعلم</title>
-    <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <style>
-        /* تنسيقات خاصة لبوابة العضو */
-        .status-signed { color: green; font-weight: bold; background: #e8f5e9; padding: 2px 8px; border-radius: 10px; }
-        .status-pending { color: #d9534f; font-weight: bold; background: #fbe6e6; padding: 2px 8px; border-radius: 10px; }
-        .meeting-details-box { background: #f9f9f9; padding: 20px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; }
-        .report-controls { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; border: 1px solid #eee; }
-    </style>
-</head>
-<body>
-    <div class="dashboard-container">
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <h2>ميسر التعلم</h2>
-                    <small style="color:#ccc;">بوابة اللجنة</small>
-                </div>
-            </div>
-            
-            <ul class="sidebar-menu">
-                <li><a href="#" onclick="switchMemberTab('meetings')" id="link-meetings" class="active"><span class="menu-icon">📅</span>اجتماعاتي</a></li>
-                <li><a href="#" onclick="switchMemberTab('reports')" id="link-reports"><span class="menu-icon">📊</span>مركز التقارير</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
-            </ul>
-        </aside>
-
-        <main class="main-content-dashboard">
-            <header class="dashboard-header">
-                <div class="user-info">
-                    <div class="user-welcome">
-                        <div class="welcome-text" id="memberRoleDisplay">الصفة</div>
-                        <div class="user-name" id="memberNameDisplay">الاسم</div>
-                    </div>
-                </div>
-            </header>
-
-            <div class="dashboard-content">
-                
-                <div id="section-meetings" class="content-section active">
-                    <div class="content-header">
-                        <h1>الاجتماعات والمحاضر</h1>
-                    </div>
-                    <div id="myMeetingsContainer" class="grid-container" style="display:block;">
-                        </div>
-                </div>
-
-                <div id="section-reports" class="content-section" style="display:none;">
-                    <div class="content-header">
-                        <h1>تقارير الطلاب (للاطلاع واتخاذ القرار)</h1>
-                    </div>
-                    
-                    <div class="report-controls">
-                        <div class="form-row" style="display:flex; gap:15px; align-items:flex-end;">
-                            <div class="form-group" style="flex:1;">
-                                <label>اختر الطالب:</label>
-                                <select id="memberStudentSelect" class="form-control">
-                                    <option value="">-- اختر الطالب --</option>
-                                </select>
-                            </div>
-                            <div class="form-group" style="flex:1;">
-                                <label>نوع التقرير:</label>
-                                <select id="memberReportType" class="form-control">
-                                    <option value="attendance">📊 تقرير الغياب</option>
-                                    <option value="achievement">📈 تقرير نسب الإنجاز</option>
-                                    <option value="assignments">📝 تقرير الواجبات</option>
-                                    <option value="iep">📄 تقرير الخطط التربوية الفردية</option>
-                                    <option value="diagnostic">🩺 تقرير الاختبار التشخيصي</option>
-                                    <option value="schedule">📅 تقرير الجدول الدراسي</option>
-                                    <option value="credit">⚖️ تقرير رصيد الحصص</option>
-                                </select>
-                            </div>
-                            <button class="btn btn-primary" onclick="memberGenerateReport()" style="height:42px;">عرض التقرير</button>
-                        </div>
-                    </div>
-
-                    <div id="reportPreviewArea" style="background:white; min-height:500px; padding:20px; border:1px solid #ccc;">
-                        <div class="text-center text-muted" style="padding-top:100px;">اختر طالباً ونوع التقرير للعرض</div>
-                    </div>
-                </div>
-
-            </div>
-        </main>
-    </div>
-
-    <div id="signMeetingModal" class="modal">
-        <div class="modal-content" style="min-width: 700px;">
-            <div class="modal-header">
-                <h3 id="signModalTitle">عنوان الاجتماع</h3>
-                <button class="modal-close" onclick="closeModal('signMeetingModal')">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="meeting-details-box" id="signModalContent">
-                    </div>
-                
-                <div class="form-group">
-                    <label>ملاحظاتك / مرئياتك على المحضر (اختياري):</label>
-                    <textarea id="memberNoteInput" class="form-control" rows="3" placeholder="اكتب أي ملاحظات أو تحفظات هنا قبل التوقيع..."></textarea>
-                </div>
-
-                <div id="signatureStatusArea" class="text-center" style="margin-top:20px;">
-                    </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="../../assets/js/reports.js"></script> 
-    <script src="../../assets/js/member.js"></script>
-    <script src="../../assets/js/auth.js"></script>
-    <script>
-        // كود بسيط لتهيئة الصفحة عند التحميل
-        checkAuth();
-        if(JSON.parse(sessionStorage.getItem('currentUser')).role !== 'committee_member') {
-            window.location.href = '../../index.html';
-        }
-    </script>
-</body>
-</html>

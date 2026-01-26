@@ -3,73 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إدارة لجنة صعوبات التعلم - ميسر التعلم</title>
+    <title>إدارة اللجنة - ميسر التعلم</title>
     <link rel="stylesheet" href="../../assets/css/main.css">
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/committee.css"> <link rel="icon" type="image/png" href="../../assets/images/logo.png">
+    <link rel="icon" type="image/png" href="../../assets/images/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
-        /* تنسيقات إضافية بسيطة للجنة */
-        .committee-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .tab-btn { padding: 10px 20px; border: none; background: none; cursor: pointer; font-family: 'Tajawal'; font-weight: bold; color: #777; border-radius: 5px; }
-        .tab-btn.active { background: #007bff; color: white; }
-        .meeting-card { background: #fff; border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-right: 4px solid #17a2b8; }
-        .poll-builder-item { background: #f9f9f9; padding: 10px; margin-bottom: 5px; border-radius: 5px; position: relative; }
-        .remove-poll-btn { position: absolute; left: 10px; top: 5px; color: red; cursor: pointer; font-weight: bold; }
+        /* ✅ إصلاح إجباري لظهور النوافذ المنبثقة */
+        .modal {
+            display: none; /* مخفي افتراضياً */
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.show {
+            display: flex !important; /* إظهار عند إضافة كلاس show */
+        }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; }
+        .modal-close:hover { color: red; }
+        
+        /* تنسيق الجدول */
+        .table-container { overflow-x: auto; }
+        .btn-action { margin: 0 2px; }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
         <aside class="sidebar">
             <div class="sidebar-header">
-                <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار النظام">
-                    <h2>ميسر التعلم</h2>
-                </div>
+                <div class="logo"><h2>ميسر التعلم</h2></div>
             </div>
-            
             <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="menu-icon">🏠</span>الرئيسية</a></li>
-                <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
-                <li><a href="content-library.html"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
-                <li><a href="reports.html"><span class="menu-icon">📊</span>التقارير</a></li>
-                <li><a href="committee.html" class="active"><span class="menu-icon">👥</span>لجنة الصعوبات</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
+                <li><a href="dashboard.html">🏠 الرئيسية</a></li>
+                <li><a href="committee.html" class="active">👥 اللجنة</a></li>
+                <li><a href="#" onclick="logout()">🚪 خروج</a></li>
             </ul>
         </aside>
 
         <main class="main-content-dashboard">
-            <header class="dashboard-header">
-                <div class="user-info">
-                    <div class="user-welcome">
-                        <div class="welcome-text">إدارة اللجنة</div>
-                        <div class="user-name" id="userName">المعلم</div>
-                    </div>
-                </div>
-            </header>
-
             <div class="dashboard-content">
                 <div class="content-header">
-                    <h1>لجنة صعوبات التعلم</h1>
-                    <button class="btn btn-primary" onclick="showNewMeetingModal()">+ اجتماع جديد</button>
+                    <h1>إدارة لجنة صعوبات التعلم</h1>
                 </div>
 
-                <div class="committee-tabs">
-                    <button class="tab-btn active" id="tab-members" onclick="switchTab('members')">👥 الأعضاء</button>
-                    <button class="tab-btn" id="tab-meetings" onclick="switchTab('meetings')">📅 الاجتماعات</button>
+                <div class="committee-tabs" style="margin-bottom: 20px;">
+                    <button class="btn btn-outline-primary active" id="tab-members" onclick="switchTab('members')">👥 الأعضاء</button>
+                    <button class="btn btn-outline-primary" id="tab-meetings" onclick="switchTab('meetings')">📅 الاجتماعات</button>
                 </div>
 
                 <div id="members-view">
-                    <div style="text-align: left; margin-bottom: 15px;">
-                        <button class="btn btn-success" onclick="showAddMemberModal()">+ إضافة عضو</button>
-                    </div>
-                    <div id="membersListContainer">
-                        </div>
+                    <button class="btn btn-success mb-3" onclick="showAddMemberModal()">+ إضافة عضو جديد</button>
+                    <div id="membersListContainer"></div>
                 </div>
 
-                <div id="meetings-view" style="display: none;">
-                    <div id="meetingsListContainer">
-                        </div>
+                <div id="meetings-view" style="display:none;">
+                    <button class="btn btn-success mb-3" onclick="showNewMeetingModal()">+ اجتماع جديد</button>
+                    <div id="meetingsListContainer"></div>
                 </div>
             </div>
         </main>
@@ -77,112 +80,37 @@
 
     <div id="addMemberModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3>إضافة عضو لجنة</h3>
-                <button class="modal-close" onclick="closeModal('addMemberModal')">&times;</button>
-            </div>
+            <div class="modal-header"><h3>بيانات العضو</h3><button class="modal-close" onclick="closeModal('addMemberModal')">&times;</button></div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label>الاسم الثلاثي <span style="color:red">*</span></label>
-                    <input type="text" id="memName" class="form-control" placeholder="مثال: محمد عبدالله">
-                </div>
-                <div class="form-group">
-                    <label>الـصـفـة</label>
+                <input type="hidden" id="editMemId">
+                <div class="form-group"><label>الاسم</label><input type="text" id="memName" class="form-control"></div>
+                <div class="form-group"><label>الصفة</label>
                     <select id="memRole" class="form-control">
-                        <option value="معلم">معلم</option>
-                        <option value="مدير">مدير المدرسة</option>
-                        <option value="موجه طلابي">موجه طلابي</option>
-                        <option value="مشرف">مشرف تربوي</option>
+                        <option value="معلم">معلم</option><option value="مدير">مدير</option><option value="مشرف">مشرف</option>
                     </select>
                 </div>
-
-                <hr style="margin: 15px 0; border-top: 1px dashed #ccc;">
-
-                <div style="background:#f0f8ff; padding:15px; border-radius:8px; border:1px solid #bce8f1;">
-                    <h5 style="margin-top:0; color:#31708f;">بيانات الدخول للنظام</h5>
-                    <small style="color:#666; display:block; margin-bottom:10px;">هذه البيانات ضرورية ليتمكن العضو من الدخول.</small>
-                    
-                    <div class="form-group">
-                        <label>اسم المستخدم <span style="color:red">*</span></label>
-                        <input type="text" id="memUser" class="form-control" placeholder="user1">
-                    </div>
-                    <div class="form-group">
-                        <label>كلمة المرور <span style="color:red">*</span></label>
-                        <input type="text" id="memPass" class="form-control" placeholder="123456">
-                    </div>
-                </div>
+                <hr>
+                <div class="form-group"><label>اسم المستخدم</label><input type="text" id="memUser" class="form-control"></div>
+                <div class="form-group"><label>كلمة المرور</label><input type="text" id="memPass" class="form-control"></div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-success w-100" onclick="saveMember()">حفظ البيانات</button>
-            </div>
+            <div class="modal-footer mt-3"><button class="btn btn-primary w-100" onclick="saveMember()">حفظ</button></div>
         </div>
     </div>
 
     <div id="meetingModal" class="modal">
-        <div class="modal-content" style="min-width: 700px;">
-            <div class="modal-header">
-                <h3>عقد اجتماع جديد</h3>
-                <button class="modal-close" onclick="closeModal('meetingModal')">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>عنوان الاجتماع</label>
-                            <input type="text" id="meetTitle" class="form-control" placeholder="مثال: اجتماع مناقشة الخطط">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>التاريخ</label>
-                            <input type="date" id="meetDate" class="form-control">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>المدعوون للاجتماع (حدد الأعضاء)</label>
-                    <div id="attendeesCheckboxList" style="max-height: 100px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px;">
-                        </div>
-                </div>
-
-                <div class="form-group">
-                    <label>نوع الاجتماع</label>
-                    <div style="display:flex; gap:20px; margin-top:5px;">
-                        <label><input type="radio" name="meetType" value="text" checked onclick="toggleMeetingType()"> محضر نصي (تقليدي)</label>
-                        <label><input type="radio" name="meetType" value="poll" onclick="toggleMeetingType()"> تصويت / استبيان</label>
-                    </div>
-                </div>
-
-                <div id="textContentArea">
-                    <div class="form-group">
-                        <label>محضر الاجتماع / المحاور</label>
-                        <textarea id="meetTextBody" class="form-control" rows="5" placeholder="اكتب تفاصيل الاجتماع والقرارات هنا..."></textarea>
-                    </div>
-                </div>
-
-                <div id="pollContentArea" style="display:none;">
-                    <div id="pollQuestionsContainer"></div>
-                    <button class="btn btn-outline-primary btn-sm mt-2" onclick="addPollQuestion()">+ إضافة فقرة/سؤال</button>
-                </div>
-
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-primary w-100" onclick="saveMeeting()">حفظ وتوثيق الاجتماع</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="viewMeetingModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="viewMeetTitle">تفاصيل الاجتماع</h3>
-                <button class="modal-close" onclick="closeModal('viewMeetingModal')">&times;</button>
+            <div class="modal-header"><h3>اجتماع جديد</h3><button class="modal-close" onclick="closeModal('meetingModal')">&times;</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>العنوان</label><input type="text" id="meetTitle" class="form-control"></div>
+                <div class="form-group"><label>التاريخ</label><input type="date" id="meetDate" class="form-control"></div>
+                <div class="form-group"><label>المحتوى</label><textarea id="meetContent" class="form-control" rows="4"></textarea></div>
+                <div class="form-group"><label>الأعضاء المدعوون</label><div id="attendeesList" style="border:1px solid #ddd; padding:10px;"></div></div>
             </div>
-            <div class="modal-body" id="viewMeetBody">
-                </div>
+            <div class="modal-footer mt-3"><button class="btn btn-primary w-100" onclick="saveMeeting()">حفظ</button></div>
         </div>
     </div>
 
-    <script src="../../assets/js/auth.js"></script>     <script src="../../assets/js/committee.js"></script> <script src="../../assets/js/dashboard.js"></script> </body>
+    <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/committee.js"></script>
+</body>
 </html>

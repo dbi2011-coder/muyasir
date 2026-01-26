@@ -1,10 +1,10 @@
 // ============================================
 // 📁 الملف: assets/js/auth.js
-// الوصف: نظام الدخول الذكي (يصلح تعارض البيانات القديمة تلقائياً)
+// الوصف: نظام الدخول الذكي (يصلح تعارض البيانات القديمة والجديدة)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. إصلاح زر الدخول
+    // 1. إصلاح زر الدخول تلقائياً
     const loginBtn = document.querySelector('button');
     if(loginBtn && (loginBtn.innerText.includes('دخول') || loginBtn.innerText.includes('Login'))) {
         loginBtn.type = 'button';
@@ -12,16 +12,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // 2. التحقق من المستخدم في الصفحات الداخلية
+    // (نتأكد أننا لسنا في صفحة الدخول أو الرئيسية)
     if (!window.location.href.includes('login.html') && !window.location.href.includes('index.html')) {
         const user = getCurrentUser();
         if (!user) {
-            // إذا لم يتم العثور على مستخدم، توجيه للخروج لتنظيف الذاكرة
-            logout(); 
+            // لم نجد مستخدم، نرجع للدخول
+            window.location.href = '../../index.html';
         }
     }
 });
 
-// ✅ دالة ذكية جداً لاسترجاع المستخدم (تحل المشكلة الجذرية)
+// ✅ الدالة الذكية لجلب المستخدم (تحل مشكلة undefined)
 function getCurrentUser() {
     try {
         const session = sessionStorage.getItem('currentUser');
@@ -29,21 +30,20 @@ function getCurrentUser() {
 
         const parsed = JSON.parse(session);
 
-        // احتمال 1: النظام الجديد (يوجد بداخله user)
+        // الصيغة الجديدة: { user: {id: ...} }
         if (parsed.user && parsed.user.id) {
             return parsed.user;
         }
         
-        // احتمال 2: النظام القديم (البيانات محفوظة مباشرة)
+        // الصيغة القديمة: { id: ... } (نقوم بإصلاحها تلقائياً)
         if (parsed.id && parsed.username) {
-            // نقوم بتحديث الصيغة تلقائياً للمستقبل
             sessionStorage.setItem('currentUser', JSON.stringify({ user: parsed }));
             return parsed;
         }
 
         return null;
     } catch (e) {
-        console.error("خطأ في قراءة الجلسة", e);
+        console.error("خطأ في قراءة الجلسة:", e);
         return null;
     }
 }
@@ -54,11 +54,11 @@ function login() {
 
     if (!userInp || !passInp) return alert("الرجاء إدخال البيانات");
 
-    // البحث في المستخدمين (الحقيقيين المحفوظين لديك)
+    // 1. البحث في المستخدمين (المدير/المعلم/الطالب)
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     let user = users.find(u => u.username == userInp && u.password == passInp);
 
-    // البحث في اللجنة
+    // 2. البحث في اللجنة (إذا لم نجد سابقاً)
     if (!user) {
         const members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
         const m = members.find(m => m.username == userInp && m.password == passInp);
@@ -66,11 +66,12 @@ function login() {
     }
 
     if (user) {
-        // حفظ بصيغة موحدة وسليمة
+        // حفظ بصيغة موحدة
         sessionStorage.setItem('currentUser', JSON.stringify({ user: user }));
         
-        // التوجيه
+        // التوجيه الصحيح
         let prefix = window.location.href.includes('/auth/') ? '../' : 'pages/';
+        // تصحيح المسار إذا كنا في الجذر
         if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/')) prefix = 'pages/';
 
         if (user.role === 'admin' || user.role === 'teacher') window.location.href = prefix + 'teacher/dashboard.html';

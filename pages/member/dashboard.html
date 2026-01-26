@@ -13,6 +13,8 @@
         .status-pending { color: #d9534f; font-weight: bold; background: #fbe6e6; padding: 2px 8px; border-radius: 10px; }
         .meeting-details-box { background: #f9f9f9; padding: 20px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; }
         .report-controls { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee; }
+        .content-section { display: none; } /* إخفاء الأقسام افتراضياً */
+        .content-section.active { display: block; } /* إظهار النشط */
     </style>
 </head>
 <body>
@@ -35,8 +37,8 @@
             <header class="dashboard-header">
                 <div class="user-info">
                     <div class="user-welcome">
-                        <div class="welcome-text" id="memberRoleDisplay">الصفة</div>
-                        <div class="user-name" id="memberNameDisplay">الاسم</div>
+                        <div class="welcome-text" id="memberRoleDisplay">عضو اللجنة</div>
+                        <div class="user-name" id="memberNameDisplay">جاري التحميل...</div>
                     </div>
                 </div>
             </header>
@@ -44,15 +46,16 @@
             <div class="dashboard-content">
                 <div id="section-meetings" class="content-section active">
                     <div class="content-header"><h1>الاجتماعات والمحاضر</h1></div>
-                    <div id="myMeetingsContainer" class="grid-container"></div>
+                    <div id="myMeetingsContainer" class="grid-container">
+                        </div>
                 </div>
 
-                <div id="section-reports" class="content-section" style="display:none;">
+                <div id="section-reports" class="content-section">
                     <div class="content-header"><h1>تقارير الطلاب</h1></div>
                     <div class="report-controls no-print">
-                        <div style="display:flex; gap:15px;">
-                            <select id="memberStudentSelect" class="form-control"><option value="">اختر الطالب</option></select>
-                            <select id="memberReportType" class="form-control">
+                        <div style="display:flex; gap:15px; flex-wrap:wrap;">
+                            <select id="memberStudentSelect" class="form-control" style="flex:1;"><option value="">اختر الطالب...</option></select>
+                            <select id="memberReportType" class="form-control" style="flex:1;">
                                 <option value="attendance">تقرير الغياب</option>
                                 <option value="achievement">تقرير الإنجاز</option>
                                 <option value="assignments">تقرير الواجبات</option>
@@ -61,7 +64,7 @@
                                 <option value="schedule">الجدول الدراسي</option>
                                 <option value="credit">تقرير رصيد الحصص</option>
                             </select>
-                            <button class="btn btn-primary" onclick="memberGenerateReport()">عرض</button>
+                            <button class="btn btn-primary" onclick="memberGenerateReport()">عرض التقرير</button>
                         </div>
                     </div>
                     <div id="reportPreviewArea" style="background:white; min-height:400px; padding:20px; border:1px solid #ccc;"></div>
@@ -73,22 +76,22 @@
     <div id="signMeetingModal" class="modal">
         <div class="modal-content" style="min-width: 600px;">
             <div class="modal-header">
-                <h3 id="signModalTitle"></h3>
+                <h3 id="signModalTitle">تفاصيل الاجتماع</h3>
                 <button class="modal-close" onclick="document.getElementById('signMeetingModal').classList.remove('show')">&times;</button>
             </div>
             <div class="modal-body">
                 <div class="meeting-details-box" id="signModalContent"></div>
                 <div class="form-group">
-                    <label>ملاحظاتك:</label>
-                    <textarea id="memberNoteInput" class="form-control" rows="3"></textarea>
+                    <label>ملاحظاتك / توصياتك:</label>
+                    <textarea id="memberNoteInput" class="form-control" rows="3" placeholder="أكتب ملاحظاتك هنا قبل التوقيع..."></textarea>
                 </div>
                 <div id="signatureStatusArea" class="text-center mt-3"></div>
             </div>
         </div>
     </div>
 
+    <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/reports.js"></script>
     <script src="../../assets/js/member.js"></script>
-    <script src="../../assets/js/auth.js"></script>
 </body>
 </html>

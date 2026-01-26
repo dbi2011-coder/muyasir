@@ -1,35 +1,49 @@
 // ============================================
 // 📁 الملف: assets/js/auth.js
-// الوصف: إدارة الدخول (بدون بيانات تجريبية - يعتمد على حسابك الحقيقي)
+// الوصف: نظام الدخول الذكي (يصلح تعارض البيانات القديمة تلقائياً)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    // إصلاح زر الدخول تلقائياً
+    // 1. إصلاح زر الدخول
     const loginBtn = document.querySelector('button');
     if(loginBtn && (loginBtn.innerText.includes('دخول') || loginBtn.innerText.includes('Login'))) {
         loginBtn.type = 'button';
         loginBtn.onclick = login;
     }
 
-    // التحقق من الصلاحية في الصفحات الداخلية
+    // 2. التحقق من المستخدم في الصفحات الداخلية
     if (!window.location.href.includes('login.html') && !window.location.href.includes('index.html')) {
-        if (!getCurrentUser()) {
-            // إذا لم يتم التعرف على المستخدم، نعود لصفحة الدخول
-            window.location.href = '../../index.html';
+        const user = getCurrentUser();
+        if (!user) {
+            // إذا لم يتم العثور على مستخدم، توجيه للخروج لتنظيف الذاكرة
+            logout(); 
         }
     }
 });
 
-// ✅ دالة ذكية لجلب المستخدم الحالي (تحل مشكلة undefined)
+// ✅ دالة ذكية جداً لاسترجاع المستخدم (تحل المشكلة الجذرية)
 function getCurrentUser() {
     try {
         const session = sessionStorage.getItem('currentUser');
         if (!session) return null;
 
         const parsed = JSON.parse(session);
-        // بعض المتصفحات تحفظه داخل property اسمها user، وبعضها مباشرة
-        return parsed.user || parsed; 
+
+        // احتمال 1: النظام الجديد (يوجد بداخله user)
+        if (parsed.user && parsed.user.id) {
+            return parsed.user;
+        }
+        
+        // احتمال 2: النظام القديم (البيانات محفوظة مباشرة)
+        if (parsed.id && parsed.username) {
+            // نقوم بتحديث الصيغة تلقائياً للمستقبل
+            sessionStorage.setItem('currentUser', JSON.stringify({ user: parsed }));
+            return parsed;
+        }
+
+        return null;
     } catch (e) {
+        console.error("خطأ في قراءة الجلسة", e);
         return null;
     }
 }
@@ -40,11 +54,11 @@ function login() {
 
     if (!userInp || !passInp) return alert("الرجاء إدخال البيانات");
 
-    // 1. البحث في المستخدمين الحقيقيين المسجلين سابقاً
+    // البحث في المستخدمين (الحقيقيين المحفوظين لديك)
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     let user = users.find(u => u.username == userInp && u.password == passInp);
 
-    // 2. البحث في اللجنة
+    // البحث في اللجنة
     if (!user) {
         const members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
         const m = members.find(m => m.username == userInp && m.password == passInp);
@@ -52,8 +66,8 @@ function login() {
     }
 
     if (user) {
-        // حفظ المستخدم بصيغة موحدة
-        sessionStorage.setItem('currentUser', JSON.stringify(user));
+        // حفظ بصيغة موحدة وسليمة
+        sessionStorage.setItem('currentUser', JSON.stringify({ user: user }));
         
         // التوجيه
         let prefix = window.location.href.includes('/auth/') ? '../' : 'pages/';
@@ -72,7 +86,7 @@ function logout() {
     window.location.href = '../../index.html';
 }
 
-// تصدير الدوال لتكون متاحة لكل الملفات
+// تصدير الدوال
 window.getCurrentUser = getCurrentUser;
 window.login = login;
 window.logout = logout;

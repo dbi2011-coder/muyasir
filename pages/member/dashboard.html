@@ -2,62 +2,83 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>بوابة اللجنة - ميسر التعلم</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم عضو اللجنة - ميسر التعلم</title>
     <link rel="stylesheet" href="../../assets/css/main.css">
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../assets/css/committee.css">
     <link rel="icon" type="image/png" href="../../assets/images/logo.png">
-    <style>
-        .status-signed { color: green; background: #e8f5e9; padding: 2px 8px; border-radius: 10px; }
-        .status-pending { color: #d9534f; background: #fbe6e6; padding: 2px 8px; border-radius: 10px; }
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="dashboard-container">
         <aside class="sidebar">
-            <div class="sidebar-header"><h2>ميسر التعلم</h2><small>بوابة العضو</small></div>
+            <div class="sidebar-header">
+                <div class="logo">
+                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
+                    <h2>ميسر التعلم</h2>
+                </div>
+            </div>
+            
             <ul class="sidebar-menu">
-                <li><a href="#" onclick="switchSection('meetings')">📅 اجتماعاتي</a></li>
-                <li><a href="#" onclick="switchSection('reports')">📊 التقارير</a></li>
-                <li><a href="#" onclick="logout()">🚪 خروج</a></li>
+                <li><a href="dashboard.html" class="active"><span class="menu-icon">🏠</span>الرئيسية</a></li>
+                <li><a href="reports.html"><span class="menu-icon">📊</span>التقارير والإحصائيات</a></li>
+                <li><a href="notes.html"><span class="menu-icon">📝</span>إرسال ملاحظات</a></li>
+                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
             </ul>
         </aside>
 
         <main class="main-content-dashboard">
             <header class="dashboard-header">
-                <div class="user-info"><div id="memberName">مرحباً</div></div>
+                <div class="user-info">
+                    <div class="user-welcome">
+                        <div class="welcome-text">مرحباً</div>
+                        <div class="user-name" id="userName">عضو اللجنة</div>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary">🔔 الإشعارات</button>
+                </div>
             </header>
-            
+
             <div class="dashboard-content">
-                <div id="section-meetings">
-                    <h1>اجتماعاتي</h1>
-                    <div id="myMeetingsContainer"></div>
+                <div class="content-header">
+                    <h1>لوحة التحكم</h1>
+                    <p>مرحباً بك في بوابة لجنة صعوبات التعلم</p>
                 </div>
 
-                <div id="section-reports" style="display:none;">
-                    <h1>مركز التقارير</h1>
-                    <div style="margin-bottom:20px;">
-                        <select id="memberStudentSelect" class="form-control" style="display:inline-block; width:200px;"><option value="">اختر الطالب</option></select>
-                        <button class="btn btn-primary" onclick="memberViewReport()">عرض التقرير</button>
+                <div class="stats-cards">
+                    <div class="stat-card">
+                        <div class="stat-icon">👨‍🏫</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="assignedTeachers">0</div>
+                            <div class="stat-label">المعلمون</div>
+                        </div>
                     </div>
-                    <div id="reportArea" style="background:white; min-height:300px; padding:20px; border:1px solid #ccc;"></div>
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="generatedReports">0</div>
+                            <div class="stat-label">التقارير</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="quick-actions" style="margin-top:20px;">
+                    <h2>روابط سريعة</h2>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn btn-outline-primary" onclick="window.location.href='reports.html'">الذهاب للتقارير</button>
+                        <button class="btn btn-outline-success" onclick="window.location.href='committee.html'">إدارة الاجتماعات</button>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
 
-    <div id="signModal" class="modal">
-        <div class="modal-content">
-            <h3 id="signTitle"></h3>
-            <div id="signBody"></div>
-            <textarea id="signNote" class="form-control" placeholder="ملاحظاتك..."></textarea>
-            <br>
-            <button class="btn btn-success" onclick="submitSign()">توقيع</button>
-            <button class="btn btn-secondary" onclick="document.getElementById('signModal').classList.remove('show')">إغلاق</button>
-        </div>
-    </div>
-
-    <script src="../../assets/js/reports.js"></script>
-    <script src="../../assets/js/member.js"></script>
     <script src="../../assets/js/auth.js"></script>
+    <script src="../../assets/js/committee.js"></script>
+    <script src="../../assets/js/committee-reports.js"></script>
+    <script src="../../assets/js/committee-notes.js"></script>
+    <script src="../../assets/js/dashboard.js"></script>
 </body>
 </html>

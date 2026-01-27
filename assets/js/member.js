@@ -1,18 +1,17 @@
 // ============================================
 // 📁 الملف: assets/js/member.js
-// الوصف: تشغيل بوابة عضو اللجنة
+// الوصف: إدارة بوابة عضو اللجنة وربطها بالتقارير الأصلية
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. التحقق من المستخدم وعرض اسمه
-    const user = getCurrentUser(); // دالة من auth.js
+    // 1. التحقق من المستخدم
+    const user = getCurrentUser();
     if (!user) {
-        // إذا لم يكن مسجلاً، نخرجه
         window.location.href = '../../index.html';
         return;
     }
 
-    // تعبئة البيانات في الهيدر
+    // 2. عرض بيانات العضو في الهيدر
     if(document.getElementById('memberNameDisplay')) {
         document.getElementById('memberNameDisplay').textContent = user.name;
     }
@@ -20,31 +19,47 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('memberRoleDisplay').textContent = user.title || user.role;
     }
 
-    // 2. تحميل البيانات
+    // 3. تحميل البيانات الأولية
     loadMyMeetings();
     loadMemberStudents();
 });
 
-// === التبديل بين التبويبات ===
-function switchMemberTab(tabName) {
-    // إخفاء الكل
-    document.getElementById('section-meetings').classList.remove('active');
-    document.getElementById('section-reports').classList.remove('active');
-    document.getElementById('link-meetings').classList.remove('active');
-    document.getElementById('link-reports').classList.remove('active');
-
-    // إظهار المطلوب
-    document.getElementById(`section-${tabName}`).classList.add('active');
-    document.getElementById(`link-${tabName}`).classList.add('active');
+// دالة مساعدة لجلب المستخدم الحالي (تعتمد على auth.js)
+function getCurrentUser() {
+    // محاولة استخدام الدالة العالمية إذا وجدت
+    if (window.getCurrentUser) return window.getCurrentUser();
+    
+    // محاولة القراءة اليدوية في حال تأخر تحميل auth.js
+    const session = sessionStorage.getItem('currentUser');
+    if (!session) return null;
+    const parsed = JSON.parse(session);
+    return parsed.user || parsed;
 }
 
-// === إدارة الاجتماعات ===
+// === التبديل بين التبويبات ===
+function switchMemberTab(tabName) {
+    // إخفاء الأقسام
+    document.getElementById('section-meetings').style.display = 'none';
+    document.getElementById('section-reports').style.display = 'none';
+    
+    // إزالة التنشيط من الروابط
+    if(document.getElementById('link-meetings')) document.getElementById('link-meetings').classList.remove('active');
+    if(document.getElementById('link-reports')) document.getElementById('link-reports').classList.remove('active');
+
+    // تفعيل القسم المطلوب
+    document.getElementById(`section-${tabName}`).style.display = 'block';
+    if(document.getElementById(`link-${tabName}`)) document.getElementById(`link-${tabName}`).classList.add('active');
+}
+
+// === أولاً: قسم الاجتماعات ===
 function loadMyMeetings() {
     const user = getCurrentUser();
     const container = document.getElementById('myMeetingsContainer');
+    if(!container) return; // حماية في حال كنا في صفحة أخرى
+
     const meetings = JSON.parse(localStorage.getItem('committeeMeetings') || '[]');
     
-    // جلب الاجتماعات التي يكون العضو مدعواً لها (موجود في attendees)
+    // جلب الاجتماعات التي دُعي إليها العضو
     const myMeetings = meetings.filter(m => m.attendees && m.attendees.includes(user.id));
 
     if (myMeetings.length === 0) {
@@ -55,7 +70,6 @@ function loadMyMeetings() {
     let html = '<table class="table table-bordered bg-white"><thead><tr><th>عنوان الاجتماع</th><th>التاريخ</th><th>الحالة</th><th>إجراء</th></tr></thead><tbody>';
     
     myMeetings.forEach(m => {
-        // التحقق هل وقع العضو أم لا
         const isSigned = m.signatures && m.signatures[user.id];
         const statusHTML = isSigned 
             ? '<span class="status-signed">✔ تم التوقيع</span>' 
@@ -78,7 +92,7 @@ function loadMyMeetings() {
     container.innerHTML = html;
 }
 
-// === التوقيع على الاجتماع ===
+// نافذة التوقيع
 let currentMeetingId = null;
 
 function openSigningModal(id) {
@@ -89,25 +103,33 @@ function openSigningModal(id) {
 
     if (!meeting) return;
 
-    document.getElementById('signModalTitle').textContent = meeting.title;
-    document.getElementById('signModalContent').innerHTML = `
-        <p><strong>التاريخ:</strong> ${meeting.date}</p>
-        <hr>
-        <p style="white-space: pre-line;">${meeting.content}</p>
-    `;
+    // تعبئة البيانات في المودال
+    if(document.getElementById('signModalTitle')) document.getElementById('signModalTitle').textContent = meeting.title;
+    if(document.getElementById('signModalContent')) {
+        document.getElementById('signModalContent').innerHTML = `
+            <div style="margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;">
+                <strong>📅 التاريخ:</strong> ${meeting.date}
+            </div>
+            <div style="white-space: pre-line; line-height:1.6;">${meeting.content}</div>
+        `;
+    }
 
     const isSigned = meeting.signatures && meeting.signatures[user.id];
     const statusArea = document.getElementById('signatureStatusArea');
     const noteInput = document.getElementById('memberNoteInput');
 
     if (isSigned) {
-        noteInput.value = meeting.signatures[user.id].note || '';
-        noteInput.disabled = true; // منع التعديل بعد التوقيع
-        statusArea.innerHTML = `<button class="btn btn-secondary" disabled>تم التوقيع مسبقاً</button>`;
+        if(noteInput) {
+            noteInput.value = meeting.signatures[user.id].note || '';
+            noteInput.disabled = true;
+        }
+        if(statusArea) statusArea.innerHTML = `<button class="btn btn-secondary" disabled>تم التوقيع مسبقاً في ${new Date(meeting.signatures[user.id].date).toLocaleDateString('ar-SA')}</button>`;
     } else {
-        noteInput.value = '';
-        noteInput.disabled = false;
-        statusArea.innerHTML = `<button class="btn btn-success" onclick="submitSignature()">✅ اعتماد وتوقيع المحضر</button>`;
+        if(noteInput) {
+            noteInput.value = '';
+            noteInput.disabled = false;
+        }
+        if(statusArea) statusArea.innerHTML = `<button class="btn btn-success" onclick="submitSignature()">✅ اعتماد وتوقيع المحضر</button>`;
     }
 
     document.getElementById('signMeetingModal').classList.add('show');
@@ -123,7 +145,6 @@ function submitSignature() {
     if (idx !== -1) {
         if (!meetings[idx].signatures) meetings[idx].signatures = {};
         
-        // حفظ التوقيع
         meetings[idx].signatures[user.id] = {
             name: user.name,
             date: new Date().toISOString(),
@@ -132,17 +153,18 @@ function submitSignature() {
 
         localStorage.setItem('committeeMeetings', JSON.stringify(meetings));
         document.getElementById('signMeetingModal').classList.remove('show');
-        loadMyMeetings(); // تحديث القائمة
+        loadMyMeetings();
         alert('تم توقيع المحضر بنجاح ✅');
     }
 }
 
-// === قسم التقارير ===
+// === ثانياً: قسم التقارير (الربط مع reports.js الأصلي) ===
+
 function loadMemberStudents() {
     const select = document.getElementById('memberStudentSelect');
     if(!select) return;
 
-    // جلب جميع الطلاب
+    // جلب جميع الطلاب لعرضهم في القائمة
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const students = users.filter(u => u.role === 'student');
 
@@ -152,23 +174,33 @@ function loadMemberStudents() {
     });
 }
 
+// 🔥 هذه الدالة هي "الجسر" الذي يحقق طلبك
 function memberGenerateReport() {
     const studentId = document.getElementById('memberStudentSelect').value;
     const type = document.getElementById('memberReportType').value;
     const container = document.getElementById('reportPreviewArea');
 
     if (!studentId) {
-        container.innerHTML = '<div class="alert alert-warning">الرجاء اختيار طالب أولاً.</div>';
+        container.innerHTML = '<div class="alert alert-warning">الرجاء اختيار طالب من القائمة أولاً.</div>';
         return;
     }
 
-    // استدعاء الدوال من reports.js
-    if (type === 'attendance' && window.generateAttendanceReport) generateAttendanceReport([studentId], container);
-    else if (type === 'achievement' && window.generateAchievementReport) generateAchievementReport([studentId], container);
-    else if (type === 'assignments' && window.generateAssignmentsReport) generateAssignmentsReport([studentId], container);
-    else if (type === 'iep' && window.generateIEPReport) generateIEPReport([studentId], container);
-    else if (type === 'diagnostic' && window.generateDiagnosticReport) generateDiagnosticReport([studentId], container);
-    else if (type === 'schedule' && window.generateScheduleReport) generateScheduleReport([studentId], container);
-    else if (type === 'credit' && window.generateCreditReport) generateCreditReport([studentId], container);
-    else container.innerHTML = '<p class="text-danger">نوع التقرير غير مدعوم أو الملف reports.js غير محمل.</p>';
+    // هنا نقوم بوضع الطالب المنفرد داخل مصفوفة [studentId]
+    // ونرسله لملف التقارير الأصلي الخاص بك كما هو
+    
+    try {
+        if (type === 'attendance') generateAttendanceReport([studentId], container);
+        else if (type === 'achievement') generateAchievementReport([studentId], container);
+        else if (type === 'assignments') generateAssignmentsReport([studentId], container);
+        else if (type === 'iep') generateIEPReport([studentId], container);
+        else if (type === 'diagnostic') generateDiagnosticReport([studentId], container);
+        else if (type === 'schedule') generateScheduleReport([studentId], container);
+        else if (type === 'credit') generateCreditReport([studentId], container);
+        else {
+            container.innerHTML = '<div class="alert alert-danger">نوع التقرير غير مدعوم أو دالة التقرير غير موجودة.</div>';
+        }
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<div class="alert alert-danger">حدث خطأ أثناء توليد التقرير. تأكد من تحميل ملف reports.js بشكل صحيح.</div>';
+    }
 }

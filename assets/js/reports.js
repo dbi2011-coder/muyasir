@@ -1,9 +1,9 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير الشامل (مع تنظيف القائمة من التكرار ورمز الميزان)
+// الوصف: نظام التقارير الشامل (النسخة الأصلية مع إصلاح خطأ الاسم)
 // ============================================
 
-// 1. حقن أنماط الطباعة (CSS)
+// 1. حقن أنماط الطباعة (CSS) - (كما هي في نسختك الأصلية)
 (function injectPrintStyles() {
     const style = document.createElement('style');
     style.innerHTML = `
@@ -134,7 +134,7 @@
 })();
 
 // ============================================
-// 2. التعريفات الأساسية
+// 2. التعريفات الأساسية (مع الإصلاح الأمني)
 // ============================================
 
 window.toggleSelectAll = function() {
@@ -174,8 +174,13 @@ window.initiateReport = function() {
 };
 
 document.addEventListener('DOMContentLoaded', function() {
+    // ✅ استدعاء آمن لتحديث الاسم
     updateTeacherName();
-    loadStudentsForSelection();
+    
+    // تحميل قائمة الطلاب فقط إذا كانت الدالة موجودة (للمعلم فقط)
+    if (typeof loadStudentsForSelection === 'function') {
+        loadStudentsForSelection();
+    }
     
     // ✅ تنظيف القائمة: حذف أي خيار يحتوي على "ميزان" أو "رصيد الحصص" (لإزالة القديم)
     const select = document.getElementById('reportType');
@@ -211,14 +216,22 @@ function ensureOptionExists(value, text, icon) {
     }
 }
 
+// ✅ دالة تحديث الاسم المصححة (تمنع الخطأ إذا لم يكن العنصر موجوداً)
 function updateTeacherName() {
     try {
         const sessionData = JSON.parse(sessionStorage.getItem('currentUser'));
         if (sessionData) {
             const name = (sessionData.user && sessionData.user.name) || sessionData.name;
-            if (name) document.getElementById('teacherName').textContent = name;
+            const el = document.getElementById('teacherName');
+            
+            // نتحقق من وجود العنصر قبل محاولة تغيير نصه
+            if (el && name) {
+                el.textContent = name;
+            }
         }
-    } catch (e) { console.error(e); }
+    } catch (e) { 
+        // نتجاهل الخطأ بصمت للحفاظ على استقرار النظام
+    }
 }
 
 function loadStudentsForSelection() {

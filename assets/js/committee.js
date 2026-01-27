@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/committee.js
-// الوصف: إدارة اللجنة (تم إصلاح توزيع أعمدة الجدول: 3 أعمدة صحيحة)
+// الوصف: إدارة اللجنة (نسخة إضافة "أ/" والرتب الجديدة)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -63,7 +63,7 @@ function loadMeetings() {
     container.innerHTML = html;
 }
 
-// ✅ دالة عرض المحضر (تم التصحيح هنا: توزيع البيانات على 3 خلايا)
+// ✅ دالة عرض المحضر (معدلة لإضافة "أ/")
 function viewMeetingDetails(id) {
     const meetings = JSON.parse(localStorage.getItem('committeeMeetings') || '[]');
     const meeting = meetings.find(m => m.id === id);
@@ -97,10 +97,15 @@ function viewMeetingDetails(id) {
                 }
             }
 
-            // ✅ الإصلاح: 3 خلايا (td) منفصلة لكل صف (tr)
+            // ✅ إضافة "أ/" قبل الاسم
+            const formalName = `أ/ ${member.name}`;
+
             tableBody.innerHTML += `
                 <tr>
-                    <td style="text-align:right; font-weight:bold; padding-right:15px;">${member.name}</td> <td style="text-align:center;">${member.role}</td> <td style="text-align:center;">${signatureContent}</td> </tr>
+                    <td style="text-align:right; font-weight:bold; padding-right:15px;">${formalName}</td>
+                    <td style="text-align:center;">${member.role}</td>
+                    <td style="text-align:center;">${signatureContent}</td>
+                </tr>
             `;
         });
     }

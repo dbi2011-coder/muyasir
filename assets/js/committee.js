@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/committee.js
-// الوصف: إدارة اللجنة (نسخة المحضر الرسمي والجدول)
+// الوصف: إدارة اللجنة (تم إصلاح توزيع أعمدة الجدول: 3 أعمدة صحيحة)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -21,7 +21,7 @@ function switchTab(tab) {
     document.getElementById(`tab-${tab}`).classList.add('active');
 }
 
-// 1. الأعضاء
+// 1. إدارة الأعضاء
 function loadMembers() {
     const members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     const container = document.getElementById('membersListContainer');
@@ -34,7 +34,7 @@ function loadMembers() {
     container.innerHTML = html;
 }
 
-// 2. الاجتماعات
+// 2. إدارة الاجتماعات
 function loadMeetings() {
     const meetings = JSON.parse(localStorage.getItem('committeeMeetings') || '[]');
     const container = document.getElementById('meetingsListContainer');
@@ -43,7 +43,6 @@ function loadMeetings() {
     meetings.sort((a, b) => new Date(b.date) - new Date(a.date));
     let html = '';
     meetings.forEach(m => {
-        // حساب التوقيعات
         const total = m.attendees ? m.attendees.length : 0;
         const signed = m.signatures ? Object.keys(m.signatures).length : 0;
         const progressColor = (signed === total && total > 0) ? 'green' : '#ffc107';
@@ -64,30 +63,25 @@ function loadMeetings() {
     container.innerHTML = html;
 }
 
-// ✅ دالة عرض المحضر الرسمي (النص + الجدول)
+// ✅ دالة عرض المحضر (تم التصحيح هنا: توزيع البيانات على 3 خلايا)
 function viewMeetingDetails(id) {
     const meetings = JSON.parse(localStorage.getItem('committeeMeetings') || '[]');
     const meeting = meetings.find(m => m.id === id);
     if(!meeting) return;
 
-    // تعبئة البيانات العلوية
     document.getElementById('viewMeetTitle').textContent = meeting.title;
     document.getElementById('viewMeetDate').textContent = meeting.date;
     document.getElementById('viewMeetContent').textContent = meeting.content || 'لا يوجد محتوى نصي.';
 
-    // بناء جدول التوقيعات
     const tableBody = document.getElementById('signaturesTableBody');
     tableBody.innerHTML = '';
 
-    // جلب أسماء الأعضاء المدعوين لضمان ظهور الجميع في الجدول (حتى من لم يوقع)
     const allMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     const attendeesIds = meeting.attendees || [];
-    
-    // فلترة الأعضاء المدعوين فقط
     const attendeesList = allMembers.filter(m => attendeesIds.includes(m.id));
 
     if (attendeesList.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="2">لا يوجد مدعوون لهذا الاجتماع.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="3">لا يوجد مدعوون لهذا الاجتماع.</td></tr>';
     } else {
         attendeesList.forEach(member => {
             const signatureData = (meeting.signatures && meeting.signatures[member.id]) ? meeting.signatures[member.id] : null;
@@ -97,23 +91,16 @@ function viewMeetingDetails(id) {
             if (signatureData) {
                 if (signatureData.image) {
                     signatureContent = `<img src="${signatureData.image}" class="sig-img-display" alt="توقيع">`;
-                    // إضافة التاريخ بخط صغير تحت التوقيع
                     signatureContent += `<br><small style="font-size:0.7em; color:#777;">${new Date(signatureData.date).toLocaleDateString('ar-SA')}</small>`;
                 } else {
                     signatureContent = `<span style="color:green; font-weight:bold;">تم الاعتماد إلكترونياً</span>`;
                 }
             }
 
+            // ✅ الإصلاح: 3 خلايا (td) منفصلة لكل صف (tr)
             tableBody.innerHTML += `
                 <tr>
-                    <td style="text-align:right; font-weight:bold;">
-                        ${member.name}
-                        <br><span style="font-weight:normal; font-size:0.9em; color:#666;">(${member.role})</span>
-                    </td>
-                    <td style="text-align:center;">
-                        ${signatureContent}
-                    </td>
-                </tr>
+                    <td style="text-align:right; font-weight:bold; padding-right:15px;">${member.name}</td> <td style="text-align:center;">${member.role}</td> <td style="text-align:center;">${signatureContent}</td> </tr>
             `;
         });
     }
@@ -121,7 +108,7 @@ function viewMeetingDetails(id) {
     document.getElementById('viewMeetingModal').classList.add('show');
 }
 
-// ... الدوال المساعدة (بدون تغيير) ...
+// ... الدوال المساعدة ...
 function showAddMemberModal() {
     document.getElementById('editMemId').value = '';
     document.getElementById('memName').value = '';

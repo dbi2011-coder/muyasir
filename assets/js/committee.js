@@ -1,29 +1,36 @@
 // ============================================
 // 📁 الملف: assets/js/committee.js
-// الوصف: إدارة اللجنة (نسخة الإصلاح الشامل)
+// الوصف: إدارة اللجنة للمعلم (نسخة البطاقات الحديثة + عرض التوقيعات)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
     loadMembers();
     loadMeetings();
+    
+    // التحقق من المستخدم لتحديث الاسم
+    if(window.getCurrentUser) {
+        const user = window.getCurrentUser();
+        if(user && document.getElementById('userName')) document.getElementById('userName').textContent = user.name;
+    }
 });
 
-// === التبديل بين التبويبات ===
 function switchTab(tab) {
-    document.getElementById('members-view').style.display = tab === 'members' ? 'block' : 'none';
-    document.getElementById('meetings-view').style.display = tab === 'meetings' ? 'block' : 'none';
+    document.getElementById('members-view').classList.remove('active');
+    document.getElementById('meetings-view').classList.remove('active');
+    document.getElementById('tab-members').classList.remove('active');
+    document.getElementById('tab-meetings').classList.remove('active');
     
-    document.getElementById('tab-members').classList.toggle('active', tab === 'members');
-    document.getElementById('tab-meetings').classList.toggle('active', tab === 'meetings');
+    document.getElementById(`${tab}-view`).classList.add('active');
+    document.getElementById(`tab-${tab}`).classList.add('active');
 }
 
-// === إدارة الأعضاء ===
+// === 1. إدارة الأعضاء (جدول كلاسيكي لأنه أنسب للبيانات) ===
 function loadMembers() {
     const members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     const container = document.getElementById('membersListContainer');
     
     if (members.length === 0) {
-        container.innerHTML = '<div class="alert alert-info">لا يوجد أعضاء. أضف عضواً جديداً.</div>';
+        container.innerHTML = '<div class="alert alert-info">لا يوجد أعضاء.</div>';
         return;
     }
 
@@ -31,12 +38,12 @@ function loadMembers() {
     members.forEach(m => {
         html += `<tr>
             <td>${m.name}</td>
-            <td>${m.role}</td>
+            <td><span class="badge badge-secondary">${m.role}</span></td>
             <td>${m.username}</td>
             <td>${m.password}</td>
             <td>
-                <button class="btn btn-sm btn-primary btn-action" onclick="editMember(${m.id})">تعديل</button>
-                <button class="btn btn-sm btn-danger btn-action" onclick="deleteMember(${m.id})">حذف</button>
+                <button class="btn btn-sm btn-primary" onclick="editMember(${m.id})">تعديل</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteMember(${m.id})">حذف</button>
             </td>
         </tr>`;
     });
@@ -44,17 +51,34 @@ function loadMembers() {
     container.innerHTML = html;
 }
 
+// ... دوال الأعضاء (إضافة/تعديل/حذف) تبقى كما هي ...
 function showAddMemberModal() {
-    document.getElementById('editMemId').value = ''; // تفريغ المعرف للإضافة الجديدة
+    document.getElementById('editMemId').value = '';
     document.getElementById('memName').value = '';
     document.getElementById('memUser').value = '';
     document.getElementById('memPass').value = '';
     document.getElementById('addMemberModal').classList.add('show');
 }
-
+function saveMember() {
+    const id = document.getElementById('editMemId').value;
+    const name = document.getElementById('memName').value;
+    const role = document.getElementById('memRole').value;
+    const user = document.getElementById('memUser').value;
+    const pass = document.getElementById('memPass').value;
+    if(!name || !user || !pass) return alert('البيانات ناقصة');
+    let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
+    if(id) {
+        const idx = members.findIndex(x => x.id == id);
+        if(idx !== -1) members[idx] = { id: parseInt(id), name, role, username: user, password: pass };
+    } else {
+        members.push({ id: Date.now(), name, role, username: user, password: pass });
+    }
+    localStorage.setItem('committeeMembers', JSON.stringify(members));
+    closeModal('addMemberModal');
+    loadMembers();
+}
 function editMember(id) {
-    const members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    const m = members.find(x => x.id === id);
+    const m = JSON.parse(localStorage.getItem('committeeMembers')||'[]').find(x => x.id === id);
     if(m) {
         document.getElementById('editMemId').value = m.id;
         document.getElementById('memName').value = m.name;
@@ -64,117 +88,150 @@ function editMember(id) {
         document.getElementById('addMemberModal').classList.add('show');
     }
 }
-
-function saveMember() {
-    const id = document.getElementById('editMemId').value;
-    const name = document.getElementById('memName').value;
-    const role = document.getElementById('memRole').value;
-    const user = document.getElementById('memUser').value;
-    const pass = document.getElementById('memPass').value;
-
-    if(!name || !user || !pass) return alert('جميع البيانات مطلوبة');
-
-    let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    
-    if(id) {
-        // تعديل
-        const idx = members.findIndex(x => x.id == id);
-        if(idx !== -1) members[idx] = { id: parseInt(id), name, role, username: user, password: pass };
-    } else {
-        // إضافة جديد
-        members.push({ id: Date.now(), name, role, username: user, password: pass });
-    }
-
-    localStorage.setItem('committeeMembers', JSON.stringify(members));
-    closeModal('addMemberModal');
-    loadMembers();
-}
-
 function deleteMember(id) {
     if(confirm('حذف العضو؟')) {
-        let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
+        let members = JSON.parse(localStorage.getItem('committeeMembers')||'[]');
         members = members.filter(x => x.id !== id);
         localStorage.setItem('committeeMembers', JSON.stringify(members));
         loadMembers();
     }
 }
 
-// === إدارة الاجتماعات ===
+// === 2. إدارة الاجتماعات (بطاقات + عرض التوقيعات) ===
+
 function loadMeetings() {
     const meetings = JSON.parse(localStorage.getItem('committeeMeetings') || '[]');
     const container = document.getElementById('meetingsListContainer');
     
     if(meetings.length === 0) {
-        container.innerHTML = '<div class="alert alert-info">لا توجد اجتماعات.</div>';
+        container.innerHTML = '<div class="alert alert-info" style="grid-column: 1/-1;">لا توجد اجتماعات. ابدأ بإنشاء واحد جديد.</div>';
         return;
     }
 
+    // ترتيب الاجتماعات: الأحدث أولاً
+    meetings.sort((a, b) => new Date(b.date) - new Date(a.date));
+
     let html = '';
     meetings.forEach(m => {
-        html += `<div class="card p-3 mb-2 bg-white border">
-            <div class="d-flex justify-content-between">
-                <h5>${m.title} <small class="text-muted">(${m.date})</small></h5>
-                <button class="btn btn-sm btn-danger" onclick="deleteMeeting(${m.id})">حذف</button>
+        // حساب نسبة التوقيعات
+        const totalAttendees = m.attendees ? m.attendees.length : 0;
+        const signedCount = m.signatures ? Object.keys(m.signatures).length : 0;
+        const progressColor = (signedCount === totalAttendees && totalAttendees > 0) ? 'green' : '#ffc107';
+
+        // قص النص الطويل للعرض
+        let shortContent = m.content || '';
+        if(shortContent.length > 100) shortContent = shortContent.substring(0, 100) + '...';
+
+        html += `
+        <div class="meeting-card">
+            <div class="card-header-custom">
+                <h3>${m.title}</h3>
+                <span class="card-date">${m.date}</span>
             </div>
-            <p>${m.content}</p>
-            <small>الحضور: ${m.attendees ? m.attendees.length : 0}</small>
+            <div class="card-body-custom">
+                <p>${shortContent || 'لا يوجد وصف.'}</p>
+            </div>
+            <div class="card-footer-custom">
+                <div class="attendees-count">
+                    <span style="color:${progressColor}; font-weight:bold;">${signedCount}</span> / ${totalAttendees} توقيعات
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-outline-primary" onclick="viewMeetingDetails(${m.id})">👁️ التفاصيل</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteMeeting(${m.id})">🗑️</button>
+                </div>
+            </div>
         </div>`;
     });
     container.innerHTML = html;
 }
 
+// ✅ دالة عرض التفاصيل والتوقيعات (جديدة)
+function viewMeetingDetails(id) {
+    const meetings = JSON.parse(localStorage.getItem('committeeMeetings') || '[]');
+    const meeting = meetings.find(m => m.id === id);
+    if(!meeting) return;
+
+    // تعبئة البيانات الأساسية
+    document.getElementById('viewMeetTitle').textContent = meeting.title;
+    document.getElementById('viewMeetDate').textContent = meeting.date;
+    document.getElementById('viewMeetContent').textContent = meeting.content || 'لا يوجد محتوى.';
+
+    // تعبئة التوقيعات
+    const sigContainer = document.getElementById('signaturesContainer');
+    sigContainer.innerHTML = '';
+
+    if (!meeting.signatures || Object.keys(meeting.signatures).length === 0) {
+        sigContainer.innerHTML = '<div class="alert alert-warning">لم يقم أحد بالتوقيع حتى الآن.</div>';
+    } else {
+        // تحويل كائن التوقيعات إلى مصفوفة للتعامل معه
+        Object.values(meeting.signatures).forEach(sig => {
+            const dateStr = new Date(sig.date).toLocaleDateString('ar-SA');
+            const timeStr = new Date(sig.date).toLocaleTimeString('ar-SA');
+            
+            let imageHTML = '';
+            if (sig.image) {
+                imageHTML = `<div class="sig-image-box"><img src="${sig.image}" alt="توقيع"></div>`;
+            } else {
+                imageHTML = '<span style="color:#ccc; font-size:0.9em;">(توقيع نصي قديم)</span>';
+            }
+
+            sigContainer.innerHTML += `
+            <div class="signature-item">
+                <div class="sig-avatar">${sig.name.charAt(0)}</div>
+                <div class="sig-details" style="margin-right:15px;">
+                    <div style="font-weight:bold; font-size:1.1em;">${sig.name}</div>
+                    <div style="color:#777; font-size:0.85em; margin-bottom:5px;">${dateStr} - ${timeStr}</div>
+                    ${sig.note ? `<div style="background:#fff; padding:5px; border:1px solid #eee; display:inline-block; margin-bottom:5px;">📝 ملاحظة: ${sig.note}</div><br>` : ''}
+                    ${imageHTML}
+                </div>
+            </div>`;
+        });
+    }
+
+    document.getElementById('viewMeetingModal').classList.add('show');
+}
+
+// ... دوال إنشاء وحذف الاجتماعات (كما هي) ...
 function showNewMeetingModal() {
-    // تعبئة قائمة الأعضاء
     const members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     const list = document.getElementById('attendeesList');
     list.innerHTML = '';
     members.forEach(m => {
-        list.innerHTML += `<div><input type="checkbox" value="${m.id}" checked> ${m.name}</div>`;
+        list.innerHTML += `<div><label style="cursor:pointer"><input type="checkbox" value="${m.id}" checked> ${m.name} (${m.role})</label></div>`;
     });
-
     document.getElementById('meetTitle').value = '';
     document.getElementById('meetContent').value = '';
     document.getElementById('meetingModal').classList.add('show');
 }
-
 function saveMeeting() {
     const title = document.getElementById('meetTitle').value;
     const date = document.getElementById('meetDate').value;
     const content = document.getElementById('meetContent').value;
+    if(!title || !date) return alert('البيانات ناقصة');
     
-    if(!title || !date) return alert('العنوان والتاريخ مطلوبان');
-
-    // جمع الحضور
     const attendees = [];
     document.querySelectorAll('#attendeesList input:checked').forEach(cb => attendees.push(parseInt(cb.value)));
 
     const meetings = JSON.parse(localStorage.getItem('committeeMeetings') || '[]');
-    meetings.push({
-        id: Date.now(),
-        title, date, content, attendees,
-        signatures: {} // لتوقيع الأعضاء لاحقاً
-    });
-
+    meetings.push({ id: Date.now(), title, date, content, attendees, signatures: {} });
+    
     localStorage.setItem('committeeMeetings', JSON.stringify(meetings));
     closeModal('meetingModal');
     loadMeetings();
 }
-
 function deleteMeeting(id) {
-    if(confirm('حذف الاجتماع؟')) {
+    if(confirm('هل أنت متأكد من حذف هذا الاجتماع والسجلات المرتبطة به؟')) {
         let meetings = JSON.parse(localStorage.getItem('committeeMeetings') || '[]');
         meetings = meetings.filter(x => x.id !== id);
         localStorage.setItem('committeeMeetings', JSON.stringify(meetings));
         loadMeetings();
     }
 }
-
-// === وظائف عامة ===
 function closeModal(id) {
     document.getElementById(id).classList.remove('show');
 }
 
-// تصدير الدوال للاستخدام في HTML
+// تصدير الدوال
 window.showAddMemberModal = showAddMemberModal;
 window.saveMember = saveMember;
 window.editMember = editMember;
@@ -183,4 +240,5 @@ window.showNewMeetingModal = showNewMeetingModal;
 window.saveMeeting = saveMeeting;
 window.deleteMeeting = deleteMeeting;
 window.closeModal = closeModal;
+window.viewMeetingDetails = viewMeetingDetails;
 window.switchTab = switchTab;

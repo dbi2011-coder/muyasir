@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     
     <style>
-        /* --- تنسيقات الشاشة العادية (Screen) --- */
+        /* --- تنسيقات الشاشة (Screen) --- */
         .meetings-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; margin-top: 20px; }
         .meeting-card { background: #fff; border-radius: 12px; border: 1px solid #e1e4e8; box-shadow: 0 4px 6px rgba(0,0,0,0.02); overflow: hidden; display: flex; flex-direction: column; }
         .meeting-card:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.1); }
@@ -18,47 +18,56 @@
         .card-body-custom { padding: 15px; flex-grow: 1; color: #555; font-size: 0.95rem; line-height: 1.5; }
         .card-footer-custom { padding: 12px 15px; background: #fcfcfc; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
 
-        /* تنسيقات المحضر على الشاشة */
-        .official-record-container { border: 1px solid #ccc; padding: 40px; background: white; margin: 10px; max-width: 21cm; margin: 0 auto; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        /* تنسيق حاوية المحضر على الشاشة */
+        .official-record-container { 
+            border: 1px solid #ddd; 
+            padding: 40px; 
+            background: white; 
+            margin: 0 auto; 
+            box-shadow: 0 0 15px rgba(0,0,0,0.05); 
+        }
+        
         .record-header { text-align: center; border-bottom: 3px double #000; padding-bottom: 15px; margin-bottom: 25px; }
         .record-content { text-align: justify; line-height: 2; font-size: 16px; margin-bottom: 30px; white-space: pre-line; }
         
+        /* جدول التوقيعات */
         .signatures-table { width: 100%; border-collapse: collapse; margin-top: 30px; }
         .signatures-table th, .signatures-table td { border: 1px solid #000; padding: 10px; text-align: center; vertical-align: middle; }
-        .signatures-table th { background-color: #f2f2f2; width: 40%; font-weight: bold; }
+        .signatures-table th { background-color: #f9f9f9; width: 40%; font-weight: bold; }
         .signatures-table td { height: 90px; }
         .sig-img-display { max-height: 70px; max-width: 180px; }
 
+        /* النوافذ المنبثقة */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
         .modal.show { display: flex !important; }
         .modal-content { background: white; width: 95%; max-width: 900px; border-radius: 8px; max-height: 95vh; overflow-y: auto; padding: 0; }
         .modal-header { padding: 15px 20px; background: #333; color: white; display: flex; justify-content: space-between; align-items: center; }
-        .modal-body { padding: 20px; background: #eee; /* خلفية رمادية لتمييز الورقة */ }
+        .modal-body { padding: 20px; background: #eee; }
         .modal-close { background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; }
 
         .content-section { display: none; }
         .content-section.active { display: block; }
 
         /* ================================================= */
-        /* 🖨️ إعدادات الطباعة الاحترافية (Professional Print) */
+        /* 🖨️ إعدادات الطباعة (تم إزالة الإطار المزعج) */
         /* ================================================= */
         @media print {
             @page {
                 size: A4;
-                margin: 1.5cm; /* هوامش رسمية */
+                margin: 2cm 1.5cm; /* هوامش الصفحة: أعلى/أسفل 2سم، يمين/يسار 1.5سم */
             }
 
-            /* إخفاء كل عناصر النظام */
+            /* إخفاء واجهة النظام */
             body * { visibility: hidden; }
             .sidebar, .dashboard-header, .committee-tabs, .btn, .no-print, .modal-header, .modal-close { display: none !important; }
 
-            /* إظهار المحضر فقط */
+            /* إعدادات النافذة عند الطباعة */
             #viewMeetingModal {
                 position: absolute;
                 left: 0;
                 top: 0;
                 width: 100%;
-                height: 100%;
+                height: auto;
                 margin: 0;
                 padding: 0;
                 background: white;
@@ -68,11 +77,11 @@
             }
 
             .modal-content {
-                box-shadow: none;
-                border: none;
+                box-shadow: none !important;
+                border: none !important; /* إزالة حدود النافذة */
                 width: 100%;
                 max-width: 100%;
-                overflow: visible;
+                background: transparent;
             }
 
             .modal-body {
@@ -82,34 +91,34 @@
                 visibility: visible;
             }
 
+            /* إزالة الصندوق حول المحضر */
             .official-record-container {
                 visibility: visible;
-                border: 2px solid #000 !important; /* إطار خارجي للصفحة */
-                box-shadow: none;
-                padding: 0;
-                margin: 0;
+                border: none !important; /* ✅ إزالة الإطار الأسود */
+                box-shadow: none !important; /* ✅ إزالة الظل */
+                padding: 0 !important;
+                margin: 0 !important;
                 width: 100%;
-                max-width: 100%;
             }
             
-            /* التأكد من ظهور محتويات المحضر */
             .official-record-container * { visibility: visible; }
 
-            /* تحسين الخطوط للطباعة */
+            /* تحسين الخطوط */
             body, .record-content, .signatures-table {
-                font-family: 'Times New Roman', serif !important; /* خط رسمي */
+                font-family: 'Times New Roman', serif !important;
                 color: #000 !important;
+                font-size: 14pt; /* حجم خط مناسب للقراءة */
             }
 
-            /* ضمان ظهور ألوان الخلفية في الجدول (للرمادي في رأس الجدول) */
+            /* التأكد من حدود الجدول فقط */
+            .signatures-table, .signatures-table th, .signatures-table td {
+                border: 1px solid #000 !important;
+            }
+
             .signatures-table th {
-                background-color: #e0e0e0 !important;
+                background-color: #eee !important;
                 -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
             }
-
-            /* منع انقسام الجدول */
-            tr { page-break-inside: avoid; }
         }
     </style>
 </head>
@@ -201,7 +210,7 @@
                 <div class="official-record-container">
                     <div class="record-header">
                         <h2 style="margin:0;">محضر اجتماع لجنة صعوبات التعلم</h2>
-                        <h3 id="viewMeetTitle" style="margin:10px 0; font-weight:normal; text-decoration:underline;">عنوان الاجتماع</h3>
+                        <h3 id="viewMeetTitle" style="margin:10px 0; font-weight:normal; text-decoration:underline;"></h3>
                         <p style="margin-top:5px;">تاريخ الانعقاد: <span id="viewMeetDate" style="font-weight:bold;"></span></p>
                     </div>
 

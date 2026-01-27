@@ -78,21 +78,34 @@
 <body>
     <div class="dashboard-container">
         <aside class="sidebar">
-            <div class="sidebar-header"><div class="logo"><h2>ميسر التعلم</h2></div></div>
+            <div class="sidebar-header">
+                <div class="logo"><h2>ميسر التعلم</h2></div>
+            </div>
             <ul class="sidebar-menu">
                 <li><a href="dashboard.html">🏠 الرئيسية</a></li>
-                <li><a href="committee.html" class="active">👥 اللجنة</a></li>
-                <li><a href="#" onclick="logout()">🚪 خروج</a></li>
+                <li><a href="students.html">👨‍🎓 الطلاب</a></li>
+                <li><a href="library.html">📚 المحتوى الرقمي</a></li>
+                <li><a href="reports.html">📊 التقارير</a></li>
+                <li><a href="committee.html" class="active">👥 لجنة الصعوبات</a></li>
+                <li><a href="#" onclick="logout()">🚪 تسجيل الخروج</a></li>
             </ul>
         </aside>
 
         <main class="main-content-dashboard">
             <header class="dashboard-header">
-                <div class="user-info"><div class="user-welcome"><div class="welcome-text">إدارة اللجنة</div><div class="user-name" id="userName">المعلم</div></div></div>
+                <div class="user-info">
+                    <div class="user-welcome">
+                        <div class="welcome-text">إدارة اللجنة</div>
+                        <div class="user-name" id="userName">المعلم</div>
+                    </div>
+                </div>
             </header>
 
             <div class="dashboard-content">
-                <div class="content-header"><h1>لجنة صعوبات التعلم</h1></div>
+                <div class="content-header">
+                    <h1>لجنة صعوبات التعلم</h1>
+                </div>
+
                 <div class="committee-tabs" style="margin-bottom: 20px; display:flex; gap:10px;">
                     <button class="btn btn-outline-primary" id="tab-members" onclick="switchTab('members')">👥 الأعضاء</button>
                     <button class="btn btn-outline-primary active" id="tab-meetings" onclick="switchTab('meetings')">📅 الاجتماعات</button>

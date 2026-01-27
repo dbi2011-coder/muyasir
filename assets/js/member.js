@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/member.js
-// الوصف: بوابة العضو + نظام التوقيع الإلكتروني + اختيار الطلاب المتعدد
+// الوصف: بوابة العضو + التوقيع + اختيار الطلاب المتعدد + (إضافة أ/ قبل الاسم)
 // ============================================
 
 // --- متغيرات لوحة التوقيع ---
@@ -15,11 +15,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const user = getCurrentUser();
     if (!user) { window.location.href = '../../index.html'; return; }
 
-    if(document.getElementById('memberNameDisplay')) document.getElementById('memberNameDisplay').textContent = user.name;
+    // ✅ التعديل هنا: إضافة "أ/" قبل الاسم
+    if(document.getElementById('memberNameDisplay')) {
+        document.getElementById('memberNameDisplay').textContent = 'أ/ ' + user.name;
+    }
+    
     if(document.getElementById('memberRoleDisplay')) document.getElementById('memberRoleDisplay').textContent = user.title || user.role;
 
     loadMyMeetings();
-    loadMemberStudentsMultiSelect(); // تحميل القائمة الجديدة
+    loadMemberStudentsMultiSelect();
     
     setupSignaturePadEvents();
 
@@ -66,7 +70,7 @@ function loadMyMeetings() {
 }
 
 // ============================================
-// 👥 نظام القائمة متعددة الاختيار (الجديد)
+// 👥 نظام القائمة متعددة الاختيار
 // ============================================
 
 function loadMemberStudentsMultiSelect() {
@@ -81,7 +85,7 @@ function loadMemberStudentsMultiSelect() {
         return;
     }
 
-    // 1. خيار "تحديد الكل"
+    // خيار تحديد الكل
     let html = `
         <div class="multi-select-option select-all-option" onclick="toggleSelectAllStudents(this)">
             <input type="checkbox" id="selectAllCheckbox">
@@ -89,7 +93,6 @@ function loadMemberStudentsMultiSelect() {
         </div>
     `;
 
-    // 2. قائمة الطلاب
     students.forEach(s => {
         html += `
             <div class="multi-select-option" onclick="toggleStudentCheckbox(this)">
@@ -102,24 +105,13 @@ function loadMemberStudentsMultiSelect() {
     listContainer.innerHTML = html;
 }
 
-// فتح/إغلاق القائمة
 function toggleMultiSelect() {
     const list = document.getElementById('studentOptionsList');
     list.classList.toggle('show');
 }
 
-// عند الضغط على "تحديد الكل"
 function toggleSelectAllStudents(optionDiv) {
     const mainCheckbox = optionDiv.querySelector('input');
-    // عكس الحالة لأن الضغط تم على الـ div
-    // (إذا ضغطنا على الـ input مباشرة، سيقوم المتصفح بتغييره، لذلك نمنع التكرار)
-    // هنا نفترض الضغط على الـ div
-    
-    // الحل الأبسط: نجعل الـ checkbox يتبع الحالة الجديدة
-    // نلاحظ أن النقر على الـ label أو checkbox يغير الحالة تلقائياً،
-    // لكن النقر على الـ div يحتاج معالجة يدوية إذا لم يكن الهدف هو الـ input
-    
-    // سنعتمد على التغيير في الـ mainCheckbox بعد الحدث
     setTimeout(() => {
         const isChecked = mainCheckbox.checked;
         const allCheckboxes = document.querySelectorAll('.student-checkbox');
@@ -128,13 +120,9 @@ function toggleSelectAllStudents(optionDiv) {
     }, 0);
 }
 
-// عند الضغط على طالب مفرد
 function toggleStudentCheckbox(optionDiv) {
-    // تحديث النص بعد لحظة بسيطة لضمان تغير حالة الـ checkbox
     setTimeout(() => {
         updateMultiSelectLabel();
-        
-        // تحديث حالة "تحديد الكل"
         const allCheckboxes = document.querySelectorAll('.student-checkbox');
         const checkedCount = document.querySelectorAll('.student-checkbox:checked').length;
         const selectAllCb = document.getElementById('selectAllCheckbox');
@@ -144,7 +132,6 @@ function toggleStudentCheckbox(optionDiv) {
     }, 0);
 }
 
-// تحديث النص الظاهر في الصندوق
 function updateMultiSelectLabel() {
     const labelSpan = document.getElementById('multiSelectLabel');
     const checkedBoxes = document.querySelectorAll('.student-checkbox:checked');
@@ -158,7 +145,6 @@ function updateMultiSelectLabel() {
         labelSpan.style.color = '#007bff';
         labelSpan.style.fontWeight = 'bold';
     } else if (checkedBoxes.length === 1) {
-        // عرض اسم الطالب إذا كان واحداً فقط
         const name = checkedBoxes[0].parentElement.querySelector('label').textContent;
         labelSpan.textContent = `👤 ${name}`;
         labelSpan.style.color = '#333';
@@ -170,7 +156,6 @@ function updateMultiSelectLabel() {
     }
 }
 
-// توليد التقرير (تم التحديث لدعم المتعدد)
 function memberGenerateReport() {
     const checkedBoxes = document.querySelectorAll('.student-checkbox:checked');
     const type = document.getElementById('memberReportType').value;
@@ -181,7 +166,6 @@ function memberGenerateReport() {
         return;
     }
 
-    // جمع الـ IDs في مصفوفة
     const targetIds = Array.from(checkedBoxes).map(cb => cb.value);
 
     try {
@@ -206,9 +190,9 @@ function memberGenerateReport() {
     }
 }
 
-// =============================================================
-// 🎨 نظام التوقيع الإلكتروني اليدوي
-// =============================================================
+// ============================================
+// 🎨 نظام التوقيع الإلكتروني
+// ============================================
 
 let currentMeetingId = null;
 

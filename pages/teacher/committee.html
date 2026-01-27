@@ -6,7 +6,8 @@
     <title>إدارة اللجنة - ميسر التعلم</title>
     <link rel="stylesheet" href="../../assets/css/main.css">
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/teacher.css"> <link rel="icon" type="image/png" href="../../assets/images/logo.png">
+    <link rel="stylesheet" href="../../assets/css/teacher.css">
+    <link rel="icon" type="image/png" href="../../assets/images/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     
     <style>
@@ -123,10 +124,14 @@
                 </div>
 
                 <div id="meetings-view" class="content-section active">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                        <h3>سجل الاجتماعات</h3>
-                        <button class="btn btn-success" onclick="showNewMeetingModal()">+ عقد اجتماع جديد</button>
+                    <div style="margin-bottom: 20px;">
+                        <button class="btn btn-success btn-lg" onclick="showNewMeetingModal()" style="width: 100%;">+ عقد اجتماع جديد</button>
                     </div>
+
+                    <div style="border-bottom: 1px solid #ddd; margin-bottom: 15px; padding-bottom: 10px;">
+                        <h3 style="margin: 0; color: #555;">سجل الاجتماعات</h3>
+                    </div>
+
                     <div id="meetingsListContainer" class="meetings-grid"></div>
                 </div>
             </div>

@@ -1,24 +1,22 @@
 // ============================================
 // 📁 الملف: assets/js/member.js
-// الوصف: تشغيل بوابة عضو اللجنة (نسخة مصححة لمنع التكرار اللانهائي)
+// الوصف: تشغيل بوابة عضو اللجنة (مع خيار "الكل" وإصلاح عرض محتوى الاجتماع)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. التحقق من المستخدم (نعتمد على الدالة من auth.js الموجودة مسبقاً)
-    // لا نعرّف الدالة هنا مرة أخرى لمنع التصادم
+    // 1. التحقق من المستخدم
     if (typeof getCurrentUser !== 'function') {
         console.error("لم يتم العثور على دالة getCurrentUser. تأكد من تحميل auth.js أولاً.");
         return;
     }
 
     const user = getCurrentUser();
-    
     if (!user) {
         window.location.href = '../../index.html';
         return;
     }
 
-    // 2. عرض الاسم والصفة (تحديث العناصر الموجودة في HTML)
+    // 2. عرض الاسم والصفة
     if(document.getElementById('memberNameDisplay')) {
         document.getElementById('memberNameDisplay').textContent = user.name;
     }
@@ -89,7 +87,7 @@ function loadMyMeetings() {
     container.innerHTML = html;
 }
 
-// === التوقيع ===
+// === التوقيع وعرض التفاصيل (تم الإصلاح هنا) ===
 let currentMeetingId = null;
 
 function openSigningModal(id) {
@@ -100,16 +98,26 @@ function openSigningModal(id) {
 
     if (!meeting) return;
 
-    if(document.getElementById('signModalTitle')) document.getElementById('signModalTitle').textContent = meeting.title;
+    // 1. تعبئة العنوان
+    if(document.getElementById('signModalTitle')) {
+        document.getElementById('signModalTitle').textContent = meeting.title;
+    }
     
+    // 2. تعبئة المحتوى (النص) ✅ إصلاح المشكلة هنا
     const contentBox = document.getElementById('signModalContent');
     if(contentBox) {
         contentBox.innerHTML = `
-            <div style="margin-bottom:10px; border-bottom:1px solid #eee;"><strong>التاريخ:</strong> ${meeting.date}</div>
-            <p style="white-space: pre-line;">${meeting.content}</p>
+            <div style="margin-bottom:15px; border-bottom:1px solid #ddd; padding-bottom:10px;">
+                <strong>📅 تاريخ الاجتماع:</strong> ${meeting.date}
+            </div>
+            <div style="background:#fff; padding:15px; border:1px solid #eee; border-radius:5px; min-height:100px;">
+                <h5 style="margin-top:0; color:#555;">محضر الاجتماع:</h5>
+                <p style="white-space: pre-line; line-height:1.6; font-size:1.1em;">${meeting.content || 'لا يوجد محتوى نصي لهذا الاجتماع.'}</p>
+            </div>
         `;
     }
 
+    // 3. حالة التوقيع
     const isSigned = meeting.signatures && meeting.signatures[user.id];
     const statusArea = document.getElementById('signatureStatusArea');
     const noteInput = document.getElementById('memberNoteInput');
@@ -117,17 +125,18 @@ function openSigningModal(id) {
     if (isSigned) {
         if(noteInput) {
             noteInput.value = meeting.signatures[user.id].note || '';
-            noteInput.disabled = true;
+            noteInput.disabled = true; // منع التعديل
         }
-        if(statusArea) statusArea.innerHTML = `<button class="btn btn-secondary" disabled>تم التوقيع مسبقاً</button>`;
+        if(statusArea) statusArea.innerHTML = `<button class="btn btn-secondary" disabled>تم التوقيع مسبقاً في ${new Date(meeting.signatures[user.id].date).toLocaleDateString('ar-SA')}</button>`;
     } else {
         if(noteInput) {
             noteInput.value = '';
             noteInput.disabled = false;
         }
-        if(statusArea) statusArea.innerHTML = `<button class="btn btn-success" onclick="submitSignature()">✅ اعتماد وتوقيع المحضر</button>`;
+        if(statusArea) statusArea.innerHTML = `<button class="btn btn-success" onclick="submitSignature()">✅ قرأت المحضر وأوافق عليه (توقيع)</button>`;
     }
 
+    // 4. إظهار النافذة
     const modal = document.getElementById('signMeetingModal');
     if(modal) modal.classList.add('show');
 }
@@ -149,42 +158,68 @@ function submitSignature() {
         if(modal) modal.classList.remove('show');
         
         loadMyMeetings();
-        alert('تم التوقيع بنجاح');
+        alert('تم التوقيع بنجاح ✅');
     }
 }
 
-// === التقارير (ربط القائمة المنسدلة) ===
+// === التقارير (إضافة خيار "الكل") ===
+
 function loadMemberStudents() {
     const select = document.getElementById('memberStudentSelect');
     if(!select) return;
+
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const students = users.filter(u => u.role === 'student');
-    select.innerHTML = '<option value="">-- اختر الطالب --</option>';
-    students.forEach(s => { select.innerHTML += `<option value="${s.id}">${s.name}</option>`; });
+
+    // ✅ إضافة خيار "جميع الطلاب" في البداية
+    let options = '<option value="">-- اختر الطالب --</option>';
+    options += '<option value="all" style="font-weight:bold; color:blue;">👥 جميع الطلاب</option>';
+    
+    students.forEach(s => { 
+        options += `<option value="${s.id}">${s.name}</option>`; 
+    });
+    
+    select.innerHTML = options;
 }
 
 function memberGenerateReport() {
-    const studentId = document.getElementById('memberStudentSelect').value;
+    const studentSelect = document.getElementById('memberStudentSelect');
+    const studentId = studentSelect.value;
     const type = document.getElementById('memberReportType').value;
     const container = document.getElementById('reportPreviewArea');
 
     if (!studentId) {
-        if(container) container.innerHTML = '<div class="alert alert-warning">الرجاء اختيار طالب أولاً.</div>';
+        if(container) container.innerHTML = '<div class="alert alert-warning">الرجاء اختيار طالب أو "جميع الطلاب" أولاً.</div>';
         return;
     }
 
-    // استدعاء الدوال من reports.js الأصلي
-    // نتأكد أن الدالة موجودة قبل استدعائها
+    // ✅ منطق التعامل مع خيار "الكل"
+    let targetIds = [];
+    if (studentId === 'all') {
+        // إذا اختار الكل، نجمع كل معرفات الطلاب
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        targetIds = users.filter(u => u.role === 'student').map(s => s.id);
+        
+        if (targetIds.length === 0) {
+            container.innerHTML = '<div class="alert alert-info">لا يوجد طلاب مسجلين في النظام.</div>';
+            return;
+        }
+    } else {
+        // إذا اختار طالب واحد
+        targetIds = [studentId];
+    }
+
+    // استدعاء الدوال من reports.js
     try {
-        if (type === 'attendance' && typeof generateAttendanceReport === 'function') generateAttendanceReport([studentId], container);
-        else if (type === 'achievement' && typeof generateAchievementReport === 'function') generateAchievementReport([studentId], container);
-        else if (type === 'assignments' && typeof generateAssignmentsReport === 'function') generateAssignmentsReport([studentId], container);
-        else if (type === 'iep' && typeof generateIEPReport === 'function') generateIEPReport([studentId], container);
-        else if (type === 'diagnostic' && typeof generateDiagnosticReport === 'function') generateDiagnosticReport([studentId], container);
-        else if (type === 'schedule' && typeof generateScheduleReport === 'function') generateScheduleReport([studentId], container);
-        else if (type === 'credit' && typeof generateCreditReport === 'function') generateCreditReport([studentId], container);
+        if (type === 'attendance' && typeof generateAttendanceReport === 'function') generateAttendanceReport(targetIds, container);
+        else if (type === 'achievement' && typeof generateAchievementReport === 'function') generateAchievementReport(targetIds, container);
+        else if (type === 'assignments' && typeof generateAssignmentsReport === 'function') generateAssignmentsReport(targetIds, container);
+        else if (type === 'iep' && typeof generateIEPReport === 'function') generateIEPReport(targetIds, container);
+        else if (type === 'diagnostic' && typeof generateDiagnosticReport === 'function') generateDiagnosticReport(targetIds, container);
+        else if (type === 'schedule' && typeof generateScheduleReport === 'function') generateScheduleReport(targetIds, container);
+        else if (type === 'credit' && typeof generateCreditReport === 'function') generateCreditReport(targetIds, container);
         else {
-             if(container) container.innerHTML = '<div class="alert alert-danger">نوع التقرير غير مدعوم أو الملف reports.js غير محمل بشكل صحيح.</div>';
+             if(container) container.innerHTML = '<div class="alert alert-danger">نوع التقرير غير مدعوم حالياً.</div>';
         }
     } catch (e) {
         console.error(e);

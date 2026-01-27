@@ -8,13 +8,43 @@
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="icon" type="image/png" href="../../assets/images/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
     <style>
+        /* ✅ 1. تنسيقات النافذة المنبثقة (المودال) - ضرورية جداً */
+        .modal {
+            display: none; /* مخفي افتراضياً */
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); /* خلفية معتمة */
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.show {
+            display: flex !important; /* إظهار عند إضافة كلاس show */
+        }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            position: relative;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; }
+        .modal-close:hover { color: red; }
+
+        /* تنسيقات أخرى */
         .status-signed { color: green; font-weight: bold; background: #e8f5e9; padding: 2px 8px; border-radius: 10px; }
         .status-pending { color: #d9534f; font-weight: bold; background: #fbe6e6; padding: 2px 8px; border-radius: 10px; }
-        .meeting-details-box { background: #f9f9f9; padding: 20px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; }
+        .meeting-details-box { background: #f9f9f9; padding: 15px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 15px; }
         .report-controls { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee; }
-        .content-section { display: none; } /* إخفاء الأقسام افتراضياً */
-        .content-section.active { display: block; } /* إظهار النشط */
+        .content-section { display: none; }
+        .content-section.active { display: block; }
     </style>
 </head>
 <body>
@@ -46,15 +76,17 @@
             <div class="dashboard-content">
                 <div id="section-meetings" class="content-section active">
                     <div class="content-header"><h1>الاجتماعات والمحاضر</h1></div>
-                    <div id="myMeetingsContainer" class="grid-container">
-                        </div>
+                    <div id="myMeetingsContainer" class="grid-container"></div>
                 </div>
 
                 <div id="section-reports" class="content-section">
                     <div class="content-header"><h1>تقارير الطلاب</h1></div>
                     <div class="report-controls no-print">
                         <div style="display:flex; gap:15px; flex-wrap:wrap;">
-                            <select id="memberStudentSelect" class="form-control" style="flex:1;"><option value="">اختر الطالب...</option></select>
+                            <select id="memberStudentSelect" class="form-control" style="flex:1;">
+                                <option value="">جاري تحميل الطلاب...</option>
+                            </select>
+                            
                             <select id="memberReportType" class="form-control" style="flex:1;">
                                 <option value="attendance">تقرير الغياب</option>
                                 <option value="achievement">تقرير الإنجاز</option>
@@ -81,17 +113,15 @@
             </div>
             <div class="modal-body">
                 <div class="meeting-details-box" id="signModalContent"></div>
+                
                 <div class="form-group">
                     <label>ملاحظاتك / توصياتك:</label>
-                    <textarea id="memberNoteInput" class="form-control" rows="3" placeholder="أكتب ملاحظاتك هنا قبل التوقيع..."></textarea>
+                    <textarea id="memberNoteInput" class="form-control" rows="3" placeholder="أكتب ملاحظاتك هنا..."></textarea>
                 </div>
                 <div id="signatureStatusArea" class="text-center mt-3"></div>
             </div>
         </div>
     </div>
 
-    <script src="../../assets/js/auth.js"></script>
-    <script src="../../assets/js/reports.js"></script>
-    <script src="../../assets/js/member.js"></script>
-</body>
+    <script src="../../assets/js/auth.js"></script>    <script src="../../assets/js/reports.js"></script> <script src="../../assets/js/member.js"></script>  </body>
 </html>

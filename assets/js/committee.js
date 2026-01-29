@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/committee.js
-// الوصف: إدارة اللجنة (نسخة إضافة "أ/" والرتب الجديدة)
+// الوصف: إدارة اللجنة (تحديث حالات عرض التوقيع: صورة/نص/بانتظار التوقيع)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -63,7 +63,7 @@ function loadMeetings() {
     container.innerHTML = html;
 }
 
-// ✅ دالة عرض المحضر (معدلة لإضافة "أ/")
+// ✅ دالة عرض المحضر (تم تحديث منطق التوقيعات)
 function viewMeetingDetails(id) {
     const meetings = JSON.parse(localStorage.getItem('committeeMeetings') || '[]');
     const meeting = meetings.find(m => m.id === id);
@@ -86,25 +86,35 @@ function viewMeetingDetails(id) {
         attendeesList.forEach(member => {
             const signatureData = (meeting.signatures && meeting.signatures[member.id]) ? meeting.signatures[member.id] : null;
             
-            let signatureContent = '<span style="color:#ccc;">لم يوقع بعد</span>';
+            let signatureContent = '';
             
             if (signatureData) {
+                // حالة 1: يوجد توقيع
+                const dateStr = new Date(signatureData.date).toLocaleDateString('ar-SA');
+                
                 if (signatureData.image) {
+                    // أ) توقيع صورة (الجديد)
                     signatureContent = `<img src="${signatureData.image}" class="sig-img-display" alt="توقيع">`;
-                    signatureContent += `<br><small style="font-size:0.7em; color:#777;">${new Date(signatureData.date).toLocaleDateString('ar-SA')}</small>`;
+                    signatureContent += `<br><small style="font-size:0.7em; color:#777;">${dateStr}</small>`;
                 } else {
-                    signatureContent = `<span style="color:green; font-weight:bold;">تم الاعتماد إلكترونياً</span>`;
+                    // ب) توقيع نصي (القديم)
+                    signatureContent = `<span style="font-family:'Tajawal'; font-weight:bold; color:#333;">${signatureData.name}</span>`;
+                    signatureContent += `<br><small style="font-size:0.75em; color:#666;">(اعتماد نصي)</small>`;
+                    signatureContent += `<br><small style="font-size:0.7em; color:#777;">${dateStr}</small>`;
                 }
+            } else {
+                // حالة 2: لا يوجد توقيع
+                signatureContent = `<span style="color:#d9534f; font-weight:bold; font-size:0.9em;">بانتظار التوقيع ⏳</span>`;
             }
 
-            // ✅ إضافة "أ/" قبل الاسم
+            // إضافة "أ/" قبل الاسم
             const formalName = `أ/ ${member.name}`;
 
             tableBody.innerHTML += `
                 <tr>
                     <td style="text-align:right; font-weight:bold; padding-right:15px;">${formalName}</td>
                     <td style="text-align:center;">${member.role}</td>
-                    <td style="text-align:center;">${signatureContent}</td>
+                    <td style="text-align:center; vertical-align:middle;">${signatureContent}</td>
                 </tr>
             `;
         });

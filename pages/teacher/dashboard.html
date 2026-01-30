@@ -8,57 +8,78 @@
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../assets/css/teacher.css">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        /* --- تنسيقات خاصة للبطاقات المصغرة (صف واحد) --- */
+        /* --- تنسيقات البطاقات العصرية (Horizontal Cards) --- */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr) !important; /* إجبار 4 أعمدة */
-            gap: 15px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(4, 1fr) !important;
+            gap: 20px;
+            margin-bottom: 30px;
         }
 
         .stat-card {
-            padding: 15px;
-            border-radius: 10px;
-            background: white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px;
             display: flex;
-            flex-direction: column;
+            justify-content: space-between; /* توزيع المحتوى */
             align-items: center;
-            justify-content: center;
-            text-align: center;
-            transition: transform 0.2s;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            border: 1px solid rgba(0,0,0,0.02);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
 
-        .stat-card:hover { transform: translateY(-3px); }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+        }
 
-        .stat-header { margin-bottom: 8px; }
-        
-        .stat-icon {
-            width: 40px; height: 40px;
-            font-size: 1.2rem;
-            display: flex; align-items: center; justify-content: center;
-            border-radius: 50%;
-            background: #f8f9fa;
+        .stat-content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .stat-number {
-            font-size: 1.6rem;
-            font-weight: bold;
+            font-size: 1.8rem;
+            font-weight: 800;
             color: #2c3e50;
-            line-height: 1.2;
+            margin-bottom: 5px;
+            line-height: 1;
+            font-family: 'Tajawal', sans-serif;
         }
 
         .stat-label {
-            font-size: 0.85rem;
-            color: #7f8c8d;
-            margin-top: 5px;
+            font-size: 0.9rem;
+            color: #8898aa;
+            font-weight: 500;
         }
 
-        @media (max-width: 768px) {
-            .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        .stat-icon-wrapper {
+            width: 55px;
+            height: 55px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            transition: transform 0.3s ease;
         }
+
+        .stat-card:hover .stat-icon-wrapper { transform: scale(1.1) rotate(5deg); }
+
+        /* ألوان مميزة لكل بطاقة */
+        .card-blue .stat-icon-wrapper { background: #e0f2fe; color: #0284c7; }
+        .card-green .stat-icon-wrapper { background: #dcfce7; color: #16a34a; }
+        .card-red .stat-icon-wrapper { background: #fee2e2; color: #dc2626; }
+        .card-orange .stat-icon-wrapper { background: #ffedd5; color: #ea580c; }
+
+        @media (max-width: 992px) { .stats-grid { grid-template-columns: repeat(2, 1fr) !important; } }
+        @media (max-width: 576px) { .stats-grid { grid-template-columns: 1fr !important; } }
     </style>
 </head>
 <body>
@@ -70,7 +91,6 @@
                     <h2>ميسر التعلم</h2>
                 </div>
             </div>
-            
             <ul class="sidebar-menu">
                 <li><a href="dashboard.html" class="active"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
                 <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
@@ -89,7 +109,7 @@
                 <div class="user-info">
                     <div class="user-welcome">
                         <div class="welcome-text">مرحباً بعودتك</div>
-                        <div class="user-name" id="userName">أ/ المعلم</div>
+                        <div class="user-name" id="userName">أ/ اسم المعلم</div>
                     </div>
                     <div class="user-avatar" id="userAvatar">م</div>
                 </div>
@@ -112,69 +132,52 @@
                 </div>
 
                 <div class="stats-grid">
-                    <div class="stat-card">
-                        <div class="stat-header"><div class="stat-icon" style="color:#4361ee; background:#eef2ff;">👨‍🎓</div></div>
-                        <div class="stat-number" id="studentsCount">0</div>
-                        <div class="stat-label">إجمالي الطلاب</div>
+                    <div class="stat-card card-blue">
+                        <div class="stat-content">
+                            <span class="stat-number" id="studentsCount">0</span>
+                            <span class="stat-label">إجمالي الطلاب</span>
+                        </div>
+                        <div class="stat-icon-wrapper">
+                            <i class="fas fa-user-graduate"></i>
+                        </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-header"><div class="stat-icon" style="color:#2ec4b6; background:#e0f7fa;">📚</div></div>
-                        <div class="stat-number" id="lessonsCount">0</div>
-                        <div class="stat-label">الدروس المضافة</div>
+
+                    <div class="stat-card card-green">
+                        <div class="stat-content">
+                            <span class="stat-number" id="lessonsCount">0</span>
+                            <span class="stat-label">الدروس المضافة</span>
+                        </div>
+                        <div class="stat-icon-wrapper">
+                            <i class="fas fa-book-open"></i>
+                        </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-header"><div class="stat-icon" style="color:#f72585; background:#fce4ec;">📝</div></div>
-                        <div class="stat-number" id="assignmentsCount">0</div>
-                        <div class="stat-label">الواجبات النشطة</div>
+
+                    <div class="stat-card card-red">
+                        <div class="stat-content">
+                            <span class="stat-number" id="assignmentsCount">0</span>
+                            <span class="stat-label">الواجبات النشطة</span>
+                        </div>
+                        <div class="stat-icon-wrapper">
+                            <i class="fas fa-clipboard-list"></i>
+                        </div>
                     </div>
-                    <div class="stat-card">
-                        <div class="stat-header"><div class="stat-icon" style="color:#ff9f1c; background:#fff3e0;">💬</div></div>
-                        <div class="stat-number" id="unreadMessages">0</div>
-                        <div class="stat-label">رسائل جديدة</div>
+
+                    <div class="stat-card card-orange">
+                        <div class="stat-content">
+                            <span class="stat-number" id="unreadMessages">0</span>
+                            <span class="stat-label">رسائل جديدة</span>
+                        </div>
+                        <div class="stat-icon-wrapper">
+                            <i class="fas fa-comments"></i>
+                        </div>
                     </div>
                 </div>
-
-            </div>
+                </div>
         </main>
     </div>
 
     <script src="../../assets/js/dashboard.js"></script>
     <script src="../../assets/js/teacher.js"></script>
     <script src="../../assets/js/auth.js"></script>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // 1. جلب وحساب عدد الطلاب
-            const users = JSON.parse(localStorage.getItem('users') || '[]');
-            const students = users.filter(u => u.role === 'student');
-            if(document.getElementById('studentsCount')) {
-                document.getElementById('studentsCount').innerText = students.length;
-            }
-
-            // 2. جلب المحتوى (دروس وواجبات)
-            // نفترض أن المحتوى مخزن في 'contentLibrary' أو 'libraryItems'
-            const library = JSON.parse(localStorage.getItem('contentLibrary') || '[]');
-            
-            // تصفية الدروس
-            const lessons = library.filter(item => item.type === 'lesson' || item.type === 'interactive_lesson');
-            if(document.getElementById('lessonsCount')) {
-                document.getElementById('lessonsCount').innerText = lessons.length;
-            }
-
-            // تصفية الواجبات
-            const homeworks = library.filter(item => item.type === 'homework' || item.type === 'assignment');
-            if(document.getElementById('assignmentsCount')) {
-                document.getElementById('assignmentsCount').innerText = homeworks.length;
-            }
-
-            // 3. جلب الرسائل
-            const messages = JSON.parse(localStorage.getItem('messages') || '[]');
-            // (اختياري: يمكن تصفية الرسائل غير المقروءة فقط)
-            // const unread = messages.filter(m => !m.read); 
-            if(document.getElementById('unreadMessages')) {
-                document.getElementById('unreadMessages').innerText = messages.length;
-            }
-        });
-    </script>
 </body>
 </html>

@@ -37,7 +37,6 @@
 
         /* --- تنسيقات البطاقات والحقول --- */
         .student-feedback-card { background: #fff; border: 1px solid #eef2f7; border-right: 4px solid #28a745; border-radius: 12px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
-        .student-feedback-card:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,0,0,0.08); }
         .student-info-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; }
         .student-icon-circle { width: 36px; height: 36px; background: #e8f5e9; color: #28a745; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
         .student-name-title { font-weight: bold; font-size: 1.05rem; color: #333; }
@@ -73,50 +72,83 @@
         .report-controls { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee; }
 
         /* ================================================= */
-        /* 🖨️ إعدادات الطباعة المتقدمة (Full Details) */
+        /* 🖨️ إعدادات الطباعة (إصلاح شامل) */
         /* ================================================= */
         @media print {
-            @page { size: A4; margin: 1.5cm; }
-            body * { visibility: hidden; }
+            @page { size: A4; margin: 10mm; }
             
-            /* إخفاء العناصر غير الضرورية */
-            .sidebar, .dashboard-header, .no-print, .modal-close, .modal-header button, .btn, .clear-sig-btn, #printBtnArea { display: none !important; }
+            /* إخفاء كل شيء في الصفحة أولاً */
+            body > *:not(#signMeetingModal) { display: none !important; }
+            
+            /* إعدادات الجسم الأساسي للطباعة */
+            html, body { 
+                background: white; 
+                height: auto; 
+                width: 100%; 
+                margin: 0; 
+                padding: 0; 
+                overflow: visible !important; 
+            }
 
-            /* تجهيز نافذة المحضر للطباعة */
+            /* إجبار النافذة المنبثقة على الظهور كصفحة عادية */
             #signMeetingModal {
-                position: absolute; left: 0; top: 0; width: 100%; height: auto;
-                margin: 0; padding: 0; background: white;
-                display: block !important; visibility: visible; overflow: visible;
+                display: block !important;
+                position: static !important; /* إلغاء التثبيت */
+                width: 100% !important;
+                height: auto !important;
+                overflow: visible !important;
+                background: white !important;
+                z-index: 9999;
             }
 
-            .modal-content { 
-                box-shadow: none !important; border: none !important; 
-                width: 100%; max-width: 100%; background: transparent; 
+            .modal-content {
+                box-shadow: none !important; 
+                border: none !important; 
+                width: 100% !important; 
+                max-width: 100% !important; 
+                background: white !important;
             }
-            .modal-body { padding: 0; margin: 0; background: white; visibility: visible; overflow: visible !important; height: auto !important; max-height: none !important; }
-            #signMeetingModal .modal-body * { visibility: visible; }
+
+            .modal-body {
+                padding: 0 !important;
+                margin: 0 !important;
+                overflow: visible !important;
+                height: auto !important;
+                max-height: none !important;
+            }
+
+            /* إخفاء العناصر غير المطلوبة في الطباعة */
+            .no-print, 
+            .modal-header, 
+            .modal-close, 
+            .clear-sig-btn, 
+            #printBtnArea { 
+                display: none !important; 
+            }
+
+            /* تنسيق النصوص للطباعة */
+            h3, h5, p, span, div { color: black !important; }
             
-            /* تحسين شكل البطاقات عند الطباعة */
+            /* تحويل البطاقات إلى إطار أسود بسيط */
             .modern-card, .student-feedback-card, .general-notes-card {
-                border: 1px solid #000; /* حدود واضحة للطباعة */
-                box-shadow: none; 
-                break-inside: avoid; page-break-inside: avoid; /* منع قص البطاقة بين الصفحات */
+                border: 1px solid #000 !important;
+                box-shadow: none !important;
                 margin-bottom: 20px;
+                page-break-inside: avoid;
             }
 
-            /* ✅ تحويل حقول الكتابة إلى نصوص كاملة */
-            textarea.modern-feedback-input {
+            /* ✅ إصلاح مشكلة النص المخفي في الـ Textarea */
+            /* الجافاسكربت سيحولها لـ Divs، لكن كإجراء احتياطي: */
+            textarea {
                 border: none !important;
                 resize: none;
-                overflow: hidden;
+                overflow: visible !important;
+                height: auto !important;
                 min-height: 50px;
-                padding: 0;
+                font-family: 'Tajawal', sans-serif;
+                color: black !important;
                 background: transparent !important;
-                box-shadow: none !important;
-                color: #000 !important;
             }
-            .input-label-hint { color: #000; font-weight: bold; }
-            h5, h3 { color: #000 !important; }
         }
     </style>
 </head>
@@ -185,6 +217,13 @@
                 <button class="modal-close" onclick="closeSigningModal()">&times;</button>
             </div>
             <div class="modal-body">
+                
+                <div style="display:none;" class="print-header-show">
+                    <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #000; padding-bottom:10px;">
+                        <h2>محضر اجتماع لجنة صعوبات التعلم</h2>
+                    </div>
+                </div>
+
                 <div class="modern-card" id="signModalDetails"></div>
                 
                 <div class="general-notes-card" id="generalNotesContainer">
@@ -192,12 +231,13 @@
                         <span>📝</span>
                         <span>ملاحظات وتوصيات عامة</span>
                     </div>
-                    <label class="input-label-hint no-print">يمكنك إضافة أي ملاحظات إضافية حول الاجتماع هنا (اختياري):</label>
+                    <label class="input-label-hint no-print">ملاحظات إضافية:</label>
                     <textarea id="memberNoteInput" class="modern-feedback-input" rows="2" placeholder="أكتب ملاحظاتك العامة هنا..."></textarea>
+                    <div id="memberNotePrint" style="display:none; white-space:pre-wrap; border:1px solid #ddd; padding:10px;"></div>
                 </div>
 
                 <div class="modern-card" id="signingAreaCard">
-                    <h5>✍️ التوقيع والاعتماد النهائي</h5>
+                    <h5>✍️ التوقيع والاعتماد</h5>
                     <div class="form-group no-print">
                         <label style="display:block; margin-bottom:5px;">ارسم توقيعك أدناه:</label>
                         <div class="signature-pad-container" id="signatureContainer">
@@ -205,7 +245,9 @@
                             <button type="button" class="clear-sig-btn" onclick="clearSignaturePad()">مسح وإعادة التوقيع ❌</button>
                         </div>
                     </div>
+                    
                     <div id="savedSignatureDisplay" style="display:none; text-align:center;"></div>
+                    
                     <div id="signatureActionArea" class="mt-3 no-print">
                         <button class="btn btn-success w-100" style="padding: 12px; font-size: 1.1em;" onclick="submitSignature()">✅ حفظ واعتماد التوقيع</button>
                     </div>
@@ -225,20 +267,55 @@
     <script src="../../assets/js/member.js"></script>
     
     <script>
-        // ✅ دالة طباعة ذكية تقوم بتوسيع النصوص لتظهر كاملة
+        // ✅ دالة طباعة ذكية ومحسنة
         function printMeeting() {
-            // 1. توسيع جميع حقول الكتابة لتناسب النص بداخلها
-            const textareas = document.querySelectorAll('textarea');
-            textareas.forEach(ta => {
-                ta.style.height = 'auto'; // تصفير الارتفاع
-                ta.style.height = (ta.scrollHeight + 5) + 'px'; // توسيع حسب المحتوى
+            // 1. التعامل مع الملاحظات العامة
+            const noteInput = document.getElementById('memberNoteInput');
+            const notePrint = document.getElementById('memberNotePrint');
+            
+            // نسخ النص من الحقل إلى الـ Div المخصص للطباعة
+            if(noteInput && notePrint) {
+                notePrint.textContent = noteInput.value || 'لا توجد ملاحظات.';
+                noteInput.style.display = 'none'; // إخفاء الحقل
+                notePrint.style.display = 'block'; // إظهار النص الثابت
+            }
+
+            // 2. التعامل مع ملاحظات الطلاب (التكرار على جميع الحقول)
+            const feedbackInputs = document.querySelectorAll('.feedback-input');
+            const originalFeedbackDisplays = []; // لتخزين الحالة الأصلية
+
+            feedbackInputs.forEach(input => {
+                // إنشاء عنصر نصي بديل
+                const printDiv = document.createElement('div');
+                printDiv.textContent = input.value || 'لا توجد ملاحظات.';
+                printDiv.style.cssText = 'white-space: pre-wrap; padding: 10px; border: 1px solid #eee; margin-top:5px;';
+                printDiv.className = 'temp-print-div';
+                
+                // إدخال العنصر الجديد وإخفاء القديم
+                input.parentNode.insertBefore(printDiv, input.nextSibling);
+                input.style.display = 'none';
             });
 
-            // 2. أمر الطباعة
-            window.print();
+            // 3. إضافة عنوان للطباعة
+            const printHeader = document.querySelector('.print-header-show');
+            if(printHeader) printHeader.style.display = 'block';
 
-            // 3. (اختياري) إعادة الحقول لحجمها الطبيعي بعد الطباعة للحفاظ على التنسيق
-            // يمكن تركها موسعة، أو إعادتها إذا رغبت
+            // 4. تنفيذ الطباعة
+            setTimeout(() => {
+                window.print();
+
+                // 5. إعادة الوضع كما كان بعد الطباعة (تنظيف)
+                if(noteInput && notePrint) {
+                    noteInput.style.display = 'block';
+                    notePrint.style.display = 'none';
+                }
+                
+                // إزالة عناصر الـ Div المؤقتة وإظهار الحقول
+                document.querySelectorAll('.temp-print-div').forEach(el => el.remove());
+                feedbackInputs.forEach(input => input.style.display = 'block');
+                
+                if(printHeader) printHeader.style.display = 'none';
+            }, 500);
         }
     </script>
 </body>

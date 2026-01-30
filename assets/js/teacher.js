@@ -1,6 +1,5 @@
 // ============================================
 // 📁 المسار: assets/js/teacher.js
-// الوصف: العقل المدبر لإدارة المعلم (طلاب، محتوى، إحصائيات)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -9,16 +8,13 @@ document.addEventListener('DOMContentLoaded', function() {
         initializeTeacherDashboard();
     } else if (window.location.pathname.includes('students.html')) {
         initializeStudentsPage();
-    } else if (window.location.pathname.includes('content-library.html')) {
-        initializeContentLibraryPage();
     }
 });
-
-// --- تهيئة الصفحات ---
 
 function initializeStudentsPage() {
     const user = checkAuth();
     if (!user || user.role !== 'teacher') return;
+    
     updateUserInterface(user);
     loadStudentsData();
 }
@@ -27,40 +23,29 @@ function initializeTeacherDashboard() {
     const user = checkAuth();
     if (!user || user.role !== 'teacher') return;
     updateUserInterface(user);
-    loadTeacherStats(); // تحميل الإحصائيات الحقيقية
+    loadTeacherStats();
 }
 
-function initializeContentLibraryPage() {
-    const user = checkAuth();
-    if (!user || user.role !== 'teacher') return;
-    updateUserInterface(user);
-    loadContentLibrary(); // دالة في content-library.js، لكننا سنضمن البيانات هنا
-}
-
-// ============================================
-// 1. قسم إدارة الطلاب
-// ============================================
-
+// 1. عرض بيانات الطلاب في الجدول
 function loadStudentsData() {
     const loadingState = document.getElementById('loadingState');
     const emptyState = document.getElementById('emptyState');
     const tableBody = document.getElementById('studentsTableBody');
     if (!tableBody) return;
 
-    if(loadingState) loadingState.style.display = 'block';
-    if(emptyState) emptyState.style.display = 'none';
+    loadingState.style.display = 'block';
+    emptyState.style.display = 'none';
     tableBody.innerHTML = '';
 
     setTimeout(() => {
         const users = JSON.parse(localStorage.getItem('users') || '[]');
         const currentTeacher = getCurrentUser();
-        // جلب الطلاب المرتبطين بهذا المعلم
         const students = users.filter(u => u.role === 'student' && u.teacherId === currentTeacher.id);
         
-        if(loadingState) loadingState.style.display = 'none';
+        loadingState.style.display = 'none';
         
         if (students.length === 0) {
-            if(emptyState) emptyState.style.display = 'block';
+            emptyState.style.display = 'block';
             return;
         }
 
@@ -82,25 +67,37 @@ function loadStudentsData() {
                     </td>
                     <td>
                         <div class="student-actions" style="display: flex; gap: 5px; flex-wrap: wrap;">
-                            <button class="btn btn-sm btn-primary" onclick="openStudentFile(${student.id})" title="ملف الطالب"><i class="fas fa-file-alt"></i></button>
-                            <button class="btn btn-sm btn-secondary" onclick="showStudentLoginData(${student.id})" title="بيانات الدخول"><i class="fas fa-key"></i></button>
-                            <button class="btn btn-sm btn-warning" onclick="editStudent(${student.id})" title="تعديل"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})" title="حذف"><i class="fas fa-trash"></i></button>
+                            <button class="btn btn-sm btn-primary" onclick="openStudentFile(${student.id})" title="ملف الطالب">
+                                <i class="fas fa-file-alt"></i> ملف الطالب
+                            </button>
+                            <button class="btn btn-sm btn-secondary" onclick="showStudentLoginData(${student.id})" title="بيانات الدخول">
+                                <i class="fas fa-key"></i> دخول
+                            </button>
+                            <button class="btn btn-sm btn-warning" onclick="editStudent(${student.id})" title="تعديل">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-info" onclick="exportStudentJson(${student.id})" title="تصدير">
+                                <i class="fas fa-file-export"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})" title="حذف">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>
             `;
         }).join('');
-    }, 300);
+    }, 500);
 }
 
+// 2. إضافة طالب جديد (الدالة التي كانت مفقودة)
 function addNewStudent() {
     const name = document.getElementById('studentName').value.trim();
     const grade = document.getElementById('studentGrade').value;
     const subject = document.getElementById('studentSubject').value;
 
     if (!name || !grade || !subject) {
-        alert('يرجى ملء جميع الحقول');
+        showAuthNotification('يرجى ملء جميع الحقول', 'error');
         return;
     }
 
@@ -108,14 +105,14 @@ function addNewStudent() {
     const currentTeacher = getCurrentUser();
 
     const newStudent = {
-        id: Date.now(), // استخدام الوقت كمعرف فريد
+        id: generateId(),
         teacherId: currentTeacher.id,
         role: 'student',
         name: name,
         grade: grade,
         subject: subject,
-        username: 's_' + Math.floor(Math.random() * 10000),
-        password: '123',
+        username: generateUsername(name), // توليد اسم مستخدم تلقائي
+        password: '123', // كلمة مرور افتراضية
         progress: 0,
         createdAt: new Date().toISOString()
     };
@@ -123,177 +120,175 @@ function addNewStudent() {
     users.push(newStudent);
     localStorage.setItem('users', JSON.stringify(users));
 
-    alert('تم إضافة الطالب بنجاح ✅');
-    if(typeof closeAddStudentModal === 'function') closeAddStudentModal();
+    showAuthNotification('تم إضافة الطالب بنجاح', 'success');
+    closeAddStudentModal();
     loadStudentsData();
 }
 
-function deleteStudent(studentId) {
-    if (!confirm('هل أنت متأكد من حذف هذا الطالب؟')) return;
-    let users = JSON.parse(localStorage.getItem('users') || '[]');
-    users = users.filter(u => u.id !== studentId);
-    localStorage.setItem('users', JSON.stringify(users));
-    loadStudentsData();
+// 3. فتح ملف الطالب
+function openStudentFile(studentId) {
+    window.location.href = `student-profile.html?id=${studentId}`;
 }
 
-function openStudentFile(id) { window.location.href = `student-profile.html?id=${id}`; }
-
-// ============================================
-// 2. قسم إدارة المحتوى (حفظ الدروس والواجبات)
-// ============================================
-
-// دالة مساعدة لحفظ أي نوع محتوى
-function saveContentItem(item) {
-    const library = JSON.parse(localStorage.getItem('contentLibrary') || '[]');
-    library.push(item);
-    localStorage.setItem('contentLibrary', JSON.stringify(library));
-}
-
-// أ) حفظ الدرس
-function saveLesson() {
-    const title = document.getElementById('lessonTitle').value;
-    const subject = document.getElementById('lessonSubject').value;
+// 4. تصدير بيانات الطالب
+function exportStudentJson(studentId) {
+    const students = JSON.parse(localStorage.getItem('users') || '[]');
+    const student = students.find(u => u.id === studentId);
     
-    if(!title) return alert('يرجى كتابة عنوان الدرس');
+    if (!student) return;
 
-    const lesson = {
-        id: Date.now(),
-        type: 'lesson', // هذا النوع مهم للعد في الداشبورد
-        title: title,
-        subject: subject,
-        date: new Date().toISOString(),
-        questions: [], // سيتم تطويره لاحقاً لجمع الأسئلة من النموذج
-        status: 'active'
+    const allData = {
+        studentProfile: student,
+        iep: (JSON.parse(localStorage.getItem('educationalPlans') || '[]')).find(p => p.studentId === studentId),
+        tests: (JSON.parse(localStorage.getItem('studentTests') || '[]')).filter(t => t.studentId === studentId),
+        lessons: (JSON.parse(localStorage.getItem('studentLessons') || '[]')).filter(l => l.studentId === studentId),
+        assignments: (JSON.parse(localStorage.getItem('studentAssignments') || '[]')).filter(a => a.studentId === studentId),
+        progress: (JSON.parse(localStorage.getItem('studentProgress') || '[]')).find(p => p.studentId === studentId)
     };
 
-    saveContentItem(lesson);
-    alert('تم حفظ الدرس بنجاح ✅');
-    if(typeof closeModal === 'function') closeModal('createLessonModal');
-    // إعادة تحميل المكتبة إذا كنا في صفحتها
-    if(typeof loadContentLibrary === 'function') loadContentLibrary();
-}
-
-// ب) حفظ الواجب
-function saveHomework() {
-    const title = document.getElementById('homeworkTitle').value;
-    const subject = document.getElementById('homeworkSubject').value;
-    const desc = document.getElementById('homeworkDescription').value;
-
-    if(!title) return alert('يرجى كتابة عنوان الواجب');
-
-    const homework = {
-        id: Date.now(),
-        type: 'homework', // مهم للعد
-        title: title,
-        subject: subject,
-        description: desc,
-        date: new Date().toISOString(),
-        status: 'active'
-    };
-
-    saveContentItem(homework);
-    alert('تم حفظ الواجب بنجاح ✅');
-    if(typeof closeModal === 'function') closeModal('createHomeworkModal');
-    if(typeof loadContentLibrary === 'function') loadContentLibrary();
-}
-
-// ج) حفظ الاختبار
-function saveTest() {
-    const title = document.getElementById('testTitle').value;
-    const subject = document.getElementById('testSubject').value;
-
-    if(!title) return alert('العنوان مطلوب');
-
-    const test = {
-        id: Date.now(),
-        type: 'test',
-        title: title,
-        subject: subject,
-        date: new Date().toISOString()
-    };
-
-    saveContentItem(test);
-    alert('تم حفظ الاختبار ✅');
-    if(typeof closeModal === 'function') closeModal('createTestModal');
-    if(typeof loadContentLibrary === 'function') loadContentLibrary();
-}
-
-// د) حفظ الهدف
-function saveObjective() {
-    const title = document.getElementById('shortTermGoal').value;
-    const subject = document.getElementById('objSubject').value;
-
-    if(!title) return alert('الهدف مطلوب');
-
-    const objective = {
-        id: Date.now(),
-        type: 'objective',
-        title: title,
-        subject: subject,
-        date: new Date().toISOString()
-    };
-
-    saveContentItem(objective);
-    alert('تم حفظ الهدف ✅');
-    if(typeof closeModal === 'function') closeModal('createObjectiveModal');
-    if(typeof loadContentLibrary === 'function') loadContentLibrary();
-}
-
-// ============================================
-// 3. قسم الإحصائيات (تحديث الداشبورد)
-// ============================================
-
-function loadTeacherStats() {
-    const currentTeacher = getCurrentUser();
-    if(!currentTeacher) return;
-
-    // 1. عدد الطلاب
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const studentsCount = users.filter(u => u.role === 'student' && u.teacherId === currentTeacher.id).length;
+    const dataStr = JSON.stringify(allData, null, 2);
+    const blob = new Blob([dataStr], {type: "application/json"});
+    const url = URL.createObjectURL(blob);
     
-    // 2. عدد الدروس والواجبات (من مكتبة المحتوى)
-    const library = JSON.parse(localStorage.getItem('contentLibrary') || '[]');
-    const lessonsCount = library.filter(i => i.type === 'lesson' || i.type === 'interactive_lesson').length;
-    const assignmentsCount = library.filter(i => i.type === 'homework' || i.type === 'assignment').length;
-
-    // 3. عدد الرسائل
-    const messages = JSON.parse(localStorage.getItem('messages') || '[]');
-    // نفترض أن الرسائل مخزنة بشكل عام حالياً، أو يمكن تصفيتها للمستخدم الحالي
-    const messagesCount = messages.length; 
-
-    // تحديث الواجهة (DOM)
-    if(document.getElementById('studentsCount')) document.getElementById('studentsCount').innerText = studentsCount;
-    if(document.getElementById('lessonsCount')) document.getElementById('lessonsCount').innerText = lessonsCount;
-    if(document.getElementById('assignmentsCount')) document.getElementById('assignmentsCount').innerText = assignmentsCount;
-    if(document.getElementById('unreadMessages')) document.getElementById('unreadMessages').innerText = messagesCount;
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `student_${student.name}_data.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showAuthNotification('تم تصدير ملف الطالب', 'success');
 }
 
-// دوال مساعدة إضافية
-function showStudentLoginData(id) {
+// 5. عرض وتوليد بيانات الدخول
+function showStudentLoginData(studentId) {
+    const students = JSON.parse(localStorage.getItem('users') || '[]');
+    const student = students.find(u => u.id === studentId);
+    
+    if (!student) return;
+
+    // إذا لم تكن لديه بيانات دخول، قم بتوليدها
+    if (!student.username) {
+        student.username = generateUsername(student.name);
+        student.password = '123';
+        localStorage.setItem('users', JSON.stringify(students));
+    }
+
+    document.getElementById('loginDataUsername').value = student.username;
+    document.getElementById('loginDataPassword').value = student.password;
+    
+    document.getElementById('studentLoginDataModal').classList.add('show');
+}
+
+// 6. تحضير تعديل الطالب
+function editStudent(studentId) {
+    const students = JSON.parse(localStorage.getItem('users') || '[]');
+    const student = students.find(u => u.id === studentId);
+    
+    if (!student) return;
+
+    document.getElementById('editStudentId').value = student.id;
+    document.getElementById('editStudentName').value = student.name;
+    document.getElementById('editStudentGrade').value = student.grade;
+    document.getElementById('editStudentSubject').value = student.subject;
+    document.getElementById('editStudentUsername').value = student.username || '';
+    document.getElementById('editStudentPassword').value = student.password || '';
+
+    document.getElementById('editStudentModal').classList.add('show');
+}
+
+// 7. حفظ تعديلات الطالب
+function updateStudentData() {
+    const id = parseInt(document.getElementById('editStudentId').value);
     const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const s = users.find(u => u.id === id);
-    if(s) {
-        document.getElementById('loginDataUsername').value = s.username;
-        document.getElementById('loginDataPassword').value = s.password;
-        document.getElementById('studentLoginDataModal').classList.add('show');
+    const index = users.findIndex(u => u.id === id);
+
+    if (index !== -1) {
+        users[index].name = document.getElementById('editStudentName').value;
+        users[index].grade = document.getElementById('editStudentGrade').value;
+        users[index].subject = document.getElementById('editStudentSubject').value;
+        users[index].username = document.getElementById('editStudentUsername').value;
+        
+        const newPass = document.getElementById('editStudentPassword').value;
+        if (newPass) users[index].password = newPass;
+
+        localStorage.setItem('users', JSON.stringify(users));
+        showAuthNotification('تم التحديث بنجاح', 'success');
+        document.getElementById('editStudentModal').classList.remove('show');
+        loadStudentsData();
     }
 }
 
-function copyToClipboard(id) {
-    const el = document.getElementById(id);
-    el.select();
-    document.execCommand('copy');
-    alert('تم النسخ');
+// 8. حذف الطالب
+function deleteStudent(studentId) {
+    if (!confirm('هل أنت متأكد من حذف هذا الطالب وجميع بياناته؟')) return;
+
+    let users = JSON.parse(localStorage.getItem('users') || '[]');
+    users = users.filter(u => u.id !== studentId);
+    localStorage.setItem('users', JSON.stringify(users));
+
+    // حذف البيانات المرتبطة (اختياري، للتنظيف)
+    // يمكن إضافة كود لحذف الاختبارات والدروس المرتبطة هنا
+
+    showAuthNotification('تم حذف الطالب', 'success');
+    loadStudentsData();
 }
 
-// تصدير الدوال للنطاق العام (Window) لضمان عمل onclick في HTML
-window.addNewStudent = addNewStudent;
-window.deleteStudent = deleteStudent;
-window.saveLesson = saveLesson;
-window.saveHomework = saveHomework;
-window.saveTest = saveTest;
-window.saveObjective = saveObjective;
-window.openStudentFile = openStudentFile;
-window.showStudentLoginData = showStudentLoginData;
-window.copyToClipboard = copyToClipboard;
-window.loadStudentsData = loadStudentsData;
+// دوال المودال (النوافذ المنبثقة)
+function showAddStudentModal() { 
+    document.getElementById('addStudentModal').classList.add('show'); 
+    document.getElementById('addStudentForm').reset();
+}
+function closeAddStudentModal() { document.getElementById('addStudentModal').classList.remove('show'); }
+function showImportStudentModal() { alert('ميزة الاستيراد قيد التطوير'); }
+function closeLoginDataModal() { document.getElementById('studentLoginDataModal').classList.remove('show'); }
+
+// أدوات مساعدة
+function copyToClipboard(elementId) {
+    const copyText = document.getElementById(elementId);
+    copyText.select();
+    navigator.clipboard.writeText(copyText.value);
+    showAuthNotification('تم النسخ', 'success');
+}
+
+function generateUsername(name) {
+    // توليد اسم مستخدم بسيط (أول حرفين + رقم عشوائي)
+    return 's_' + Math.floor(Math.random() * 10000);
+}
+
+function generateId() {
+    return Math.floor(Math.random() * 1000000);
+}
+
+function searchStudents() {
+    const term = document.getElementById('studentSearch').value.toLowerCase();
+    const rows = document.querySelectorAll('#studentsTableBody tr');
+    rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(term) ? '' : 'none';
+    });
+}
+
+function filterStudents() {
+    const grade = document.getElementById('gradeFilter').value;
+    const rows = document.querySelectorAll('#studentsTableBody tr');
+    rows.forEach(row => {
+        const rowGrade = row.children[2].innerText; // العمود الثالث هو الصف
+        if (grade === 'all' || rowGrade.includes(grade)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// محاكاة إحصائيات المعلم للوحة التحكم الرئيسية
+function loadTeacherStats() {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const currentTeacher = getCurrentUser();
+    const students = users.filter(u => u.role === 'student' && u.teacherId === currentTeacher.id);
+    
+    if(document.getElementById('studentsCount')) {
+        document.getElementById('studentsCount').textContent = students.length;
+    }
+}

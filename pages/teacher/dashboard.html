@@ -13,13 +13,13 @@
         /* --- تنسيقات خاصة للبطاقات المصغرة (صف واحد) --- */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr) !important; /* إجبار 4 أعمدة في صف واحد */
+            grid-template-columns: repeat(4, 1fr) !important; /* إجبار 4 أعمدة */
             gap: 15px;
             margin-bottom: 20px;
         }
 
         .stat-card {
-            padding: 15px; /* تقليل الحواف */
+            padding: 15px;
             border-radius: 10px;
             background: white;
             box-shadow: 0 2px 5px rgba(0,0,0,0.05);
@@ -36,7 +36,7 @@
         .stat-header { margin-bottom: 8px; }
         
         .stat-icon {
-            width: 40px; height: 40px; /* تصغير الأيقونة */
+            width: 40px; height: 40px;
             font-size: 1.2rem;
             display: flex; align-items: center; justify-content: center;
             border-radius: 50%;
@@ -44,19 +44,18 @@
         }
 
         .stat-number {
-            font-size: 1.6rem; /* تصغير الرقم */
+            font-size: 1.6rem;
             font-weight: bold;
             color: #2c3e50;
             line-height: 1.2;
         }
 
         .stat-label {
-            font-size: 0.85rem; /* تصغير النص */
+            font-size: 0.85rem;
             color: #7f8c8d;
             margin-top: 5px;
         }
 
-        /* استجابة للشاشات الصغيرة جداً (موبايل) */
         @media (max-width: 768px) {
             .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
@@ -90,7 +89,7 @@
                 <div class="user-info">
                     <div class="user-welcome">
                         <div class="welcome-text">مرحباً بعودتك</div>
-                        <div class="user-name" id="userName">أ/ اسم المعلم</div>
+                        <div class="user-name" id="userName">أ/ المعلم</div>
                     </div>
                     <div class="user-avatar" id="userAvatar">م</div>
                 </div>
@@ -135,12 +134,47 @@
                     </div>
                 </div>
 
-                </div>
+            </div>
         </main>
     </div>
 
     <script src="../../assets/js/dashboard.js"></script>
     <script src="../../assets/js/teacher.js"></script>
     <script src="../../assets/js/auth.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 1. جلب وحساب عدد الطلاب
+            const users = JSON.parse(localStorage.getItem('users') || '[]');
+            const students = users.filter(u => u.role === 'student');
+            if(document.getElementById('studentsCount')) {
+                document.getElementById('studentsCount').innerText = students.length;
+            }
+
+            // 2. جلب المحتوى (دروس وواجبات)
+            // نفترض أن المحتوى مخزن في 'contentLibrary' أو 'libraryItems'
+            const library = JSON.parse(localStorage.getItem('contentLibrary') || '[]');
+            
+            // تصفية الدروس
+            const lessons = library.filter(item => item.type === 'lesson' || item.type === 'interactive_lesson');
+            if(document.getElementById('lessonsCount')) {
+                document.getElementById('lessonsCount').innerText = lessons.length;
+            }
+
+            // تصفية الواجبات
+            const homeworks = library.filter(item => item.type === 'homework' || item.type === 'assignment');
+            if(document.getElementById('assignmentsCount')) {
+                document.getElementById('assignmentsCount').innerText = homeworks.length;
+            }
+
+            // 3. جلب الرسائل
+            const messages = JSON.parse(localStorage.getItem('messages') || '[]');
+            // (اختياري: يمكن تصفية الرسائل غير المقروءة فقط)
+            // const unread = messages.filter(m => !m.read); 
+            if(document.getElementById('unreadMessages')) {
+                document.getElementById('unreadMessages').innerText = messages.length;
+            }
+        });
+    </script>
 </body>
 </html>

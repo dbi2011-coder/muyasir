@@ -22,76 +22,80 @@
         }
         select.form-control:focus { outline: none; border-color: #007bff; box-shadow: 0 0 0 3px rgba(0,123,255,0.1); }
 
-        /* --- تنسيقات القائمة متعددة الاختيار (Multi-Select Custom) --- */
-        .multi-select-container {
-            position: relative;
-            flex: 1;
-            font-family: 'Tajawal', sans-serif;
-            min-width: 200px;
-        }
+        /* --- تنسيقات القائمة متعددة الاختيار --- */
+        .multi-select-container { position: relative; flex: 1; font-family: 'Tajawal', sans-serif; min-width: 200px; }
+        .multi-select-display { background-color: #fff; border: 1px solid #e1e4e8; border-radius: 10px; padding: 12px 15px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; box-shadow: 0 2px 5px rgba(0,0,0,0.02); height: 48px; }
+        .multi-select-display:hover { border-color: #ccc; }
+        .multi-select-display::after { content: ''; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid #666; margin-right: 10px; }
+        .multi-select-options { display: none; position: absolute; top: 105%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); z-index: 100; max-height: 300px; overflow-y: auto; }
+        .multi-select-options.show { display: block; }
+        .multi-select-option { padding: 10px 15px; border-bottom: 1px solid #f9f9f9; cursor: pointer; display: flex; align-items: center; transition: background 0.2s; }
+        .multi-select-option:hover { background-color: #f0f7ff; }
+        .select-all-option { background-color: #f8f9fa; font-weight: bold; color: #007bff; }
+        .multi-select-option input[type="checkbox"] { margin-left: 10px; width: 18px; height: 18px; cursor: pointer; accent-color: #007bff; }
+        .multi-select-option label { cursor: pointer; flex-grow: 1; margin: 0; }
 
-        .multi-select-display {
-            background-color: #fff;
-            border: 1px solid #e1e4e8;
+        /* --- ✅ تنسيقات بطاقات إبداء الرأي (الجديدة) --- */
+        .student-feedback-card {
+            background: #fff;
+            border: 1px solid #eef2f7;
+            border-right: 4px solid #28a745; /* خط أخضر جمالي يمين البطاقة */
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .student-feedback-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.08);
+        }
+        .student-info-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        .student-icon-circle {
+            width: 36px; height: 36px;
+            background: #e8f5e9;
+            color: #28a745;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem;
+        }
+        .student-name-title {
+            font-weight: bold;
+            font-size: 1.05rem;
+            color: #333;
+        }
+        .modern-feedback-input {
+            width: 100%;
+            border: 2px solid #f1f3f5;
             border-radius: 10px;
             padding: 12px 15px;
-            cursor: pointer;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            user-select: none;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
-            height: 48px;
+            font-family: 'Tajawal', sans-serif;
+            font-size: 0.95rem;
+            color: #495057;
+            background-color: #fcfcfc;
+            transition: all 0.3s ease;
+            resize: vertical;
+            min-height: 80px;
         }
-
-        .multi-select-display:hover { border-color: #ccc; }
-        
-        .multi-select-display::after {
-            content: '';
-            width: 0; height: 0;
-            border-left: 5px solid transparent;
-            border-right: 5px solid transparent;
-            border-top: 5px solid #666;
-            margin-right: 10px;
+        .modern-feedback-input:focus {
+            outline: none;
+            border-color: #28a745;
+            background-color: #fff;
+            box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.1); /* توهج أخضر خفيف */
         }
-
-        .multi-select-options {
-            display: none;
-            position: absolute;
-            top: 105%;
-            left: 0; right: 0;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            z-index: 100;
-            max-height: 300px;
-            overflow-y: auto;
+        .input-label-hint {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 6px;
+            display: block;
         }
-
-        .multi-select-options.show { display: block; }
-
-        .multi-select-option {
-            padding: 10px 15px;
-            border-bottom: 1px solid #f9f9f9;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            transition: background 0.2s;
-        }
-
-        .multi-select-option:hover { background-color: #f0f7ff; }
-        
-        .select-all-option { background-color: #f8f9fa; font-weight: bold; color: #007bff; }
-
-        .multi-select-option input[type="checkbox"] {
-            margin-left: 10px;
-            width: 18px; height: 18px;
-            cursor: pointer;
-            accent-color: #007bff;
-        }
-
-        .multi-select-option label { cursor: pointer; flex-grow: 1; margin: 0; }
 
         /* --- باقي التنسيقات --- */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
@@ -149,7 +153,6 @@
                     <div class="content-header"><h1>تقارير الطلاب</h1></div>
                     <div class="report-controls no-print">
                         <div style="display:flex; gap:15px; flex-wrap:wrap;">
-                            
                             <div class="multi-select-container" id="studentMultiSelect">
                                 <div class="multi-select-display" onclick="toggleMultiSelect()">
                                     <span id="multiSelectLabel">-- اختر الطلاب --</span>
@@ -190,8 +193,8 @@
                     <h5>📝 التوقيع والاعتماد</h5>
                     
                     <div class="form-group">
-                        <label>ملاحظات / توصيات (اختياري):</label>
-                        <textarea id="memberNoteInput" class="form-control" rows="2" placeholder="أكتب ملاحظاتك هنا..."></textarea>
+                        <label>ملاحظات عامة / توصيات (اختياري):</label>
+                        <textarea id="memberNoteInput" class="form-control" rows="2" placeholder="أكتب ملاحظاتك العامة هنا..."></textarea>
                     </div>
 
                     <div class="form-group">

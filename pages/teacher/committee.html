@@ -21,17 +21,27 @@
 
         /* حاوية المحضر */
         .official-record-container { 
-            border: 1px solid #ddd; 
-            padding: 40px; 
-            background: white; 
-            margin: 0 auto; 
-            box-shadow: 0 0 15px rgba(0,0,0,0.05); 
+            border: 1px solid #ddd; padding: 40px; background: white; margin: 0 auto; box-shadow: 0 0 15px rgba(0,0,0,0.05); 
         }
-        
         .record-header { text-align: center; border-bottom: 3px double #000; padding-bottom: 15px; margin-bottom: 25px; }
-        .record-content { text-align: justify; line-height: 2; font-size: 16px; margin-bottom: 30px; white-space: pre-line; }
+        .record-content { text-align: justify; line-height: 2; font-size: 16px; margin-bottom: 20px; white-space: pre-line; }
         
-        /* تنسيق الجدول الرسمي (3 أعمدة) */
+        /* تنسيقات المرفقات في العرض */
+        .record-attachments { margin-top: 20px; padding: 15px; background: #f9f9f9; border: 1px solid #eee; border-radius: 8px; }
+        .record-attachments h5 { margin-top: 0; color: #555; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+        .attachment-item { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .attachment-img { max-width: 100%; max-height: 300px; border: 1px solid #ccc; padding: 5px; background: white; margin-top: 10px; }
+
+        /* قائمة البنود في العرض */
+        .agenda-list { list-style: none; padding: 0; margin: 0 0 20px 0; }
+        .agenda-list li { margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
+        .agenda-list li::before { content: '✅'; font-size: 0.8em; }
+
+        /* تنسيقات الإدخال الجديد (اجتماع جديد) */
+        .topics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #eee; }
+        .topic-checkbox label { cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.9em; }
+
+        /* تنسيق الجدول الرسمي */
         .signatures-table { width: 100%; border-collapse: collapse; margin-top: 30px; }
         .signatures-table th, .signatures-table td { border: 1px solid #000; padding: 10px; text-align: center; vertical-align: middle; }
         .signatures-table th { background-color: #f9f9f9; font-weight: bold; }
@@ -52,27 +62,19 @@
         /* 🖨️ إعدادات الطباعة */
         /* ================================================= */
         @media print {
-            @page {
-                size: A4;
-                margin: 2cm 1.5cm;
-            }
+            @page { size: A4; margin: 2cm 1.5cm; }
             body * { visibility: hidden; }
             .sidebar, .dashboard-header, .committee-tabs, .btn, .no-print, .modal-header, .modal-close { display: none !important; }
-
-            #viewMeetingModal {
-                position: absolute; left: 0; top: 0; width: 100%; height: auto;
-                margin: 0; padding: 0; background: white;
-                display: block !important; visibility: visible; overflow: visible;
-            }
-
+            #viewMeetingModal { position: absolute; left: 0; top: 0; width: 100%; height: auto; margin: 0; padding: 0; background: white; display: block !important; visibility: visible; overflow: visible; }
             .modal-content { box-shadow: none !important; border: none !important; width: 100%; max-width: 100%; background: transparent; }
             .modal-body { padding: 0; margin: 0; background: white; visibility: visible; }
             .official-record-container { visibility: visible; border: none !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; width: 100%; }
             .official-record-container * { visibility: visible; }
-
             body, .record-content, .signatures-table { font-family: 'Times New Roman', serif !important; color: #000 !important; font-size: 14pt; }
             .signatures-table, .signatures-table th, .signatures-table td { border: 1px solid #000 !important; }
             .signatures-table th { background-color: #eee !important; -webkit-print-color-adjust: exact; }
+            /* إخفاء زر تحميل الـ PDF عند الطباعة لأن الورق لا يدعم الروابط */
+            .attachment-download-btn { display: none !important; }
         }
     </style>
 </head>
@@ -85,7 +87,6 @@
                     <h2>ميسر التعلم</h2>
                 </div>
             </div>
-            
             <ul class="sidebar-menu">
                 <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
                 <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
@@ -109,10 +110,7 @@
             </header>
 
             <div class="dashboard-content">
-                <div class="content-header">
-                    <h1>لجنة صعوبات التعلم</h1>
-                </div>
-
+                <div class="content-header"><h1>لجنة صعوبات التعلم</h1></div>
                 <div class="committee-tabs" style="margin-bottom: 20px; display:flex; gap:10px;">
                     <button class="btn btn-outline-primary" id="tab-members" onclick="switchTab('members')">👥 الأعضاء</button>
                     <button class="btn btn-outline-primary active" id="tab-meetings" onclick="switchTab('meetings')">📅 الاجتماعات</button>
@@ -125,11 +123,9 @@
 
                 <div id="meetings-view" class="content-section active">
                     <button class="btn btn-success mb-3" onclick="showNewMeetingModal()">+ عقد اجتماع جديد</button>
-
                     <div style="border-bottom: 1px solid #ddd; margin-bottom: 15px; padding-bottom: 10px;">
                         <h3 style="margin: 0; color: #555;">سجل الاجتماعات</h3>
                     </div>
-
                     <div id="meetingsListContainer" class="meetings-grid"></div>
                 </div>
             </div>
@@ -160,13 +156,54 @@
     </div>
 
     <div id="meetingModal" class="modal">
-        <div class="modal-content" style="max-width:600px;">
-            <div class="modal-header"><h3>اجتماع جديد</h3><button class="modal-close" onclick="closeModal('meetingModal')">&times;</button></div>
+        <div class="modal-content" style="max-width:700px;">
+            <div class="modal-header"><h3>اجتماع جديد وتوثيق</h3><button class="modal-close" onclick="closeModal('meetingModal')">&times;</button></div>
             <div class="modal-body">
-                <div class="form-group"><label>العنوان</label><input type="text" id="meetTitle" class="form-control"></div>
-                <div class="form-group"><label>التاريخ</label><input type="date" id="meetDate" class="form-control"></div>
-                <div class="form-group"><label>نص المحضر</label><textarea id="meetContent" class="form-control" rows="4"></textarea></div>
-                <div class="form-group"><label>المدعوون</label><div id="attendeesList" style="border:1px solid #ddd; padding:10px; max-height:100px; overflow-y:auto;"></div></div>
+                <div class="form-group">
+                    <label>عنوان الاجتماع</label>
+                    <input type="text" id="meetTitle" class="form-control" placeholder="مثال: الاجتماع الدوري الأول">
+                </div>
+                <div class="form-group">
+                    <label>تاريخ الانعقاد</label>
+                    <input type="date" id="meetDate" class="form-control">
+                </div>
+                
+                <div class="form-group">
+                    <label>بنود الاجتماع (اختر ما تم مناقشته):</label>
+                    <div class="topics-grid">
+                        <div class="topic-checkbox"><label><input type="checkbox" name="meetTopic" value="دراسة حالة الطلاب الجدد"> دراسة حالة الطلاب الجدد</label></div>
+                        <div class="topic-checkbox"><label><input type="checkbox" name="meetTopic" value="اعتماد الخطط التربوية الفردية"> اعتماد الخطط التربوية</label></div>
+                        <div class="topic-checkbox"><label><input type="checkbox" name="meetTopic" value="مناقشة المستوى التحصيلي"> مناقشة المستوى التحصيلي</label></div>
+                        <div class="topic-checkbox"><label><input type="checkbox" name="meetTopic" value="سلوكيات الطلاب داخل الفصل"> سلوكيات الطلاب</label></div>
+                        <div class="topic-checkbox"><label><input type="checkbox" name="meetTopic" value="تحديد مواعيد الاختبارات"> تحديد مواعيد الاختبارات</label></div>
+                        <div class="topic-checkbox"><label><input type="checkbox" name="meetTopic" value="ما يستجد من أعمال"> ما يستجد من أعمال</label></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>تفاصيل وملاحظات إضافية (نص المحضر):</label>
+                    <textarea id="meetContent" class="form-control" rows="4" placeholder="اكتب تفاصيل القرارات والتوصيات هنا..."></textarea>
+                </div>
+
+                <div class="form-group" style="background:#f0f8ff; padding:10px; border-radius:5px; border:1px solid #cce5ff;">
+                    <label style="color:#004085; font-weight:bold;">📎 المرفقات (اختياري):</label>
+                    
+                    <div style="margin-top:10px;">
+                        <label style="font-size:0.9em;">رفع ملف (PDF) - تعميم أو تقرير:</label>
+                        <input type="file" id="meetPdf" class="form-control" accept="application/pdf">
+                    </div>
+                    
+                    <div style="margin-top:10px;">
+                        <label style="font-size:0.9em;">رفع صورة (Image) - توثيق أو رسم بياني:</label>
+                        <input type="file" id="meetImg" class="form-control" accept="image/*">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>الأعضاء المدعوون:</label>
+                    <div id="attendeesList" style="border:1px solid #ddd; padding:10px; max-height:100px; overflow-y:auto; background:white;"></div>
+                </div>
+
                 <button class="btn btn-primary w-100 mt-3" onclick="saveMeeting()">حفظ الاجتماع</button>
             </div>
         </div>
@@ -187,7 +224,19 @@
                     </div>
 
                     <h4 style="margin-bottom:5px; text-decoration: underline;">أولاً: وقائع الاجتماع</h4>
-                    <div class="record-content" id="viewMeetContent"></div>
+                    <div class="record-content">
+                        <div id="viewMeetTopics" style="margin-bottom:15px; font-weight:bold; color:#333;"></div>
+                        
+                        <div id="viewMeetContent"></div>
+
+                        <div id="viewAttachments" class="record-attachments" style="display:none;">
+                            <h5>المرفقات والتوثيق</h5>
+                            <div id="pdfContainer" class="attachment-item" style="display:none;"></div>
+                            <div id="imgContainer" style="display:none; text-align:center;">
+                                <img id="viewMeetImgDisplay" src="" class="attachment-img" alt="صورة مرفقة">
+                            </div>
+                        </div>
+                    </div>
 
                     <h4 style="margin-bottom:5px; text-decoration: underline;">ثانياً: التوقيعات والاعتماد</h4>
                     <table class="signatures-table">

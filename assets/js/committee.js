@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/committee.js
-// الوصف: إدارة اللجنة (تحديث حالات عرض التوقيع: صورة/نص/بانتظار التوقيع)
+// الوصف: إدارة اللجنة (دعم البنود + رفع PDF وصور + عرضها في المحضر)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -63,7 +63,7 @@ function loadMeetings() {
     container.innerHTML = html;
 }
 
-// ✅ دالة عرض المحضر (تم تحديث منطق التوقيعات)
+// ✅ دالة عرض المحضر (المطورة: بنود + مرفقات + صور)
 function viewMeetingDetails(id) {
     const meetings = JSON.parse(localStorage.getItem('committeeMeetings') || '[]');
     const meeting = meetings.find(m => m.id === id);
@@ -71,8 +71,53 @@ function viewMeetingDetails(id) {
 
     document.getElementById('viewMeetTitle').textContent = meeting.title;
     document.getElementById('viewMeetDate').textContent = meeting.date;
-    document.getElementById('viewMeetContent').textContent = meeting.content || 'لا يوجد محتوى نصي.';
+    document.getElementById('viewMeetContent').textContent = meeting.content || 'لا توجد تفاصيل نصية إضافية.';
 
+    // 1. عرض البنود (Topics)
+    const topicsContainer = document.getElementById('viewMeetTopics');
+    if (meeting.topics && meeting.topics.length > 0) {
+        let topicsHtml = '<ul class="agenda-list">';
+        meeting.topics.forEach(t => { topicsHtml += `<li>${t}</li>`; });
+        topicsHtml += '</ul>';
+        topicsContainer.innerHTML = topicsHtml;
+    } else {
+        topicsContainer.innerHTML = '';
+    }
+
+    // 2. عرض المرفقات (Attachments)
+    const attachSection = document.getElementById('viewAttachments');
+    const pdfContainer = document.getElementById('pdfContainer');
+    const imgContainer = document.getElementById('imgContainer');
+    const imgDisplay = document.getElementById('viewMeetImgDisplay');
+
+    let hasAttachments = false;
+
+    // PDF
+    if (meeting.pdfFile) {
+        hasAttachments = true;
+        pdfContainer.style.display = 'block';
+        pdfContainer.innerHTML = `
+            <span style="font-size:1.5rem;">📄</span>
+            <span style="font-weight:bold;">ملف مرفق (PDF)</span>
+            <a href="${meeting.pdfFile}" download="attachment.pdf" class="btn btn-sm btn-info attachment-download-btn">⬇️ تحميل الملف</a>
+        `;
+    } else {
+        pdfContainer.style.display = 'none';
+    }
+
+    // Image
+    if (meeting.imgFile) {
+        hasAttachments = true;
+        imgContainer.style.display = 'block';
+        imgDisplay.src = meeting.imgFile;
+    } else {
+        imgContainer.style.display = 'none';
+    }
+
+    attachSection.style.display = hasAttachments ? 'block' : 'none';
+
+
+    // 3. جدول التوقيعات
     const tableBody = document.getElementById('signaturesTableBody');
     tableBody.innerHTML = '';
 
@@ -85,38 +130,21 @@ function viewMeetingDetails(id) {
     } else {
         attendeesList.forEach(member => {
             const signatureData = (meeting.signatures && meeting.signatures[member.id]) ? meeting.signatures[member.id] : null;
-            
             let signatureContent = '';
             
             if (signatureData) {
-                // حالة 1: يوجد توقيع
                 const dateStr = new Date(signatureData.date).toLocaleDateString('ar-SA');
-                
                 if (signatureData.image) {
-                    // أ) توقيع صورة (الجديد)
-                    signatureContent = `<img src="${signatureData.image}" class="sig-img-display" alt="توقيع">`;
-                    signatureContent += `<br><small style="font-size:0.7em; color:#777;">${dateStr}</small>`;
+                    signatureContent = `<img src="${signatureData.image}" class="sig-img-display" alt="توقيع"><br><small style="font-size:0.7em; color:#777;">${dateStr}</small>`;
                 } else {
-                    // ب) توقيع نصي (القديم)
-                    signatureContent = `<span style="font-family:'Tajawal'; font-weight:bold; color:#333;">${signatureData.name}</span>`;
-                    signatureContent += `<br><small style="font-size:0.75em; color:#666;">(اعتماد نصي)</small>`;
-                    signatureContent += `<br><small style="font-size:0.7em; color:#777;">${dateStr}</small>`;
+                    signatureContent = `<span style="font-family:'Tajawal'; font-weight:bold; color:#333;">${signatureData.name}</span><br><small style="font-size:0.75em; color:#666;">(اعتماد نصي)</small><br><small style="font-size:0.7em; color:#777;">${dateStr}</small>`;
                 }
             } else {
-                // حالة 2: لا يوجد توقيع
                 signatureContent = `<span style="color:#d9534f; font-weight:bold; font-size:0.9em;">بانتظار التوقيع ⏳</span>`;
             }
 
-            // إضافة "أ/" قبل الاسم
             const formalName = `أ/ ${member.name}`;
-
-            tableBody.innerHTML += `
-                <tr>
-                    <td style="text-align:right; font-weight:bold; padding-right:15px;">${formalName}</td>
-                    <td style="text-align:center;">${member.role}</td>
-                    <td style="text-align:center; vertical-align:middle;">${signatureContent}</td>
-                </tr>
-            `;
+            tableBody.innerHTML += `<tr><td style="text-align:right; font-weight:bold; padding-right:15px;">${formalName}</td><td style="text-align:center;">${member.role}</td><td style="text-align:center; vertical-align:middle;">${signatureContent}</td></tr>`;
         });
     }
 
@@ -124,6 +152,87 @@ function viewMeetingDetails(id) {
 }
 
 // ... الدوال المساعدة ...
+function showNewMeetingModal() {
+    const members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
+    const list = document.getElementById('attendeesList');
+    list.innerHTML = '';
+    members.forEach(m => {
+        list.innerHTML += `<div><label style="cursor:pointer"><input type="checkbox" value="${m.id}" checked> ${m.name}</label></div>`;
+    });
+    
+    // تصفير الحقول
+    document.getElementById('meetTitle').value = '';
+    document.getElementById('meetDate').value = '';
+    document.getElementById('meetContent').value = '';
+    document.getElementById('meetPdf').value = '';
+    document.getElementById('meetImg').value = '';
+    document.querySelectorAll('input[name="meetTopic"]').forEach(cb => cb.checked = false);
+
+    document.getElementById('meetingModal').classList.add('show');
+}
+
+// ✅ دالة حفظ الاجتماع (Async لدعم الملفات)
+async function saveMeeting() {
+    const title = document.getElementById('meetTitle').value;
+    const date = document.getElementById('meetDate').value;
+    const content = document.getElementById('meetContent').value;
+    
+    if(!title || !date) return alert('يرجى تعبئة العنوان والتاريخ على الأقل.');
+
+    // 1. جمع البنود
+    const topics = [];
+    document.querySelectorAll('input[name="meetTopic"]:checked').forEach(cb => topics.push(cb.value));
+
+    // 2. جمع المدعوين
+    const attendees = [];
+    document.querySelectorAll('#attendeesList input:checked').forEach(cb => attendees.push(parseInt(cb.value)));
+
+    // 3. معالجة الملفات (تحويل لـ Base64)
+    const pdfInput = document.getElementById('meetPdf');
+    const imgInput = document.getElementById('meetImg');
+    
+    let pdfData = null;
+    let imgData = null;
+
+    // دالة مساعدة لقراءة الملف
+    const readFile = (file) => new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(file);
+    });
+
+    if (pdfInput.files && pdfInput.files[0]) {
+        // فحص الحجم (للحفاظ على localStorage)
+        if(pdfInput.files[0].size > 2 * 1024 * 1024) return alert('حجم ملف PDF كبير جداً. الحد الأقصى 2 ميجا.');
+        pdfData = await readFile(pdfInput.files[0]);
+    }
+
+    if (imgInput.files && imgInput.files[0]) {
+        if(imgInput.files[0].size > 2 * 1024 * 1024) return alert('حجم الصورة كبير جداً. الحد الأقصى 2 ميجا.');
+        imgData = await readFile(imgInput.files[0]);
+    }
+
+    // 4. الحفظ
+    const meetings = JSON.parse(localStorage.getItem('committeeMeetings') || '[]');
+    
+    meetings.push({ 
+        id: Date.now(), 
+        title, 
+        date, 
+        content, 
+        topics: topics, 
+        pdfFile: pdfData, 
+        imgFile: imgData,
+        attendees, 
+        signatures: {} 
+    });
+    
+    localStorage.setItem('committeeMeetings', JSON.stringify(meetings));
+    closeModal('meetingModal');
+    loadMeetings();
+}
+
+// ... باقي الدوال كما هي ...
 function showAddMemberModal() {
     document.getElementById('editMemId').value = '';
     document.getElementById('memName').value = '';
@@ -167,30 +276,6 @@ function deleteMember(id) {
         localStorage.setItem('committeeMembers', JSON.stringify(members));
         loadMembers();
     }
-}
-function showNewMeetingModal() {
-    const members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    const list = document.getElementById('attendeesList');
-    list.innerHTML = '';
-    members.forEach(m => {
-        list.innerHTML += `<div><label style="cursor:pointer"><input type="checkbox" value="${m.id}" checked> ${m.name}</label></div>`;
-    });
-    document.getElementById('meetTitle').value = '';
-    document.getElementById('meetContent').value = '';
-    document.getElementById('meetingModal').classList.add('show');
-}
-function saveMeeting() {
-    const title = document.getElementById('meetTitle').value;
-    const date = document.getElementById('meetDate').value;
-    const content = document.getElementById('meetContent').value;
-    if(!title || !date) return alert('البيانات ناقصة');
-    const attendees = [];
-    document.querySelectorAll('#attendeesList input:checked').forEach(cb => attendees.push(parseInt(cb.value)));
-    const meetings = JSON.parse(localStorage.getItem('committeeMeetings') || '[]');
-    meetings.push({ id: Date.now(), title, date, content, attendees, signatures: {} });
-    localStorage.setItem('committeeMeetings', JSON.stringify(meetings));
-    closeModal('meetingModal');
-    loadMeetings();
 }
 function deleteMeeting(id) {
     if(confirm('حذف الاجتماع؟')) {

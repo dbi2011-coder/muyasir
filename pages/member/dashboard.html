@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
     
     <style>
-        /* --- تنسيقات القوائم المنسدلة (لنوع التقرير فقط) --- */
+        /* --- تنسيقات القوائم المنسدلة --- */
         select.form-control {
             appearance: none; -webkit-appearance: none; -moz-appearance: none;
             background-color: #fff; border: 1px solid #e1e4e8; border-radius: 10px;
@@ -35,67 +35,42 @@
         .multi-select-option input[type="checkbox"] { margin-left: 10px; width: 18px; height: 18px; cursor: pointer; accent-color: #007bff; }
         .multi-select-option label { cursor: pointer; flex-grow: 1; margin: 0; }
 
-        /* --- ✅ تنسيقات بطاقات إبداء الرأي (الجديدة) --- */
+        /* --- تنسيقات بطاقات إبداء الرأي (الطلاب) --- */
         .student-feedback-card {
+            background: #fff; border: 1px solid #eef2f7; border-right: 4px solid #28a745; border-radius: 12px;
+            padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.02); transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .student-feedback-card:hover { transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,0,0,0.08); }
+        .student-info-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; border-bottom: 1px solid #f0f0f0; padding-bottom: 10px; }
+        .student-icon-circle { width: 36px; height: 36px; background: #e8f5e9; color: #28a745; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+        .student-name-title { font-weight: bold; font-size: 1.05rem; color: #333; }
+
+        /* --- ✅ تنسيقات بطاقة الملاحظات العامة (الجديدة) --- */
+        .general-notes-card {
             background: #fff;
             border: 1px solid #eef2f7;
-            border-right: 4px solid #28a745; /* خط أخضر جمالي يمين البطاقة */
+            border-right: 4px solid #007bff; /* أزرق */
             border-radius: 12px;
             padding: 20px;
-            margin-bottom: 15px;
+            margin-bottom: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-            transition: transform 0.2s, box-shadow 0.2s;
         }
-        .student-feedback-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 15px rgba(0,0,0,0.08);
+        .general-notes-header {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 12px;
+            color: #007bff; font-weight: bold; font-size: 1.1rem;
         }
-        .student-info-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-            border-bottom: 1px solid #f0f0f0;
-            padding-bottom: 10px;
-        }
-        .student-icon-circle {
-            width: 36px; height: 36px;
-            background: #e8f5e9;
-            color: #28a745;
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.2rem;
-        }
-        .student-name-title {
-            font-weight: bold;
-            font-size: 1.05rem;
-            color: #333;
-        }
+
+        /* حقول الإدخال الحديثة */
         .modern-feedback-input {
-            width: 100%;
-            border: 2px solid #f1f3f5;
-            border-radius: 10px;
-            padding: 12px 15px;
-            font-family: 'Tajawal', sans-serif;
-            font-size: 0.95rem;
-            color: #495057;
-            background-color: #fcfcfc;
-            transition: all 0.3s ease;
-            resize: vertical;
-            min-height: 80px;
+            width: 100%; border: 2px solid #f1f3f5; border-radius: 10px; padding: 12px 15px;
+            font-family: 'Tajawal', sans-serif; font-size: 0.95rem; color: #495057; background-color: #fcfcfc;
+            transition: all 0.3s ease; resize: vertical; min-height: 80px;
         }
-        .modern-feedback-input:focus {
-            outline: none;
-            border-color: #28a745;
-            background-color: #fff;
-            box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.1); /* توهج أخضر خفيف */
-        }
-        .input-label-hint {
-            font-size: 0.85rem;
-            color: #888;
-            margin-bottom: 6px;
-            display: block;
-        }
+        .modern-feedback-input:focus { outline: none; border-color: #28a745; background-color: #fff; box-shadow: 0 0 0 4px rgba(40, 167, 69, 0.1); }
+        /* تخصيص لون التركيز للملاحظات العامة */
+        .general-notes-card .modern-feedback-input:focus { border-color: #007bff; box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1); }
+        
+        .input-label-hint { font-size: 0.85rem; color: #888; margin-bottom: 6px; display: block; }
 
         /* --- باقي التنسيقات --- */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
@@ -157,8 +132,7 @@
                                 <div class="multi-select-display" onclick="toggleMultiSelect()">
                                     <span id="multiSelectLabel">-- اختر الطلاب --</span>
                                 </div>
-                                <div class="multi-select-options" id="studentOptionsList">
-                                    </div>
+                                <div class="multi-select-options" id="studentOptionsList"></div>
                             </div>
                             
                             <select id="memberReportType" class="form-control" style="flex:1;">
@@ -189,16 +163,20 @@
             <div class="modal-body">
                 <div class="modern-card" id="signModalDetails"></div>
                 
+                <div class="general-notes-card" id="generalNotesContainer">
+                    <div class="general-notes-header">
+                        <span>📝</span>
+                        <span>ملاحظات وتوصيات عامة</span>
+                    </div>
+                    <label class="input-label-hint">يمكنك إضافة أي ملاحظات إضافية حول الاجتماع هنا (اختياري):</label>
+                    <textarea id="memberNoteInput" class="modern-feedback-input" rows="2" placeholder="أكتب ملاحظاتك العامة هنا..."></textarea>
+                </div>
+
                 <div class="modern-card" id="signingAreaCard">
-                    <h5>📝 التوقيع والاعتماد</h5>
+                    <h5>✍️ التوقيع والاعتماد النهائي</h5>
                     
                     <div class="form-group">
-                        <label>ملاحظات عامة / توصيات (اختياري):</label>
-                        <textarea id="memberNoteInput" class="form-control" rows="2" placeholder="أكتب ملاحظاتك العامة هنا..."></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label style="display:block; margin-bottom:5px;">توقيعك أدناه (ارسم باستخدام الماوس أو الإصبع):</label>
+                        <label style="display:block; margin-bottom:5px;">ارسم توقيعك أدناه:</label>
                         <div class="signature-pad-container" id="signatureContainer">
                             <canvas id="signature-pad"></canvas>
                             <button type="button" class="clear-sig-btn" onclick="clearSignaturePad()">مسح وإعادة التوقيع ❌</button>

@@ -80,7 +80,7 @@
                 <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
                 <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
                 <li><a href="reports.html"><span class="menu-icon">📋</span>التقارير</a></li>
-                <li><a href="committee.html" class="active"><span class="menu-icon">👥</span>لجنة الصعوبات</a></li>
+                <li><a href="committee.html" class="active"><span class="menu-icon">👥</span>لجنة صعوبات التعلم</a></li>
                 <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
             </ul>
         </aside>
@@ -157,7 +157,6 @@
                         <button class="btn btn-sm btn-outline-primary" onclick="addPollTool()">📊 إضافة تصويت/استبيان</button>
                         <button class="btn btn-sm btn-outline-success" onclick="addStudentFeedbackTool()">👨‍🎓 طلب مرئيات عن طلاب</button>
                     </div>
-
                     <div id="dynamicToolsContainer"></div>
                 </div>
 
@@ -196,11 +195,8 @@
                     <h4 style="margin-bottom:5px; text-decoration: underline;">أولاً: وقائع الاجتماع</h4>
                     <div class="record-content">
                         <div id="viewMeetContent" style="margin-bottom:20px;"></div>
-
                         <div id="viewPollsResults" style="margin-bottom:20px;"></div>
-
                         <div id="viewStudentsFeedback" style="margin-bottom:20px;"></div>
-
                         <div id="viewAttachments" style="display:none; margin-top:20px; border-top:1px dashed #ccc; padding-top:10px;">
                             <h5 style="margin:0 0 10px 0;">📎 المرفقات:</h5>
                             <div id="pdfContainer" style="margin-bottom:10px;"></div>

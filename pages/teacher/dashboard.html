@@ -11,7 +11,6 @@
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- الشريط الجانبي -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
@@ -27,14 +26,12 @@
                 <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
                 <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
                 <li><a href="reports.html"><span class="menu-icon">📋</span>التقارير</a></li>
-                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة الصعوبات</a></li>
+                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة صعوبات التعلم</a></li>
                 <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
             </ul>
         </aside>
 
-        <!-- المحتوى الرئيسي -->
         <main class="main-content-dashboard">
-            <!-- رأس اللوحة -->
             <header class="dashboard-header">
                 <button class="mobile-menu-btn">☰</button>
                 <div class="user-info">
@@ -52,7 +49,6 @@
                 </div>
             </header>
 
-            <!-- محتوى اللوحة -->
             <div class="dashboard-content">
                 <div class="content-header">
                     <h1>لوحة تحكم المعلم</h1>
@@ -63,68 +59,47 @@
                     </div>
                 </div>
 
-                <!-- الإحصائيات السريعة -->
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-header">
-                            <div class="stat-icon">👨‍🎓</div>
-                        </div>
+                        <div class="stat-header"><div class="stat-icon">👨‍🎓</div></div>
                         <div class="stat-number" id="studentsCount">0</div>
                         <div class="stat-label">إجمالي الطلاب</div>
                     </div>
-                    
                     <div class="stat-card success">
-                        <div class="stat-header">
-                            <div class="stat-icon">📚</div>
-                        </div>
+                        <div class="stat-header"><div class="stat-icon">📚</div></div>
                         <div class="stat-number" id="lessonsCount">0</div>
                         <div class="stat-label">الدروس المضافة</div>
                     </div>
-                    
                     <div class="stat-card warning">
-                        <div class="stat-header">
-                            <div class="stat-icon">📝</div>
-                        </div>
+                        <div class="stat-header"><div class="stat-icon">📝</div></div>
                         <div class="stat-number" id="assignmentsCount">0</div>
-                        <div class="stat-label>الواجبات النشطة</div>
+                        <div class="stat-label">الواجبات النشطة</div>
                     </div>
-                    
                     <div class="stat-card danger">
-                        <div class="stat-header">
-                            <div class="stat-icon">💬</div>
-                        </div>
+                        <div class="stat-header"><div class="stat-icon">💬</div></div>
                         <div class="stat-number" id="unreadMessages">0</div>
                         <div class="stat-label">رسائل جديدة</div>
                     </div>
                 </div>
 
-                <!-- الطلاب المميزين -->
                 <div class="featured-students">
                     <div class="card">
                         <h3>الطلاب المميزين هذا الأسبوع</h3>
-                        <div class="students-list" id="featuredStudentsList">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </div>
+                        <div class="students-list" id="featuredStudentsList"></div>
                     </div>
                 </div>
 
-                <!-- النشاط الأخير -->
                 <div class="recent-activity">
                     <div class="card">
                         <h3>النشاط الأخير</h3>
-                        <div class="activity-list" id="activityList">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </div>
+                        <div class="activity-list" id="activityList"></div>
                     </div>
                 </div>
 
-                <!-- الإشعارات المهمة -->
                 <div class="important-notices">
                     <div class="card">
                         <h3>إشعارات مهمة</h3>
-                        <div class="notices-list" id="noticesList">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </div>
+                        <div class="notices-list" id="noticesList"></div>
                     </div>
                 </div>
             </div>

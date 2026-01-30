@@ -1,6 +1,5 @@
 // ============================================
 // 📁 الملف: assets/js/member.js
-// الوصف: بوابة العضو (النسخة النهائية - بطاقات طلاب محسنة وتفاعلية)
 // ============================================
 
 const DB_NAME = 'CommitteeAppDB';
@@ -103,11 +102,10 @@ async function openSigningModal(id) {
             });
         }
 
-        // ب) مرئيات الطلاب (التحديث: استخدام بطاقات تفاعلية)
+        // ب) مرئيات الطلاب
         if(meeting.requestedFeedback && meeting.requestedFeedback.length > 0) {
             html += `<hr><h5 style="color:#28a745;">👨‍🎓 مرئياتك عن الطلاب:</h5>`;
             meeting.requestedFeedback.forEach(req => {
-                // ✅ الهيكل الجديد للبطاقة
                 html += `
                 <div class="student-feedback-card">
                     <div class="student-info-header">
@@ -128,9 +126,11 @@ async function openSigningModal(id) {
 
     document.getElementById('signModalDetails').innerHTML = html;
 
+    // التحكم في العناصر
     const sigContainer = document.getElementById('signatureContainer');
     const savedSigDisplay = document.getElementById('savedSignatureDisplay');
     const actionArea = document.getElementById('signatureActionArea');
+    const notesContainer = document.getElementById('generalNotesContainer'); // ✅ الحاوية الجديدة
     const noteInput = document.getElementById('memberNoteInput');
 
     if (isSigned) {
@@ -138,13 +138,18 @@ async function openSigningModal(id) {
         savedSigDisplay.style.display = 'block';
         savedSigDisplay.innerHTML = `<img src="${meeting.signatures[user.id].image}" class="saved-signature-img">`;
         actionArea.style.display = 'none';
-        noteInput.style.display = 'none';
+        
+        // إخفاء بطاقة الملاحظات كاملة إذا وقع
+        notesContainer.style.display = 'none';
     } else {
         sigContainer.style.display = 'block';
         savedSigDisplay.style.display = 'none';
         actionArea.style.display = 'block';
-        noteInput.style.display = 'block';
+        
+        // إظهار بطاقة الملاحظات
+        notesContainer.style.display = 'block';
         noteInput.value = '';
+        
         setTimeout(initializeCanvas, 300);
     }
     document.getElementById('signMeetingModal').classList.add('show');
@@ -195,7 +200,7 @@ function stopDrawing() { isDrawing=false; }
 function clearSignaturePad() { ctx.clearRect(0,0,canvas.width,canvas.height); hasSigned=false; }
 function getPos(e) { const r=canvas.getBoundingClientRect(); return {x:(e.touches?e.touches[0].clientX:e.clientX)-r.left, y:(e.touches?e.touches[0].clientY:e.clientY)-r.top}; }
 
-// Multi-select & Reports (موجودة مسبقاً)
+// Multi-select & Reports
 function loadMemberStudentsMultiSelect() { const list=document.getElementById('studentOptionsList'); if(!list)return; const users=JSON.parse(localStorage.getItem('users')||'[]'); const st=users.filter(u=>u.role==='student'); if(st.length===0){list.innerHTML='<div style="padding:10px;">لا طلاب</div>';return;} let h=`<div class="multi-select-option select-all-option" onclick="toggleSelectAllStudents(this)"><input type="checkbox" id="selectAllCheckbox"><label for="selectAllCheckbox">الكل</label></div>`; st.forEach(s=>{h+=`<div class="multi-select-option" onclick="toggleStudentCheckbox(this)"><input type="checkbox" value="${s.id}" class="student-checkbox"><label>${s.name}</label></div>`;}); list.innerHTML=h; }
 function toggleMultiSelect() { document.getElementById('studentOptionsList').classList.toggle('show'); }
 function toggleSelectAllStudents(d) { const v=d.querySelector('input').checked; setTimeout(()=>{document.querySelectorAll('.student-checkbox').forEach(x=>x.checked=v);updateMultiSelectLabel();},0); }

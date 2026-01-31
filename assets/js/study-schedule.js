@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/study-schedule.js
-// الوصف: إدارة الجدول الدراسي (بيانات خاصة لكل معلم)
+// الوصف: إدارة الجدول الدراسي (معزول لكل معلم) + إصلاح closeModal
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -44,7 +44,7 @@ function renderScheduleTable() {
             let cellClass = '';
 
             if (sessionData && sessionData.students && sessionData.students.length > 0) {
-                // جلب أسماء الطلاب (الذين يتبعون لهذا المعلم أيضاً)
+                // جلب أسماء الطلاب
                 const studentNames = sessionData.students.map(sid => {
                     const s = users.find(u => u.id === sid);
                     return s ? s.name : '';
@@ -82,9 +82,8 @@ function openSelectStudentsModal(day, period) {
         container.innerHTML = '<p class="text-danger">لا يوجد طلاب مسجلين باسمك. قم بإضافة طلاب أولاً.</p>';
     }
 
-    // تحديد الطلاب المختارين سابقاً في هذه الحصة
+    // تحديد الطلاب المختارين سابقاً
     const allSchedules = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
-    // البحث في جدول المعلم الحالي
     const sessionData = allSchedules.find(s => s.teacherId === currentUser.id && s.day === day && s.period === period);
     const selectedIds = sessionData ? sessionData.students : [];
 
@@ -101,9 +100,9 @@ function openSelectStudentsModal(day, period) {
         container.appendChild(label);
     });
 
-    // استخدام دالة فتح النافذة المتاحة
-    if (typeof showModal === 'function') showModal('selectStudentsModal');
-    else document.getElementById('selectStudentsModal').classList.add('show');
+    // فتح النافذة
+    const modal = document.getElementById('selectStudentsModal');
+    if (modal) modal.classList.add('show');
 }
 
 // دالة حفظ الطلاب في الحصة
@@ -120,10 +119,10 @@ function saveSessionStudents() {
     // 1. حذف المدخل القديم لهذه الحصة (الخاص بالمعلم الحالي فقط)
     scheduleData = scheduleData.filter(s => !(s.teacherId === currentUser.id && s.day === day && s.period === period));
 
-    // 2. إضافة المدخل الجديد (مع بصمة المعلم ID)
+    // 2. إضافة المدخل الجديد
     if (selectedStudentIds.length > 0) {
         scheduleData.push({
-            teacherId: currentUser.id, // 🔥 ربط الحصة بالمعلم
+            teacherId: currentUser.id,
             day: day,
             period: period,
             students: selectedStudentIds
@@ -132,12 +131,22 @@ function saveSessionStudents() {
 
     localStorage.setItem('teacherSchedule', JSON.stringify(scheduleData));
     
-    if (typeof closeModal === 'function') closeModal('selectStudentsModal');
-    else document.getElementById('selectStudentsModal').classList.remove('show');
+    // إغلاق النافذة
+    closeModal('selectStudentsModal');
     
     renderScheduleTable();
 }
 
+// 🔥 دالة إغلاق النافذة (تمت إضافتها لحل المشكلة)
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('show');
+    }
+}
+
+// تصدير الدوال
 window.renderScheduleTable = renderScheduleTable;
 window.openSelectStudentsModal = openSelectStudentsModal;
 window.saveSessionStudents = saveSessionStudents;
+window.closeModal = closeModal; // ✅ تم تصدير الدالة لتراها HTML

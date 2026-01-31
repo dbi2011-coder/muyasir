@@ -1,24 +1,13 @@
 // ============================================
 // 📁 المسار: assets/js/auth.js
-// الوصف: نظام المصادقة الموحد (مدير، معلم، لجنة) - النسخة المصلحة
+// الوصف: نظام المصادقة الموحد (يضمن عمل جميع الأدوار)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    // عند تحميل الصفحة، تأكد من وجود البيانات الأساسية
     initSystem();
-    
-    // ربط نموذج تسجيل الدخول بالدالة إذا كنا في صفحة الدخول
-    const loginBtn = document.querySelector('button[onclick="login()"]'); // محاولة للعثور على الزر القديم
-    if (!loginBtn) {
-        // إذا كان النموذج يستخدم ID
-        const form = document.getElementById('loginForm');
-        if (form) {
-            form.addEventListener('submit', login);
-        }
-    }
 });
 
-// 1. تهيئة النظام وإنشاء المستخدمين الافتراضيين
+// 1. تهيئة النظام وإنشاء الحسابات المفقودة
 function initSystem() {
     let users = JSON.parse(localStorage.getItem('users') || '[]');
     let dataChanged = false;
@@ -33,21 +22,21 @@ function initSystem() {
             role: "admin", 
             status: "active"
         });
-        console.log("✅ تم إنشاء حساب المدير: admin / 123");
+        console.log("✅ تم إنشاء حساب المدير: admin");
         dataChanged = true;
     }
 
-    // ب) التأكد من وجود "عضو لجنة" (الطلب الجديد)
+    // ب) التأكد من وجود "عضو اللجنة" (هذا ما كان مفقوداً)
     if (!users.some(u => u.role === 'committee')) {
         users.push({
             id: 99, 
-            name: "عضو اللجنة", 
+            name: "عضو لجنة الصعوبات", 
             username: "comm", 
             password: "123", 
             role: "committee", 
             status: "active"
         });
-        console.log("✅ تم إنشاء حساب عضو اللجنة: comm / 123");
+        console.log("✅ تم إنشاء حساب عضو اللجنة: comm");
         dataChanged = true;
     }
 
@@ -56,53 +45,37 @@ function initSystem() {
     }
 }
 
-// 2. دالة تسجيل الدخول (مع حل مشكلة التحديث والمسارات)
+// 2. دالة تسجيل الدخول
 function login(event) {
-    // 🔥 منع تحديث الصفحة (هذا هو الحل لمشكلة مسح البيانات)
-    if (event) event.preventDefault();
+    if (event) event.preventDefault(); // منع تحديث الصفحة
 
     const usernameInput = document.getElementById('username');
     const passwordInput = document.getElementById('password');
     
-    // التحقق من وجود الحقول
-    if (!usernameInput || !passwordInput) {
-        console.error("حقول اسم المستخدم أو كلمة المرور غير موجودة!");
-        return;
-    }
+    if (!usernameInput || !passwordInput) return;
 
     const username = usernameInput.value.trim();
     const password = passwordInput.value.trim();
 
-    if (!username || !password) {
-        alert('يرجى إدخال اسم المستخدم وكلمة المرور');
-        return;
-    }
-
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     
-    // البحث عن المستخدم (بدون حساسية لحالة الأحرف)
+    // البحث عن المستخدم
     const user = users.find(u => u.username.toLowerCase() === username.toLowerCase() && u.password === password);
 
     if (user) {
-        // التحقق من حالة الحساب
-        if (user.status === 'suspended' || user.status === 'inactive') {
-            alert('⛔ هذا الحساب موقوف، يرجى مراجعة الإدارة.');
+        if (user.status === 'suspended') {
+            alert('⛔ هذا الحساب موقوف');
             return;
         }
 
         // حفظ الجلسة
-        const sessionData = { user: user, loginTime: new Date().toISOString() };
-        sessionStorage.setItem('currentUser', JSON.stringify(sessionData));
+        sessionStorage.setItem('currentUser', JSON.stringify({ user: user, loginTime: new Date().toISOString() }));
 
-        // 🔥 نظام التوجيه الذكي (Routing)
-        // نحدد المسار بناءً على مكاننا الحالي (هل نحن في الرئيسية أم في صفحة داخلية؟)
-        let basePath = '';
-        if (window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname.endsWith('/')) {
-            basePath = 'pages/'; // نحن في الصفحة الرئيسية
-        } else if (window.location.pathname.includes('/pages/')) {
-            basePath = '../'; // نحن داخل مجلد pages ونريد التبديل
-        } else {
-            basePath = 'pages/'; // احتياط
+        // تحديد المسار الصحيح (Routing)
+        let basePath = 'pages/';
+        // إذا كنا داخل مجلد فرعي (مثل pages/teacher)، نعود للخلف
+        if (window.location.pathname.includes('/pages/')) {
+            basePath = '../'; 
         }
 
         // التوجيه حسب الصلاحية
@@ -116,32 +89,26 @@ function login(event) {
             case 'student':
                 window.location.href = basePath + 'student/dashboard.html';
                 break;
-            case 'committee':
-                // ✅ تمت إضافة توجيه عضو اللجنة
+            case 'committee': // ✅ تم إعادة تفعيل توجيه اللجنة
                 window.location.href = basePath + 'committee/dashboard.html';
                 break;
             default:
-                alert('عذراً، دور المستخدم غير معروف!');
+                alert('لا توجد لوحة تحكم لهذا الدور');
         }
-
     } else {
-        alert('❌ اسم المستخدم أو كلمة المرور غير صحيحة');
+        alert('❌ اسم المستخدم أو كلمة المرور خاطئة');
     }
 }
 
 // 3. التحقق من الصلاحية (للاستخدام داخل الصفحات)
 function checkAuth() {
     const sessionStr = sessionStorage.getItem('currentUser');
-    
     if (!sessionStr) {
-        // إذا لم يكن مسجلاً، أعد توجيهه لصفحة الدخول
-        // نتأكد ألا نقوم بالتوجيه إذا كنا أصلاً في صفحة الدخول
         if (window.location.href.includes('/pages/')) {
             window.location.href = '../../index.html'; 
         }
         return null;
     }
-
     return JSON.parse(sessionStr).user;
 }
 
@@ -151,7 +118,7 @@ function logout() {
     window.location.href = '../../index.html';
 }
 
-// أدوات مساعدة
+// تصدير الدوال
 window.login = login;
 window.logout = logout;
 window.checkAuth = checkAuth;

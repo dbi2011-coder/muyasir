@@ -8,79 +8,6 @@
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../assets/css/teacher.css">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        /* --- تنسيقات البطاقات العصرية (Horizontal Cards) --- */
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr) !important;
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: #fff;
-            border-radius: 16px;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between; /* توزيع المحتوى */
-            align-items: center;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
-            border: 1px solid rgba(0,0,0,0.02);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
-        }
-
-        .stat-content {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        .stat-number {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: #2c3e50;
-            margin-bottom: 5px;
-            line-height: 1;
-            font-family: 'Tajawal', sans-serif;
-        }
-
-        .stat-label {
-            font-size: 0.9rem;
-            color: #8898aa;
-            font-weight: 500;
-        }
-
-        .stat-icon-wrapper {
-            width: 55px;
-            height: 55px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            transition: transform 0.3s ease;
-        }
-
-        .stat-card:hover .stat-icon-wrapper { transform: scale(1.1) rotate(5deg); }
-
-        /* ألوان مميزة لكل بطاقة */
-        .card-blue .stat-icon-wrapper { background: #e0f2fe; color: #0284c7; }
-        .card-green .stat-icon-wrapper { background: #dcfce7; color: #16a34a; }
-        .card-red .stat-icon-wrapper { background: #fee2e2; color: #dc2626; }
-        .card-orange .stat-icon-wrapper { background: #ffedd5; color: #ea580c; }
-
-        @media (max-width: 992px) { .stats-grid { grid-template-columns: repeat(2, 1fr) !important; } }
-        @media (max-width: 576px) { .stats-grid { grid-template-columns: 1fr !important; } }
-    </style>
 </head>
 <body>
     <div class="dashboard-container">
@@ -91,6 +18,7 @@
                     <h2>ميسر التعلم</h2>
                 </div>
             </div>
+            
             <ul class="sidebar-menu">
                 <li><a href="dashboard.html" class="active"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
                 <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
@@ -124,55 +52,52 @@
             <div class="dashboard-content">
                 <div class="content-header">
                     <h1>لوحة تحكم المعلم</h1>
-                    <div class="header-actions">
-                        <button class="btn btn-success" onclick="window.location.href='students.html'">
-                            <span>+ إضافة طالب جديد</span>
-                        </button>
                     </div>
-                </div>
 
                 <div class="stats-grid">
-                    <div class="stat-card card-blue">
-                        <div class="stat-content">
-                            <span class="stat-number" id="studentsCount">0</span>
-                            <span class="stat-label">إجمالي الطلاب</span>
-                        </div>
-                        <div class="stat-icon-wrapper">
-                            <i class="fas fa-user-graduate"></i>
-                        </div>
+                    <div class="stat-card">
+                        <div class="stat-header"><div class="stat-icon">👨‍🎓</div></div>
+                        <div class="stat-number" id="studentsCount">0</div>
+                        <div class="stat-label">إجمالي الطلاب</div>
                     </div>
-
-                    <div class="stat-card card-green">
-                        <div class="stat-content">
-                            <span class="stat-number" id="lessonsCount">0</span>
-                            <span class="stat-label">الدروس المضافة</span>
-                        </div>
-                        <div class="stat-icon-wrapper">
-                            <i class="fas fa-book-open"></i>
-                        </div>
+                    <div class="stat-card success">
+                        <div class="stat-header"><div class="stat-icon">📚</div></div>
+                        <div class="stat-number" id="lessonsCount">0</div>
+                        <div class="stat-label">الدروس المضافة</div>
                     </div>
-
-                    <div class="stat-card card-red">
-                        <div class="stat-content">
-                            <span class="stat-number" id="assignmentsCount">0</span>
-                            <span class="stat-label">الواجبات النشطة</span>
-                        </div>
-                        <div class="stat-icon-wrapper">
-                            <i class="fas fa-clipboard-list"></i>
-                        </div>
+                    <div class="stat-card warning">
+                        <div class="stat-header"><div class="stat-icon">📝</div></div>
+                        <div class="stat-number" id="assignmentsCount">0</div>
+                        <div class="stat-label">الواجبات النشطة</div>
                     </div>
-
-                    <div class="stat-card card-orange">
-                        <div class="stat-content">
-                            <span class="stat-number" id="unreadMessages">0</span>
-                            <span class="stat-label">رسائل جديدة</span>
-                        </div>
-                        <div class="stat-icon-wrapper">
-                            <i class="fas fa-comments"></i>
-                        </div>
+                    <div class="stat-card danger">
+                        <div class="stat-header"><div class="stat-icon">💬</div></div>
+                        <div class="stat-number" id="unreadMessages">0</div>
+                        <div class="stat-label">رسائل جديدة</div>
                     </div>
                 </div>
+
+                <div class="featured-students">
+                    <div class="card">
+                        <h3>الطلاب المميزين هذا الأسبوع</h3>
+                        <div class="students-list" id="featuredStudentsList"></div>
+                    </div>
                 </div>
+
+                <div class="recent-activity">
+                    <div class="card">
+                        <h3>النشاط الأخير</h3>
+                        <div class="activity-list" id="activityList"></div>
+                    </div>
+                </div>
+
+                <div class="important-notices">
+                    <div class="card">
+                        <h3>إشعارات مهمة</h3>
+                        <div class="notices-list" id="noticesList"></div>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 

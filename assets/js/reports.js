@@ -1,142 +1,140 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير (إصلاح التعرف على المعلم وعرض الطلاب)
+// الوصف: توليد التقارير للمعلم الحالي (مع إصلاح البيانات تلقائياً)
 // ============================================
 
-// 🔥 1. عند تحميل الصفحة: تعرف على المعلم وأصلح الطلاب
 document.addEventListener('DOMContentLoaded', function() {
-    const currentUser = getCurrentUser();
-
-    if (currentUser) {
-        // أ) عرض اسم المعلم في الهيدر (أعلى الصفحة)
-        if (document.getElementById('userName')) {
-            document.getElementById('userName').textContent = currentUser.name;
-        }
-        if (document.getElementById('userAvatar')) {
-            document.getElementById('userAvatar').textContent = currentUser.name.charAt(0);
-        }
-
-        // ب) تشغيل الإصلاح التلقائي للطلاب فوراً
-        autoFixStudents(currentUser);
-    }
+    // تشغيل عملية التعريف والإصلاح فور تحميل الصفحة
+    initReportsPage();
 });
 
-// دالة الإصلاح التلقائي (تعمل في الخلفية)
-function autoFixStudents(currentUser) {
-    let allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    let dataModified = false;
+function initReportsPage() {
+    // 1. محاولة جلب المستخدم الحالي بأكثر من طريقة
+    let currentUser = null;
+    
+    if (typeof getCurrentUser === 'function') {
+        currentUser = getCurrentUser();
+    } else {
+        // خطة بديلة إذا لم تكن الدالة موجودة
+        const session = sessionStorage.getItem('currentUser');
+        if (session) currentUser = JSON.parse(session);
+    }
 
-    // ربط أي طالب "يتيم" (بدون معلم) بالمعلم الحالي
+    if (!currentUser) {
+        console.log("⚠️ لم يتم العثور على مستخدم مسجل. العودة للدخول...");
+        // window.location.href = '../../index.html'; // يمكنك تفعيل هذا السطر لاحقاً
+        return;
+    }
+
+    // 2. عرض اسم المعلم في الصفحة
+    const nameEl = document.getElementById('userName');
+    if (nameEl) nameEl.textContent = currentUser.name;
+
+    console.log(`✅ تم التعرف على المعلم: ${currentUser.name} (ID: ${currentUser.id})`);
+
+    // 3. تشغيل إصلاح الطلاب (ربطهم بهذا المعلم)
+    forceFixData(false); // false تعني بدون رسالة تنبيه مزعجة
+}
+
+// دالة إصلاح البيانات (تربط الطلاب بالمعلم الحالي)
+function forceFixData(showAlert = true) {
+    let currentUser = null;
+    if (typeof getCurrentUser === 'function') currentUser = getCurrentUser();
+    else currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+
+    if (!currentUser) return;
+
+    let allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    let modified = false;
+    let fixedCount = 0;
+
+    // المرور على كل المستخدمين
     allUsers = allUsers.map(u => {
-        if (u.role === 'student' && !u.teacherId) {
-            u.teacherId = currentUser.id;
-            dataModified = true;
+        // إذا كان طالباً وليس لديه معلم، أو معلمه غير محدد
+        if (u.role === 'student' && (!u.teacherId || u.teacherId === 'undefined')) {
+            u.teacherId = currentUser.id; // نربطه بالمعلم الحالي
+            modified = true;
+            fixedCount++;
         }
         return u;
     });
 
-    if (dataModified) {
+    if (modified) {
         localStorage.setItem('users', JSON.stringify(allUsers));
-        console.log("✅ تم ربط الطلاب بالمعلم: " + currentUser.name);
+        console.log(`🔄 تم إصلاح ${fixedCount} طالب وربطهم بالمعلم.`);
+        if (showAlert) alert(`تم تحديث بيانات ${fixedCount} طالب وربطهم بحسابك بنجاح.`);
+    } else {
+        if (showAlert) alert("بيانات الطلاب سليمة ومحدثة.");
     }
 }
 
-// 🔥 2. دالة توليد التقرير
+// دالة توليد التقرير
 function generateClassBalanceReport() {
-    const currentUser = getCurrentUser();
-    if (!currentUser) {
-        alert("يرجى تسجيل الدخول أولاً");
-        return;
-    }
-
-    // جلب بيانات النظام
-    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    // إظهار منطقة العرض
+    document.getElementById('reportPreviewContainer').style.display = 'block';
     
-    // جلب طلاب المعلم الحالي (مقارنة مرنة ==)
+    let currentUser = null;
+    if (typeof getCurrentUser === 'function') currentUser = getCurrentUser();
+    else currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+
+    // جلب الطلاب المرتبطين بهذا المعلم
+    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    // المقارنة بـ == لضمان توافق الأنواع (نص/رقم)
     const myStudents = allUsers.filter(u => u.role === 'student' && u.teacherId == currentUser.id);
 
     if (myStudents.length === 0) {
-        alert("عذراً.. لا يوجد طلاب مسجلين باسمك (ID: " + currentUser.id + ")");
+        document.getElementById('reportPreviewArea').innerHTML = `
+            <div style="text-align:center; color:red; padding:20px;">
+                <h3>⚠️ لا يوجد طلاب</h3>
+                <p>لم يتم العثور على طلاب مسجلين بحسابك.</p>
+                <button class="btn btn-sm btn-primary" onclick="forceFixData()">حاول إصلاح البيانات</button>
+            </div>`;
         return;
     }
 
-    // حساب الحصص من الجدول
+    // جلب الجدول لحساب الحصص
     const allSchedules = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     const mySchedule = allSchedules.filter(s => s.teacherId == currentUser.id);
 
-    const studentSessionCounts = {};
-    mySchedule.forEach(session => {
-        if (session.students) {
-            session.students.forEach(studentId => {
-                studentSessionCounts[studentId] = (studentSessionCounts[studentId] || 0) + 1;
-            });
+    const counts = {};
+    mySchedule.forEach(sess => {
+        if (sess.students) {
+            sess.students.forEach(sid => counts[sid] = (counts[sid] || 0) + 1);
         }
     });
 
-    // بناء التقرير
-    let printDate = new Date().toLocaleDateString('ar-SA');
-    let reportContent = `
-        <div style="text-align:center; margin-bottom:30px;">
-            <h2 style="margin-bottom:10px;">تقرير رصيد الحصص</h2>
-            <h4 style="color:#555;">المعلم: ${currentUser.name}</h4>
-            <p>تاريخ التقرير: ${printDate}</p>
-            <p>عدد الطلاب: ${myStudents.length}</p>
-        </div>
-        
-        <table border="1" style="width:100%; border-collapse:collapse; text-align:right; direction:rtl;">
-            <thead style="background-color:#f8f9fa;">
-                <tr>
-                    <th style="padding:12px;">م</th>
-                    <th style="padding:12px;">اسم الطالب</th>
-                    <th style="padding:12px;">الصف</th>
-                    <th style="padding:12px;">عدد الحصص</th>
-                    <th style="padding:12px;">الملاحظات</th>
-                </tr>
-            </thead>
-            <tbody>
+    let html = `
+    <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #333; padding-bottom:10px;">
+        <h2>تقرير متابعة الطلاب</h2>
+        <h4>المعلم: ${currentUser.name}</h4>
+    </div>
+    <table border="1" style="width:100%; border-collapse:collapse; text-align:right;">
+        <thead style="background:#f0f0f0;">
+            <tr><th>م</th><th>الطالب</th><th>الصف</th><th>عدد الحصص</th><th>الحالة</th></tr>
+        </thead>
+        <tbody>
     `;
 
-    myStudents.forEach((student, index) => {
-        const count = studentSessionCounts[student.id] || 0;
-        let note = '-';
-        let rowColor = '#fff';
-
-        if (count < 5) { note = 'يحتاج تكثيف'; rowColor = '#fff5f5'; }
+    myStudents.forEach((std, idx) => {
+        const c = counts[std.id] || 0;
+        let status = 'منتظم';
+        if(c < 5) status = 'يحتاج متابعة';
         
-        reportContent += `
-            <tr style="background-color:${rowColor}">
-                <td style="padding:10px;">${index + 1}</td>
-                <td style="padding:10px; font-weight:bold;">${student.name}</td>
-                <td style="padding:10px;">${student.grade || 'غير محدد'}</td>
-                <td style="padding:10px; font-weight:bold; color:#007bff;">${count}</td>
-                <td style="padding:10px;">${note}</td>
-            </tr>
-        `;
+        html += `
+        <tr>
+            <td>${idx+1}</td>
+            <td><strong>${std.name}</strong></td>
+            <td>${std.grade || '-'}</td>
+            <td>${c}</td>
+            <td>${status}</td>
+        </tr>`;
     });
 
-    reportContent += `</tbody></table>`;
-
-    // عرض التقرير
-    const previewArea = document.getElementById('reportPreviewArea');
-    if (previewArea) {
-        previewArea.innerHTML = reportContent;
-        if(document.getElementById('printActions')) document.getElementById('printActions').style.display = 'block';
-    } else {
-        // طباعة مباشرة
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-            <html dir="rtl"><head><title>تقرير الطلاب</title>
-            <style>body{font-family:'Tajawal',sans-serif; padding:20px;}</style>
-            </head><body>${reportContent}</body></html>
-        `);
-        printWindow.document.close();
-    }
-}
-
-// دالة مساعدة
-function getCurrentUser() {
-    return JSON.parse(sessionStorage.getItem('currentUser'));
+    html += `</tbody></table>`;
+    
+    document.getElementById('reportPreviewArea').innerHTML = html;
 }
 
 // تصدير الدوال
+window.forceFixData = forceFixData;
 window.generateClassBalanceReport = generateClassBalanceReport;

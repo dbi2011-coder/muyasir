@@ -1,42 +1,66 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير (مع إصلاح تلقائي للطلاب القدامى)
+// الوصف: نظام التقارير (إصلاح التعرف على المعلم وعرض الطلاب)
 // ============================================
 
-// دالة توليد تقرير رصيد الحصص
-function generateClassBalanceReport() {
+// 🔥 1. عند تحميل الصفحة: تعرف على المعلم وأصلح الطلاب
+document.addEventListener('DOMContentLoaded', function() {
     const currentUser = getCurrentUser();
-    if (!currentUser) return;
 
+    if (currentUser) {
+        // أ) عرض اسم المعلم في الهيدر (أعلى الصفحة)
+        if (document.getElementById('userName')) {
+            document.getElementById('userName').textContent = currentUser.name;
+        }
+        if (document.getElementById('userAvatar')) {
+            document.getElementById('userAvatar').textContent = currentUser.name.charAt(0);
+        }
+
+        // ب) تشغيل الإصلاح التلقائي للطلاب فوراً
+        autoFixStudents(currentUser);
+    }
+});
+
+// دالة الإصلاح التلقائي (تعمل في الخلفية)
+function autoFixStudents(currentUser) {
     let allUsers = JSON.parse(localStorage.getItem('users') || '[]');
     let dataModified = false;
 
-    // 🛠️ خطوة الإصلاح الذكي (Auto-Fix):
-    // البحث عن الطلاب "اليتامى" (بدون teacherId) ونسبهم للمعلم الحالي
+    // ربط أي طالب "يتيم" (بدون معلم) بالمعلم الحالي
     allUsers = allUsers.map(u => {
         if (u.role === 'student' && !u.teacherId) {
-            u.teacherId = currentUser.id; // تبني الطالب
+            u.teacherId = currentUser.id;
             dataModified = true;
         }
         return u;
     });
 
-    // حفظ التعديلات إذا وجدنا طلاباً قدامى
     if (dataModified) {
         localStorage.setItem('users', JSON.stringify(allUsers));
-        console.log("✅ تم تحديث الطلاب القدامى ليكونوا ضمن قائمتك.");
+        console.log("✅ تم ربط الطلاب بالمعلم: " + currentUser.name);
     }
+}
 
-    // 1. جلب طلاب المعلم الحالي
-    // نستخدم == بدلاً من === لضمان توافق الأرقام والنصوص
-    const myStudents = allUsers.filter(u => u.role === 'student' && u.teacherId == currentUser.id);
-
-    if (myStudents.length === 0) {
-        alert("لا يوجد طلاب مسجلين في قائمتك حالياً.");
+// 🔥 2. دالة توليد التقرير
+function generateClassBalanceReport() {
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+        alert("يرجى تسجيل الدخول أولاً");
         return;
     }
 
-    // 2. حساب الرصيد من جدول المعلم
+    // جلب بيانات النظام
+    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    
+    // جلب طلاب المعلم الحالي (مقارنة مرنة ==)
+    const myStudents = allUsers.filter(u => u.role === 'student' && u.teacherId == currentUser.id);
+
+    if (myStudents.length === 0) {
+        alert("عذراً.. لا يوجد طلاب مسجلين باسمك (ID: " + currentUser.id + ")");
+        return;
+    }
+
+    // حساب الحصص من الجدول
     const allSchedules = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     const mySchedule = allSchedules.filter(s => s.teacherId == currentUser.id);
 
@@ -49,66 +73,67 @@ function generateClassBalanceReport() {
         }
     });
 
-    // 3. بناء التقرير
+    // بناء التقرير
     let printDate = new Date().toLocaleDateString('ar-SA');
     let reportContent = `
-        <div class="report-header text-center mb-4">
-            <h2>تقرير رصيد الحصص - صعوبات التعلم</h2>
-            <h4>المعلم: ${currentUser.name}</h4>
+        <div style="text-align:center; margin-bottom:30px;">
+            <h2 style="margin-bottom:10px;">تقرير رصيد الحصص</h2>
+            <h4 style="color:#555;">المعلم: ${currentUser.name}</h4>
             <p>تاريخ التقرير: ${printDate}</p>
+            <p>عدد الطلاب: ${myStudents.length}</p>
         </div>
-        <table class="table table-bordered" style="width:100%; direction:rtl; text-align:right; border-collapse:collapse; margin-top:20px;" border="1">
+        
+        <table border="1" style="width:100%; border-collapse:collapse; text-align:right; direction:rtl;">
             <thead style="background-color:#f8f9fa;">
                 <tr>
-                    <th style="padding:10px;">اسم الطالب</th>
-                    <th style="padding:10px;">الصف</th>
-                    <th style="padding:10px;">عدد الحصص</th>
-                    <th style="padding:10px;">الحالة</th>
+                    <th style="padding:12px;">م</th>
+                    <th style="padding:12px;">اسم الطالب</th>
+                    <th style="padding:12px;">الصف</th>
+                    <th style="padding:12px;">عدد الحصص</th>
+                    <th style="padding:12px;">الملاحظات</th>
                 </tr>
             </thead>
             <tbody>
     `;
 
-    myStudents.forEach(student => {
+    myStudents.forEach((student, index) => {
         const count = studentSessionCounts[student.id] || 0;
-        let status = 'عادي';
-        let color = '#000';
-        
-        if (count < 5) { status = 'يحتاج دعم'; color = '#d9534f'; }
-        else if (count > 20) { status = 'متقدم'; color = '#5cb85c'; }
+        let note = '-';
+        let rowColor = '#fff';
 
+        if (count < 5) { note = 'يحتاج تكثيف'; rowColor = '#fff5f5'; }
+        
         reportContent += `
-            <tr>
-                <td style="padding:10px;">${student.name}</td>
-                <td style="padding:10px;">${student.grade || '-'}</td>
-                <td style="padding:10px; font-weight:bold;">${count}</td>
-                <td style="padding:10px; color:${color};">${status}</td>
+            <tr style="background-color:${rowColor}">
+                <td style="padding:10px;">${index + 1}</td>
+                <td style="padding:10px; font-weight:bold;">${student.name}</td>
+                <td style="padding:10px;">${student.grade || 'غير محدد'}</td>
+                <td style="padding:10px; font-weight:bold; color:#007bff;">${count}</td>
+                <td style="padding:10px;">${note}</td>
             </tr>
         `;
     });
 
     reportContent += `</tbody></table>`;
 
-    // 4. عرض التقرير
+    // عرض التقرير
     const previewArea = document.getElementById('reportPreviewArea');
     if (previewArea) {
         previewArea.innerHTML = reportContent;
-        const btnContainer = document.getElementById('printActions');
-        if(btnContainer) btnContainer.style.display = 'block';
+        if(document.getElementById('printActions')) document.getElementById('printActions').style.display = 'block';
     } else {
-        // طباعة مباشرة إذا لم توجد منطقة معاينة
+        // طباعة مباشرة
         const printWindow = window.open('', '_blank');
         printWindow.document.write(`
             <html dir="rtl"><head><title>تقرير الطلاب</title>
-            <style>body { font-family: 'Tajawal', sans-serif; padding: 20px; }</style>
+            <style>body{font-family:'Tajawal',sans-serif; padding:20px;}</style>
             </head><body>${reportContent}</body></html>
         `);
         printWindow.document.close();
-        // printWindow.print(); // يمكنك تفعيل هذا السطر للطباعة التلقائية
     }
 }
 
-// دالة مساعدة للحصول على المستخدم الحالي (في حال لم تكن موجودة في الذاكرة)
+// دالة مساعدة
 function getCurrentUser() {
     return JSON.parse(sessionStorage.getItem('currentUser'));
 }

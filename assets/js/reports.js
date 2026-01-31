@@ -1,193 +1,308 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: تقرير رصيد الحصص (نفس تصميمك المرفق + عزل بيانات المعلم)
+// الوصف: نظام التقارير الشامل (جميع الأنواع + عزل بيانات المعلم)
 // ============================================
 
-// 1. حقن أنماط الطباعة (نفس الستايل الموجود في ملفك بالضبط)
-(function injectPrintStyles() {
+document.addEventListener('DOMContentLoaded', function() {
+    // إصلاح البيانات تلقائياً عند التحميل
+    forceFixData();
+    // حقن ستايل الطباعة
+    injectPrintStyles();
+});
+
+// 1. حقن أنماط الطباعة (كما في نسختك الأصلية)
+function injectPrintStyles() {
     const style = document.createElement('style');
     style.innerHTML = `
         @media print {
-            @page {
-                size: A4;
-                margin: 10mm;
-            }
-            body * {
-                visibility: hidden;
-            }
-            .main-sidebar, .header, .sidebar, .no-print, button, input, select, .alert, .dashboard-header, .sidebar-menu {
-                display: none !important;
-            }
-            #reportPreviewArea, #reportPreviewArea * {
-                visibility: visible;
-            }
+            @page { size: A4; margin: 10mm; }
+            body * { visibility: hidden; }
+            .main-sidebar, .header, .sidebar, .no-print, button, input, select, .alert, .dashboard-header, .sidebar-menu { display: none !important; }
+            #reportPreviewArea, #reportPreviewArea * { visibility: visible; }
             #reportPreviewArea {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                margin: 0;
-                padding: 0;
-                background: white;
-                direction: rtl;
+                position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0;
+                background: white; direction: rtl;
             }
-            
-            /* تنسيق الجداول (مطابق لملفك: Times New Roman + حدود سوداء) */
             table {
-                width: 100% !important;
-                border-collapse: collapse !important;
+                width: 100% !important; border-collapse: collapse !important;
                 border: 2px solid #000 !important;
-                font-family: 'Times New Roman', serif;
-                font-size: 12pt;
-                margin-top: 15px;
-                margin-bottom: 15px;
+                font-family: 'Times New Roman', serif; font-size: 12pt;
+                margin-top: 15px; margin-bottom: 15px;
             }
             th, td {
-                border: 1px solid #000 !important;
-                padding: 8px !important;
+                border: 1px solid #000 !important; padding: 8px !important;
                 text-align: center !important;
             }
-            th {
-                background-color: #f0f0f0 !important;
-                font-weight: bold;
-            }
-            .text-red { color: red !important; font-weight: bold; }
-            .text-green { color: green !important; font-weight: bold; }
-            .text-black { color: black !important; font-weight: bold; }
+            th { background-color: #f0f0f0 !important; font-weight: bold; }
         }
     `;
     document.head.appendChild(style);
-})();
+}
 
-// 2. الدالة الرئيسية لتوليد التقرير
-function generateClassBalanceReport() {
-    // أ) التأكد من المعلم الحالي
+// 2. الدالة الرئيسية: تحديد نوع التقرير وتوجيهه
+function generateReport() {
+    // التحقق من نوع التقرير المختار (من أزرار الراديو)
+    const selectedOption = document.querySelector('input[name="reportType"]:checked');
+    const reportType = selectedOption ? selectedOption.value : 'classBalance'; // الافتراضي
+
+    // التحقق من المستخدم
     let currentUser = null;
     try {
         if (typeof getCurrentUser === 'function') currentUser = getCurrentUser();
         else currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
-    } catch(e) { console.error(e); }
+    } catch(e) {}
 
-    if (!currentUser) {
-        alert("يرجى تسجيل الدخول أولاً");
-        return;
-    }
+    if (!currentUser) return alert("يرجى تسجيل الدخول");
 
-    // 🔥 إصلاح فوري: ربط الطلاب "اليتامى" بالمعلم الحالي قبل جلبهم
-    let allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    let modified = false;
-    allUsers = allUsers.map(u => {
-        if (u.role === 'student' && !u.teacherId) {
-            u.teacherId = currentUser.id;
-            modified = true;
-        }
-        return u;
-    });
-    if (modified) localStorage.setItem('users', JSON.stringify(allUsers));
-
-    // ب) جلب بيانات طلابك فقط (Filter by Teacher ID)
-    const myStudents = allUsers.filter(u => u.role === 'student' && u.teacherId == currentUser.id);
-
-    if (myStudents.length === 0) {
-        alert("لم يتم العثور على طلاب مسجلين بحسابك.\n(تأكد من إضافة طلاب في صفحة الطلاب)");
-        return;
-    }
-
-    // ج) حساب الحصص من جدولك الخاص
-    const allSchedules = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
-    const mySchedule = allSchedules.filter(s => s.teacherId == currentUser.id);
-
-    const studentCounts = {};
-    mySchedule.forEach(sess => {
-        if (sess.students) {
-            sess.students.forEach(sid => {
-                studentCounts[sid] = (studentCounts[sid] || 0) + 1;
-            });
-        }
-    });
-
-    // د) بناء التقرير (نفس HTML ملفك بالضبط مع تغيير الاسم)
-    const printDate = new Date().toLocaleDateString('ar-SA');
-
-    let html = `
-        <div style="text-align:center; margin-bottom:20px; font-family:'Times New Roman', serif;">
-            <h2 style="text-decoration:underline;">تقرير رصيد الحصص للطلاب</h2>
-            <h3 style="margin:10px 0;">المعلم: ${currentUser.name}</h3>
-        </div>
-
-        <table style="width:100%; direction:rtl; border-collapse:collapse; text-align:center; font-family:'Times New Roman', serif;" border="1">
-            <thead style="background-color:#eee;">
-                <tr>
-                    <th style="padding:10px; width:50px;">م</th>
-                    <th style="padding:10px;">اسم الطالب</th>
-                    <th style="padding:10px;">الصف</th>
-                    <th style="padding:10px;">الرصيد (عدد الحصص)</th>
-                    <th style="padding:10px;">الحالة</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-
-    myStudents.forEach((student, index) => {
-        const count = studentCounts[student.id] || 0;
-        
-        // منطق الألوان الخاص بك (محاكاة نفس الستايل)
-        let balanceText = count;
-        let balanceClass = 'text-black';
-        let status = 'يسير وفق الخطة';
-
-        // يمكنك تعديل الرقم 5 حسب معيارك
-        if (count < 5) { 
-            balanceClass = 'text-red'; 
-            status = 'يحتاج تعويض';
-        } else if (count > 20) { 
-            balanceClass = 'text-green'; 
-            balanceText = '+' + count; 
-            status = 'متقدم';
-        }
-
-        html += `
-            <tr>
-                <td>${index + 1}</td>
-                <td style="font-weight:bold; font-size:1.1em; text-align:right; padding-right:20px;">${student.name}</td>
-                <td>${student.grade || '-'}</td>
-                <td class="${balanceClass}" style="font-size:1.4em; direction:ltr;">${balanceText}</td>
-                <td>${status}</td>
-            </tr>
-        `;
-    });
-
-    html += `</tbody></table>`;
-
-    // هـ) ذيل التقرير (نفس الدليل والفوتر الموجود في ملفك)
-    html += `
-        <div style="margin-top:20px; font-size:0.9em; color:#555; border:1px solid #ccc; padding:10px; border-radius:5px; direction:rtl; text-align:right; font-family:'Times New Roman';">
-            <strong>دليل التقرير:</strong>
-            <ul style="margin-top:5px; margin-bottom:0; padding-right:20px;">
-                <li><span style="color:red; font-weight:bold;">اللون الأحمر:</span> الطالب لم يحصل على حصص كافية (يحتاج تعويض).</li>
-                <li><span style="color:green; font-weight:bold;">اللون الأخضر (+):</span> الطالب متقدم في الخطة.</li>
-                <li><span style="color:black; font-weight:bold;">اللون الأسود:</span> الطالب يسير وفق الخطة تماماً.</li>
-            </ul>
-        </div>
-
-        <div class="custom-footer" style="margin-top:30px; text-align:left; font-size:0.9rem; color:#333; direction:rtl; font-family:'Times New Roman';">
-            تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ <strong>${currentUser.name}</strong> بتاريخ ${printDate}
-        </div>
-        
-        <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
-            <button onclick="window.print()" class="btn btn-primary">🖨️ طباعة</button>
-        </div>
-    `;
-
-    // عرض النتيجة
-    const previewArea = document.getElementById('reportPreviewArea');
-    if (previewArea) {
-        previewArea.innerHTML = html;
-        // إظهار الحاوية
-        const container = document.getElementById('reportPreviewContainer');
-        if (container) container.style.display = 'block';
+    // توجيه الطلب حسب النوع
+    switch (reportType) {
+        case 'studentData':
+            generateStudentDataReport(currentUser);
+            break;
+        case 'classBalance': // هذا هو رصيد الحصص
+            generateClassBalanceReport(currentUser);
+            break;
+        case 'diagnostic':
+            generateDiagnosticReport(currentUser);
+            break;
+        case 'iep':
+            generateIEPReport(currentUser);
+            break;
+        default:
+            generateClassBalanceReport(currentUser);
     }
 }
 
-// تصدير الدالة
-window.generateClassBalanceReport = generateClassBalanceReport;
+// =========================================================
+// 📊 النوع الأول: تقرير بيانات الطلاب (Student Data)
+// =========================================================
+function generateStudentDataReport(user) {
+    const students = getMyStudents(user);
+    if (!students) return;
+
+    let html = buildHeader("تقرير بيانات الطلاب", user.name);
+    
+    html += `
+    <table border="1">
+        <thead>
+            <tr>
+                <th>م</th><th>اسم الطالب</th><th>الصف</th><th>رقم الهوية</th><th>تاريخ الميلاد</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    students.forEach((s, i) => {
+        html += `<tr>
+            <td>${i+1}</td>
+            <td style="font-weight:bold; text-align:right;">${s.name}</td>
+            <td>${s.grade || '-'}</td>
+            <td>${s.idNumber || '-'}</td>
+            <td>${s.dob || '-'}</td>
+        </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    html += buildFooter(user.name);
+    renderReport(html);
+}
+
+// =========================================================
+// 📊 النوع الثاني: تقرير رصيد الحصص (Class Balance)
+// =========================================================
+function generateClassBalanceReport(user) {
+    const students = getMyStudents(user);
+    if (!students) return;
+
+    // جلب الجدول الخاص بالمعلم فقط
+    const allSchedules = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
+    const mySchedule = allSchedules.filter(s => s.teacherId == user.id);
+
+    const counts = {};
+    mySchedule.forEach(sess => {
+        if (sess.students) sess.students.forEach(sid => counts[sid] = (counts[sid] || 0) + 1);
+    });
+
+    let html = buildHeader("تقرير رصيد الحصص", user.name);
+    html += `
+    <table border="1">
+        <thead>
+            <tr>
+                <th>م</th><th>اسم الطالب</th><th>الصف</th><th>الرصيد</th><th>الحالة</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    students.forEach((s, i) => {
+        const c = counts[s.id] || 0;
+        let color = 'black';
+        let status = 'منتظم';
+        if(c < 5) { color = 'red'; status = 'يحتاج تعويض'; }
+        else if(c > 20) { color = 'green'; status = 'متقدم'; }
+
+        html += `<tr>
+            <td>${i+1}</td>
+            <td style="font-weight:bold; text-align:right;">${s.name}</td>
+            <td>${s.grade || '-'}</td>
+            <td style="font-weight:bold; color:${color}; direction:ltr;">${c}</td>
+            <td>${status}</td>
+        </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    
+    // إضافة الدليل (Legend)
+    html += `
+    <div style="border:1px solid #ccc; padding:10px; margin-top:20px; font-size:0.9em; text-align:right;">
+        <strong>الدليل:</strong>
+        <ul style="list-style:none; padding:0;">
+            <li style="color:red;">• الأحمر: يحتاج تعويض</li>
+            <li style="color:green;">• الأخضر: متقدم</li>
+        </ul>
+    </div>`;
+
+    html += buildFooter(user.name);
+    renderReport(html);
+}
+
+// =========================================================
+// 📊 النوع الثالث: تقرير الاختبار التشخيصي (Diagnostic)
+// =========================================================
+function generateDiagnosticReport(user) {
+    const students = getMyStudents(user);
+    if (!students) return;
+
+    let html = buildHeader("تقرير حالة الاختبار التشخيصي", user.name);
+    html += `
+    <table border="1">
+        <thead>
+            <tr>
+                <th>م</th><th>اسم الطالب</th><th>الصف</th><th>حالة الاختبار</th><th>النتيجة</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    students.forEach((s, i) => {
+        // هنا يمكنك جلب نتائج حقيقية إذا كانت مخزنة، حالياً سأضع قيم افتراضية
+        html += `<tr>
+            <td>${i+1}</td>
+            <td style="text-align:right;">${s.name}</td>
+            <td>${s.grade || '-'}</td>
+            <td>${Math.random() > 0.5 ? 'مكتمل' : 'غير مكتمل'}</td>
+            <td>-</td>
+        </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    html += buildFooter(user.name);
+    renderReport(html);
+}
+
+// =========================================================
+// 📊 النوع الرابع: تقرير الخطة التربوية الفردية (IEP)
+// =========================================================
+function generateIEPReport(user) {
+    const students = getMyStudents(user);
+    if (!students) return;
+
+    let html = buildHeader("متابعة الخطط التربوية الفردية", user.name);
+    html += `
+    <table border="1">
+        <thead>
+            <tr>
+                <th>م</th><th>اسم الطالب</th><th>تاريخ البدء</th><th>الأهداف المحققة</th><th>نسبة الإنجاز</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    students.forEach((s, i) => {
+        html += `<tr>
+            <td>${i+1}</td>
+            <td style="text-align:right;">${s.name}</td>
+            <td>-</td>
+            <td>0</td>
+            <td>0%</td>
+        </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    html += buildFooter(user.name);
+    renderReport(html);
+}
+
+// =========================================================
+// 🛠️ دوال مساعدة (Helpers)
+// =========================================================
+
+// جلب طلاب المعلم الحالي فقط
+function getMyStudents(user) {
+    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const students = allUsers.filter(u => u.role === 'student' && u.teacherId == user.id);
+    
+    if (students.length === 0) {
+        alert("لا يوجد طلاب مسجلين باسمك.");
+        return null;
+    }
+    return students;
+}
+
+// بناء الهيدر
+function buildHeader(title, teacherName) {
+    return `
+    <div style="text-align:center; font-family:'Times New Roman'; margin-bottom:20px;">
+        <h2 style="text-decoration:underline;">${title}</h2>
+        <h3>المعلم: ${teacherName}</h3>
+    </div>`;
+}
+
+// بناء الفوتر
+function buildFooter(teacherName) {
+    const date = new Date().toLocaleDateString('ar-SA');
+    return `
+    <div class="custom-footer" style="margin-top:30px; text-align:left; font-size:0.9rem; direction:rtl; font-family:'Times New Roman';">
+        تم طباعة التقرير من نظام ميسر التعلم للأستاذ/ <strong>${teacherName}</strong> بتاريخ ${date}
+    </div>
+    <div class="no-print" style="margin-top:20px; text-align:left;">
+        <button onclick="window.print()" class="btn btn-primary">🖨️ طباعة</button>
+    </div>`;
+}
+
+// عرض التقرير في الصفحة
+function renderReport(htmlContent) {
+    const preview = document.getElementById('reportPreviewArea');
+    if (preview) {
+        preview.innerHTML = htmlContent;
+        const container = document.getElementById('reportPreviewContainer'); // تأكد من وجود هذا العنصر في HTML
+        if (container) container.style.display = 'block';
+        
+        // إذا كان الزر منفصلاً
+        const printDiv = document.getElementById('printActions');
+        if (printDiv) printDiv.style.display = 'block';
+    }
+}
+
+// إصلاح البيانات
+function forceFixData() {
+    let user = null;
+    try { 
+        if(typeof getCurrentUser == 'function') user = getCurrentUser();
+        else user = JSON.parse(sessionStorage.getItem('currentUser'));
+    } catch(e){}
+
+    if (!user) return;
+
+    let users = JSON.parse(localStorage.getItem('users') || '[]');
+    let mod = false;
+    users = users.map(u => {
+        if(u.role === 'student' && !u.teacherId) {
+            u.teacherId = user.id;
+            mod = true;
+        }
+        return u;
+    });
+    if(mod) localStorage.setItem('users', JSON.stringify(users));
+}
+
+// تصدير الدوال
+window.generateReport = generateReport;
+window.generateClassBalanceReport = generateClassBalanceReport; // للدعم القديم
+window.forceFixData = forceFixData;

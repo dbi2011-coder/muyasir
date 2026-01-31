@@ -1,9 +1,9 @@
 // ============================================
 // 📁 الملف: assets/js/committee.js
-// الوصف: إدارة اللجنة (بيانات خاصة لكل معلم)
+// الوصف: إدارة اللجنة (عزل البيانات + واجهة المستخدم)
 // ============================================
 
-// --- إعدادات قاعدة البيانات ---
+// --- 1. إعدادات قاعدة البيانات IndexedDB ---
 const DB_NAME = 'CommitteeAppDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'meetings';
@@ -24,16 +24,92 @@ function dbGetAll() { return new Promise((res, rej) => { const tx = db.transacti
 function dbPut(item) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readwrite'); const r = tx.objectStore(STORE_NAME).put(item); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
 function dbDelete(id) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readwrite'); const r = tx.objectStore(STORE_NAME).delete(id); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
 
+// تشغيل عند التحميل
 document.addEventListener('DOMContentLoaded', async function() {
     try { await openDB(); } catch(e) { console.log('DB init error'); }
     
-    // تحميل البيانات فقط إذا كنا في صفحة اللجنة
+    // تحميل البيانات إذا كانت العناصر موجودة
     if (document.getElementById('membersListContainer')) loadMembers();
     if (document.getElementById('meetingsListContainer')) loadMeetings();
+
+    // تفعيل التبويب الافتراضي (الاجتماعات)
+    if(typeof switchTab === 'function') switchTab('meetingsSection');
 });
 
 // ========================
-// 👥 إدارة الأعضاء (خاصة)
+// 🖥️ دوال الواجهة (إصلاح الأخطاء ReferenceError)
+// ========================
+
+// 1. التبديل بين التبويبات (الاجتماعات / الأعضاء)
+function switchTab(tabId) {
+    // إخفاء كل الأقسام
+    const sections = ['meetingsSection', 'membersSection'];
+    sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    // إظهار القسم المطلوب
+    const target = document.getElementById(tabId);
+    if (target) target.style.display = 'block';
+
+    // تحديث الأزرار النشطة
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    // محاولة تفعيل الزر الذي تم ضغطه (يعتمد على HTML)
+    const activeBtn = document.querySelector(`button[onclick="switchTab('${tabId}')"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+}
+
+// 2. فتح نافذة اجتماع جديد
+function showNewMeetingModal() {
+    // تفريغ الحقول
+    if(document.getElementById('meetTitle')) document.getElementById('meetTitle').value = '';
+    if(document.getElementById('meetDate')) document.getElementById('meetDate').value = '';
+    if(document.getElementById('meetContent')) document.getElementById('meetContent').value = '';
+    if(document.getElementById('dynamicToolsContainer')) document.getElementById('dynamicToolsContainer').innerHTML = '';
+    
+    // إظهار النافذة
+    const modal = document.getElementById('meetingModal');
+    if(modal) modal.classList.add('show');
+}
+
+// 3. أدوات الاجتماع الديناميكية (تصويت، إلخ)
+function addPollTool() {
+    const container = document.getElementById('dynamicToolsContainer');
+    const id = Date.now();
+    const html = `
+    <div class="dynamic-item poll-tool" id="tool_${id}" style="border:1px solid #eee; padding:10px; margin-bottom:10px; border-radius:5px;">
+        <div style="display:flex; justify-content:space-between;">
+            <h5 style="margin:0 0 10px 0; color:#007bff;">📊 تصويت</h5>
+            <span style="cursor:pointer; color:red;" onclick="removeTool('tool_${id}')">×</span>
+        </div>
+        <input type="text" class="form-control mb-2 poll-question" placeholder="عنوان التصويت">
+        <input type="text" class="form-control mb-1 poll-option" placeholder="خيار 1">
+        <input type="text" class="form-control mb-1 poll-option" placeholder="خيار 2">
+    </div>`;
+    container.insertAdjacentHTML('beforeend', html);
+}
+
+function addStudentFeedbackTool() {
+    const container = document.getElementById('dynamicToolsContainer');
+    const id = Date.now();
+    const html = `
+    <div class="dynamic-item feedback-tool" id="tool_${id}" style="border:1px solid #eee; padding:10px; margin-bottom:10px; border-radius:5px;">
+        <div style="display:flex; justify-content:space-between;">
+            <h5 style="margin:0 0 10px 0; color:#28a745;">👨‍🎓 مرئيات طلاب</h5>
+            <span style="cursor:pointer; color:red;" onclick="removeTool('tool_${id}')">×</span>
+        </div>
+        <p style="font-size:0.8rem; color:#777;">سيتم إضافة قائمة الطلاب لاحقاً عند الحفظ</p>
+    </div>`;
+    container.insertAdjacentHTML('beforeend', html);
+}
+
+function removeTool(id) {
+    document.getElementById(id).remove();
+}
+
+// ========================
+// 👥 إدارة الأعضاء (مع العزل)
 // ========================
 
 function loadMembers() {
@@ -52,10 +128,10 @@ function loadMembers() {
     }
 
     container.innerHTML = myMembers.map(m => `
-        <div class="member-card">
+        <div class="member-card" style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #eee;">
             <div class="member-info">
-                <h4>${m.name}</h4>
-                <span>${m.role}</span>
+                <strong>${m.name}</strong> <span style="font-size:0.85rem; color:#777;">(${m.role})</span>
+                <div style="font-size:0.8rem; color:#aaa;">المستخدم: ${m.username}</div>
             </div>
             <div class="member-actions">
                 <button class="btn btn-sm btn-outline-primary" onclick="editMember(${m.id})">تعديل</button>
@@ -78,16 +154,12 @@ function saveMember() {
     let allMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
 
     if (id) {
-        // تعديل عضو موجود
         const index = allMembers.findIndex(m => m.id == id);
-        if (index !== -1) {
-            allMembers[index] = { ...allMembers[index], name, role, username: user, password: pass };
-        }
+        if (index !== -1) allMembers[index] = { ...allMembers[index], name, role, username: user, password: pass };
     } else {
-        // إضافة عضو جديد (مع ربطه بالمعلم الحالي)
         allMembers.push({
             id: Date.now(),
-            ownerId: currentUser.id, // 🔥 ربط العضو بالمعلم
+            ownerId: currentUser.id, // 🔥 ربط بالمعلم
             name, role, username: user, password: pass
         });
     }
@@ -105,8 +177,28 @@ function deleteMember(id) {
     loadMembers();
 }
 
+function showAddMemberModal() {
+    document.getElementById('editMemId').value = '';
+    document.getElementById('memName').value = '';
+    document.getElementById('memUser').value = '';
+    document.getElementById('memPass').value = '';
+    document.getElementById('addMemberModal').classList.add('show');
+}
+
+function editMember(id) {
+    const m = JSON.parse(localStorage.getItem('committeeMembers')||'[]').find(x => x.id === id);
+    if(m) {
+        document.getElementById('editMemId').value = m.id;
+        document.getElementById('memName').value = m.name;
+        document.getElementById('memRole').value = m.role;
+        document.getElementById('memUser').value = m.username;
+        document.getElementById('memPass').value = m.password;
+        document.getElementById('addMemberModal').classList.add('show');
+    }
+}
+
 // ========================
-// 🤝 إدارة الاجتماعات (خاصة)
+// 🤝 إدارة الاجتماعات (مع العزل)
 // ========================
 
 async function loadMeetings() {
@@ -145,10 +237,8 @@ async function saveMeeting() {
 
     const newMeeting = {
         id: Date.now(),
-        teacherId: currentUser.id, // 🔥 ربط الاجتماع بالمعلم
-        title, date, content,
-        attendees: [], 
-        signatures: {}
+        teacherId: currentUser.id, // 🔥 ربط بالمعلم
+        title, date, content
     };
 
     await dbPut(newMeeting);
@@ -161,30 +251,23 @@ async function deleteMeeting(id) {
     if (confirm('حذف؟')) { await dbDelete(id); loadMeetings(); }
 }
 
-// أدوات المساعدة والنوافذ
-function showAddMemberModal() {
-    document.getElementById('editMemId').value = '';
-    document.getElementById('memName').value = '';
-    document.getElementById('memRole').value = 'عضو';
-    document.getElementById('memUser').value = '';
-    document.getElementById('memPass').value = '';
-    document.getElementById('addMemberModal').classList.add('show');
+// أدوات عامة
+function closeModal(id) { 
+    const modal = document.getElementById(id);
+    if(modal) modal.classList.remove('show');
 }
-function editMember(id) {
-    const members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    const m = members.find(x => x.id === id);
-    if (m) {
-        document.getElementById('editMemId').value = m.id;
-        document.getElementById('memName').value = m.name;
-        document.getElementById('memRole').value = m.role;
-        document.getElementById('memUser').value = m.username;
-        document.getElementById('memPass').value = m.password;
-        document.getElementById('addMemberModal').classList.add('show');
-    }
-}
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
-// تصدير الدوال
+// دالة مساعدة لجلب المستخدم
+function getCurrentUser() {
+    return JSON.parse(sessionStorage.getItem('currentUser') || '{}');
+}
+
+// تصدير الدوال (لكي تعمل في HTML)
+window.switchTab = switchTab;
+window.showNewMeetingModal = showNewMeetingModal;
+window.addPollTool = addPollTool;
+window.addStudentFeedbackTool = addStudentFeedbackTool;
+window.removeTool = removeTool;
 window.loadMembers = loadMembers;
 window.saveMember = saveMember;
 window.deleteMember = deleteMember;

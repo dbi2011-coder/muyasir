@@ -1,9 +1,9 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: تقرير رصيد الحصص (تصميمك الأصلي + عزل المعلمين)
+// الوصف: تقرير رصيد الحصص (تصميمك + عزل البيانات + إصلاح فوري)
 // ============================================
 
-// 1. حقن أنماط الطباعة (نفس الستايل الخاص بك بالضبط)
+// 1. حقن أنماط الطباعة (نفس تصميمك بالضبط)
 (function injectPrintStyles() {
     const style = document.createElement('style');
     style.innerHTML = `
@@ -36,26 +36,42 @@
     document.head.appendChild(style);
 })();
 
-// 2. دالة توليد التقرير
+// 2. الدالة الرئيسية لتوليد التقرير
 function generateClassBalanceReport() {
-    // أ) التأكد من المعلم
+    // أ) التأكد من المعلم الحالي
     let currentUser = null;
-    if (typeof getCurrentUser === 'function') currentUser = getCurrentUser();
-    else currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+    try {
+        if (typeof getCurrentUser === 'function') currentUser = getCurrentUser();
+        else currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+    } catch(e) { console.error(e); }
 
-    if (!currentUser) return alert("يرجى تسجيل الدخول");
+    if (!currentUser) return alert("يرجى تسجيل الدخول أولاً");
 
-    // ب) جلب بيانات الطلاب (مع الفلترة للمعلم الحالي)
-    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    // 🔥 هذا السطر يضمن ظهور طلابك أنت فقط
+    // 🔥 خطوة الإصلاح الفوري: ربط الطلاب "اليتامى" بالمعلم الحالي قبل جلبهم
+    let allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    let modified = false;
+    allUsers = allUsers.map(u => {
+        // إذا كان طالباً وليس لديه معلم، نربطه بك فوراً
+        if (u.role === 'student' && !u.teacherId) {
+            u.teacherId = currentUser.id;
+            modified = true;
+        }
+        return u;
+    });
+    // حفظ التعديلات إذا وجدت
+    if (modified) localStorage.setItem('users', JSON.stringify(allUsers));
+
+
+    // ب) جلب بيانات طلابك فقط (بعد الإصلاح)
+    // 🔥 الفلترة: نجلب فقط الطلاب الذين يحملون teacherId الخاص بك
     const myStudents = allUsers.filter(u => u.role === 'student' && u.teacherId == currentUser.id);
 
     if (myStudents.length === 0) {
-        alert("لا يوجد طلاب مسجلين باسمك.");
+        alert("لم يتم العثور على طلاب مسجلين بحسابك.\n(تأكد من إضافة طلاب أو أن البيانات تم تحديثها)");
         return;
     }
 
-    // ج) حساب الحصص (من جدولك الخاص)
+    // ج) حساب الحصص من جدولك الخاص
     const allSchedules = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     const mySchedule = allSchedules.filter(s => s.teacherId == currentUser.id);
 
@@ -64,7 +80,7 @@ function generateClassBalanceReport() {
         if (sess.students) sess.students.forEach(sid => studentCounts[sid] = (studentCounts[sid] || 0) + 1);
     });
 
-    // د) بناء التقرير (نفس HTML ملفك بالضبط)
+    // د) بناء التقرير (HTML)
     const printDate = new Date().toLocaleDateString('ar-SA');
 
     let html = `
@@ -89,13 +105,12 @@ function generateClassBalanceReport() {
     myStudents.forEach((student, index) => {
         const count = studentCounts[student.id] || 0;
         
-        // منطق الألوان الخاص بك
+        // منطق الألوان (نفس ملفك المرفق)
         let balanceText = count;
         let balanceClass = 'text-black';
         let status = 'منتظم';
 
-        // يمكنك تعديل الرقم 5 حسب المعيار الذي تريده
-        if (count < 5) { 
+        if (count < 5) { // يمكنك تعديل الرقم 5
             balanceClass = 'text-red'; 
             status = 'يحتاج دعم';
         } else if (count > 20) { 
@@ -117,7 +132,7 @@ function generateClassBalanceReport() {
 
     html += `</tbody></table>`;
 
-    // هـ) ذيل التقرير (نفس الدليل والفوتر الخاص بك)
+    // ذيل التقرير
     html += `
         <div style="margin-top:20px; font-size:0.9em; color:#555; border:1px solid #ccc; padding:10px; border-radius:5px; direction:rtl; text-align:right; font-family:'Times New Roman';">
             <strong>دليل التقرير:</strong>
@@ -137,37 +152,15 @@ function generateClassBalanceReport() {
         </div>
     `;
 
-    // عرض التقرير
+    // عرض النتيجة
     const previewArea = document.getElementById('reportPreviewArea');
     if (previewArea) {
         previewArea.innerHTML = html;
-        // إظهار الحاوية إذا كانت مخفية
+        // إظهار الحاوية في حال كانت مخفية
         const container = document.getElementById('reportPreviewContainer');
         if (container) container.style.display = 'block';
     }
 }
 
-// 3. إصلاح البيانات (لضمان ظهور الطلاب)
-(function forceFixData() {
-    let currentUser = null;
-    if (typeof getCurrentUser === 'function') currentUser = getCurrentUser();
-    else currentUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
-    
-    if (!currentUser) return;
-
-    let allUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    let modified = false;
-
-    allUsers = allUsers.map(u => {
-        if (u.role === 'student' && !u.teacherId) {
-            u.teacherId = currentUser.id;
-            modified = true;
-        }
-        return u;
-    });
-
-    if (modified) localStorage.setItem('users', JSON.stringify(allUsers));
-})();
-
-// تصدير
+// تصدير الدالة
 window.generateClassBalanceReport = generateClassBalanceReport;

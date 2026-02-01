@@ -1,13 +1,22 @@
 // ============================================
 // 📁 الملف: assets/js/committee.js
-// الوصف: إدارة اللجنة (نظام الاجتماعات التفاعلي + IndexedDB)
+// الوصف: إدارة اللجنة (عزل البيانات + واجهة المستخدم)
 // ============================================
 
-// --- إعدادات قاعدة البيانات ---
+// --- 1. إعدادات قاعدة البيانات IndexedDB ---
 const DB_NAME = 'CommitteeAppDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'meetings';
 let db;
+
+// دالة مساعدة لجلب المستخدم الحالي بأمان
+function getCurrentUser() {
+    const session = sessionStorage.getItem('currentUser');
+    if (!session) return null;
+    const data = JSON.parse(session);
+    // دعم الصيغتين: سواء كان الكائن مباشرة أو داخل خاصية user
+    return data.user || data;
+}
 
 function openDB() {
     return new Promise((resolve, reject) => {
@@ -22,298 +31,297 @@ function openDB() {
 }
 function dbGetAll() { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readonly'); const r = tx.objectStore(STORE_NAME).getAll(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
 function dbPut(item) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readwrite'); const r = tx.objectStore(STORE_NAME).put(item); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
-function dbGet(id) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readonly'); const r = tx.objectStore(STORE_NAME).get(id); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
 function dbDelete(id) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readwrite'); const r = tx.objectStore(STORE_NAME).delete(id); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
 
-// --- التشغيل ---
+// تشغيل عند التحميل
 document.addEventListener('DOMContentLoaded', async function() {
-    if(window.getCurrentUser) {
-        const user = window.getCurrentUser();
-        if(user && document.getElementById('userName')) document.getElementById('userName').textContent = user.name;
-    }
-    await openDB();
-    loadMembers();
-    loadMeetings();
+    try { await openDB(); } catch(e) { console.log('DB init error'); }
+    
+    // تحميل البيانات إذا كانت العناصر موجودة
+    if (document.getElementById('membersListContainer')) loadMembers();
+    if (document.getElementById('meetingsListContainer')) loadMeetings();
+
+    // تفعيل التبويب الافتراضي (الاجتماعات)
+    if(typeof switchTab === 'function') switchTab('meetingsSection');
 });
 
-function switchTab(tab) {
-    document.getElementById('members-view').classList.remove('active');
-    document.getElementById('meetings-view').classList.remove('active');
-    document.getElementById('tab-members').classList.remove('active');
-    document.getElementById('tab-meetings').classList.remove('active');
-    document.getElementById(`${tab}-view`).classList.add('active');
-    document.getElementById(`tab-${tab}`).classList.add('active');
+// ========================
+// 🖥️ دوال الواجهة (إصلاح الأخطاء ReferenceError)
+// ========================
+
+// 1. التبديل بين التبويبات (الاجتماعات / الأعضاء)
+function switchTab(tabId) {
+    // إخفاء كل الأقسام
+    const sections = ['meetingsSection', 'membersSection'];
+    sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = 'none';
+    });
+
+    // إظهار القسم المطلوب
+    const target = document.getElementById(tabId);
+    if (target) target.style.display = 'block';
+
+    // تحديث الأزرار النشطة
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    // محاولة تفعيل الزر الذي تم ضغطه (يعتمد على HTML)
+    const activeBtn = document.querySelector(`button[onclick="switchTab('${tabId}')"]`);
+    if (activeBtn) activeBtn.classList.add('active');
 }
 
-// --- 🛠️ أدوات بناء الاجتماع التفاعلي ---
+// 2. فتح نافذة اجتماع جديد
+function showNewMeetingModal() {
+    // تفريغ الحقول
+    if(document.getElementById('meetTitle')) document.getElementById('meetTitle').value = '';
+    if(document.getElementById('meetDate')) document.getElementById('meetDate').value = '';
+    if(document.getElementById('meetContent')) document.getElementById('meetContent').value = '';
+    if(document.getElementById('dynamicToolsContainer')) document.getElementById('dynamicToolsContainer').innerHTML = '';
+    
+    // إظهار النافذة
+    const modal = document.getElementById('meetingModal');
+    if(modal) modal.classList.add('show');
+}
 
-// إضافة أداة تصويت
+// 3. أدوات الاجتماع الديناميكية (تصويت، إلخ)
 function addPollTool() {
     const container = document.getElementById('dynamicToolsContainer');
     const id = Date.now();
     const html = `
-    <div class="dynamic-item poll-tool" id="tool_${id}">
-        <span class="remove-item-btn" onclick="removeTool('tool_${id}')">×</span>
-        <h5 style="margin:0 0 10px 0; color:#007bff;">📊 تصويت جديد</h5>
-        <input type="text" class="form-control mb-2 poll-question" placeholder="اكتب سؤال التصويت هنا (مثلاً: ما رأيكم في...؟)">
-        <div class="poll-options">
-            <input type="text" class="form-control mb-1 poll-option" placeholder="خيار 1 (مثال: موافق)">
-            <input type="text" class="form-control mb-1 poll-option" placeholder="خيار 2 (مثال: غير موافق)">
+    <div class="dynamic-item poll-tool" id="tool_${id}" style="border:1px solid #eee; padding:10px; margin-bottom:10px; border-radius:5px;">
+        <div style="display:flex; justify-content:space-between;">
+            <h5 style="margin:0 0 10px 0; color:#007bff;">📊 تصويت</h5>
+            <span style="cursor:pointer; color:red;" onclick="removeTool('tool_${id}')">×</span>
         </div>
-        <button class="btn btn-sm btn-light" onclick="addPollOption(this)">+ خيار إضافي</button>
+        <input type="text" class="form-control mb-2 poll-question" placeholder="عنوان التصويت">
+        <input type="text" class="form-control mb-1 poll-option" placeholder="خيار 1">
+        <input type="text" class="form-control mb-1 poll-option" placeholder="خيار 2">
     </div>`;
     container.insertAdjacentHTML('beforeend', html);
 }
 
-function addPollOption(btn) {
-    const container = btn.previousElementSibling;
-    container.insertAdjacentHTML('beforeend', `<input type="text" class="form-control mb-1 poll-option" placeholder="خيار جديد">`);
-}
-
-// إضافة أداة مرئيات الطلاب
 function addStudentFeedbackTool() {
     const container = document.getElementById('dynamicToolsContainer');
     const id = Date.now();
-    
-    // جلب قائمة الطلاب
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const students = users.filter(u => u.role === 'student');
-    
-    let options = '';
-    students.forEach(s => options += `<option value="${s.id}">${s.name}</option>`);
-
     const html = `
-    <div class="dynamic-item feedback-tool" id="tool_${id}">
-        <span class="remove-item-btn" onclick="removeTool('tool_${id}')">×</span>
-        <h5 style="margin:0 0 10px 0; color:#28a745;">👨‍🎓 طلب مرئيات عن طلاب</h5>
-        <p style="font-size:0.85em; color:#666;">اختر الطلاب الذين تريد من الأعضاء كتابة ملاحظات عنهم:</p>
-        <select multiple class="form-control student-select" style="height:100px;">
-            ${options}
-        </select>
-        <small style="color:#888;">اضغط Ctrl لتحديد أكثر من طالب</small>
+    <div class="dynamic-item feedback-tool" id="tool_${id}" style="border:1px solid #eee; padding:10px; margin-bottom:10px; border-radius:5px;">
+        <div style="display:flex; justify-content:space-between;">
+            <h5 style="margin:0 0 10px 0; color:#28a745;">👨‍🎓 مرئيات طلاب</h5>
+            <span style="cursor:pointer; color:red;" onclick="removeTool('tool_${id}')">×</span>
+        </div>
+        <p style="font-size:0.8rem; color:#777;">سيتم إضافة قائمة الطلاب لاحقاً عند الحفظ</p>
     </div>`;
     container.insertAdjacentHTML('beforeend', html);
 }
 
-function removeTool(id) { document.getElementById(id).remove(); }
-
-// ----------------------------------------------------------------
-
-// فتح نافذة اجتماع جديد
-function showNewMeetingModal() {
-    document.getElementById('meetTitle').value = '';
-    document.getElementById('meetDate').value = '';
-    document.getElementById('meetContent').value = '';
-    document.getElementById('meetPdf').value = '';
-    document.getElementById('meetImg').value = '';
-    document.getElementById('dynamicToolsContainer').innerHTML = ''; // تصفير الأدوات
-
-    // تحميل المدعوين
-    const members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    const list = document.getElementById('attendeesList');
-    list.innerHTML = '';
-    members.forEach(m => {
-        list.innerHTML += `<div><label style="cursor:pointer"><input type="checkbox" value="${m.id}" checked> ${m.name}</label></div>`;
-    });
-
-    document.getElementById('meetingModal').classList.add('show');
+function removeTool(id) {
+    document.getElementById(id).remove();
 }
 
-// ✅ حفظ الاجتماع (تفاعلي)
+// ========================
+// 👥 إدارة الأعضاء (مع العزل التام)
+// ========================
+
+function loadMembers() {
+    const container = document.getElementById('membersListContainer');
+    if (!container) return;
+
+    const currentUser = getCurrentUser();
+    if (!currentUser) return; // يجب أن يكون مسجلاً
+
+    const allMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
+    
+    // 🔥 العزل: جلب أعضاء هذا المعلم فقط (المقارنة بـ ownerId)
+    const myMembers = allMembers.filter(m => m.ownerId == currentUser.id);
+
+    if (myMembers.length === 0) {
+        container.innerHTML = '<p class="text-center text-muted" style="padding:20px;">لا يوجد أعضاء في لجنتك. أضف عضواً جديداً.</p>';
+        return;
+    }
+
+    container.innerHTML = myMembers.map(m => `
+        <div class="member-card" style="display:flex; justify-content:space-between; align-items:center; padding:15px; border-bottom:1px solid #eee; background:#fff; margin-bottom:10px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+            <div class="member-info">
+                <strong style="font-size:1.1em; color:#2c3e50;">${m.name}</strong> 
+                <span style="font-size:0.85rem; background:#e1f5fe; color:#0288d1; padding:2px 8px; border-radius:12px; margin-right:5px;">${m.role}</span>
+                <div style="font-size:0.85rem; color:#7f8c8d; margin-top:5px;">اسم المستخدم: ${m.username}</div>
+            </div>
+            <div class="member-actions" style="display:flex; gap:5px;">
+                <button class="btn btn-sm btn-outline-primary" onclick="editMember(${m.id})">✏️ تعديل</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteMember(${m.id})">🗑️ حذف</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function saveMember() {
+    const currentUser = getCurrentUser();
+    if (!currentUser) return;
+
+    const id = document.getElementById('editMemId').value;
+    const name = document.getElementById('memName').value;
+    const role = document.getElementById('memRole').value;
+    const user = document.getElementById('memUser').value;
+    const pass = document.getElementById('memPass').value;
+
+    if (!name || !user || !pass) return alert('البيانات ناقصة');
+
+    let allMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
+
+    if (id) {
+        // تعديل عضو موجود (يجب التأكد أنه يتبع للمعلم الحالي)
+        const index = allMembers.findIndex(m => m.id == id && m.ownerId == currentUser.id);
+        if (index !== -1) {
+            allMembers[index] = { ...allMembers[index], name, role, username: user, password: pass };
+        }
+    } else {
+        // إضافة عضو جديد (مع ربطه بالمعلم الحالي)
+        allMembers.push({
+            id: Date.now(),
+            ownerId: currentUser.id, // 🔥 مفتاح العزل
+            name, role, username: user, password: pass
+        });
+    }
+
+    localStorage.setItem('committeeMembers', JSON.stringify(allMembers));
+    closeModal('addMemberModal');
+    loadMembers();
+}
+
+function deleteMember(id) {
+    const currentUser = getCurrentUser();
+    if (!confirm('هل أنت متأكد من حذف هذا العضو؟')) return;
+    
+    let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
+    // حذف العضو فقط إذا كان يتبع للمعلم الحالي
+    members = members.filter(m => !(m.id == id && m.ownerId == currentUser.id));
+    
+    localStorage.setItem('committeeMembers', JSON.stringify(members));
+    loadMembers();
+}
+
+function showAddMemberModal() {
+    document.getElementById('editMemId').value = '';
+    document.getElementById('memName').value = '';
+    document.getElementById('memUser').value = '';
+    document.getElementById('memPass').value = '';
+    
+    // إعادة تعيين الدور للافتراضي
+    const roleSelect = document.getElementById('memRole');
+    if(roleSelect) roleSelect.value = 'عضو';
+
+    const modal = document.getElementById('addMemberModal');
+    if(modal) modal.classList.add('show');
+}
+
+function editMember(id) {
+    const currentUser = getCurrentUser();
+    // البحث فقط ضمن أعضاء المعلم الحالي
+    const m = JSON.parse(localStorage.getItem('committeeMembers')||'[]').find(x => x.id == id && x.ownerId == currentUser.id);
+    
+    if(m) {
+        document.getElementById('editMemId').value = m.id;
+        document.getElementById('memName').value = m.name;
+        document.getElementById('memRole').value = m.role;
+        document.getElementById('memUser').value = m.username;
+        document.getElementById('memPass').value = m.password;
+        
+        const modal = document.getElementById('addMemberModal');
+        if(modal) modal.classList.add('show');
+    }
+}
+
+// ========================
+// 🤝 إدارة الاجتماعات (مع العزل التام)
+// ========================
+
+async function loadMeetings() {
+    const container = document.getElementById('meetingsListContainer');
+    if (!container) return;
+    
+    const currentUser = getCurrentUser();
+    if (!currentUser) return;
+
+    const allMeetings = await dbGetAll();
+    
+    // 🔥 العزل: جلب اجتماعات هذا المعلم فقط (المقارنة بـ teacherId)
+    const myMeetings = allMeetings.filter(m => m.teacherId == currentUser.id);
+
+    if (myMeetings.length === 0) {
+        container.innerHTML = '<div class="alert alert-info" style="text-align:center;">لا توجد اجتماعات محفوظة. ابدأ اجتماعاً جديداً.</div>';
+        return;
+    }
+
+    container.innerHTML = myMeetings.map(m => `
+        <div class="meeting-card" style="background:white; border:1px solid #eee; border-radius:8px; padding:15px; margin-bottom:15px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+            <div style="display:flex; justify-content:space-between; align-items:start;">
+                <div>
+                    <h3 style="margin:0 0 5px 0; color:#2c3e50; font-size:1.2em;">${m.title}</h3>
+                    <span class="date" style="color:#7f8c8d; font-size:0.9em;">📅 ${m.date}</span>
+                    <p style="color:#555; margin-top:10px; font-size:0.95em;">${m.content ? m.content.substring(0, 100) + '...' : ''}</p>
+                </div>
+                <div class="actions">
+                    <button class="btn btn-sm btn-outline-danger" onclick="deleteMeeting(${m.id})">🗑️ حذف</button>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
 async function saveMeeting() {
+    const currentUser = getCurrentUser();
+    if (!currentUser) return;
+
     const title = document.getElementById('meetTitle').value;
     const date = document.getElementById('meetDate').value;
     const content = document.getElementById('meetContent').value;
 
-    if(!title || !date || !content) return alert('البيانات الإلزامية: العنوان، التاريخ، نص المحضر.');
-
-    // 1. جمع بيانات التصويت
-    const polls = [];
-    document.querySelectorAll('.poll-tool').forEach(div => {
-        const question = div.querySelector('.poll-question').value;
-        const options = [];
-        div.querySelectorAll('.poll-option').forEach(opt => { if(opt.value) options.push(opt.value); });
-        if(question && options.length > 0) polls.push({ id: Date.now() + Math.random(), question, options });
-    });
-
-    // 2. جمع بيانات مرئيات الطلاب
-    const requestedFeedback = [];
-    document.querySelectorAll('.feedback-tool').forEach(div => {
-        const select = div.querySelector('.student-select');
-        Array.from(select.selectedOptions).forEach(opt => {
-            requestedFeedback.push({ id: opt.value, name: opt.text });
-        });
-    });
-
-    // 3. المدعوين
-    const attendees = [];
-    document.querySelectorAll('#attendeesList input:checked').forEach(cb => attendees.push(parseInt(cb.value)));
-
-    // 4. المرفقات
-    const readFile = (file) => new Promise((res) => { const r = new FileReader(); r.onload = (e) => res(e.target.result); r.readAsDataURL(file); });
-    let pdfData = null, imgData = null;
-    const pdfInput = document.getElementById('meetPdf');
-    const imgInput = document.getElementById('meetImg');
-    
-    if (pdfInput.files[0]) pdfData = await readFile(pdfInput.files[0]);
-    if (imgInput.files[0]) imgData = await readFile(imgInput.files[0]);
+    if (!title) return alert('العنوان مطلوب');
 
     const newMeeting = {
         id: Date.now(),
+        teacherId: currentUser.id, // 🔥 مفتاح العزل
         title, date, content,
-        polls, // مصفوفة التصويتات
-        requestedFeedback, // مصفوفة الطلاب المطلوب الرأي عنهم
-        pdfFile: pdfData,
-        imgFile: imgData,
-        attendees,
-        signatures: {} // ستخزن هنا التوقيعات + إجابات الاستبيانات
+        // يمكن إضافة المزيد من الحقول هنا (مثل الحضور، الأدوات، إلخ)
     };
 
-    try {
-        await dbPut(newMeeting);
-        closeModal('meetingModal');
-        loadMeetings();
-        alert('تم حفظ الاجتماع بنجاح ✅');
-    } catch(e) { console.error(e); alert('خطأ في الحفظ'); }
+    await dbPut(newMeeting);
+    closeModal('meetingModal');
+    loadMeetings();
+    alert('تم حفظ الاجتماع بنجاح ✅');
 }
 
-// تحميل القائمة
-async function loadMeetings() {
-    const container = document.getElementById('meetingsListContainer');
-    try {
-        const meetings = await dbGetAll();
-        if(meetings.length === 0) { container.innerHTML = '<div class="alert alert-info">لا توجد اجتماعات.</div>'; return; }
-        meetings.sort((a, b) => new Date(b.date) - new Date(a.date));
-        let html = '';
-        meetings.forEach(m => {
-            const total = m.attendees ? m.attendees.length : 0;
-            const signed = m.signatures ? Object.keys(m.signatures).length : 0;
-            const progressColor = (signed === total && total > 0) ? 'green' : '#ffc107';
-            html += `<div class="meeting-card">
-                <div class="card-header-custom"><h3>${m.title}</h3><span class="card-date">${m.date}</span></div>
-                <div class="card-body-custom"><p>${(m.content||'').substring(0,80)}...</p></div>
-                <div class="card-footer-custom"><span style="font-size:0.85em; color:#666;">التوقيعات: <strong style="color:${progressColor}">${signed}</strong> / ${total}</span>
-                <div><button class="btn btn-sm btn-outline-primary" onclick="viewMeetingDetails(${m.id})">📄 عرض المحضر</button>
-                <button class="btn btn-sm btn-outline-danger" onclick="deleteMeeting(${m.id})">🗑️</button></div></div></div>`;
-        });
-        container.innerHTML = html;
-    } catch(e) { console.error(e); }
+async function deleteMeeting(id) {
+    const currentUser = getCurrentUser();
+    // تأكد أولاً أن الاجتماع يخص المعلم الحالي (أمان إضافي)
+    const allMeetings = await dbGetAll();
+    const meeting = allMeetings.find(m => m.id == id && m.teacherId == currentUser.id);
+    
+    if (meeting) {
+        if (confirm('هل أنت متأكد من حذف هذا الاجتماع؟')) { 
+            await dbDelete(id); 
+            loadMeetings(); 
+        }
+    }
 }
 
-// ✅ عرض المحضر + النتائج
-async function viewMeetingDetails(id) {
-    const meeting = await dbGet(id);
-    if(!meeting) return;
-
-    document.getElementById('viewMeetTitle').textContent = meeting.title;
-    document.getElementById('viewMeetDate').textContent = meeting.date;
-    document.getElementById('viewMeetContent').textContent = meeting.content;
-
-    // 1. عرض نتائج التصويت (تجميعي)
-    const pollsContainer = document.getElementById('viewPollsResults');
-    pollsContainer.innerHTML = '';
-    if(meeting.polls && meeting.polls.length > 0) {
-        pollsContainer.innerHTML = '<h5>📊 نتائج التصويت:</h5>';
-        meeting.polls.forEach(poll => {
-            // حساب النتائج
-            const counts = {};
-            poll.options.forEach(o => counts[o] = 0);
-            
-            // المرور على توقيعات الأعضاء وجمع الإجابات
-            Object.values(meeting.signatures || {}).forEach(sig => {
-                if(sig.pollResponses && sig.pollResponses[poll.id]) {
-                    const answer = sig.pollResponses[poll.id];
-                    if(counts[answer] !== undefined) counts[answer]++;
-                }
-            });
-
-            let resultsHtml = `<div class="poll-result-box"><strong>❓ ${poll.question}</strong><ul style="margin-top:5px;">`;
-            for(const [opt, count] of Object.entries(counts)) {
-                resultsHtml += `<li>${opt}: <strong>${count}</strong> صوت</li>`;
-            }
-            resultsHtml += `</ul></div>`;
-            pollsContainer.innerHTML += resultsHtml;
-        });
-    }
-
-    // 2. عرض مرئيات الطلاب (تجميعي)
-    const feedbackContainer = document.getElementById('viewStudentsFeedback');
-    feedbackContainer.innerHTML = '';
-    if(meeting.requestedFeedback && meeting.requestedFeedback.length > 0) {
-        feedbackContainer.innerHTML = '<h5>👨‍🎓 مرئيات الأعضاء عن الطلاب:</h5>';
-        meeting.requestedFeedback.forEach(req => {
-            let feedbackHtml = `<div class="student-feedback-box"><h6 style="color:#28a745; margin:0 0 5px 0;">${req.name}</h6>`;
-            let hasComments = false;
-            
-            Object.values(meeting.signatures || {}).forEach(sig => {
-                if(sig.feedbackResponses && sig.feedbackResponses[req.id]) {
-                    hasComments = true;
-                    feedbackHtml += `<div class="feedback-item"><strong>${sig.name}:</strong> ${sig.feedbackResponses[req.id]}</div>`;
-                }
-            });
-
-            if(!hasComments) feedbackHtml += `<small style="color:#999;">لا توجد ملاحظات بعد.</small>`;
-            feedbackHtml += `</div>`;
-            feedbackContainer.innerHTML += feedbackHtml;
-        });
-    }
-
-    // 3. المرفقات
-    const attachSection = document.getElementById('viewAttachments');
-    const pdfContainer = document.getElementById('pdfContainer');
-    const imgContainer = document.getElementById('imgContainer');
-    const imgDisplay = document.getElementById('viewMeetImgDisplay');
-
-    if(meeting.pdfFile || meeting.imgFile) {
-        attachSection.style.display = 'block';
-        if(meeting.pdfFile) pdfContainer.innerHTML = `<a href="${meeting.pdfFile}" download="attach.pdf" class="btn btn-sm btn-info">⬇️ تحميل PDF</a>`; else pdfContainer.innerHTML='';
-        if(meeting.imgFile) { imgDisplay.src = meeting.imgFile; imgContainer.style.display='block'; } else imgContainer.style.display='none';
-    } else { attachSection.style.display = 'none'; }
-
-    // 4. جدول التوقيعات
-    const tableBody = document.getElementById('signaturesTableBody');
-    tableBody.innerHTML = '';
-    const allMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    const attendeesList = allMembers.filter(m => (meeting.attendees||[]).includes(m.id));
-
-    if(attendeesList.length === 0) tableBody.innerHTML = '<tr><td colspan="3">لا يوجد مدعوون.</td></tr>';
-    else {
-        attendeesList.forEach(member => {
-            const sig = (meeting.signatures && meeting.signatures[member.id]) ? meeting.signatures[member.id] : null;
-            let sigHtml = sig 
-                ? (sig.image ? `<img src="${sig.image}" class="sig-img-display"><br><small>${new Date(sig.date).toLocaleDateString('ar-SA')}</small>` 
-                             : `<b>${sig.name}</b><br><small>(اعتماد)</small>`)
-                : `<span style="color:red">بانتظار التوقيع</span>`;
-            
-            tableBody.innerHTML += `<tr><td style="text-align:right;">أ/ ${member.name}</td><td>${member.role}</td><td>${sigHtml}</td></tr>`;
-        });
-    }
-
-    document.getElementById('viewMeetingModal').classList.add('show');
+// أدوات عامة
+function closeModal(id) { 
+    const modal = document.getElementById(id);
+    if(modal) modal.classList.remove('show');
 }
 
-// دوال مساعدة
-async function deleteMeeting(id) { if(confirm('حذف؟')) { await dbDelete(id); loadMeetings(); } }
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-// (دوال الأعضاء loadMembers, saveMember, editMember, deleteMember كما هي في السابق...)
-function loadMembers() { /*نفس الكود السابق*/ const members = JSON.parse(localStorage.getItem('committeeMembers') || '[]'); const container = document.getElementById('membersListContainer'); if (members.length === 0) { container.innerHTML = '<div class="alert alert-info">لا يوجد أعضاء.</div>'; return; } let html = '<table class="table table-bordered bg-white"><thead><tr><th>الاسم</th><th>الصفة</th><th>المستخدم</th><th>المرور</th><th>إجراءات</th></tr></thead><tbody>'; members.forEach(m => { html += `<tr><td>${m.name}</td><td>${m.role}</td><td>${m.username}</td><td>${m.password}</td><td><button class="btn btn-sm btn-primary" onclick="editMember(${m.id})">تعديل</button> <button class="btn btn-sm btn-danger" onclick="deleteMember(${m.id})">حذف</button></td></tr>`; }); html += '</tbody></table>'; container.innerHTML = html; }
-function showAddMemberModal() { document.getElementById('addMemberModal').classList.add('show'); document.getElementById('editMemId').value=''; document.getElementById('memName').value=''; document.getElementById('memUser').value=''; document.getElementById('memPass').value=''; }
-function saveMember() { const id = document.getElementById('editMemId').value; const name = document.getElementById('memName').value; const role = document.getElementById('memRole').value; const user = document.getElementById('memUser').value; const pass = document.getElementById('memPass').value; if(!name || !user || !pass) return alert('البيانات ناقصة'); let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]'); if(id) { const idx = members.findIndex(x => x.id == id); if(idx !== -1) members[idx] = { id: parseInt(id), name, role, username: user, password: pass }; } else { members.push({ id: Date.now(), name, role, username: user, password: pass }); } localStorage.setItem('committeeMembers', JSON.stringify(members)); closeModal('addMemberModal'); loadMembers(); }
-function editMember(id) { const m = JSON.parse(localStorage.getItem('committeeMembers')||'[]').find(x => x.id === id); if(m) { document.getElementById('editMemId').value = m.id; document.getElementById('memName').value = m.name; document.getElementById('memRole').value = m.role; document.getElementById('memUser').value = m.username; document.getElementById('memPass').value = m.password; document.getElementById('addMemberModal').classList.add('show'); } }
-function deleteMember(id) { if(confirm('حذف؟')) { let members = JSON.parse(localStorage.getItem('committeeMembers')||'[]'); members = members.filter(x => x.id !== id); localStorage.setItem('committeeMembers', JSON.stringify(members)); loadMembers(); } }
-
+// تصدير الدوال (لكي تعمل في HTML)
+window.switchTab = switchTab;
+window.showNewMeetingModal = showNewMeetingModal;
 window.addPollTool = addPollTool;
-window.addPollOption = addPollOption;
 window.addStudentFeedbackTool = addStudentFeedbackTool;
 window.removeTool = removeTool;
-window.showNewMeetingModal = showNewMeetingModal;
-window.saveMeeting = saveMeeting;
+window.loadMembers = loadMembers;
+window.saveMember = saveMember;
+window.deleteMember = deleteMember;
+window.showAddMemberModal = showAddMemberModal;
+window.editMember = editMember;
 window.loadMeetings = loadMeetings;
-window.viewMeetingDetails = viewMeetingDetails;
+window.saveMeeting = saveMeeting;
 window.deleteMeeting = deleteMeeting;
 window.closeModal = closeModal;
-window.switchTab = switchTab;
-window.showAddMemberModal = showAddMemberModal;
-window.saveMember = saveMember;
-window.editMember = editMember;
-window.deleteMember = deleteMember;

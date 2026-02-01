@@ -1,12 +1,13 @@
 // ============================================
 // 📁 الملف: assets/js/auth.js
-// الوصف: نظام المصادقة (إصلاح المدير + اللجنة + دالة الإشعارات)
+// الوصف: نظام الدخول (مع تفعيل الحظر للحسابات الموقوفة)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
     // 1. ربط زر الدخول
     const loginBtn = document.querySelector('button');
     if(loginBtn && (loginBtn.innerText.includes('دخول') || loginBtn.innerText.includes('Login'))) {
+        // استنساخ الزر لإزالة أي أحداث سابقة وتجنب التكرار
         const newBtn = loginBtn.cloneNode(true);
         loginBtn.parentNode.replaceChild(newBtn, loginBtn);
         newBtn.type = 'button';
@@ -29,18 +30,26 @@ function login() {
         return;
     }
 
-    // أ) البحث في المستخدمين الأساسيين (مدير / معلم)
+    // أ) البحث في المستخدمين الأساسيين (مدير / معلم / طالب)
     let users = JSON.parse(localStorage.getItem('users') || '[]');
     
-    // ضمان وجود المدير
+    // ضمان وجود المدير دائماً
     if (!users.some(u => u.role === 'admin')) {
-        users.push({ id: 1, name: "مدير النظام", username: "admin", password: "123", role: "admin" });
+        users.push({ id: 1, name: "مدير النظام", username: "admin", password: "123", role: "admin", status: "active" });
         localStorage.setItem('users', JSON.stringify(users));
     }
 
     let user = users.find(u => u.username == userInp && u.password == passInp);
 
-    // ب) البحث في أعضاء اللجنة (النظام القديم)
+    // 🔥🔥 هنا التعديل الجوهري: فحص حالة الحساب 🔥🔥
+    if (user) {
+        if (user.status === 'suspended' || user.status === 'موقوف') {
+            showAuthNotification("⛔ عذراً، تم إيقاف حسابك. يرجى مراجعة الإدارة.", "error");
+            return; // 🛑 إيقاف العملية ومنع الدخول
+        }
+    }
+
+    // ب) البحث في أعضاء اللجنة (إذا لم يكن مستخدماً عادياً)
     if (!user) {
         const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
         const member = committeeMembers.find(m => m.username === userInp && m.password === passInp);
@@ -51,15 +60,17 @@ function login() {
                 name: member.name,
                 username: member.username,
                 role: 'committee_member', 
-                title: member.role
+                title: member.role,
+                status: 'active' // أعضاء اللجنة فعالين افتراضياً
             };
         }
     }
 
-    // ج) التوجيه
+    // ج) التوجيه (إذا تم العثور على المستخدم وكان غير موقوف)
     if (user) {
         sessionStorage.setItem('currentUser', JSON.stringify(user));
         
+        // تحديد مسار التوجيه
         let prefix = window.location.href.includes('/pages/') ? '../' : 'pages/';
 
         if (user.role === 'admin') {
@@ -76,7 +87,7 @@ function login() {
     }
 }
 
-// 🔥 دالة الإشعارات (هذه التي كانت مفقودة وتسبب الخطأ)
+// دالة الإشعارات
 function showAuthNotification(message, type = 'info') {
     const div = document.createElement('div');
     div.innerText = message;
@@ -88,11 +99,19 @@ function showAuthNotification(message, type = 'info') {
     div.style.borderRadius = '8px';
     div.style.color = '#fff';
     div.style.fontWeight = 'bold';
-    div.style.zIndex = '9999';
+    div.style.zIndex = '99999';
+    div.style.boxShadow = '0 4px 10px rgba(0,0,0,0.2)';
+    div.style.fontFamily = 'Tajawal, sans-serif';
+    
+    // لون أحمر للخطأ/الحظر، وأخضر للنجاح
     div.style.backgroundColor = type === 'error' ? '#e74c3c' : '#2ecc71';
     
     document.body.appendChild(div);
-    setTimeout(() => div.remove(), 3000);
+    setTimeout(() => {
+        div.style.opacity = '0';
+        div.style.transition = 'opacity 0.5s';
+        setTimeout(() => div.remove(), 500);
+    }, 3000);
 }
 
 function checkAuth() {
@@ -113,6 +132,7 @@ function getCurrentUser() {
     return JSON.parse(sessionStorage.getItem('currentUser') || 'null');
 }
 
+// تصدير الدوال
 window.login = login;
 window.checkAuth = checkAuth;
 window.logout = logout;

@@ -1,56 +1,42 @@
 // ============================================
 // 📁 الملف: assets/js/committee.js
-// الوصف: إدارة اللجنة (النسخة الكاملة: عزل + عرض + طباعة)
+// الوصف: إدارة اللجنة (نسخة كاملة: عزل + طباعة + عرض + تصميم أصلي)
 // ============================================
 
+// --- إعدادات قاعدة البيانات ---
 const DB_NAME = 'CommitteeAppDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'meetings';
 let db;
 
-// --- أدوات عامة ---
-function getCurrentUser() {
-    try {
-        const session = sessionStorage.getItem('currentUser');
-        if (!session) return null;
-        const data = JSON.parse(session);
-        return data.user || data;
-    } catch (e) { return null; }
-}
-
-function openDB() {
-    return new Promise((resolve, reject) => {
-        const req = indexedDB.open(DB_NAME, DB_VERSION);
-        req.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-        };
-        req.onsuccess = (e) => { db = e.target.result; resolve(db); };
-        req.onerror = (e) => reject(e);
-    });
-}
-function dbGetAll() { return new Promise((res) => { const tx = db.transaction(STORE_NAME, 'readonly'); const r = tx.objectStore(STORE_NAME).getAll(); r.onsuccess = () => res(r.result); }); }
-function dbPut(item) { return new Promise((res) => { const tx = db.transaction(STORE_NAME, 'readwrite'); const r = tx.objectStore(STORE_NAME).put(item); r.onsuccess = () => res(); }); }
-function dbDelete(id) { return new Promise((res) => { const tx = db.transaction(STORE_NAME, 'readwrite'); const r = tx.objectStore(STORE_NAME).delete(id); r.onsuccess = () => res(); }); }
-
 // --- عند التحميل ---
 document.addEventListener('DOMContentLoaded', async function() {
     const user = getCurrentUser();
+    
+    // 1. تحديث اسم المعلم في الأعلى
     if (user) {
         if(document.getElementById('teacherName')) document.getElementById('teacherName').textContent = user.name;
         if(document.getElementById('userAvatar')) document.getElementById('userAvatar').textContent = user.name.charAt(0);
-        autoFixData(user); // إصلاح البيانات القديمة
+        
+        // 2. إصلاح البيانات القديمة (ربطها بك تلقائياً)
+        autoFixData(user);
     }
 
+    // 3. فتح قاعدة البيانات وتحميل القوائم
     try { await openDB(); } catch(e) { console.error(e); }
     
     loadMembers();
     loadMeetings();
 
+    // 4. تفعيل التبويب الافتراضي
     if(typeof switchTab === 'function') switchTab('meetingsSection');
 });
 
+// ==========================================
+// 🛠️ وظيفة إصلاح البيانات (لضمان ظهور بياناتك السابقة)
+// ==========================================
 function autoFixData(user) {
+    // إصلاح الأعضاء في LocalStorage
     let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     let mod = false;
     members = members.map(m => {
@@ -60,7 +46,9 @@ function autoFixData(user) {
     if (mod) localStorage.setItem('committeeMembers', JSON.stringify(members));
 }
 
-// --- التبويبات ---
+// ==========================================
+// 📱 التبويبات (Tabs)
+// ==========================================
 function switchTab(tabId) {
     ['meetingsSection', 'membersSection'].forEach(id => {
         const el = document.getElementById(id);
@@ -70,12 +58,13 @@ function switchTab(tabId) {
     if (target) target.style.display = 'block';
 
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    // محاولة تفعيل الزر النشط
     const activeBtn = document.querySelector(`button[onclick="switchTab('${tabId}')"]`);
     if (activeBtn) activeBtn.classList.add('active');
 }
 
 // ==========================================
-// 👥 الأعضاء (Members)
+// 👥 إدارة الأعضاء (Members) - مع العزل
 // ==========================================
 function loadMembers() {
     const container = document.getElementById('membersListContainer');
@@ -83,23 +72,30 @@ function loadMembers() {
 
     const user = getCurrentUser();
     const allMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
+    
+    // 🔥 العزل: عرض الأعضاء التابعين لهذا المعلم فقط
     const myMembers = allMembers.filter(m => m.ownerId == user.id);
 
     if (myMembers.length === 0) {
-        container.innerHTML = `<div class="text-center p-3 text-muted">لا يوجد أعضاء. <br><button class="btn btn-sm btn-primary mt-2" onclick="showAddMemberModal()">إضافة عضو</button></div>`;
+        container.innerHTML = `
+            <div class="text-center p-4 text-muted" style="border: 2px dashed #eee; border-radius: 10px;">
+                <p>لا يوجد أعضاء في لجنتك حالياً.</p>
+                <button class="btn btn-sm btn-primary mt-2" onclick="showAddMemberModal()">+ إضافة عضو جديد</button>
+            </div>`;
         return;
     }
 
+    // 🔥 التصميم الأصلي (Cards)
     container.innerHTML = myMembers.map(m => `
         <div class="member-card" style="display:flex; justify-content:space-between; align-items:center; background:white; padding:15px; margin-bottom:10px; border-radius:8px; border:1px solid #eee; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-            <div>
-                <h4 style="margin:0; color:#2c3e50;">${m.name}</h4>
-                <span class="badge bg-info text-white" style="font-size:0.8em;">${m.role}</span>
-                <div style="font-size:0.8em; color:#888;">${m.username}</div>
+            <div class="member-info">
+                <div style="font-weight:bold; font-size:1.1em; color:#2c3e50;">${m.name}</div>
+                <span class="badge" style="background:#e1f5fe; color:#0288d1; padding:3px 10px; border-radius:15px; font-size:0.85em; margin-top:5px; display:inline-block;">${m.role}</span>
+                <div style="font-size:0.85em; color:#95a5a6; margin-top:5px;">User: ${m.username}</div>
             </div>
-            <div>
-                <button class="btn btn-sm btn-outline-primary" onclick="editMember(${m.id})">✏️</button>
-                <button class="btn btn-sm btn-outline-danger" onclick="deleteMember(${m.id})">🗑️</button>
+            <div class="member-actions" style="display:flex; gap:5px;">
+                <button class="btn btn-sm btn-outline-primary" onclick="editMember(${m.id})" title="تعديل">✏️</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteMember(${m.id})" title="حذف">🗑️</button>
             </div>
         </div>
     `).join('');
@@ -116,28 +112,33 @@ function saveMember() {
     if (!name || !username || !pass) return alert('البيانات ناقصة');
 
     let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
+
     if (id) {
         const idx = members.findIndex(m => m.id == id);
         if (idx !== -1) members[idx] = { ...members[idx], name, role, username, password: pass };
     } else {
-        members.push({ id: Date.now(), ownerId: user.id, name, role, username, password: pass });
+        members.push({
+            id: Date.now(),
+            ownerId: user.id, // 🔥 ربط العضو بالمعلم
+            name, role, username, password: pass
+        });
     }
+
     localStorage.setItem('committeeMembers', JSON.stringify(members));
     closeModal('addMemberModal');
     loadMembers();
 }
 
 function deleteMember(id) {
-    if(confirm('حذف العضو؟')) {
-        let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-        members = members.filter(m => m.id != id);
-        localStorage.setItem('committeeMembers', JSON.stringify(members));
-        loadMembers();
-    }
+    if(!confirm('هل أنت متأكد من حذف العضو؟')) return;
+    let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
+    members = members.filter(m => m.id != id);
+    localStorage.setItem('committeeMembers', JSON.stringify(members));
+    loadMembers();
 }
 
 // ==========================================
-// 🤝 الاجتماعات (Meetings) - مع العرض والطباعة
+// 🤝 الاجتماعات (Meetings) - عزل + عرض + طباعة
 // ==========================================
 async function loadMeetings() {
     const container = document.getElementById('meetingsListContainer');
@@ -147,54 +148,59 @@ async function loadMeetings() {
     const user = getCurrentUser();
     let allMeetings = await dbGetAll();
 
-    // إصلاح الاجتماعات القديمة
+    // إصلاح الاجتماعات القديمة (IndexedDB Fix)
     let dbFix = false;
     for(let m of allMeetings) {
         if(!m.teacherId) { m.teacherId = user.id; await dbPut(m); dbFix = true; }
     }
     if(dbFix) allMeetings = await dbGetAll();
 
+    // 🔥 العزل: اجتماعاتي فقط
     const myMeetings = allMeetings.filter(m => m.teacherId == user.id);
 
     if (myMeetings.length === 0) {
-        container.innerHTML = '<div class="alert alert-info text-center">لا توجد اجتماعات محفوظة.</div>';
+        container.innerHTML = '<div class="alert alert-info text-center">لا توجد اجتماعات محفوظة. ابدأ اجتماعاً جديداً.</div>';
         return;
     }
 
+    // 🔥 التصميم الأصلي مع الأزرار المطلوبة
     container.innerHTML = myMeetings.map(m => `
-        <div class="meeting-card" style="background:white; border:1px solid #eee; padding:15px; margin-bottom:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+        <div class="meeting-card" style="background:white; border:1px solid #eee; padding:20px; margin-bottom:15px; border-radius:10px; box-shadow:0 3px 6px rgba(0,0,0,0.05); transition:transform 0.2s;">
             <div style="display:flex; justify-content:space-between; align-items:start;">
                 <div>
-                    <h3 style="margin:0 0 5px 0; font-size:1.2em; color:#2c3e50;">${m.title}</h3>
-                    <span style="color:#7f8c8d; font-size:0.9em;">📅 ${m.date}</span>
+                    <h3 style="margin:0 0 8px 0; font-size:1.3em; color:#2c3e50; font-weight:bold;">${m.title}</h3>
+                    <div style="color:#7f8c8d; font-size:0.9em; margin-bottom:10px;">📅 تاريخ الاجتماع: ${m.date}</div>
                 </div>
-                <div class="actions">
-                    <button class="btn btn-sm btn-info text-white" onclick="viewMeeting(${m.id})">👁️ عرض</button>
-                    <button class="btn btn-sm btn-secondary" onclick="printMeeting(${m.id})">🖨️ طباعة</button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteMeeting(${m.id})">🗑️</button>
+                <div class="actions" style="display:flex; gap:5px;">
+                    <button class="btn btn-sm btn-info text-white" onclick="viewMeeting(${m.id})" title="عرض التفاصيل">👁️ عرض</button>
+                    <button class="btn btn-sm btn-secondary" onclick="printMeeting(${m.id})" title="طباعة المحضر">🖨️ طباعة</button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteMeeting(${m.id})" title="حذف">🗑️</button>
                 </div>
             </div>
-            <p style="color:#555; margin-top:10px; font-size:0.95em;">${m.content ? m.content.substring(0, 100) + '...' : ''}</p>
+            <p style="color:#555; font-size:0.95em; line-height:1.5; border-top:1px solid #f1f1f1; padding-top:10px; margin-top:5px;">
+                ${m.content ? m.content.substring(0, 120) + (m.content.length > 120 ? '...' : '') : 'لا يوجد محتوى نصي'}
+            </p>
         </div>
     `).join('');
 }
 
-// وظيفة عرض المحضر
+// 👁️ وظيفة عرض المحضر (المفقودة سابقاً)
 async function viewMeeting(id) {
     if(!db) await openDB();
     const all = await dbGetAll();
     const m = all.find(x => x.id == id);
     if(m) {
-        document.getElementById('meetTitle').value = m.title;
-        document.getElementById('meetDate').value = m.date;
-        document.getElementById('meetContent').value = m.content;
-        // فتح النافذة
+        // تعبئة البيانات في المودال للعرض/التعديل
+        if(document.getElementById('meetTitle')) document.getElementById('meetTitle').value = m.title;
+        if(document.getElementById('meetDate')) document.getElementById('meetDate').value = m.date;
+        if(document.getElementById('meetContent')) document.getElementById('meetContent').value = m.content;
+        
         const modal = document.getElementById('meetingModal');
         if(modal) modal.classList.add('show');
     }
 }
 
-// وظيفة طباعة المحضر
+// 🖨️ وظيفة طباعة المحضر (المفقودة سابقاً)
 async function printMeeting(id) {
     if(!db) await openDB();
     const all = await dbGetAll();
@@ -203,34 +209,60 @@ async function printMeeting(id) {
 
     const user = getCurrentUser();
     
-    // إنشاء نافذة طباعة
+    // فتح نافذة طباعة رسمية
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
         <html dir="rtl">
         <head>
             <title>محضر اجتماع: ${m.title}</title>
             <style>
-                body { font-family: 'Times New Roman', serif; padding: 40px; }
+                body { font-family: 'Times New Roman', serif; padding: 40px; max-width: 800px; margin: 0 auto; }
                 .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px; }
-                .content { font-size: 14pt; line-height: 1.6; text-align: justify; white-space: pre-wrap; }
-                .meta { margin-bottom: 20px; font-weight: bold; }
-                .footer { margin-top: 50px; border-top: 1px solid #ccc; padding-top: 20px; text-align: center; font-size: 10pt; }
+                .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+                .meta-table td { padding: 8px; border: 1px solid #ccc; }
+                .meta-label { background: #f9f9f9; font-weight: bold; width: 150px; }
+                .content { font-size: 14pt; line-height: 1.8; text-align: justify; white-space: pre-wrap; border: 1px solid #ccc; padding: 20px; min-height: 300px; }
+                .footer { margin-top: 50px; display: flex; justify-content: space-between; page-break-inside: avoid; }
+                .sign-box { text-align: center; width: 200px; }
             </style>
         </head>
         <body>
             <div class="header">
                 <h2>محضر اجتماع لجنة صعوبات التعلم</h2>
-                <h3>الموضوع: ${m.title}</h3>
+                <h3>المملكة العربية السعودية - وزارة التعليم</h3>
             </div>
-            <div class="meta">
-                التاريخ: ${m.date}<br>
-                المعلم: ${user.name}
-            </div>
+            
+            <table class="meta-table">
+                <tr>
+                    <td class="meta-label">عنوان الاجتماع</td>
+                    <td>${m.title}</td>
+                </tr>
+                <tr>
+                    <td class="meta-label">التاريخ</td>
+                    <td>${m.date}</td>
+                </tr>
+                <tr>
+                    <td class="meta-label">المعلم المسؤول</td>
+                    <td>${user.name}</td>
+                </tr>
+            </table>
+
+            <h4>وقائع الاجتماع:</h4>
             <div class="content">
                 ${m.content}
             </div>
+
             <div class="footer">
-                تم استخراج هذا المحضر من نظام ميسر التعلم
+                <div class="sign-box">
+                    <p>معلم الصعوبات</p>
+                    <p><strong>${user.name}</strong></p>
+                    <p>التوقيع: ....................</p>
+                </div>
+                <div class="sign-box">
+                    <p>قائد المدرسة</p>
+                    <p><strong>....................</strong></p>
+                    <p>التوقيع: ....................</p>
+                </div>
             </div>
             <script>window.print();<\/script>
         </body>
@@ -247,29 +279,49 @@ async function saveMeeting() {
 
     if (!title) return alert('العنوان مطلوب');
 
-    // حفظ (أو تعديل إذا كان هناك ID مخفي - للتبسيط سننشئ جديداً دائماً أو نعتمد المنطق البسيط)
-    // هنا سنقوم بالحفظ كجديد دائماً كما في النسخة البسيطة، أو تحديث لو كنا نعدل
-    // سأعتمد الحفظ البسيط لضمان العمل
     const meeting = {
         id: Date.now(),
-        teacherId: user.id,
+        teacherId: user.id, // 🔥 بصمة المعلم
         title, date, content
     };
 
     await dbPut(meeting);
     closeModal('meetingModal');
     loadMeetings();
-    alert('تم الحفظ');
+    alert('تم الحفظ بنجاح');
 }
 
 async function deleteMeeting(id) {
-    if(confirm('حذف الاجتماع؟')) {
+    if(confirm('هل أنت متأكد من حذف الاجتماع؟')) {
         await dbDelete(id);
         loadMeetings();
     }
 }
 
-// --- نوافذ وأدوات ---
+// --- أدوات مساعدة ونوافذ ---
+function getCurrentUser() {
+    try {
+        const s = sessionStorage.getItem('currentUser');
+        const d = JSON.parse(s);
+        return d.user || d;
+    } catch(e) { return null; }
+}
+
+function openDB() {
+    return new Promise((res, rej) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        };
+        req.onsuccess = (e) => { db = e.target.result; res(db); };
+        req.onerror = (e) => rej(e);
+    });
+}
+function dbGetAll() { return new Promise((res) => { const tx = db.transaction(STORE_NAME, 'readonly'); const r = tx.objectStore(STORE_NAME).getAll(); r.onsuccess = () => res(r.result); }); }
+function dbPut(item) { return new Promise((res) => { const tx = db.transaction(STORE_NAME, 'readwrite'); const r = tx.objectStore(STORE_NAME).put(item); r.onsuccess = () => res(); }); }
+function dbDelete(id) { return new Promise((res) => { const tx = db.transaction(STORE_NAME, 'readwrite'); const r = tx.objectStore(STORE_NAME).delete(id); r.onsuccess = () => res(); }); }
+
 function showNewMeetingModal() {
     document.getElementById('meetTitle').value = '';
     document.getElementById('meetDate').value = '';
@@ -296,7 +348,7 @@ function editMember(id) {
 }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
-// تصدير الدوال
+// تصدير الدوال (لكي يتعرف عليها HTML)
 window.switchTab = switchTab;
 window.loadMembers = loadMembers;
 window.saveMember = saveMember;
@@ -305,8 +357,8 @@ window.showAddMemberModal = showAddMemberModal;
 window.editMember = editMember;
 window.showNewMeetingModal = showNewMeetingModal;
 window.loadMeetings = loadMeetings;
-window.viewMeeting = viewMeeting; // ✅
-window.printMeeting = printMeeting; // ✅
 window.saveMeeting = saveMeeting;
 window.deleteMeeting = deleteMeeting;
+window.viewMeeting = viewMeeting;
+window.printMeeting = printMeeting;
 window.closeModal = closeModal;

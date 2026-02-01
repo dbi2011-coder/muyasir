@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/committee.js
-// الوصف: إدارة اللجنة (نسخة كاملة: عزل + طباعة + عرض + تصميم أصلي)
+// الوصف: إدارة لجنة صعوبات التعلم (النسخة الأصلية كاملة الميزات + عزل البيانات)
 // ============================================
 
 // --- إعدادات قاعدة البيانات ---
@@ -18,25 +18,25 @@ document.addEventListener('DOMContentLoaded', async function() {
         if(document.getElementById('teacherName')) document.getElementById('teacherName').textContent = user.name;
         if(document.getElementById('userAvatar')) document.getElementById('userAvatar').textContent = user.name.charAt(0);
         
-        // 2. إصلاح البيانات القديمة (ربطها بك تلقائياً)
+        // 🔥 إصلاح البيانات القديمة تلقائياً (ربطها بك)
         autoFixData(user);
     }
 
-    // 3. فتح قاعدة البيانات وتحميل القوائم
+    // 2. فتح قاعدة البيانات وتحميل القوائم
     try { await openDB(); } catch(e) { console.error(e); }
     
     loadMembers();
     loadMeetings();
 
-    // 4. تفعيل التبويب الافتراضي
+    // 3. تفعيل التبويب الافتراضي
     if(typeof switchTab === 'function') switchTab('meetingsSection');
 });
 
 // ==========================================
-// 🛠️ وظيفة إصلاح البيانات (لضمان ظهور بياناتك السابقة)
+// 🛠️ دالة إصلاح البيانات (لضمان ظهور بياناتك السابقة)
 // ==========================================
 function autoFixData(user) {
-    // إصلاح الأعضاء في LocalStorage
+    // إصلاح الأعضاء
     let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     let mod = false;
     members = members.map(m => {
@@ -58,7 +58,6 @@ function switchTab(tabId) {
     if (target) target.style.display = 'block';
 
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    // محاولة تفعيل الزر النشط
     const activeBtn = document.querySelector(`button[onclick="switchTab('${tabId}')"]`);
     if (activeBtn) activeBtn.classList.add('active');
 }
@@ -85,7 +84,7 @@ function loadMembers() {
         return;
     }
 
-    // 🔥 التصميم الأصلي (Cards)
+    // عرض القائمة بتصميم البطاقات الأصلي
     container.innerHTML = myMembers.map(m => `
         <div class="member-card" style="display:flex; justify-content:space-between; align-items:center; background:white; padding:15px; margin-bottom:10px; border-radius:8px; border:1px solid #eee; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
             <div class="member-info">
@@ -138,7 +137,7 @@ function deleteMember(id) {
 }
 
 // ==========================================
-// 🤝 الاجتماعات (Meetings) - عزل + عرض + طباعة
+// 🤝 الاجتماعات (Meetings) - مع العرض والطباعة
 // ==========================================
 async function loadMeetings() {
     const container = document.getElementById('meetingsListContainer');
@@ -163,7 +162,7 @@ async function loadMeetings() {
         return;
     }
 
-    // 🔥 التصميم الأصلي مع الأزرار المطلوبة
+    // عرض الاجتماعات بتصميم البطاقات مع أزرار الطباعة والعرض
     container.innerHTML = myMeetings.map(m => `
         <div class="meeting-card" style="background:white; border:1px solid #eee; padding:20px; margin-bottom:15px; border-radius:10px; box-shadow:0 3px 6px rgba(0,0,0,0.05); transition:transform 0.2s;">
             <div style="display:flex; justify-content:space-between; align-items:start;">
@@ -184,13 +183,12 @@ async function loadMeetings() {
     `).join('');
 }
 
-// 👁️ وظيفة عرض المحضر (المفقودة سابقاً)
+// 👁️ وظيفة عرض المحضر
 async function viewMeeting(id) {
     if(!db) await openDB();
     const all = await dbGetAll();
     const m = all.find(x => x.id == id);
     if(m) {
-        // تعبئة البيانات في المودال للعرض/التعديل
         if(document.getElementById('meetTitle')) document.getElementById('meetTitle').value = m.title;
         if(document.getElementById('meetDate')) document.getElementById('meetDate').value = m.date;
         if(document.getElementById('meetContent')) document.getElementById('meetContent').value = m.content;
@@ -200,7 +198,7 @@ async function viewMeeting(id) {
     }
 }
 
-// 🖨️ وظيفة طباعة المحضر (المفقودة سابقاً)
+// 🖨️ وظيفة طباعة المحضر (الرسمية)
 async function printMeeting(id) {
     if(!db) await openDB();
     const all = await dbGetAll();
@@ -209,7 +207,6 @@ async function printMeeting(id) {
 
     const user = getCurrentUser();
     
-    // فتح نافذة طباعة رسمية
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
         <html dir="rtl">
@@ -231,38 +228,16 @@ async function printMeeting(id) {
                 <h2>محضر اجتماع لجنة صعوبات التعلم</h2>
                 <h3>المملكة العربية السعودية - وزارة التعليم</h3>
             </div>
-            
             <table class="meta-table">
-                <tr>
-                    <td class="meta-label">عنوان الاجتماع</td>
-                    <td>${m.title}</td>
-                </tr>
-                <tr>
-                    <td class="meta-label">التاريخ</td>
-                    <td>${m.date}</td>
-                </tr>
-                <tr>
-                    <td class="meta-label">المعلم المسؤول</td>
-                    <td>${user.name}</td>
-                </tr>
+                <tr><td class="meta-label">عنوان الاجتماع</td><td>${m.title}</td></tr>
+                <tr><td class="meta-label">التاريخ</td><td>${m.date}</td></tr>
+                <tr><td class="meta-label">المعلم المسؤول</td><td>${user.name}</td></tr>
             </table>
-
             <h4>وقائع الاجتماع:</h4>
-            <div class="content">
-                ${m.content}
-            </div>
-
+            <div class="content">${m.content}</div>
             <div class="footer">
-                <div class="sign-box">
-                    <p>معلم الصعوبات</p>
-                    <p><strong>${user.name}</strong></p>
-                    <p>التوقيع: ....................</p>
-                </div>
-                <div class="sign-box">
-                    <p>قائد المدرسة</p>
-                    <p><strong>....................</strong></p>
-                    <p>التوقيع: ....................</p>
-                </div>
+                <div class="sign-box"><p>معلم الصعوبات</p><p><strong>${user.name}</strong></p><p>التوقيع: ....................</p></div>
+                <div class="sign-box"><p>قائد المدرسة</p><p><strong>....................</strong></p><p>التوقيع: ....................</p></div>
             </div>
             <script>window.print();<\/script>
         </body>

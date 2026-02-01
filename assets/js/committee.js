@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/committee.js
-// الوصف: إدارة اللجنة (عزل البيانات + واجهة المستخدم)
+// الوصف: إدارة اللجنة (عزل البيانات + عرض اسم المعلم)
 // ============================================
 
 // --- 1. إعدادات قاعدة البيانات IndexedDB ---
@@ -14,7 +14,6 @@ function getCurrentUser() {
     const session = sessionStorage.getItem('currentUser');
     if (!session) return null;
     const data = JSON.parse(session);
-    // دعم الصيغتين: سواء كان الكائن مباشرة أو داخل خاصية user
     return data.user || data;
 }
 
@@ -35,54 +34,57 @@ function dbDelete(id) { return new Promise((res, rej) => { const tx = db.transac
 
 // تشغيل عند التحميل
 document.addEventListener('DOMContentLoaded', async function() {
+    // 1. عرض اسم المعلم في الأعلى (هذا هو الجزء الذي كان ناقصاً)
+    const currentUser = getCurrentUser();
+    if (currentUser) {
+        // يدعم المعرفين المحتملين (teacherName أو userName)
+        const nameEl = document.getElementById('teacherName') || document.getElementById('userName');
+        if (nameEl) nameEl.textContent = currentUser.name;
+
+        const avatarEl = document.getElementById('userAvatar');
+        if (avatarEl) avatarEl.textContent = currentUser.name.charAt(0);
+    }
+
+    // 2. فتح قاعدة البيانات
     try { await openDB(); } catch(e) { console.log('DB init error'); }
     
-    // تحميل البيانات إذا كانت العناصر موجودة
+    // 3. تحميل البيانات
     if (document.getElementById('membersListContainer')) loadMembers();
     if (document.getElementById('meetingsListContainer')) loadMeetings();
 
-    // تفعيل التبويب الافتراضي (الاجتماعات)
+    // 4. تفعيل التبويب الافتراضي
     if(typeof switchTab === 'function') switchTab('meetingsSection');
 });
 
 // ========================
-// 🖥️ دوال الواجهة (إصلاح الأخطاء ReferenceError)
+// 🖥️ دوال الواجهة
 // ========================
 
-// 1. التبديل بين التبويبات (الاجتماعات / الأعضاء)
 function switchTab(tabId) {
-    // إخفاء كل الأقسام
     const sections = ['meetingsSection', 'membersSection'];
     sections.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });
 
-    // إظهار القسم المطلوب
     const target = document.getElementById(tabId);
     if (target) target.style.display = 'block';
 
-    // تحديث الأزرار النشطة
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    // محاولة تفعيل الزر الذي تم ضغطه (يعتمد على HTML)
     const activeBtn = document.querySelector(`button[onclick="switchTab('${tabId}')"]`);
     if (activeBtn) activeBtn.classList.add('active');
 }
 
-// 2. فتح نافذة اجتماع جديد
 function showNewMeetingModal() {
-    // تفريغ الحقول
     if(document.getElementById('meetTitle')) document.getElementById('meetTitle').value = '';
     if(document.getElementById('meetDate')) document.getElementById('meetDate').value = '';
     if(document.getElementById('meetContent')) document.getElementById('meetContent').value = '';
     if(document.getElementById('dynamicToolsContainer')) document.getElementById('dynamicToolsContainer').innerHTML = '';
     
-    // إظهار النافذة
     const modal = document.getElementById('meetingModal');
     if(modal) modal.classList.add('show');
 }
 
-// 3. أدوات الاجتماع الديناميكية (تصويت، إلخ)
 function addPollTool() {
     const container = document.getElementById('dynamicToolsContainer');
     const id = Date.now();
@@ -118,7 +120,7 @@ function removeTool(id) {
 }
 
 // ========================
-// 👥 إدارة الأعضاء (مع العزل التام)
+// 👥 إدارة الأعضاء (معزولة)
 // ========================
 
 function loadMembers() {
@@ -126,11 +128,11 @@ function loadMembers() {
     if (!container) return;
 
     const currentUser = getCurrentUser();
-    if (!currentUser) return; // يجب أن يكون مسجلاً
+    if (!currentUser) return;
 
     const allMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     
-    // 🔥 العزل: جلب أعضاء هذا المعلم فقط (المقارنة بـ ownerId)
+    // 🔥 العزل: جلب أعضاء هذا المعلم فقط
     const myMembers = allMembers.filter(m => m.ownerId == currentUser.id);
 
     if (myMembers.length === 0) {
@@ -139,7 +141,7 @@ function loadMembers() {
     }
 
     container.innerHTML = myMembers.map(m => `
-        <div class="member-card" style="display:flex; justify-content:space-between; align-items:center; padding:15px; border-bottom:1px solid #eee; background:#fff; margin-bottom:10px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+        <div class="member-card" style="display:flex; justify-content:space-between; align-items:center; padding:15px; border-bottom:1px solid #eee; background:#fff; margin-bottom:10px; border-radius:8px;">
             <div class="member-info">
                 <strong style="font-size:1.1em; color:#2c3e50;">${m.name}</strong> 
                 <span style="font-size:0.85rem; background:#e1f5fe; color:#0288d1; padding:2px 8px; border-radius:12px; margin-right:5px;">${m.role}</span>
@@ -168,16 +170,14 @@ function saveMember() {
     let allMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
 
     if (id) {
-        // تعديل عضو موجود (يجب التأكد أنه يتبع للمعلم الحالي)
         const index = allMembers.findIndex(m => m.id == id && m.ownerId == currentUser.id);
         if (index !== -1) {
             allMembers[index] = { ...allMembers[index], name, role, username: user, password: pass };
         }
     } else {
-        // إضافة عضو جديد (مع ربطه بالمعلم الحالي)
         allMembers.push({
             id: Date.now(),
-            ownerId: currentUser.id, // 🔥 مفتاح العزل
+            ownerId: currentUser.id, // 🔥 ربط بالمعلم
             name, role, username: user, password: pass
         });
     }
@@ -192,7 +192,6 @@ function deleteMember(id) {
     if (!confirm('هل أنت متأكد من حذف هذا العضو؟')) return;
     
     let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    // حذف العضو فقط إذا كان يتبع للمعلم الحالي
     members = members.filter(m => !(m.id == id && m.ownerId == currentUser.id));
     
     localStorage.setItem('committeeMembers', JSON.stringify(members));
@@ -204,34 +203,26 @@ function showAddMemberModal() {
     document.getElementById('memName').value = '';
     document.getElementById('memUser').value = '';
     document.getElementById('memPass').value = '';
-    
-    // إعادة تعيين الدور للافتراضي
-    const roleSelect = document.getElementById('memRole');
-    if(roleSelect) roleSelect.value = 'عضو';
-
     const modal = document.getElementById('addMemberModal');
     if(modal) modal.classList.add('show');
 }
 
 function editMember(id) {
     const currentUser = getCurrentUser();
-    // البحث فقط ضمن أعضاء المعلم الحالي
     const m = JSON.parse(localStorage.getItem('committeeMembers')||'[]').find(x => x.id == id && x.ownerId == currentUser.id);
-    
     if(m) {
         document.getElementById('editMemId').value = m.id;
         document.getElementById('memName').value = m.name;
         document.getElementById('memRole').value = m.role;
         document.getElementById('memUser').value = m.username;
         document.getElementById('memPass').value = m.password;
-        
         const modal = document.getElementById('addMemberModal');
         if(modal) modal.classList.add('show');
     }
 }
 
 // ========================
-// 🤝 إدارة الاجتماعات (مع العزل التام)
+// 🤝 إدارة الاجتماعات (معزولة)
 // ========================
 
 async function loadMeetings() {
@@ -243,7 +234,7 @@ async function loadMeetings() {
 
     const allMeetings = await dbGetAll();
     
-    // 🔥 العزل: جلب اجتماعات هذا المعلم فقط (المقارنة بـ teacherId)
+    // 🔥 العزل: جلب اجتماعات هذا المعلم فقط
     const myMeetings = allMeetings.filter(m => m.teacherId == currentUser.id);
 
     if (myMeetings.length === 0) {
@@ -279,38 +270,33 @@ async function saveMeeting() {
 
     const newMeeting = {
         id: Date.now(),
-        teacherId: currentUser.id, // 🔥 مفتاح العزل
-        title, date, content,
-        // يمكن إضافة المزيد من الحقول هنا (مثل الحضور، الأدوات، إلخ)
+        teacherId: currentUser.id, // 🔥 ربط بالمعلم
+        title, date, content
     };
 
     await dbPut(newMeeting);
     closeModal('meetingModal');
     loadMeetings();
-    alert('تم حفظ الاجتماع بنجاح ✅');
+    alert('تم حفظ الاجتماع ✅');
 }
 
 async function deleteMeeting(id) {
     const currentUser = getCurrentUser();
-    // تأكد أولاً أن الاجتماع يخص المعلم الحالي (أمان إضافي)
     const allMeetings = await dbGetAll();
     const meeting = allMeetings.find(m => m.id == id && m.teacherId == currentUser.id);
     
-    if (meeting) {
-        if (confirm('هل أنت متأكد من حذف هذا الاجتماع؟')) { 
-            await dbDelete(id); 
-            loadMeetings(); 
-        }
+    if (meeting && confirm('هل أنت متأكد من حذف هذا الاجتماع؟')) { 
+        await dbDelete(id); 
+        loadMeetings(); 
     }
 }
 
-// أدوات عامة
 function closeModal(id) { 
     const modal = document.getElementById(id);
     if(modal) modal.classList.remove('show');
 }
 
-// تصدير الدوال (لكي تعمل في HTML)
+// تصدير الدوال
 window.switchTab = switchTab;
 window.showNewMeetingModal = showNewMeetingModal;
 window.addPollTool = addPollTool;

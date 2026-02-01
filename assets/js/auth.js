@@ -1,18 +1,19 @@
 // ============================================
 // 📁 الملف: assets/js/auth.js
-// الوصف: نظام الدخول الأساسي + دعم عضو اللجنة (تم إصلاح المدير)
+// الوصف: نظام المصادقة (إصلاح المدير + اللجنة + دالة الإشعارات)
 // ============================================
 
-// عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. ربط زر الدخول (لمنع تحديث الصفحة)
+    // 1. ربط زر الدخول
     const loginBtn = document.querySelector('button');
     if(loginBtn && (loginBtn.innerText.includes('دخول') || loginBtn.innerText.includes('Login'))) {
-        loginBtn.type = 'button';
-        loginBtn.onclick = login;
+        const newBtn = loginBtn.cloneNode(true);
+        loginBtn.parentNode.replaceChild(newBtn, loginBtn);
+        newBtn.type = 'button';
+        newBtn.addEventListener('click', login);
     }
     
-    // 2. التحقق من الجلسة (إلا في صفحة الدخول والرئيسية)
+    // 2. التحقق من الجلسة (إلا في صفحة الدخول)
     if (!window.location.href.includes('index.html') && !window.location.href.includes('login.html')) {
         checkAuth();
     }
@@ -20,31 +21,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // دالة تسجيل الدخول
 function login() {
-    // جلب البيانات من الحقول
     const userInp = document.getElementById('username').value.trim();
     const passInp = document.getElementById('password').value.trim();
 
     if (!userInp || !passInp) {
-        alert("الرجاء إدخال البيانات");
+        showAuthNotification("الرجاء إدخال البيانات", "error");
         return;
     }
 
-    // 1. البحث في المستخدمين الأساسيين (المعلم / الطلاب / المدير)
+    // أ) البحث في المستخدمين الأساسيين (مدير / معلم)
     let users = JSON.parse(localStorage.getItem('users') || '[]');
     
-    // 🔥 إصلاح المدير: التأكد من وجود حساب المدير في القائمة
+    // ضمان وجود المدير
     if (!users.some(u => u.role === 'admin')) {
-        // إذا لم يكن المدير موجوداً، ننشئه مؤقتاً للتحقق
-        users.push({
-            id: 1, name: "مدير النظام", username: "admin", password: "123", role: "admin"
-        });
-        // (اختياري: يمكننا حفظه في localStorage لضمان بقائه)
+        users.push({ id: 1, name: "مدير النظام", username: "admin", password: "123", role: "admin" });
         localStorage.setItem('users', JSON.stringify(users));
     }
 
     let user = users.find(u => u.username == userInp && u.password == passInp);
 
-    // 2. === البحث في أعضاء اللجنة (كما في النسخة السابقة تماماً) ===
+    // ب) البحث في أعضاء اللجنة (النظام القديم)
     if (!user) {
         const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
         const member = committeeMembers.find(m => m.username === userInp && m.password === passInp);
@@ -54,43 +50,51 @@ function login() {
                 id: member.id,
                 name: member.name,
                 username: member.username,
-                role: 'committee_member', // الدور كما هو في النسخة السابقة
+                role: 'committee_member', 
                 title: member.role
             };
         }
     }
 
-    // 3. التوجيه حسب الصلاحية
+    // ج) التوجيه
     if (user) {
-        // حفظ المستخدم في الجلسة
         sessionStorage.setItem('currentUser', JSON.stringify(user));
         
-        // تحديد المسار الصحيح (مع مراعاة مكان الملف الحالي)
-        let prefix = '';
-        if (window.location.href.includes('/pages/')) {
-            prefix = '../'; // نحن داخل مجلد فرعي
-        } else {
-            prefix = 'pages/'; // نحن في الجذر
-        }
+        let prefix = window.location.href.includes('/pages/') ? '../' : 'pages/';
 
-        // التوجيه
         if (user.role === 'admin') {
-            // ✅ إصلاح توجيه المدير: يذهب للوحة المدير
             window.location.href = prefix + 'admin/dashboard.html';
         } else if (user.role === 'teacher') {
             window.location.href = prefix + 'teacher/dashboard.html';
         } else if (user.role === 'committee_member') {
-            // ✅ توجيه عضو اللجنة (لم نغيره، بقي كما كان)
             window.location.href = prefix + 'member/dashboard.html'; 
         } else {
             window.location.href = prefix + 'student/dashboard.html';
         }
     } else {
-        alert("بيانات الدخول غير صحيحة!");
+        showAuthNotification("بيانات الدخول غير صحيحة!", "error");
     }
 }
 
-// دالة التحقق من الصلاحية
+// 🔥 دالة الإشعارات (هذه التي كانت مفقودة وتسبب الخطأ)
+function showAuthNotification(message, type = 'info') {
+    const div = document.createElement('div');
+    div.innerText = message;
+    div.style.position = 'fixed';
+    div.style.top = '20px';
+    div.style.left = '50%';
+    div.style.transform = 'translateX(-50%)';
+    div.style.padding = '15px 30px';
+    div.style.borderRadius = '8px';
+    div.style.color = '#fff';
+    div.style.fontWeight = 'bold';
+    div.style.zIndex = '9999';
+    div.style.backgroundColor = type === 'error' ? '#e74c3c' : '#2ecc71';
+    
+    document.body.appendChild(div);
+    setTimeout(() => div.remove(), 3000);
+}
+
 function checkAuth() {
     const session = sessionStorage.getItem('currentUser');
     if (!session) {
@@ -100,20 +104,17 @@ function checkAuth() {
     return JSON.parse(session);
 }
 
-// دالة تسجيل الخروج
 function logout() {
     sessionStorage.removeItem('currentUser');
     window.location.href = '../../index.html';
 }
 
-// دالة مساعدة لجلب المستخدم الحالي
 function getCurrentUser() {
-    const session = sessionStorage.getItem('currentUser');
-    return session ? JSON.parse(session) : null;
+    return JSON.parse(sessionStorage.getItem('currentUser') || 'null');
 }
 
-// تصدير الدوال لتكون متاحة للنظام
 window.login = login;
 window.checkAuth = checkAuth;
 window.logout = logout;
 window.getCurrentUser = getCurrentUser;
+window.showAuthNotification = showAuthNotification;

@@ -1,26 +1,40 @@
 // ============================================
 // 📁 الملف: assets/js/admin.js
-// الوصف: لوحة تحكم المدير (الأزرار الكاملة + عزل البيانات)
+// الوصف: لوحة تحكم المدير (إصلاح مشكلة التكرار RangeError + الأزرار الكاملة)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. التحقق من الصلاحية
-    const user = checkAuth();
+    // 1. التحقق من الصلاحية (تم تغيير اسم الدالة لمنع التضارب)
+    const user = getAdminSession(); 
     if (!user || user.role !== 'admin') {
         window.location.href = '../../index.html';
         return;
     }
     
-    // 2. تحديث الواجهة
-    if(document.getElementById('userName')) document.getElementById('userName').textContent = user.name;
+    // 2. تحديث الواجهة باسم المدير
+    if(document.getElementById('userName')) {
+        document.getElementById('userName').textContent = user.name;
+    }
     
-    // 3. تحميل البيانات (مع حماية ضد الأخطاء)
+    // 3. تحميل البيانات
     if (document.getElementById('teachersTableBody')) loadTeachersData();
     if (document.getElementById('teachersCount')) loadAdminStats();
 });
 
 // ==========================================
-// 1. عرض البيانات (الجدول + الأزرار)
+// 1. دالة المصادقة الآمنة (بديلة لـ checkAuth المسببة للمشكلة)
+// ==========================================
+function getAdminSession() {
+    try {
+        const session = sessionStorage.getItem('currentUser');
+        return session ? JSON.parse(session) : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+// ==========================================
+// 2. عرض البيانات (الجدول + الأزرار الكاملة)
 // ==========================================
 
 function loadTeachersData() {
@@ -30,7 +44,7 @@ function loadTeachersData() {
     
     if (!tableBody) return;
 
-    // إخفاء التحميل
+    // إخفاء مؤشر التحميل إن وجد
     if(loadingState) loadingState.style.display = 'none';
     
     const users = JSON.parse(localStorage.getItem('users') || '[]');
@@ -44,16 +58,20 @@ function loadTeachersData() {
 
     if(emptyState) emptyState.style.display = 'none';
 
-    // 🔥 بناء الجدول مع الأزرار القديمة
+    // 🔥 بناء الجدول مع كافة الأزرار المطلوبة
     tableBody.innerHTML = teachers.map((teacher, index) => {
-        // حساب عدد طلابه (للتأكد من العزل)
+        // عدد طلابه (للتأكد من العزل)
         const studentCount = users.filter(u => u.role === 'student' && u.teacherId == teacher.id).length;
         
-        // تحديد حالة الزر (تفعيل/إيقاف)
-        const statusText = teacher.status === 'suspended' ? 'موقوف' : 'نشط';
-        const statusClass = teacher.status === 'suspended' ? 'bg-danger' : 'bg-success';
-        const toggleBtnText = teacher.status === 'suspended' ? 'تفعيل' : 'إيقاف';
-        const toggleBtnClass = teacher.status === 'suspended' ? 'btn-success' : 'btn-warning';
+        // حالة الزر واللون
+        const isActive = teacher.status !== 'suspended';
+        const statusBadge = isActive 
+            ? '<span class="badge bg-success" style="padding:5px 10px; color:white; border-radius:5px;">نشط</span>' 
+            : '<span class="badge bg-danger" style="padding:5px 10px; color:white; border-radius:5px;">موقوف</span>';
+            
+        const toggleBtnText = isActive ? 'إيقاف' : 'تفعيل';
+        const toggleBtnClass = isActive ? 'btn-warning' : 'btn-success';
+        const toggleIcon = isActive ? '⚡' : '✅';
 
         return `
             <tr>
@@ -62,19 +80,22 @@ function loadTeachersData() {
                 <td>${teacher.username}</td>
                 <td>${teacher.phone || '-'}</td>
                 <td>${studentCount}</td>
-                <td><span class="badge ${statusClass}" style="padding:5px 10px; color:white; border-radius:5px;">${statusText}</span></td>
+                <td>${statusBadge}</td>
                 <td>
                     <div class="action-buttons" style="display:flex; gap:5px; justify-content:center;">
-                        <button class="btn btn-sm btn-primary" onclick="editTeacher(${teacher.id})" title="تعديل">
+                        <button class="btn btn-sm btn-primary" onclick="editTeacher(${teacher.id})" title="تعديل البيانات">
                              تعديل ✏️
                         </button>
-                        <button class="btn btn-sm btn-info" onclick="viewTeacherCredentials(${teacher.id})" title="بيانات الدخول">
+                        
+                        <button class="btn btn-sm btn-info" onclick="viewTeacherCredentials(${teacher.id})" title="عرض وتعديل كلمة المرور">
                              بيانات 🔑
                         </button>
-                        <button class="btn btn-sm ${toggleBtnClass}" onclick="toggleTeacherStatus(${teacher.id})" title="${toggleBtnText}">
-                            ${toggleBtnText} ⚡
+                        
+                        <button class="btn btn-sm ${toggleBtnClass}" onclick="toggleTeacherStatus(${teacher.id})" title="${toggleBtnText} الحساب">
+                            ${toggleBtnText} ${toggleIcon}
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteTeacher(${teacher.id})" title="حذف">
+                        
+                        <button class="btn btn-sm btn-danger" onclick="deleteTeacher(${teacher.id})" title="حذف نهائي">
                              حذف 🗑️
                         </button>
                     </div>
@@ -84,40 +105,45 @@ function loadTeachersData() {
     }).join('');
 }
 
-// عرض الإحصائيات
+// عرض الإحصائيات في البطاقات العلوية
 function loadAdminStats() {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const tCount = users.filter(u => u.role === 'teacher').length;
     const sCount = users.filter(u => u.role === 'student').length;
 
-    // التحقق من العناصر قبل الكتابة
     if(document.getElementById('teachersCount')) document.getElementById('teachersCount').textContent = tCount;
     if(document.getElementById('studentsCount')) document.getElementById('studentsCount').textContent = sCount;
 }
 
 // ==========================================
-// 2. إدارة المعلمين (إضافة / حذف / تعديل)
+// 3. إدارة المعلمين (إضافة / حذف / تعديل الحالة)
 // ==========================================
 
 function addNewTeacher() {
-    const name = document.getElementById('teacherName').value.trim();
-    const username = document.getElementById('teacherUsername').value.trim();
-    const password = document.getElementById('teacherPassword').value.trim();
-    const phone = document.getElementById('teacherPhone') ? document.getElementById('teacherPhone').value.trim() : '';
+    const nameInp = document.getElementById('teacherName'); // تأكد أن الـ ID في HTML هو teacherName أو newTeacherName
+    const userInp = document.getElementById('teacherUsername');
+    const passInp = document.getElementById('teacherPassword');
+    const phoneInp = document.getElementById('teacherPhone');
+
+    // دعم المسميات المختلفة في الـ HTML
+    const name = (nameInp ? nameInp.value : document.getElementById('newTeacherName').value).trim();
+    const username = (userInp ? userInp.value : document.getElementById('newTeacherUsername').value).trim();
+    const password = (passInp ? passInp.value : document.getElementById('newTeacherPassword').value).trim();
+    const phone = phoneInp ? phoneInp.value.trim() : '';
 
     if (!name || !username || !password) {
-        showNotification('يرجى تعبئة الحقول الأساسية', 'error');
+        alert('يرجى تعبئة الحقول الأساسية (الاسم، اسم المستخدم، كلمة المرور)');
         return;
     }
 
     const users = JSON.parse(localStorage.getItem('users') || '[]');
 
     if (users.some(u => u.username === username)) {
-        showNotification('اسم المستخدم موجود مسبقاً', 'error');
+        alert('اسم المستخدم هذا مسجل مسبقاً، يرجى اختيار اسم آخر.');
         return;
     }
 
-    // 🔥 إنشاء المعلم مع ID فريد (أساس العزل)
+    // 🔥 إنشاء المعلم مع ID فريد (أساس عزل البيانات)
     const newTeacher = {
         id: Date.now(),
         role: 'teacher',
@@ -132,18 +158,23 @@ function addNewTeacher() {
     users.push(newTeacher);
     localStorage.setItem('users', JSON.stringify(users));
 
-    showNotification('تم إضافة المعلم بنجاح', 'success');
+    alert('تم إضافة المعلم بنجاح ✅');
     
-    // إغلاق النافذة
+    // إغلاق النافذة (دعم لأكثر من طريقة إغلاق حسب الكود لديك)
     if(typeof closeAddTeacherModal === 'function') closeAddTeacherModal();
-    else document.getElementById('addTeacherModal').classList.remove('show');
+    else if(document.getElementById('addTeacherModal')) document.getElementById('addTeacherModal').classList.remove('show');
+    
+    // تفريغ الحقول
+    if(nameInp) nameInp.value = '';
+    if(userInp) userInp.value = '';
+    if(passInp) passInp.value = '';
     
     loadTeachersData();
     loadAdminStats();
 }
 
 function deleteTeacher(id) {
-    if (!confirm('تحذير: سيتم حذف المعلم وجميع طلابه وجداوله وتقاريره. هل أنت متأكد؟')) return;
+    if (!confirm('⚠️ تحذير هام:\nسيتم حذف حساب المعلم وجميع الطلاب المرتبطين به وجميع التقارير والجداول الخاصة به.\n\nهل أنت متأكد تماماً؟')) return;
 
     let users = JSON.parse(localStorage.getItem('users') || '[]');
     
@@ -155,12 +186,12 @@ function deleteTeacher(id) {
 
     localStorage.setItem('users', JSON.stringify(users));
     
-    // 3. تنظيف الجداول الخاصة به
+    // 3. تنظيف الجداول الخاصة به (اختياري لكن مفضل للنظافة)
     let schedules = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     schedules = schedules.filter(s => s.teacherId != id);
     localStorage.setItem('teacherSchedule', JSON.stringify(schedules));
 
-    showNotification('تم الحذف وتنظيف البيانات بنجاح', 'success');
+    alert('تم الحذف وتنظيف البيانات بنجاح 🗑️');
     loadTeachersData();
     loadAdminStats();
 }
@@ -173,13 +204,27 @@ function toggleTeacherStatus(id) {
         const currentStatus = users[index].status || 'active';
         users[index].status = currentStatus === 'active' ? 'suspended' : 'active';
         localStorage.setItem('users', JSON.stringify(users));
-        showNotification('تم تغيير حالة المعلم', 'success');
-        loadTeachersData();
+        loadTeachersData(); // إعادة رسم الجدول لتحديث الزر
+    }
+}
+
+// دالة تعديل (Placeholder) - يمكنك تطويرها لفتح مودال تعديل
+function editTeacher(id) {
+    // هنا يمكنك فتح نافذة تعديل، سأضع تنبيهاً مؤقتاً
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const teacher = users.find(u => u.id === id);
+    if(teacher) {
+        const newName = prompt('تعديل اسم المعلم:', teacher.name);
+        if(newName) {
+            teacher.name = newName;
+            localStorage.setItem('users', JSON.stringify(users));
+            loadTeachersData();
+        }
     }
 }
 
 // ==========================================
-// 3. بيانات الدخول (View Credentials)
+// 4. بيانات الدخول (View Credentials)
 // ==========================================
 
 function viewTeacherCredentials(id) {
@@ -188,7 +233,7 @@ function viewTeacherCredentials(id) {
     
     if (!teacher) return;
 
-    // تعبئة النافذة (Modal) الموجودة في HTML الخاص بك
+    // تعبئة النافذة (Modal) الموجودة في HTML
     const idInput = document.getElementById('viewTeacherId');
     const nameEl = document.getElementById('viewTeacherName');
     const userEl = document.getElementById('viewTeacherUsername');
@@ -196,7 +241,12 @@ function viewTeacherCredentials(id) {
 
     if(idInput) idInput.value = teacher.id;
     if(nameEl) nameEl.textContent = teacher.name;
-    if(userEl) userEl.textContent = teacher.username;
+    if(userEl) {
+        userEl.textContent = teacher.username;
+        // نسخ اسم المستخدم للحقل المخفي إن وجد للتعديل
+        if(document.getElementById('editCredTeacherUsername')) document.getElementById('editCredTeacherUsername').value = teacher.username;
+    }
+    
     if(passInput) {
         passInput.value = teacher.password;
         passInput.type = 'password'; // إخفاء مبدئي
@@ -208,53 +258,73 @@ function viewTeacherCredentials(id) {
 
 function togglePasswordVisibility() {
     const passInput = document.getElementById('viewTeacherPassword');
+    const toggleBtn = document.querySelector('.toggle-password-btn');
+    
     if(passInput) {
-        passInput.type = passInput.type === 'password' ? 'text' : 'password';
+        if (passInput.type === 'password') {
+            passInput.type = 'text';
+            if(toggleBtn) toggleBtn.textContent = '🙈 إخفاء';
+        } else {
+            passInput.type = 'password';
+            if(toggleBtn) toggleBtn.textContent = '👁️ إظهار';
+        }
     }
 }
 
 function copyToClipboard(type) {
     let text = '';
-    if (type === 'username') text = document.getElementById('viewTeacherUsername').textContent;
-    if (type === 'password') text = document.getElementById('viewTeacherPassword').value;
+    if (type === 'username') {
+        const el = document.getElementById('viewTeacherUsername');
+        text = el ? el.textContent : '';
+    }
+    if (type === 'password') {
+        const el = document.getElementById('viewTeacherPassword');
+        text = el ? el.value : '';
+    }
     
-    navigator.clipboard.writeText(text).then(() => {
-        showNotification('تم النسخ بنجاح', 'success');
-    });
-}
-
-function closeViewCredentialsModal() {
-    document.getElementById('viewCredentialsModal').classList.remove('show');
-}
-
-// ==========================================
-// 4. دوال مساعدة (لمنع الأخطاء)
-// ==========================================
-
-// بديل آمن لـ showAuthNotification
-function showNotification(msg, type) {
-    // إذا كانت الدالة الأصلية موجودة في auth.js نستخدمها
-    if (window.showAuthNotification) {
-        window.showAuthNotification(msg, type);
-    } else {
-        // بديل بسيط في حال لم يتم تحميل auth.js
-        alert(msg);
+    if(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            alert('تم النسخ: ' + text);
+        });
     }
 }
 
-// التأكد من وجود auth.js
-function checkAuth() {
-    if (window.checkAuth) return window.checkAuth();
-    const session = sessionStorage.getItem('currentUser');
-    return session ? JSON.parse(session) : null;
+function closeViewCredentialsModal() {
+    const modal = document.getElementById('viewCredentialsModal');
+    if(modal) modal.classList.remove('show');
+}
+
+// حفظ تعديلات بيانات الدخول (إذا قمت بتعديلها من النافذة)
+function saveTeacherCredentials() {
+    const id = document.getElementById('viewTeacherId').value;
+    const newPass = document.getElementById('viewTeacherPassword').value;
+    
+    if(!newPass || newPass.length < 3) return alert('كلمة المرور قصيرة جداً');
+
+    let users = JSON.parse(localStorage.getItem('users') || '[]');
+    const idx = users.findIndex(u => u.id == id);
+    
+    if(idx !== -1) {
+        users[idx].password = newPass;
+        localStorage.setItem('users', JSON.stringify(users));
+        alert('تم تحديث كلمة المرور بنجاح');
+        closeViewCredentialsModal();
+        loadTeachersData();
+    }
 }
 
 // تصدير الدوال لتكون متاحة للـ HTML
 window.addNewTeacher = addNewTeacher;
 window.deleteTeacher = deleteTeacher;
-window.editTeacher = function(id) { alert('يمكنك تعديل البيانات بحذف المعلم وإضافته، أو تفعيل زر التعديل لاحقاً.'); }; // مؤقت
+window.editTeacher = editTeacher;
 window.toggleTeacherStatus = toggleTeacherStatus;
 window.viewTeacherCredentials = viewTeacherCredentials;
 window.togglePasswordVisibility = togglePasswordVisibility;
 window.copyToClipboard = copyToClipboard;
 window.closeViewCredentialsModal = closeViewCredentialsModal;
+window.saveTeacherCredentials = saveTeacherCredentials;
+// تصدير دالة الإغلاق للإضافة أيضاً
+window.closeAddTeacherModal = function() {
+    const m = document.getElementById('addTeacherModal');
+    if(m) m.classList.remove('show');
+};

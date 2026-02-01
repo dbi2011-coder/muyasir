@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/committee.js
-// الوصف: إدارة لجنة صعوبات التعلم (النسخة الأصلية كاملة الميزات + عزل البيانات)
+// الوصف: إدارة لجنة صعوبات التعلم (كامل الميزات: طباعة + عرض + عزل)
 // ============================================
 
 // --- إعدادات قاعدة البيانات ---
@@ -18,17 +18,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         if(document.getElementById('teacherName')) document.getElementById('teacherName').textContent = user.name;
         if(document.getElementById('userAvatar')) document.getElementById('userAvatar').textContent = user.name.charAt(0);
         
-        // 🔥 إصلاح البيانات القديمة تلقائياً (ربطها بك)
+        // 2. إصلاح البيانات القديمة تلقائياً (ربطها بك)
         autoFixData(user);
     }
 
-    // 2. فتح قاعدة البيانات وتحميل القوائم
+    // 3. فتح قاعدة البيانات وتحميل القوائم
     try { await openDB(); } catch(e) { console.error(e); }
     
     loadMembers();
     loadMeetings();
 
-    // 3. تفعيل التبويب الافتراضي
+    // 4. تفعيل التبويب الافتراضي
     if(typeof switchTab === 'function') switchTab('meetingsSection');
 });
 
@@ -40,6 +40,7 @@ function autoFixData(user) {
     let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     let mod = false;
     members = members.map(m => {
+        // إذا كان العضو قديماً وليس له صاحب، نربطه بك
         if (!m.ownerId) { m.ownerId = user.id; mod = true; }
         return m;
     });
@@ -137,7 +138,7 @@ function deleteMember(id) {
 }
 
 // ==========================================
-// 🤝 الاجتماعات (Meetings) - مع العرض والطباعة
+// 🤝 الاجتماعات (Meetings) - كاملة الميزات (عرض + طباعة)
 // ==========================================
 async function loadMeetings() {
     const container = document.getElementById('meetingsListContainer');
@@ -147,7 +148,7 @@ async function loadMeetings() {
     const user = getCurrentUser();
     let allMeetings = await dbGetAll();
 
-    // إصلاح الاجتماعات القديمة (IndexedDB Fix)
+    // 🔥 إصلاح الاجتماعات القديمة (IndexedDB Fix)
     let dbFix = false;
     for(let m of allMeetings) {
         if(!m.teacherId) { m.teacherId = user.id; await dbPut(m); dbFix = true; }
@@ -162,7 +163,7 @@ async function loadMeetings() {
         return;
     }
 
-    // عرض الاجتماعات بتصميم البطاقات مع أزرار الطباعة والعرض
+    // عرض الاجتماعات بتصميم البطاقات مع أزرار الطباعة والعرض (كما طلبت)
     container.innerHTML = myMeetings.map(m => `
         <div class="meeting-card" style="background:white; border:1px solid #eee; padding:20px; margin-bottom:15px; border-radius:10px; box-shadow:0 3px 6px rgba(0,0,0,0.05); transition:transform 0.2s;">
             <div style="display:flex; justify-content:space-between; align-items:start;">
@@ -189,6 +190,7 @@ async function viewMeeting(id) {
     const all = await dbGetAll();
     const m = all.find(x => x.id == id);
     if(m) {
+        // تعبئة البيانات في المودال للعرض
         if(document.getElementById('meetTitle')) document.getElementById('meetTitle').value = m.title;
         if(document.getElementById('meetDate')) document.getElementById('meetDate').value = m.date;
         if(document.getElementById('meetContent')) document.getElementById('meetContent').value = m.content;

@@ -426,4 +426,35 @@ body {
     .action-buttons {
         flex-direction: column;
     }
+
 }
+/* ============================================
+   🎨 تصميم الإشعارات المنبثقة (Toast Notifications)
+   ============================================ */
+.toast-notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 99999;
+    padding: 15px 30px;
+    border-radius: 8px;
+    font-family: 'Tajawal', sans-serif;
+    font-weight: bold;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    opacity: 0; /* البداية مخفية */
+    animation: slideDown 0.5s forwards; /* حركة ظهور */
+}
+
+/* حركة الظهور */
+@keyframes slideDown {
+    from { top: -50px; opacity: 0; }
+    to { top: 20px; opacity: 1; }
+}
+
+/* الألوان */
+.toast-error { background-color: #e74c3c; }   /* أحمر للأخطاء */
+.toast-success { background-color: #2ecc71; } /* أخضر للنجاح */
+.toast-info { background-color: #3498db; }    /* أزرق للمعلومات */

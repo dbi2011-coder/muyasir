@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/teacher.js
-// الوصف: إدارة المعلم + نظام منع التكرار الصارم (النسخة المحسنة)
+// الوصف: إدارة المعلم + نظام منع التكرار الصارم جداً (Debug Version)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -52,7 +52,7 @@ function loadTeacherStats() {
 }
 
 // ============================================
-// 2. إدارة الطلاب (إضافة / تعديل / حذف)
+// 2. إدارة الطلاب (المنطق المعدل)
 // ============================================
 function loadStudentsData() {
     const loadingState = document.getElementById('loadingState');
@@ -131,21 +131,15 @@ function addNewStudent() {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const currentTeacher = getCurrentUser();
 
-    // 🔥 توليد اسم مستخدم فريد (يضمن عدم التكرار عند الإنشاء)
+    // 🔥 توليد تلقائي يضمن عدم التكرار
     let username = '';
     let password = '123';
     let isUnique = false;
 
-    // محاولة التوليد حتى نجد زوجاً غير مكرر
     while (!isUnique) {
         username = 's_' + Math.floor(Math.random() * 10000);
-        
-        // التحقق من وجود مستخدم بنفس الاسم وكلمة المرور
-        const exists = users.some(u => 
-            (u.username || '').trim() === username && 
-            (u.password || '').trim() === password
-        );
-        
+        // هل هذا المزيج موجود؟
+        const exists = users.some(u => String(u.username) === String(username) && String(u.password) === String(password));
         if (!exists) {
             isUnique = true;
         }
@@ -176,7 +170,8 @@ function addNewStudent() {
 
 function editStudent(studentId) {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const student = users.find(u => u.id === studentId);
+    // استخدام == للمقارنة الآمنة بين النص والرقم
+    const student = users.find(u => u.id == studentId);
     if (!student) return;
 
     document.getElementById('editStudentId').value = student.id;
@@ -184,20 +179,22 @@ function editStudent(studentId) {
     document.getElementById('editStudentGrade').value = student.grade;
     document.getElementById('editStudentSubject').value = student.subject;
     
-    // تعبئة الحقول
     if(document.getElementById('editStudentUsername')) document.getElementById('editStudentUsername').value = student.username || '';
-    if(document.getElementById('editStudentPassword')) document.getElementById('editStudentPassword').value = ''; // نتركها فارغة للأمان
+    // تفريغ حقل كلمة المرور ليعرف المعلم أنه إذا تركه فارغاً لن يتغير
+    if(document.getElementById('editStudentPassword')) document.getElementById('editStudentPassword').value = '';
 
     document.getElementById('editStudentModal').classList.add('show');
 }
 
+// 🔥🔥🔥 الدالة التي تم إصلاحها جذرياً 🔥🔥🔥
 function updateStudentData() {
-    // التأكد من تحويل المعرف إلى نفس النوع المستخدم في التخزين
-    const idStr = document.getElementById('editStudentId').value; 
-    const id = Number(idStr); // أو parseInt
+    // 1. جلب المعرف وتحويله لنص لضمان المقارنة
+    const idInput = document.getElementById('editStudentId').value;
+    const currentId = String(idInput);
 
+    // 2. تحديث قائمة المستخدمين من LocalStorage
     const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const index = users.findIndex(u => u.id == id); // == للتعامل مع اختلاف الأنواع string/number
+    const index = users.findIndex(u => String(u.id) === currentId);
 
     if (index !== -1) {
         const currentUser = users[index];
@@ -206,48 +203,49 @@ function updateStudentData() {
         const newGrade = document.getElementById('editStudentGrade').value;
         const newSubject = document.getElementById('editStudentSubject').value;
         
-        // التحقق من اسم المستخدم الجديد (تنظيف المسافات)
-        let newUsername = document.getElementById('editStudentUsername').value.trim();
-        if (!newUsername) newUsername = (currentUser.username || '').trim();
+        // 3. تحديد اسم المستخدم النهائي (الجديد أو القديم)
+        let finalUsername = document.getElementById('editStudentUsername').value.trim();
+        if (!finalUsername) finalUsername = currentUser.username;
         
-        // التحقق من كلمة المرور الجديدة (تنظيف المسافات)
-        let newPassword = document.getElementById('editStudentPassword').value.trim();
-        if (!newPassword) newPassword = (currentUser.password || '').trim();
+        // 4. تحديد كلمة المرور النهائية (الجديدة أو القديمة)
+        let finalPassword = document.getElementById('editStudentPassword').value.trim();
+        if (!finalPassword) finalPassword = currentUser.password;
 
-        // 🔥🔥🔥 التحقق الصارم والمحسن 🔥🔥🔥
-        // 1. تحويل المعرفات لنصوص لضمان المقارنة الصحيحة
-        // 2. تنظيف المسافات من بيانات المستخدمين الآخرين
+        console.log(`Checking collision for: User=${finalUsername}, Pass=${finalPassword}, MyID=${currentId}`);
+
+        // 5. 🔥 الفحص الصارم 🔥
+        // نبحث عن "أي" مستخدم آخر لديه نفس اسم المستخدم ونفس كلمة المرور
         const duplicateUser = users.find(u => {
-            // تجاهل الطالب نفسه
-            if (String(u.id) === String(id)) return false;
+            // تجاهل الطالب نفسه (مهم جداً)
+            if (String(u.id) === currentId) return false;
 
-            const uName = (u.username || '').trim();
-            const uPass = (u.password || '').trim();
+            const uName = String(u.username || '').trim();
+            const uPass = String(u.password || '').trim();
 
-            // هل يتطابق الاسم وكلمة المرور؟
-            return uName === newUsername && uPass === newPassword;
+            // هل هناك تطابق كامل؟
+            return uName === String(finalUsername) && uPass === String(finalPassword);
         });
         
         if (duplicateUser) {
-            // رسالة خطأ تفصيلية تخبر المعلم بمن هو الطالب المكرر
-            const errorMsg = `⛔ عذراً، تكرار بيانات!\n\nبيانات الدخول هذه مطابقة تماماً للطالب: "${duplicateUser.name}".\n\nيجب عليك تغيير "كلمة المرور" لتصبح مختلفة عنه.`;
+            console.warn("Collision found with user:", duplicateUser);
+            
+            const errorMsg = `⛔ خطأ: تكرار بيانات!\n\nهذه البيانات مطابقة تماماً للطالب: "${duplicateUser.name}".\nلا يمكن لطالبين امتلاك نفس اسم المستخدم وكلمة المرور معاً.\n\nالرجاء تغيير كلمة المرور.`;
             
             if(typeof showAuthNotification === 'function') {
-                showAuthNotification('بيانات مكررة مع طالب آخر! يرجى تغيير كلمة المرور.', 'error');
-                // تنبيه إضافي للتوضيح
-                setTimeout(() => alert(errorMsg), 500); 
+                showAuthNotification('بيانات مكررة! الرجاء تغيير كلمة المرور.', 'error');
+                setTimeout(() => alert(errorMsg), 500);
             } else {
                 alert(errorMsg);
             }
-            return; // 🛑 إيقاف الحفظ فوراً
+            return; // 🛑 إيقاف الحفظ
         }
 
-        // الحفظ بعد اجتياز الفحص
+        // 6. الحفظ
         users[index].name = newName;
         users[index].grade = newGrade;
         users[index].subject = newSubject;
-        users[index].username = newUsername;
-        users[index].password = newPassword;
+        users[index].username = finalUsername;
+        users[index].password = finalPassword;
 
         localStorage.setItem('users', JSON.stringify(users));
         
@@ -256,20 +254,21 @@ function updateStudentData() {
 
         document.getElementById('editStudentModal').classList.remove('show');
         loadStudentsData();
+    } else {
+        alert('حدث خطأ: لم يتم العثور على الطالب في قاعدة البيانات.');
     }
 }
 
 function deleteStudent(studentId) {
     if (!confirm('هل أنت متأكد من حذف هذا الطالب؟')) return;
     let users = JSON.parse(localStorage.getItem('users') || '[]');
-    // استخدام == لضمان الحذف حتى لو اختلف النوع
     users = users.filter(u => u.id != studentId);
     localStorage.setItem('users', JSON.stringify(users));
     loadStudentsData();
 }
 
 // ============================================
-// 🚀 3. نظام نقل الطلاب (Import / Export)
+// 🚀 3. نظام نقل الطلاب
 // ============================================
 
 function exportStudentData(studentId) {
@@ -363,7 +362,6 @@ function processStudentImport() {
     reader.readAsText(fileInput.files[0]);
 }
 
-// دوال مساعدة للاستيراد والتصدير
 function getStudentData(key, id) {
     return JSON.parse(localStorage.getItem(key) || '[]').filter(x => x.studentId == id);
 }

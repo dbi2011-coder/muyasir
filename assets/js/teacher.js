@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/teacher.js
-// الوصف: إدارة المعلم + نظام نقل الطلاب + منع تكرار البيانات (اسم + كلمة مرور)
+// الوصف: إدارة المعلم + نظام نقل الطلاب + منع تكرار البيانات الصارم
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -52,7 +52,7 @@ function loadTeacherStats() {
 }
 
 // ============================================
-// 2. إدارة الطلاب (مع منع التكرار)
+// 2. إدارة الطلاب (إضافة / تعديل / حذف)
 // ============================================
 function loadStudentsData() {
     const loadingState = document.getElementById('loadingState');
@@ -131,15 +131,14 @@ function addNewStudent() {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const currentTeacher = getCurrentUser();
 
-    // 🔥 ضمان عدم تكرار (اسم المستخدم + كلمة المرور)
-    // إذا كان اسم المستخدم موجوداً وكلمة المرور مطابقة، نقوم بتوليد اسم جديد
+    // 🔥 توليد اسم مستخدم فريد (يضمن عدم التكرار عند الإنشاء)
     let username = '';
     let password = '123';
     let isUnique = false;
 
     while (!isUnique) {
         username = 's_' + Math.floor(Math.random() * 10000);
-        // الشرط: هل يوجد طالب آخر يملك نفس الاسم ونفس الباسورد؟
+        // الشرط: هل يوجد أحد يملك نفس الاسم ونفس كلمة المرور؟
         const exists = users.some(u => u.username === username && u.password === password);
         if (!exists) {
             isUnique = true;
@@ -178,6 +177,7 @@ function editStudent(studentId) {
     document.getElementById('editStudentName').value = student.name;
     document.getElementById('editStudentGrade').value = student.grade;
     document.getElementById('editStudentSubject').value = student.subject;
+    // تعبئة الحقول (يمكن تركها فارغة في حالة عدم التغيير)
     if(document.getElementById('editStudentUsername')) document.getElementById('editStudentUsername').value = student.username || '';
     if(document.getElementById('editStudentPassword')) document.getElementById('editStudentPassword').value = '';
 
@@ -190,26 +190,42 @@ function updateStudentData() {
     const index = users.findIndex(u => u.id === id);
 
     if (index !== -1) {
-        const newName = document.getElementById('editStudentName').value;
+        // جلب القيم الحالية من القاعدة لاستخدامها في حال كانت الحقول فارغة
+        const currentUser = users[index];
+
+        const newName = document.getElementById('editStudentName').value.trim();
         const newGrade = document.getElementById('editStudentGrade').value;
         const newSubject = document.getElementById('editStudentSubject').value;
         
-        let newUsername = document.getElementById('editStudentUsername').value;
-        if (!newUsername) newUsername = users[index].username;
+        // التحقق من اسم المستخدم الجديد (أو استخدام القديم)
+        let newUsername = document.getElementById('editStudentUsername').value.trim();
+        if (!newUsername) newUsername = currentUser.username; // إذا فارغ، استخدم القديم
         
-        let newPassword = document.getElementById('editStudentPassword').value;
-        if (!newPassword) newPassword = users[index].password;
+        // التحقق من كلمة المرور الجديدة (أو استخدام القديمة)
+        let newPassword = document.getElementById('editStudentPassword').value.trim();
+        if (!newPassword) newPassword = currentUser.password; // إذا فارغ، استخدم القديمة
 
-        // 🔥 التحقق اليدوي عند التعديل: منع التطابق الكامل مع طالب آخر
-        const duplicate = users.some(u => u.id !== id && u.username === newUsername && u.password === newPassword);
+        // 🔥🔥🔥 التحقق الصارم من التكرار 🔥🔥🔥
+        // نبحث عن أي مستخدم آخر (ليس الطالب نفسه) يملك نفس "الاسم" و نفس "الباسورد"
+        const isDuplicate = users.some(u => 
+            u.id !== id &&             // ليس هو نفسه
+            u.username === newUsername && // نفس الاسم
+            u.password === newPassword    // نفس الباسورد
+        );
         
-        if (duplicate) {
-            const msg = '⚠️ خطأ: يوجد طالب آخر يستخدم نفس اسم المستخدم وكلمة المرور هذه معاً!';
-            if(typeof showAuthNotification === 'function') showAuthNotification(msg, 'error');
-            else alert(msg);
-            return; // إيقاف الحفظ
+        if (isDuplicate) {
+            // رسالة الخطأ المطلوبة
+            const errorMsg = '⛔ عذراً، لا يمكن الحفظ!\n\nهذه البيانات (اسم المستخدم + كلمة المرور) متطابقة تماماً مع طالب آخر.\nالرجاء تغيير "كلمة المرور" لتصبح مختلفة.';
+            
+            if(typeof showAuthNotification === 'function') {
+                showAuthNotification(errorMsg, 'error');
+            } else {
+                alert(errorMsg);
+            }
+            return; // 🛑 إيقاف عملية الحفظ
         }
 
+        // إذا نجح التحقق، قم بالحفظ
         users[index].name = newName;
         users[index].grade = newGrade;
         users[index].subject = newSubject;
@@ -218,7 +234,7 @@ function updateStudentData() {
 
         localStorage.setItem('users', JSON.stringify(users));
         
-        if(typeof showAuthNotification === 'function') showAuthNotification('تم التحديث بنجاح ✅', 'success');
+        if(typeof showAuthNotification === 'function') showAuthNotification('تم تحديث البيانات بنجاح ✅', 'success');
         else alert('تم التحديث بنجاح ✅');
 
         document.getElementById('editStudentModal').classList.remove('show');

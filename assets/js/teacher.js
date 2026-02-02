@@ -268,7 +268,10 @@ function processStudentImport() {
             const existingIndex = users.findIndex(u => u.username === studentInfo.username);
             
             if (existingIndex !== -1) {
-                if (!confirm(`الطالب "${studentInfo.name}" موجود بالفعل. استبدال البيانات؟`)) return;
+                // 🔥🔥 هنا تم تغيير الرسالة كما طلبت 🔥🔥
+                if (!confirm(`الطالب "${studentInfo.name}" موجود لدى معلم آخر . هل تريد نقله إليك ؟`)) return;
+                
+                // تنظيف البيانات القديمة
                 cleanStudentOldData(users[existingIndex].id);
                 users.splice(existingIndex, 1);
             }

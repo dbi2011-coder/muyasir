@@ -1,5 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/teacher.js
+// الوصف: إدارة المعلم + نظام نقل الطلاب (استيراد/تصدير)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -9,7 +10,6 @@ document.addEventListener('DOMContentLoaded', function() {
     } else if (path.includes('students.html')) {
         initializeStudentsPage();
     }
-    // ملاحظة: الصفحات الأخرى تدير نفسها أو تستدعي دوالاً عامة
 });
 
 function initializeStudentsPage() {
@@ -23,33 +23,28 @@ function initializeTeacherDashboard() {
     const user = checkAuth();
     if (!user || user.role !== 'teacher') return;
     updateUserInterface(user);
-    loadTeacherStats(); // تشغيل العدادات
+    loadTeacherStats();
 }
 
 // ============================================
-// 1. تحديث إحصائيات لوحة التحكم (العدادات)
+// 1. تحديث إحصائيات لوحة التحكم
 // ============================================
 function loadTeacherStats() {
     const currentTeacher = getCurrentUser();
     if (!currentTeacher) return;
 
-    // 1. الطلاب
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const studentsCount = users.filter(u => u.role === 'student' && u.teacherId === currentTeacher.id).length;
     
-    // 2. الدروس (من مفتاح lessons)
     const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
     const lessonsCount = lessons.filter(l => l.teacherId === currentTeacher.id).length;
     
-    // 3. الواجبات (من مفتاح assignments)
     const assignments = JSON.parse(localStorage.getItem('assignments') || '[]');
     const assignmentsCount = assignments.filter(a => a.teacherId === currentTeacher.id).length;
 
-    // 4. الرسائل (من مفتاح teacherMessages)
     const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
     const messagesCount = messages.filter(m => m.teacherId === currentTeacher.id && m.isFromStudent && !m.isRead).length;
 
-    // التحديث في الصفحة
     if (document.getElementById('studentsCount')) document.getElementById('studentsCount').innerText = studentsCount;
     if (document.getElementById('lessonsCount')) document.getElementById('lessonsCount').innerText = lessonsCount;
     if (document.getElementById('assignmentsCount')) document.getElementById('assignmentsCount').innerText = assignmentsCount;
@@ -100,16 +95,16 @@ function loadStudentsData() {
                     <td>
                         <div class="student-actions" style="display: flex; gap: 5px; flex-wrap: wrap;">
                             <button class="btn btn-sm btn-primary" onclick="openStudentFile(${student.id})" title="ملف الطالب">
-                                <i class="fas fa-file-alt"></i> ملف الطالب
+                                <i class="fas fa-file-alt"></i> ملف
                             </button>
                             <button class="btn btn-sm btn-secondary" onclick="showStudentLoginData(${student.id})" title="بيانات الدخول">
-                                <i class="fas fa-key"></i> دخول
+                                <i class="fas fa-key"></i>
                             </button>
                             <button class="btn btn-sm btn-warning" onclick="editStudent(${student.id})" title="تعديل">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-sm btn-info" onclick="exportStudentJson(${student.id})" title="تصدير">
-                                <i class="fas fa-file-export"></i>
+                            <button class="btn btn-sm btn-info" onclick="exportStudentData(${student.id})" title="تصدير ملف الطالب">
+                                <i class="fas fa-file-export"></i> تصدير
                             </button>
                             <button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})" title="حذف">
                                 <i class="fas fa-trash"></i>
@@ -202,7 +197,126 @@ function deleteStudent(studentId) {
     loadStudentsData();
 }
 
-// أدوات مساعدة
+// ============================================
+// 🚀 3. نظام نقل الطلاب (Import / Export)
+// ============================================
+
+// أ) تصدير الطالب (Create JSON File)
+function exportStudentData(studentId) {
+    const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const student = users.find(u => u.id == studentId);
+    
+    if (!student) return alert('بيانات الطالب غير موجودة');
+
+    const exportData = {
+        info: student,
+        data: {
+            tests: getStudentData('studentTests', studentId),
+            lessons: getStudentData('studentLessons', studentId),
+            assignments: getStudentData('studentAssignments', studentId),
+            progress: getStudentData('studentProgress', studentId),
+            events: getStudentData('studentEvents', studentId),
+            activities: getStudentData('studentActivities', studentId)
+        },
+        meta: {
+            exportedBy: getCurrentUser().name,
+            date: new Date().toISOString()
+        }
+    };
+
+    const fileName = `student_${student.name.replace(/\s+/g, '_')}.json`;
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+}
+
+// ب) استيراد الطالب (Read JSON File)
+function showImportStudentModal() {
+    const fileInput = document.getElementById('studentJsonFile');
+    if(fileInput) fileInput.value = '';
+    
+    const modal = document.getElementById('importStudentModal');
+    if(modal) modal.classList.add('show');
+}
+
+function processStudentImport() {
+    const fileInput = document.getElementById('studentJsonFile');
+    if (!fileInput || !fileInput.files[0]) return alert('يرجى اختيار ملف الطالب أولاً');
+
+    const currentUser = getCurrentUser();
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const imported = JSON.parse(e.target.result);
+            
+            if (!imported.info || !imported.data) throw new Error('الملف غير صالح');
+
+            // 🔥 نقل الملكية للمعلم الحالي
+            const studentInfo = imported.info;
+            studentInfo.teacherId = currentUser.id; 
+
+            // التحقق من التكرار
+            let users = JSON.parse(localStorage.getItem('users') || '[]');
+            const existingIndex = users.findIndex(u => u.username === studentInfo.username);
+            
+            if (existingIndex !== -1) {
+                if (!confirm(`الطالب "${studentInfo.name}" موجود بالفعل. استبدال البيانات؟`)) return;
+                cleanStudentOldData(users[existingIndex].id);
+                users.splice(existingIndex, 1);
+            }
+
+            // حفظ الطالب
+            users.push(studentInfo);
+            localStorage.setItem('users', JSON.stringify(users));
+
+            // دمج السجلات
+            mergeData('studentTests', imported.data.tests);
+            mergeData('studentLessons', imported.data.lessons);
+            mergeData('studentAssignments', imported.data.assignments);
+            mergeData('studentProgress', imported.data.progress);
+            mergeData('studentEvents', imported.data.events);
+            mergeData('studentActivities', imported.data.activities);
+
+            alert(`تم استيراد الطالب "${studentInfo.name}" بنجاح! 🎉`);
+            closeModal('importStudentModal');
+            loadStudentsData();
+
+        } catch (err) {
+            alert('حدث خطأ: ملف غير صالح.');
+            console.error(err);
+        }
+    };
+    reader.readAsText(fileInput.files[0]);
+}
+
+// دوال مساعدة للاستيراد والتصدير
+function getStudentData(key, id) {
+    return JSON.parse(localStorage.getItem(key) || '[]').filter(x => x.studentId == id);
+}
+
+function mergeData(key, newData) {
+    if (!newData || !newData.length) return;
+    let current = JSON.parse(localStorage.getItem(key) || '[]');
+    current = current.filter(x => x.studentId != newData[0].studentId);
+    localStorage.setItem(key, JSON.stringify([...current, ...newData]));
+}
+
+function cleanStudentOldData(id) {
+    ['studentTests', 'studentLessons', 'studentAssignments', 'studentEvents'].forEach(key => {
+        let data = JSON.parse(localStorage.getItem(key) || '[]');
+        localStorage.setItem(key, JSON.stringify(data.filter(x => x.studentId != id)));
+    });
+}
+
+// أدوات عامة
 function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser')).user; }
 function openStudentFile(id) { window.location.href = `student-profile.html?id=${id}`; }
 function showStudentLoginData(id) {
@@ -220,10 +334,9 @@ function copyToClipboard(id) {
     document.execCommand('copy');
     alert('تم النسخ');
 }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 function closeAddStudentModal() { document.getElementById('addStudentModal').classList.remove('show'); }
 function showAddStudentModal() { document.getElementById('addStudentModal').classList.add('show'); }
-function showImportStudentModal() { alert('قريباً'); }
-function exportStudentJson() { alert('قريباً'); }
 function searchStudents() {
     const term = document.getElementById('studentSearch').value.toLowerCase();
     document.querySelectorAll('#studentsTableBody tr').forEach(row => {
@@ -249,6 +362,8 @@ window.loadStudentsData = loadStudentsData;
 window.showAddStudentModal = showAddStudentModal;
 window.closeAddStudentModal = closeAddStudentModal;
 window.showImportStudentModal = showImportStudentModal;
-window.exportStudentJson = exportStudentJson;
+window.exportStudentData = exportStudentData;
+window.processStudentImport = processStudentImport;
 window.searchStudents = searchStudents;
 window.filterStudents = filterStudents;
+window.closeModal = closeModal;

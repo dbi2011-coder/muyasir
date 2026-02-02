@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/teacher.js
-// الوصف: إدارة المعلم + نظام نقل الطلاب + منع تكرار البيانات الصارم
+// الوصف: إدارة المعلم + نظام منع التكرار الصارم (النسخة المحسنة)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -136,10 +136,16 @@ function addNewStudent() {
     let password = '123';
     let isUnique = false;
 
+    // محاولة التوليد حتى نجد زوجاً غير مكرر
     while (!isUnique) {
         username = 's_' + Math.floor(Math.random() * 10000);
-        // الشرط: هل يوجد أحد يملك نفس الاسم ونفس كلمة المرور؟
-        const exists = users.some(u => u.username === username && u.password === password);
+        
+        // التحقق من وجود مستخدم بنفس الاسم وكلمة المرور
+        const exists = users.some(u => 
+            (u.username || '').trim() === username && 
+            (u.password || '').trim() === password
+        );
+        
         if (!exists) {
             isUnique = true;
         }
@@ -177,55 +183,66 @@ function editStudent(studentId) {
     document.getElementById('editStudentName').value = student.name;
     document.getElementById('editStudentGrade').value = student.grade;
     document.getElementById('editStudentSubject').value = student.subject;
-    // تعبئة الحقول (يمكن تركها فارغة في حالة عدم التغيير)
+    
+    // تعبئة الحقول
     if(document.getElementById('editStudentUsername')) document.getElementById('editStudentUsername').value = student.username || '';
-    if(document.getElementById('editStudentPassword')) document.getElementById('editStudentPassword').value = '';
+    if(document.getElementById('editStudentPassword')) document.getElementById('editStudentPassword').value = ''; // نتركها فارغة للأمان
 
     document.getElementById('editStudentModal').classList.add('show');
 }
 
 function updateStudentData() {
-    const id = parseInt(document.getElementById('editStudentId').value);
+    // التأكد من تحويل المعرف إلى نفس النوع المستخدم في التخزين
+    const idStr = document.getElementById('editStudentId').value; 
+    const id = Number(idStr); // أو parseInt
+
     const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const index = users.findIndex(u => u.id === id);
+    const index = users.findIndex(u => u.id == id); // == للتعامل مع اختلاف الأنواع string/number
 
     if (index !== -1) {
-        // جلب القيم الحالية من القاعدة لاستخدامها في حال كانت الحقول فارغة
         const currentUser = users[index];
 
         const newName = document.getElementById('editStudentName').value.trim();
         const newGrade = document.getElementById('editStudentGrade').value;
         const newSubject = document.getElementById('editStudentSubject').value;
         
-        // التحقق من اسم المستخدم الجديد (أو استخدام القديم)
+        // التحقق من اسم المستخدم الجديد (تنظيف المسافات)
         let newUsername = document.getElementById('editStudentUsername').value.trim();
-        if (!newUsername) newUsername = currentUser.username; // إذا فارغ، استخدم القديم
+        if (!newUsername) newUsername = (currentUser.username || '').trim();
         
-        // التحقق من كلمة المرور الجديدة (أو استخدام القديمة)
+        // التحقق من كلمة المرور الجديدة (تنظيف المسافات)
         let newPassword = document.getElementById('editStudentPassword').value.trim();
-        if (!newPassword) newPassword = currentUser.password; // إذا فارغ، استخدم القديمة
+        if (!newPassword) newPassword = (currentUser.password || '').trim();
 
-        // 🔥🔥🔥 التحقق الصارم من التكرار 🔥🔥🔥
-        // نبحث عن أي مستخدم آخر (ليس الطالب نفسه) يملك نفس "الاسم" و نفس "الباسورد"
-        const isDuplicate = users.some(u => 
-            u.id !== id &&             // ليس هو نفسه
-            u.username === newUsername && // نفس الاسم
-            u.password === newPassword    // نفس الباسورد
-        );
+        // 🔥🔥🔥 التحقق الصارم والمحسن 🔥🔥🔥
+        // 1. تحويل المعرفات لنصوص لضمان المقارنة الصحيحة
+        // 2. تنظيف المسافات من بيانات المستخدمين الآخرين
+        const duplicateUser = users.find(u => {
+            // تجاهل الطالب نفسه
+            if (String(u.id) === String(id)) return false;
+
+            const uName = (u.username || '').trim();
+            const uPass = (u.password || '').trim();
+
+            // هل يتطابق الاسم وكلمة المرور؟
+            return uName === newUsername && uPass === newPassword;
+        });
         
-        if (isDuplicate) {
-            // رسالة الخطأ المطلوبة
-            const errorMsg = '⛔ عذراً، لا يمكن الحفظ!\n\nهذه البيانات (اسم المستخدم + كلمة المرور) متطابقة تماماً مع طالب آخر.\nالرجاء تغيير "كلمة المرور" لتصبح مختلفة.';
+        if (duplicateUser) {
+            // رسالة خطأ تفصيلية تخبر المعلم بمن هو الطالب المكرر
+            const errorMsg = `⛔ عذراً، تكرار بيانات!\n\nبيانات الدخول هذه مطابقة تماماً للطالب: "${duplicateUser.name}".\n\nيجب عليك تغيير "كلمة المرور" لتصبح مختلفة عنه.`;
             
             if(typeof showAuthNotification === 'function') {
-                showAuthNotification(errorMsg, 'error');
+                showAuthNotification('بيانات مكررة مع طالب آخر! يرجى تغيير كلمة المرور.', 'error');
+                // تنبيه إضافي للتوضيح
+                setTimeout(() => alert(errorMsg), 500); 
             } else {
                 alert(errorMsg);
             }
-            return; // 🛑 إيقاف عملية الحفظ
+            return; // 🛑 إيقاف الحفظ فوراً
         }
 
-        // إذا نجح التحقق، قم بالحفظ
+        // الحفظ بعد اجتياز الفحص
         users[index].name = newName;
         users[index].grade = newGrade;
         users[index].subject = newSubject;
@@ -245,7 +262,8 @@ function updateStudentData() {
 function deleteStudent(studentId) {
     if (!confirm('هل أنت متأكد من حذف هذا الطالب؟')) return;
     let users = JSON.parse(localStorage.getItem('users') || '[]');
-    users = users.filter(u => u.id !== studentId);
+    // استخدام == لضمان الحذف حتى لو اختلف النوع
+    users = users.filter(u => u.id != studentId);
     localStorage.setItem('users', JSON.stringify(users));
     loadStudentsData();
 }
@@ -369,7 +387,7 @@ function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUse
 function openStudentFile(id) { window.location.href = `student-profile.html?id=${id}`; }
 function showStudentLoginData(id) {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const s = users.find(u => u.id === id);
+    const s = users.find(u => u.id == id);
     if(s) {
         document.getElementById('loginDataUsername').value = s.username;
         document.getElementById('loginDataPassword').value = s.password;

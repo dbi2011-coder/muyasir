@@ -129,6 +129,29 @@
         </div>
     </div>
 
+    <div id="importStudentModal" class="modal">
+        <div class="modal-content" style="border: 2px solid #2c3e50;">
+            <div class="modal-header">
+                <h3>📥 استيراد ملف طالب</h3>
+                <button class="modal-close" onclick="closeModal('importStudentModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="text-align: center; padding: 30px;">
+                    <div style="font-size: 3rem; margin-bottom: 15px;">📂</div>
+                    <p style="color: #666; margin-bottom: 20px;">
+                        اختر ملف الطالب (JSON) الذي تم تصديره من المعلم السابق.<br>
+                        سيتم نقل الطالب وكامل سجلاته إلى قائمتك فوراً.
+                    </p>
+                    <input type="file" id="studentJsonFile" accept=".json" class="form-control" style="border: 2px dashed #ccc; padding: 10px;">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('importStudentModal')">إلغاء</button>
+                <button class="btn btn-success" onclick="processStudentImport()">✅ بدء الاستيراد</button>
+            </div>
+        </div>
+    </div>
+
     <script src="../../assets/js/dashboard.js"></script>
     <script src="../../assets/js/teacher.js"></script>
     <script src="../../assets/js/auth.js"></script>

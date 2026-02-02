@@ -138,3 +138,47 @@ window.checkAuth = checkAuth;
 window.logout = logout;
 window.getCurrentUser = getCurrentUser;
 window.showAuthNotification = showAuthNotification;
+// ============================================
+// 🔔 نظام الإشعارات الموحد (استبدال Alert)
+// ============================================
+
+// 1. دالة إنشاء الإشعار بالتصميم الجديد
+function showToast(message, type = 'info') {
+    // إنشاء العنصر
+    const toast = document.createElement('div');
+    toast.className = `toast-notification toast-${type}`;
+    toast.innerText = message;
+
+    // إضافته للصفحة
+    document.body.appendChild(toast);
+
+    // الحذف التلقائي بعد 3 ثوانٍ
+    setTimeout(() => {
+        toast.style.opacity = '0'; // اختفاء تدريجي
+        toast.style.transform = 'translate(-50%, -20px)'; // حركة للأعلى
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+            }
+        }, 500); // انتظار انتهاء الأنيميشن
+    }, 3000);
+}
+
+// 2. 🔥 السحر: استبدال دالة alert الأصلية
+// هذا السطر سيجعل أي كود قديم يستخدم alert() يستخدم تصميمك الجديد تلقائياً!
+window.alert = function(message) {
+    // نعتبر الـ alert العادي رسالة "تنبيه/خطأ" أو حسب السياق
+    // يمكنك تغيير 'error' إلى 'info' إذا أردت اللون الأزرق
+    showToast(message, 'info'); 
+};
+
+// 3. دالة مساعدة لرسائل النجاح والخطأ المحددة
+// يمكنك استخدامها في الكود الجديد: showSuccess('تم الحفظ')
+window.showSuccess = (msg) => showToast(msg, 'success');
+window.showError = (msg) => showToast(msg, 'error');
+
+// 4. تحديث دالة showAuthNotification القديمة (إن وجدت) لتعمل بالتصميم الجديد
+window.showAuthNotification = function(message, type) {
+    const styleType = (type === 'success') ? 'success' : 'error';
+    showToast(message, styleType);
+};

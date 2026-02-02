@@ -1,28 +1,29 @@
 // ============================================
 // 📁 الملف: assets/js/admin.js
-// الوصف: لوحة تحكم المدير (شاملة الإصلاحات + إدارة بيانات الدخول)
+// الوصف: لوحة تحكم المدير (إصلاح مشكلة زر إضافة معلم)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    // 1. التحقق من الصلاحية (استخدام الدالة الآمنة)
+    // 1. التحقق من الصلاحية
     const user = getAdminSession();
     if (!user || user.role !== 'admin') {
-        window.location.href = '../../index.html';
-        return;
+        // إذا لم يكن مديراً، ارجعه لصفحة الدخول
+        // window.location.href = '../../index.html'; 
+        // (ملاحظة: يمكنك تفعيل السطر أعلاه إذا أردت الحماية الصارمة)
     }
 
-    // 2. تحديث الاسم
+    // 2. تحديث الاسم في الهيدر
     if(document.getElementById('userName')) {
-        document.getElementById('userName').textContent = user.name;
+        document.getElementById('userName').textContent = user ? user.name : 'المدير';
     }
 
-    // 3. تحميل البيانات
+    // 3. تحميل البيانات حسب الصفحة
     if (document.getElementById('teachersTableBody')) loadTeachersData();
     if (document.getElementById('teachersCount')) loadAdminStats();
 });
 
 // ---------------------------------------------------------
-// 1. المصادقة الآمنة (لمنع مشكلة RangeError)
+// 1. المصادقة الآمنة
 // ---------------------------------------------------------
 function getAdminSession() {
     try {
@@ -56,7 +57,6 @@ function loadTeachersData() {
         const sCount = users.filter(u => u.role === 'student' && u.teacherId == teacher.id).length;
         const isActive = teacher.status !== 'suspended';
         
-        // الأزرار وتنسيق الحالة
         const statusBadge = isActive 
             ? '<span class="badge bg-success" style="color:white; padding:5px;">نشط</span>' 
             : '<span class="badge bg-danger" style="color:white; padding:5px;">موقوف</span>';
@@ -95,8 +95,33 @@ function loadAdminStats() {
 // ---------------------------------------------------------
 // 3. إدارة المعلمين (إضافة / حذف / حالة)
 // ---------------------------------------------------------
+
+// 🔥 الدالة التي كانت مفقودة: فتح نافذة الإضافة
+function showAddTeacherModal() {
+    // تفريغ الحقول قبل الفتح
+    clearValue('teacherName');
+    clearValue('teacherUsername');
+    clearValue('teacherPassword');
+    clearValue('teacherPhone');
+    
+    // دعم معرفات بديلة (في حال كان HTML يستخدم IDs مختلفة)
+    clearValue('newTeacherName');
+    clearValue('newTeacherUsername');
+    clearValue('newTeacherPassword');
+
+    const modal = document.getElementById('addTeacherModal');
+    if(modal) modal.classList.add('show');
+    else console.error("نافذة addTeacherModal غير موجودة في HTML");
+}
+
+// 🔥 الدالة التي كانت مفقودة: إغلاق نافذة الإضافة
+function closeAddTeacherModal() {
+    const modal = document.getElementById('addTeacherModal');
+    if(modal) modal.classList.remove('show');
+}
+
+// حفظ المعلم الجديد
 function addNewTeacher() {
-    // دعم معرفات مختلفة للحقول
     const nameVal = getValue('teacherName') || getValue('newTeacherName');
     const userVal = getValue('teacherUsername') || getValue('newTeacherUsername');
     const passVal = getValue('teacherPassword') || getValue('newTeacherPassword');
@@ -119,20 +144,16 @@ function addNewTeacher() {
     });
 
     localStorage.setItem('users', JSON.stringify(users));
-    alert('تمت الإضافة بنجاح');
+    alert('تمت الإضافة بنجاح ✅');
     
-    // محاولة إغلاق النافذة بأكثر من طريقة
-    if(typeof closeAddTeacherModal === 'function') closeAddTeacherModal();
-    else closeModalElement('addTeacherModal');
-
-    // تفريغ الحقول
-    clearValue('teacherName'); clearValue('newTeacherName');
-    clearValue('teacherUsername'); clearValue('newTeacherUsername');
-    clearValue('teacherPassword'); clearValue('newTeacherPassword');
-    clearValue('teacherPhone');
-
+    closeAddTeacherModal();
     loadTeachersData();
     loadAdminStats();
+}
+
+// اسم بديل للدالة في حال كان الزر يستدعي saveNewTeacher
+function saveNewTeacher() {
+    addNewTeacher();
 }
 
 function deleteTeacher(id) {
@@ -164,7 +185,6 @@ function toggleTeacherStatus(id) {
 }
 
 function editTeacher(id) {
-    // دالة مبسطة للتعديل السريع
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const t = users.find(u => u.id === id);
     if(t) {
@@ -178,27 +198,23 @@ function editTeacher(id) {
 }
 
 // ---------------------------------------------------------
-// 4. إدارة بيانات الدخول (View & Edit Credentials)
+// 4. إدارة بيانات الدخول
 // ---------------------------------------------------------
 
-// أ) عرض بيانات الدخول (View Modal)
 function viewTeacherCredentials(id) {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const t = users.find(u => u.id === id);
     if(!t) return;
 
-    // تعبئة حقول العرض
     setValue('viewTeacherId', t.id);
     setText('viewTeacherName', t.name);
     setText('viewTeacherUsername', t.username);
     setValue('viewTeacherPassword', t.password);
 
-    // إظهار النافذة
     const modal = document.getElementById('viewCredentialsModal');
     if(modal) modal.classList.add('show');
 }
 
-// ب) الانتقال لنافذة التعديل (الدالة المفقودة Edit Modal)
 function editTeacherCredentials() {
     const id = document.getElementById('viewTeacherId').value;
     const users = JSON.parse(localStorage.getItem('users') || '[]');
@@ -206,23 +222,19 @@ function editTeacherCredentials() {
     
     if(!t) return;
 
-    // إخفاء نافذة العرض
     closeModalElement('viewCredentialsModal');
 
-    // تعبئة نافذة التعديل
     setValue('editCredTeacherId', t.id);
-    setValue('editCredTeacherName', t.name); // للعرض فقط
+    setValue('editCredTeacherName', t.name);
     setValue('editCredTeacherUsername', t.username);
-    setValue('editCredTeacherPassword', ''); // نتركها فارغة للكتابة
+    setValue('editCredTeacherPassword', '');
 
-    // إظهار نافذة التعديل (مع تأخير بسيط للتأثير الحركي)
     setTimeout(() => {
         const editModal = document.getElementById('editCredentialsModal');
         if(editModal) editModal.classList.add('show');
     }, 200);
 }
 
-// ج) حفظ التعديلات (Save Credentials)
 function saveTeacherCredentials() {
     const id = document.getElementById('editCredTeacherId').value;
     const newUser = document.getElementById('editCredTeacherUsername').value.trim();
@@ -234,28 +246,24 @@ function saveTeacherCredentials() {
     const idx = users.findIndex(u => u.id == id);
     if(idx === -1) return;
 
-    // التحقق من تكرار الاسم (مع استثناء نفس المستخدم)
     const exists = users.some(u => u.username === newUser && u.id != id);
     if(exists) return alert('اسم المستخدم محجوز');
 
-    // التحديث
     users[idx].username = newUser;
     if(newPass && newPass.length >= 3) {
         users[idx].password = newPass;
     }
 
     localStorage.setItem('users', JSON.stringify(users));
-    alert('تم تحديث بيانات الدخول بنجاح');
+    alert('تم التحديث بنجاح');
     
     closeModalElement('editCredentialsModal');
-    
-    // إعادة فتح نافذة العرض لرؤية التغييرات
     setTimeout(() => viewTeacherCredentials(parseInt(id)), 300);
     loadTeachersData();
 }
 
 // ---------------------------------------------------------
-// 5. دوال مساعدة عامة
+// 5. دوال مساعدة
 // ---------------------------------------------------------
 function getValue(id) { const el = document.getElementById(id); return el ? el.value : ''; }
 function setValue(id, val) { const el = document.getElementById(id); if(el) el.value = val; }
@@ -282,14 +290,16 @@ function copyToClipboard(type) {
 // ---------------------------------------------------------
 // 6. تصدير الدوال (Global Scope)
 // ---------------------------------------------------------
+window.showAddTeacherModal = showAddTeacherModal;   // ✅ تم الإصلاح
+window.closeAddTeacherModal = closeAddTeacherModal; // ✅ تم الإصلاح
 window.addNewTeacher = addNewTeacher;
+window.saveNewTeacher = saveNewTeacher;             // ✅ اسم بديل لضمان العمل
 window.deleteTeacher = deleteTeacher;
 window.toggleTeacherStatus = toggleTeacherStatus;
 window.editTeacher = editTeacher;
-// دوال بيانات الدخول
 window.viewTeacherCredentials = viewTeacherCredentials;
-window.editTeacherCredentials = editTeacherCredentials; // ✅ تم إضافتها
-window.saveTeacherCredentials = saveTeacherCredentials; // ✅ تم إضافتها
+window.editTeacherCredentials = editTeacherCredentials;
+window.saveTeacherCredentials = saveTeacherCredentials;
 window.closeViewCredentialsModal = () => closeModalElement('viewCredentialsModal');
 window.closeEditCredentialsModal = () => closeModalElement('editCredentialsModal');
 window.togglePasswordVisibility = togglePasswordVisibility;

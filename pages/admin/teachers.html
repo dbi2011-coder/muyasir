@@ -4,17 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>إدارة المعلمين - ميسر التعلم</title>
-    <!-- الخطوط -->
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <!-- الأيقونات -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- الأنماط -->
     <link rel="stylesheet" href="../../assets/css/main.css">
     <link rel="stylesheet" href="../../assets/css/admin.css">
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
 </head>
 <body>
-    <!-- الشريط الجانبي -->
     <div class="sidebar">
         <div class="sidebar-header">
             <div class="logo">
@@ -26,16 +22,12 @@
         <ul class="sidebar-menu">
             <li><a href="dashboard.html"><i class="menu-icon fas fa-home"></i> لوحة التحكم</a></li>
             <li><a href="teachers.html" class="active"><i class="menu-icon fas fa-chalkboard-teacher"></i> إدارة المعلمين</a></li>
-            <li><a href="students.html"><i class="menu-icon fas fa-user-graduate"></i> إدارة الطلاب</a></li>
-            <li><a href="reports.html"><i class="menu-icon fas fa-chart-bar"></i> التقارير والإحصائيات</a></li>
             <li><a href="settings.html"><i class="menu-icon fas fa-cog"></i> إعدادات النظام</a></li>
             <li><a href="#" onclick="logout()"><i class="menu-icon fas fa-sign-out-alt"></i> تسجيل الخروج</a></li>
         </ul>
     </div>
 
-    <!-- المحتوى الرئيسي -->
     <div class="main-content-dashboard">
-        <!-- رأس الصفحة -->
         <div class="dashboard-header">
             <div class="user-info">
                 <div class="user-avatar" id="userAvatar">م</div>
@@ -56,9 +48,7 @@
             </div>
         </div>
 
-        <!-- محتوى الصفحة -->
         <div class="dashboard-content">
-            <!-- عنوان الصفحة -->
             <div class="content-header">
                 <h1><i class="fas fa-chalkboard-teacher"></i> إدارة المعلمين</h1>
                 <button class="btn btn-success" onclick="showAddTeacherModal()">
@@ -66,7 +56,6 @@
                 </button>
             </div>
 
-            <!-- الإحصائيات -->
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-header">
@@ -117,7 +106,6 @@
                 </div>
             </div>
 
-            <!-- فلترة البحث -->
             <div class="filters-section">
                 <div class="search-box">
                     <input type="text" id="teacherSearch" class="form-control" 
@@ -136,7 +124,6 @@
                 </select>
             </div>
 
-            <!-- جدول المعلمين -->
             <div class="table-container">
                 <table class="table">
                     <thead>
@@ -151,17 +138,14 @@
                         </tr>
                     </thead>
                     <tbody id="teachersTableBody">
-                        <!-- سيتم تعبئته بواسطة JavaScript -->
-                    </tbody>
+                        </tbody>
                 </table>
                 
-                <!-- حالة التحميل -->
                 <div id="loadingState" class="loading-state" style="display: none;">
                     <div class="loading-spinner"></div>
                     <p>جاري تحميل بيانات المعلمين...</p>
                 </div>
                 
-                <!-- حالة عدم وجود بيانات -->
                 <div id="emptyState" class="empty-state" style="display: none;">
                     <div class="empty-icon">
                         <i class="fas fa-chalkboard-teacher"></i>
@@ -174,21 +158,14 @@
                 </div>
             </div>
 
-            <!-- النشاط الأخير -->
             <div class="recent-activity">
                 <h3><i class="fas fa-history"></i> النشاط الأخير</h3>
                 <div class="activity-list" id="activityList">
-                    <!-- سيتم تعبئته بواسطة JavaScript -->
-                </div>
+                    </div>
             </div>
         </div>
     </div>
 
-    <!-- =========================================== -->
-    <!-- النوافذ المنبثقة (Modals) -->
-    <!-- =========================================== -->
-
-    <!-- نافذة إضافة معلم جديد -->
     <div id="addTeacherModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -236,7 +213,6 @@
         </div>
     </div>
 
-    <!-- نافذة تعديل معلم -->
     <div id="editTeacherModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -278,11 +254,6 @@
         </div>
     </div>
 
-    <!-- =========================================== -->
-    <!-- النوافذ المنبثقة الجديدة: بيانات الدخول -->
-    <!-- =========================================== -->
-
-    <!-- نافذة عرض بيانات الدخول -->
     <div id="viewCredentialsModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -348,7 +319,6 @@
         </div>
     </div>
 
-    <!-- نافذة تعديل بيانات الدخول -->
     <div id="editCredentialsModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -392,11 +362,6 @@
         </div>
     </div>
 
-    <!-- =========================================== -->
-    <!-- نهاية النوافذ المنبثقة -->
-    <!-- =========================================== -->
-
-    <!-- الأكواد البرمجية -->
     <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/admin.js"></script>
     

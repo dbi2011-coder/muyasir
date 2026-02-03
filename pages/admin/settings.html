@@ -12,7 +12,6 @@
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- الشريط الجانبي -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
@@ -23,16 +22,12 @@
             <ul class="sidebar-menu">
                 <li><a href="dashboard.html"><i class="fas fa-home"></i> لوحة التحكم</a></li>
                 <li><a href="teachers.html"><i class="fas fa-chalkboard-teacher"></i> إدارة المعلمين</a></li>
-                <li><a href="students.html"><i class="fas fa-user-graduate"></i> إدارة الطلاب</a></li>
-                <li><a href="reports.html"><i class="fas fa-chart-bar"></i> التقارير</a></li>
                 <li><a href="settings.html" class="active"><i class="fas fa-cog"></i> الإعدادات</a></li>
                 <li><a href="#" onclick="logout()"><i class="fas fa-sign-out-alt"></i> تسجيل الخروج</a></li>
             </ul>
         </aside>
 
-        <!-- المحتوى الرئيسي -->
         <main class="main-content-dashboard">
-            <!-- رأس لوحة التحكم -->
             <header class="dashboard-header">
                 <div class="user-info">
                     <div class="user-welcome">
@@ -49,13 +44,11 @@
                 </div>
             </header>
 
-            <!-- محتوى لوحة التحكم -->
             <div class="dashboard-content">
                 <div class="content-header">
                     <h1><i class="fas fa-cog"></i> إعدادات النظام</h1>
                 </div>
 
-                <!-- تبويبات الإعدادات -->
                 <div class="settings-tabs">
                     <button class="settings-tab active" data-tab="general" onclick="switchSettingsTab('general')">
                         <i class="fas fa-sliders-h"></i> الإعدادات العامة
@@ -71,7 +64,6 @@
                     </button>
                 </div>
 
-                <!-- الإعدادات العامة -->
                 <div id="general-tab" class="settings-section">
                     <h3><i class="fas fa-sliders-h"></i> الإعدادات العامة للنظام</h3>
                     <form id="systemSettingsForm">
@@ -133,7 +125,6 @@
                     </form>
                 </div>
 
-                <!-- النسخ الاحتياطي -->
                 <div id="backup-tab" class="settings-section" style="display: none;">
                     <h3><i class="fas fa-database"></i> إدارة النسخ الاحتياطي</h3>
                     
@@ -181,13 +172,11 @@
                                 </tr>
                             </thead>
                             <tbody id="backupList">
-                                <!-- سيتم تعبئته بالجافاسكريبت -->
-                            </tbody>
+                                </tbody>
                         </table>
                     </div>
                 </div>
 
-                <!-- سجلات النظام -->
                 <div id="logs-tab" class="settings-section" style="display: none;">
                     <h3><i class="fas fa-clipboard-list"></i> سجلات النظام</h3>
                     
@@ -224,8 +213,7 @@
                                 </tr>
                             </thead>
                             <tbody id="logsList">
-                                <!-- سيتم تعبئته بالجافاسكريبت -->
-                            </tbody>
+                                </tbody>
                         </table>
                     </div>
 
@@ -239,7 +227,6 @@
                     </div>
                 </div>
 
-                <!-- الأمان -->
                 <div id="security-tab" class="settings-section" style="display: none;">
                     <h3><i class="fas fa-shield-alt"></i> إعدادات الأمان</h3>
                     
@@ -330,7 +317,6 @@
         </main>
     </div>
 
-    <!-- نموذج استيراد النسخ الاحتياطية -->
     <div class="modal" id="importBackupModal">
         <div class="modal-content">
             <div class="modal-header">
@@ -358,7 +344,6 @@
         </div>
     </div>
 
-    <!-- إضافة الجافاسكريبت -->
     <script src="../../assets/js/auth.js"></script>
     <script src="../../assets/js/admin.js"></script>
     

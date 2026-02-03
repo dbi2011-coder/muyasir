@@ -11,7 +11,6 @@
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- الشريط الجانبي -->
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
@@ -23,15 +22,12 @@
             <ul class="sidebar-menu">
                 <li><a href="dashboard.html" class="active"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
                 <li><a href="teachers.html"><span class="menu-icon">👨‍🏫</span>إدارة المعلمين</a></li>
-                <li><a href="reports.html"><span class="menu-icon">📋</span>التقارير</a></li>
                 <li><a href="settings.html"><span class="menu-icon">⚙️</span>الإعدادات</a></li>
                 <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
             </ul>
         </aside>
 
-        <!-- المحتوى الرئيسي -->
         <main class="main-content-dashboard">
-            <!-- رأس اللوحة -->
             <header class="dashboard-header">
                 <button class="mobile-menu-btn">☰</button>
                 <div class="user-info">
@@ -49,7 +45,6 @@
                 </div>
             </header>
 
-            <!-- محتوى اللوحة -->
             <div class="dashboard-content">
                 <div class="content-header">
                     <h1>لوحة تحكم المدير</h1>
@@ -60,7 +55,6 @@
                     </div>
                 </div>
 
-                <!-- الإحصائيات -->
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-header">
@@ -95,24 +89,20 @@
                     </div>
                 </div>
 
-                <!-- النشاط الأخير -->
                 <div class="recent-activity">
                     <div class="card">
                         <h3>النشاط الأخير</h3>
                         <div class="activity-list" id="activityList">
-                            <!-- سيتم تعبئته بواسطة JavaScript -->
-                        </div>
+                            </div>
                     </div>
                 </div>
 
-                <!-- رسالة ترحيبية -->
                 <div class="welcome-message">
                     <div class="card">
                         <h3>مرحباً بك في نظام ميسر التعلم</h3>
-                        <p>يمكنك من خلال هذه اللوحة إدارة النظام بالكامل، متابعة المعلمين، والطلاب، وعرض التقارير الشاملة.</p>
+                        <p>يمكنك من خلال هذه اللوحة إدارة النظام بالكامل، ومتابعة المعلمين والطلاب.</p>
                         <div class="quick-actions">
                             <button class="btn btn-primary" onclick="window.location.href='teachers.html'">إدارة المعلمين</button>
-                            <button class="btn btn-secondary" onclick="window.location.href='reports.html'">عرض التقارير</button>
                             <button class="btn btn-success" onclick="showSystemStats()">إحصائيات النظام</button>
                         </div>
                     </div>

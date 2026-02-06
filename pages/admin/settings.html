@@ -69,23 +69,11 @@
                     <form id="systemSettingsForm">
                         <div class="settings-grid">
                             <div class="setting-item">
-                                <label for="systemName">اسم النظام *</label>
-                                <input type="text" id="systemName" class="form-control" required>
-                            </div>
-                            <div class="setting-item">
-                                <label for="systemEmail">البريد الإلكتروني للنظام</label>
-                                <input type="email" id="systemEmail" class="form-control">
-                            </div>
-                            <div class="setting-item">
                                 <label for="sessionTimeout">مهلة الجلسة (دقائق) *</label>
                                 <input type="number" id="sessionTimeout" class="form-control" min="5" max="480" value="60" required>
                                 <small class="text-muted">الوقت قبل انتهاء الجلسة تلقائياً (5-480 دقيقة)</small>
                             </div>
-                            <div class="setting-item">
-                                <label for="maxLoginAttempts">أقصى محاولات تسجيل دخول *</label>
-                                <input type="number" id="maxLoginAttempts" class="form-control" min="1" max="10" value="5" required>
-                                <small class="text-muted">عدد المحاولات المسموح بها قبل تعليق الحساب</small>
-                            </div>
+                            
                             <div class="setting-item">
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="enableNotifications" class="form-check" checked>
@@ -98,22 +86,8 @@
                                     <span>النسخ الاحتياطي التلقائي</span>
                                 </label>
                             </div>
-                            <div class="setting-item">
-                                <label for="backupFrequency">تكرار النسخ الاحتياطي</label>
-                                <select id="backupFrequency" class="form-control">
-                                    <option value="daily">يومي</option>
-                                    <option value="weekly">أسبوعي</option>
-                                    <option value="monthly">شهري</option>
-                                </select>
+
                             </div>
-                            <div class="setting-item">
-                                <label for="defaultLanguage">اللغة الافتراضية</label>
-                                <select id="defaultLanguage" class="form-control">
-                                    <option value="ar" selected>العربية</option>
-                                    <option value="en">English</option>
-                                </select>
-                            </div>
-                        </div>
                         <div class="setting-actions">
                             <button type="submit" class="btn btn-success">
                                 <i class="fas fa-save"></i> حفظ الإعدادات
@@ -368,7 +342,7 @@
             document.getElementById(`${tabName}-tab`).style.display = 'block';
         }
 
-        // تحميل إعدادات النظام
+        // تحميل إعدادات النظام (محدث)
         function loadSystemSettings() {
             const settings = JSON.parse(localStorage.getItem('systemSettings') || '{}');
             
@@ -389,34 +363,26 @@
                 return;
             }
             
-            document.getElementById('systemName').value = settings.systemName || 'ميسر التعلم';
-            document.getElementById('systemEmail').value = settings.systemEmail || '';
+            // تم حذف التعيينات للحقول المحذوفة
             document.getElementById('sessionTimeout').value = settings.sessionTimeout || 60;
-            document.getElementById('maxLoginAttempts').value = settings.maxLoginAttempts || 5;
             document.getElementById('enableNotifications').checked = settings.enableNotifications !== false;
             document.getElementById('enableAutoBackup').checked = settings.enableAutoBackup || false;
-            document.getElementById('backupFrequency').value = settings.backupFrequency || 'daily';
-            document.getElementById('defaultLanguage').value = settings.defaultLanguage || 'ar';
         }
 
-        // حفظ إعدادات النظام
+        // حفظ إعدادات النظام (محدث)
         function saveSystemSettings() {
+            // الاحتفاظ بالقيم القديمة التي تم إخفاؤها
+            const currentSettings = JSON.parse(localStorage.getItem('systemSettings') || '{}');
+            
             const settings = {
-                systemName: document.getElementById('systemName').value.trim(),
-                systemEmail: document.getElementById('systemEmail').value.trim(),
+                ...currentSettings, // دمج القيم القديمة
                 sessionTimeout: parseInt(document.getElementById('sessionTimeout').value),
-                maxLoginAttempts: parseInt(document.getElementById('maxLoginAttempts').value),
                 enableNotifications: document.getElementById('enableNotifications').checked,
                 enableAutoBackup: document.getElementById('enableAutoBackup').checked,
-                backupFrequency: document.getElementById('backupFrequency').value,
-                defaultLanguage: document.getElementById('defaultLanguage').value,
                 lastUpdated: new Date().toISOString()
             };
 
-            if (!settings.systemName) {
-                alert('يرجى إدخال اسم النظام');
-                return;
-            }
+            // تم إزالة التحقق من اسم النظام لأنه تم حذفه
 
             localStorage.setItem('systemSettings', JSON.stringify(settings));
             
@@ -426,7 +392,7 @@
             alert('تم حفظ الإعدادات بنجاح');
         }
 
-        // إعادة تعيين الإعدادات
+        // إعادة تعيين الإعدادات (محدث)
         function resetSettings() {
             if (!confirm('هل أنت متأكد من إعادة تعيين الإعدادات إلى القيم الافتراضية؟')) {
                 return;

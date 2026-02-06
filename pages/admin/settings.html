@@ -70,11 +70,7 @@
                     <div class="user-avatar" id="userAvatar">م</div>
                 </div>
                 <div class="header-actions">
-                    <button class="btn btn-primary" onclick="showNotifications()">
-                        <i class="fas fa-bell"></i>
-                        <span class="notification-badge" id="notificationCount">0</span>
-                    </button>
-                </div>
+                    </div>
             </header>
 
             <div class="dashboard-content">
@@ -108,12 +104,6 @@
                                 <small class="text-muted">الوقت قبل انتهاء الجلسة تلقائياً (5-480 دقيقة)</small>
                             </div>
                             
-                            <div class="setting-item">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="enableNotifications" class="form-check" checked>
-                                    <span>تفعيل الإشعارات</span>
-                                </label>
-                            </div>
                             <div class="setting-item">
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="enableAutoBackup" class="form-check">
@@ -500,7 +490,7 @@
             }
             
             document.getElementById('sessionTimeout').value = settings.sessionTimeout || 60;
-            document.getElementById('enableNotifications').checked = settings.enableNotifications !== false;
+            // تم حذف التعيين ل enableNotifications
             document.getElementById('enableAutoBackup').checked = settings.enableAutoBackup || false;
 
             // تحميل التقويم أيضاً عند تحميل الإعدادات
@@ -513,7 +503,7 @@
             const settings = {
                 ...currentSettings,
                 sessionTimeout: parseInt(document.getElementById('sessionTimeout').value),
-                enableNotifications: document.getElementById('enableNotifications').checked,
+                enableNotifications: false, // تعيين قيمة ثابتة (معطل)
                 enableAutoBackup: document.getElementById('enableAutoBackup').checked,
                 lastUpdated: new Date().toISOString()
             };
@@ -530,7 +520,7 @@
             
             const defaultSettings = {
                 sessionTimeout: 60,
-                enableNotifications: true,
+                enableNotifications: false,
                 enableAutoBackup: false,
                 lastUpdated: new Date().toISOString()
             };
@@ -577,36 +567,52 @@
         }
 
         function createBackup() {
-            if (!confirm('هل تريد إنشاء نسخة احتياطية جديدة؟')) return;
+            if (!confirm('هل تريد إنشاء نسخة احتياطية جديدة وتحميلها؟')) return;
             
             const backupData = {};
-            Object.keys(localStorage).forEach(key => {
+            const keys = [
+                'users', 'teachers', 'students', 
+                'tests', 'lessons', 'assignments', 'objectives',
+                'studentLessons', 'studentTests', 'studentAssignments', 'studentEvents',
+                'teacherSchedule', 'academicCalendar',
+                'systemSettings', 'systemLogs',
+                'committeeMembers', 'committeeNotes', 'committeeReports'
+            ];
+            keys.forEach(key => {
                 try { backupData[key] = JSON.parse(localStorage.getItem(key)); } 
                 catch (e) { backupData[key] = localStorage.getItem(key); }
             });
             
-            const backups = JSON.parse(localStorage.getItem('systemBackups') || '[]');
-            const backup = {
-                id: Date.now(),
-                createdAt: new Date().toISOString(),
-                type: 'manual',
-                data: backupData,
-                size: JSON.stringify(backupData).length + ' bytes'
-            };
-            
-            backups.push(backup);
-            localStorage.setItem('systemBackups', JSON.stringify(backups));
-            
-            const blob = new Blob([JSON.stringify(backupData, null, 2)], {type: 'application/json'});
+            // حساب الحجم التقريبي
+            const dataString = JSON.stringify(backupData, null, 2);
+            const sizeInKB = (dataString.length / 1024).toFixed(2) + ' KB';
+
+            const blob = new Blob([dataString], {type: 'application/json'});
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = `backup-muyasir-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
             URL.revokeObjectURL(url);
             
-            addSystemLog('تم إنشاء نسخة احتياطية', 'backup');
-            alert('تم إنشاء النسخة الاحتياطية بنجاح');
+            // حفظ سجل فقط
+            const backups = JSON.parse(localStorage.getItem('systemBackups') || '[]');
+            const newBackup = {
+                id: Date.now(),
+                createdAt: new Date().toISOString(),
+                type: 'manual',
+                size: sizeInKB,
+                data: null // توفير مساحة
+            };
+            
+            backups.push(newBackup);
+            if (backups.length > 10) backups.shift();
+            localStorage.setItem('systemBackups', JSON.stringify(backups));
+            
+            addSystemLog('تم إنشاء وتصدير نسخة احتياطية', 'backup');
+            alert('تم تحميل ملف النسخة الاحتياطية بنجاح.');
             loadBackupHistory();
         }
 
@@ -628,7 +634,11 @@
                             localStorage.setItem(key, JSON.stringify(backupData[key]));
                         });
                     } else {
+                        // الاحتفاظ بسجلات النسخ الاحتياطي
+                        const oldBackups = localStorage.getItem('systemBackups');
                         localStorage.clear();
+                        if(oldBackups) localStorage.setItem('systemBackups', oldBackups);
+                        
                         Object.keys(backupData).forEach(key => {
                             localStorage.setItem(key, JSON.stringify(backupData[key]));
                         });
@@ -645,8 +655,15 @@
 
         function downloadBackup(index) {
             const backups = JSON.parse(localStorage.getItem('systemBackups') || '[]');
-            if (!backups[index]) return;
-            const blob = new Blob([JSON.stringify(backups[index].data, null, 2)], {type: 'application/json'});
+            const backup = backups[index];
+            if (!backup) return;
+            
+            if (!backup.data) {
+                alert('هذا الملف موجود لديك بالفعل على جهازك (تم تحميله وقت الإنشاء).');
+                return;
+            }
+
+            const blob = new Blob([JSON.stringify(backup.data, null, 2)], {type: 'application/json'});
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -656,12 +673,20 @@
         }
 
         function restoreBackup(index) {
-            if (!confirm('⚠️ تحذير: استعادة النسخة الاحتياطية ستحل محل البيانات الحالية.')) return;
             const backups = JSON.parse(localStorage.getItem('systemBackups') || '[]');
-            if (!backups[index]) return;
+            const backup = backups[index];
+            if (!backup) return;
+
+            if (!backup.data) {
+                alert('ℹ️ هذه النسخة تم حفظها كملف خارجي لتوفير المساحة.\n\nلاستعادتها، يرجى الضغط على زر "استيراد نسخة احتياطية" في الأعلى.');
+                return;
+            }
+
+            if (!confirm('⚠️ تحذير: استعادة النسخة الاحتياطية ستحل محل البيانات الحالية.')) return;
+            
             localStorage.clear();
-            Object.keys(backups[index].data).forEach(key => {
-                localStorage.setItem(key, JSON.stringify(backups[index].data[key]));
+            Object.keys(backup.data).forEach(key => {
+                localStorage.setItem(key, JSON.stringify(backup.data[key]));
             });
             alert('تم استعادة النسخة الاحتياطية بنجاح');
             location.reload();

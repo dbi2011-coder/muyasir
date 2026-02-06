@@ -1,14 +1,13 @@
 // ============================================
 // 📁 الملف: assets/js/admin.js
-// الوصف: لوحة تحكم المدير (مع ميزات التصدير والاستيراد)
+// الوصف: لوحة تحكم المدير (إصلاح شامل للتصدير والاستيراد مع الطلاب)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
     // 1. التحقق من الصلاحية
     const user = getAdminSession();
-    if (!user || user.role !== 'admin') {
-        // window.location.href = '../../index.html'; 
-    }
+    // يمكنك تفعيل التحقق الصارم هنا إذا أردت
+    // if (!user || user.role !== 'admin') { window.location.href = '../../index.html'; }
 
     // 2. تحديث الاسم في الهيدر
     if(document.getElementById('userName')) {
@@ -31,7 +30,7 @@ function getAdminSession() {
 }
 
 // ---------------------------------------------------------
-// 2. عرض الجدول والأزرار (محدث مع زر التصدير)
+// 2. عرض الجدول والأزرار (مع زر التصدير)
 // ---------------------------------------------------------
 function loadTeachersData() {
     const tableBody = document.getElementById('teachersTableBody');
@@ -52,6 +51,7 @@ function loadTeachersData() {
     if (empty) empty.style.display = 'none';
 
     tableBody.innerHTML = teachers.map((teacher, index) => {
+        // حساب عدد الطلاب المرتبطين بهذا المعلم
         const sCount = users.filter(u => u.role === 'student' && u.teacherId == teacher.id).length;
         const isActive = teacher.status !== 'suspended';
         
@@ -71,7 +71,7 @@ function loadTeachersData() {
                 <td>${statusBadge}</td>
                 <td>
                     <div style="display:flex; gap:5px; justify-content:center;">
-                        <button class="btn btn-sm btn-dark" onclick="exportTeacherData(${teacher.id})" title="تصدير ملف المعلم">تصدير 📤</button>
+                        <button class="btn btn-sm btn-dark" onclick="exportTeacherData(${teacher.id})" title="تصدير ملف المعلم وطلابه">تصدير 📤</button>
                         <button class="btn btn-sm btn-primary" onclick="editTeacher(${teacher.id})">تعديل ✏️</button>
                         <button class="btn btn-sm btn-info" onclick="viewTeacherCredentials(${teacher.id})">بيانات 🔑</button>
                         <button class="btn btn-sm ${toggleClass}" onclick="toggleTeacherStatus(${teacher.id})">${toggleText}</button>
@@ -104,6 +104,7 @@ function showAddTeacherModal() {
     clearValue('teacherUsername');
     clearValue('teacherPassword');
     clearValue('teacherPhone');
+    // دعم الحقول البديلة
     clearValue('newTeacherName');
     clearValue('newTeacherUsername');
     clearValue('newTeacherPassword');
@@ -147,6 +148,7 @@ function addNewTeacher() {
     loadAdminStats();
 }
 
+// اسم بديل لاستخدامه في HTML إذا لزم الأمر
 function saveNewTeacher() {
     addNewTeacher();
 }
@@ -155,11 +157,13 @@ function deleteTeacher(id) {
     if(!confirm('هل أنت متأكد من حذف المعلم وجميع طلابه؟')) return;
     
     let users = JSON.parse(localStorage.getItem('users') || '[]');
-    users = users.filter(u => u.id !== id);
+    users = users.filter(u => u.id !== id); // حذف المعلم
+    // حذف طلابه المرتبطين به
     users = users.filter(u => !(u.role === 'student' && u.teacherId == id));
     
     localStorage.setItem('users', JSON.stringify(users));
     
+    // تنظيف الجدول الدراسي
     let sch = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     localStorage.setItem('teacherSchedule', JSON.stringify(sch.filter(s => s.teacherId != id)));
 
@@ -257,11 +261,11 @@ function saveTeacherCredentials() {
 }
 
 // ---------------------------------------------------------
-// 5. ميزات التصدير والاستيراد (جديد)
+// 5. ميزات التصدير والاستيراد (محدثة بالكامل)
 // ---------------------------------------------------------
 
 function exportTeacherData(teacherId) {
-    if (!confirm('هل تريد تصدير نسخة كاملة من بيانات هذا المعلم؟')) return;
+    if (!confirm('هل تريد تصدير نسخة كاملة من بيانات هذا المعلم وطلابه؟')) return;
 
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const teacherProfile = users.find(u => u.id == teacherId);
@@ -271,11 +275,13 @@ function exportTeacherData(teacherId) {
         return;
     }
 
-    // جلب الجدول
+    // 1. جلب الطلاب المرتبطين بالمعلم
+    const teacherStudents = users.filter(u => u.role === 'student' && u.teacherId == teacherId);
+
+    // 2. جلب البيانات الأخرى
     const allSchedules = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     const teacherSchedule = allSchedules.filter(s => s.teacherId == teacherId);
 
-    // جلب المحتوى
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const teacherTests = allTests.filter(t => t.authorId == teacherId || t.teacherId == teacherId);
 
@@ -285,14 +291,16 @@ function exportTeacherData(teacherId) {
     const allAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
     const teacherAssignments = allAssignments.filter(a => a.authorId == teacherId || a.teacherId == teacherId);
 
+    // 3. بناء ملف التصدير
     const exportData = {
         meta: {
             type: 'teacher_backup',
-            version: '1.0',
+            version: '1.2',
             exportedAt: new Date().toISOString()
         },
         profile: teacherProfile,
         data: {
+            students: teacherStudents, // تضمين الطلاب أمر ضروري
             schedule: teacherSchedule,
             tests: teacherTests,
             lessons: teacherLessons,
@@ -332,20 +340,39 @@ function importTeacherData() {
                     return;
                 }
 
-                if (!confirm(`هل تريد استيراد بيانات المعلم: ${importedData.profile.name}؟`)) return;
+                const sCount = importedData.data.students ? importedData.data.students.length : 0;
+                
+                if (!confirm(`هل تريد استيراد المعلم: "${importedData.profile.name}" وعدد طلابه (${sCount})؟`)) return;
 
                 const users = JSON.parse(localStorage.getItem('users') || '[]');
-                const existsIdx = users.findIndex(u => u.id == importedData.profile.id);
                 
+                // 1. استيراد المعلم (تحديث إذا كان موجوداً، أو إضافة)
+                const existsIdx = users.findIndex(u => u.id == importedData.profile.id);
                 if (existsIdx !== -1) {
-                    if (!confirm('هذا المعلم موجود بالفعل، هل تريد تحديث بياناته؟')) return;
                     users[existsIdx] = importedData.profile;
                 } else {
                     users.push(importedData.profile);
                 }
+
+                // 2. استيراد الطلاب (حل مشكلة اختفاء الطلاب)
+                if (importedData.data.students && importedData.data.students.length > 0) {
+                    importedData.data.students.forEach(importedStudent => {
+                        // التحقق من وجود الطالب مسبقاً
+                        const sIdx = users.findIndex(u => u.id == importedStudent.id);
+                        if (sIdx !== -1) {
+                            // تحديث بيانات الطالب الموجود لضمان ارتباطه بالمعلم الصحيح
+                            users[sIdx] = importedStudent;
+                        } else {
+                            // إضافة الطالب الجديد
+                            users.push(importedStudent);
+                        }
+                    });
+                }
+                
+                // حفظ قائمة المستخدمين المحدثة
                 localStorage.setItem('users', JSON.stringify(users));
 
-                // دالة لدمج البيانات
+                // 3. دمج البيانات الأخرى
                 const mergeData = (key, newData) => {
                     if (!newData || newData.length === 0) return;
                     const currentData = JSON.parse(localStorage.getItem(key) || '[]');
@@ -360,12 +387,13 @@ function importTeacherData() {
                 mergeData('lessons', importedData.data.lessons);
                 mergeData('assignments', importedData.data.assignments);
 
-                alert('تم استيراد بيانات المعلم بنجاح');
+                alert(`تم استيراد المعلم و ${sCount} طالب بنجاح!`);
                 loadTeachersData();
                 loadAdminStats();
                 
             } catch (err) {
                 alert('خطأ في قراءة الملف: ' + err.message);
+                console.error(err);
             }
         };
         reader.readAsText(file);
@@ -416,6 +444,5 @@ window.closeViewCredentialsModal = () => closeModalElement('viewCredentialsModal
 window.closeEditCredentialsModal = () => closeModalElement('editCredentialsModal');
 window.togglePasswordVisibility = togglePasswordVisibility;
 window.copyToClipboard = copyToClipboard;
-// الدوال الجديدة
 window.exportTeacherData = exportTeacherData;
 window.importTeacherData = importTeacherData;

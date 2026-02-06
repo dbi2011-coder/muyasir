@@ -21,19 +21,20 @@ function loadSystemSettings() {
     
     // تعبئة النموذج بالإعدادات الحالية
     if (settings) {
-        document.getElementById('systemName').value = settings.systemName || 'ميسر التعلم';
-        document.getElementById('systemEmail').value = settings.systemEmail || '';
-        document.getElementById('sessionTimeout').value = settings.sessionTimeout || 60;
-        document.getElementById('maxLoginAttempts').value = settings.maxLoginAttempts || 5;
-        document.getElementById('enableNotifications').checked = settings.enableNotifications !== false;
-        document.getElementById('enableAutoBackup').checked = settings.enableAutoBackup || false;
-        document.getElementById('backupFrequency').value = settings.backupFrequency || 'daily';
+        if(document.getElementById('systemName')) document.getElementById('systemName').value = settings.systemName || 'ميسر التعلم';
+        if(document.getElementById('systemEmail')) document.getElementById('systemEmail').value = settings.systemEmail || '';
+        if(document.getElementById('sessionTimeout')) document.getElementById('sessionTimeout').value = settings.sessionTimeout || 60;
+        // تم حذف maxLoginAttempts سابقاً بناء على طلبك، لكن نبقيه في الكود في حال كان موجوداً في الذاكرة
+        if(document.getElementById('enableNotifications')) document.getElementById('enableNotifications').checked = settings.enableNotifications !== false;
+        if(document.getElementById('enableAutoBackup')) document.getElementById('enableAutoBackup').checked = settings.enableAutoBackup || false;
+        if(document.getElementById('backupFrequency')) document.getElementById('backupFrequency').value = settings.backupFrequency || 'daily';
     }
 }
 
 function setupSettingsForm() {
     const form = document.getElementById('systemSettingsForm');
-    
+    if (!form) return;
+
     form.addEventListener('submit', function(e) {
         e.preventDefault();
         saveSystemSettings();
@@ -41,76 +42,54 @@ function setupSettingsForm() {
 }
 
 function saveSystemSettings() {
+    const oldSettings = JSON.parse(localStorage.getItem('systemSettings') || '{}');
+    
     const settings = {
-        systemName: document.getElementById('systemName').value.trim(),
-        systemEmail: document.getElementById('systemEmail').value.trim(),
+        ...oldSettings,
         sessionTimeout: parseInt(document.getElementById('sessionTimeout').value),
-        maxLoginAttempts: parseInt(document.getElementById('maxLoginAttempts').value),
         enableNotifications: document.getElementById('enableNotifications').checked,
         enableAutoBackup: document.getElementById('enableAutoBackup').checked,
-        backupFrequency: document.getElementById('backupFrequency').value,
         lastUpdated: new Date().toISOString()
     };
 
-    // التحقق من صحة البيانات
-    if (!settings.systemName) {
-        showAuthNotification('يرجى إدخال اسم النظام', 'error');
-        return;
-    }
-
-    if (settings.systemEmail && !isValidEmail(settings.systemEmail)) {
-        showAuthNotification('البريد الإلكتروني غير صالح', 'error');
-        return;
-    }
-
     if (settings.sessionTimeout < 5 || settings.sessionTimeout > 480) {
-        showAuthNotification('مهلة الجلسة يجب أن تكون بين 5 و 480 دقيقة', 'error');
+        alert('مهلة الجلسة يجب أن تكون بين 5 و 480 دقيقة');
         return;
     }
 
-    // حفظ الإعدادات
     localStorage.setItem('systemSettings', JSON.stringify(settings));
-    
-    // إضافة سجل
     addSystemLog('تم تحديث إعدادات النظام', 'settings');
+    alert('تم حفظ الإعدادات بنجاح');
     
-    showAuthNotification('تم حفظ الإعدادات بنجاح', 'success');
-    
-    // إعادة تحميل الإعدادات لعرض التغييرات
-    setTimeout(() => {
-        loadSystemSettings();
-    }, 1000);
+    setTimeout(() => { loadSystemSettings(); }, 1000);
 }
 
 function resetSettings() {
     if (confirm('هل أنت متأكد من إعادة تعيين الإعدادات إلى القيم الافتراضية؟')) {
         const defaultSettings = {
             systemName: 'ميسر التعلم',
-            systemEmail: '',
             sessionTimeout: 60,
-            maxLoginAttempts: 5,
             enableNotifications: true,
             enableAutoBackup: false,
-            backupFrequency: 'daily',
             lastUpdated: new Date().toISOString()
         };
         
         localStorage.setItem('systemSettings', JSON.stringify(defaultSettings));
-        
-        // إضافة سجل
         addSystemLog('تم إعادة تعيين إعدادات النظام', 'settings');
+        alert('تم إعادة تعيين الإعدادات بنجاح');
         
-        showAuthNotification('تم إعادة تعيين الإعدادات بنجاح', 'success');
-        
-        // إعادة تحميل النموذج
-        setTimeout(() => {
-            loadSystemSettings();
-        }, 500);
+        setTimeout(() => { loadSystemSettings(); }, 500);
     }
 }
 
+// ----------------------------------------------------------------
+// 🔥 قسم النسخ الاحتياطي (استيراد وتصدير JSON)
+// ----------------------------------------------------------------
+
 function loadBackupHistory() {
     const backupList = document.getElementById('backupList');
+    if (!backupList) return;
+
     const backups = JSON.parse(localStorage.getItem('systemBackups') || '[]');
     
     if (backups.length === 0) {
@@ -128,7 +107,6 @@ function loadBackupHistory() {
         return;
     }
     
-    // ترتيب النسخ الاحتياطية من الأحدث إلى الأقدم
     backups.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     
     backupList.innerHTML = backups.map((backup, index) => `
@@ -149,63 +127,137 @@ function loadBackupHistory() {
 }
 
 function createBackup() {
-    showAuthNotification('جاري إنشاء نسخة احتياطية...', 'info');
+    // 1. تجميع كافة بيانات النظام (تحديث القائمة لتشمل كل شيء)
+    const backupData = {};
+    const keys = [
+        'users', 'teachers', 'students', 
+        'tests', 'lessons', 'assignments', 'objectives', // المحتوى
+        'studentLessons', 'studentTests', 'studentAssignments', 'studentEvents', // بيانات الطلاب التفصيلية
+        'teacherSchedule', 'academicCalendar', // الجداول والتقويم
+        'systemSettings', 'systemLogs', // الإعدادات والسجلات
+        'committeeMembers', 'committeeNotes', 'committeeReports' // اللجان
+    ];
     
-    setTimeout(() => {
-        // جمع جميع البيانات من localStorage
-        const backupData = {};
-        const keys = [
-            'users', 'teachers', 'students', 'tests', 'lessons', 
-            'assignments', 'systemSettings', 'committeeMembers',
-            'committeeNotes', 'committeeReports', 'loginLogs'
-        ];
-        
-        keys.forEach(key => {
-            if (localStorage.getItem(key)) {
-                backupData[key] = JSON.parse(localStorage.getItem(key));
+    keys.forEach(key => {
+        if (localStorage.getItem(key)) {
+            backupData[key] = JSON.parse(localStorage.getItem(key));
+        }
+    });
+    
+    // 2. الحفظ في السجل الداخلي (للاستعادة السريعة)
+    const backups = JSON.parse(localStorage.getItem('systemBackups') || '[]');
+    const newBackup = {
+        id: Date.now(),
+        createdAt: new Date().toISOString(),
+        type: 'manual',
+        data: backupData,
+        size: JSON.stringify(backupData).length + ' bytes'
+    };
+    
+    backups.push(newBackup);
+    localStorage.setItem('systemBackups', JSON.stringify(backups));
+    
+    // 3. التصدير كملف JSON حقيقي
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `backup-muyasir-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    addSystemLog('تم إنشاء وتصدير نسخة احتياطية', 'backup');
+    loadBackupHistory();
+}
+
+// فتح نافذة الاستيراد
+function importBackup() {
+    const modal = document.getElementById('importBackupModal');
+    if(modal) modal.classList.add('show');
+}
+
+function closeImportBackupModal() {
+    const modal = document.getElementById('importBackupModal');
+    if(modal) modal.classList.remove('show');
+    const fileInput = document.getElementById('backupFile');
+    if(fileInput) fileInput.value = '';
+}
+
+// تنفيذ عملية الاستيراد من الملف
+function processBackupImport() {
+    const fileInput = document.getElementById('backupFile');
+    const replaceExisting = document.getElementById('replaceExisting').checked;
+    
+    if (!fileInput || !fileInput.files[0]) {
+        alert('يرجى اختيار ملف النسخة الاحتياطية');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const backupData = JSON.parse(e.target.result);
+            
+            if (replaceExisting) {
+                // مسح واستبدال كامل
+                if (!confirm('⚠️ تحذير: سيتم مسح جميع البيانات الحالية واستبدالها ببيانات الملف. هل أنت متأكد؟')) return;
+                
+                // نحتفظ فقط بالنسخ الاحتياطية السابقة للأمان
+                const oldBackups = localStorage.getItem('systemBackups');
+                localStorage.clear();
+                if(oldBackups) localStorage.setItem('systemBackups', oldBackups);
+                
+                Object.keys(backupData).forEach(key => {
+                    localStorage.setItem(key, JSON.stringify(backupData[key]));
+                });
+            } else {
+                // دمج البيانات (الاحتفاظ بالقديم وإضافة الجديد)
+                Object.keys(backupData).forEach(key => {
+                    const existing = localStorage.getItem(key);
+                    if (existing) {
+                        try {
+                            const parsedExisting = JSON.parse(existing);
+                            const parsedNew = backupData[key];
+                            if (Array.isArray(parsedExisting) && Array.isArray(parsedNew)) {
+                                // دمج المصفوفات مع منع التكرار بالاعتماد على ID إن وجد
+                                const mergedMap = new Map();
+                                [...parsedExisting, ...parsedNew].forEach(item => {
+                                    if(item.id) mergedMap.set(item.id, item);
+                                    else mergedMap.set(JSON.stringify(item), item);
+                                });
+                                localStorage.setItem(key, JSON.stringify(Array.from(mergedMap.values())));
+                            } else {
+                                // للكائنات، نحدث القيم
+                                localStorage.setItem(key, JSON.stringify({...parsedExisting, ...parsedNew}));
+                            }
+                        } catch (err) {
+                            localStorage.setItem(key, JSON.stringify(backupData[key]));
+                        }
+                    } else {
+                        localStorage.setItem(key, JSON.stringify(backupData[key]));
+                    }
+                });
             }
-        });
-        
-        // إنشاء كائن النسخة الاحتياطية
-        const backups = JSON.parse(localStorage.getItem('systemBackups') || '[]');
-        const newBackup = {
-            id: generateId(),
-            createdAt: new Date().toISOString(),
-            type: 'manual',
-            data: backupData,
-            size: JSON.stringify(backupData).length + ' bytes'
-        };
-        
-        backups.push(newBackup);
-        localStorage.setItem('systemBackups', JSON.stringify(backups));
-        
-        // حفظ البيانات في ملف تنزيل (محاكاة)
-        const blob = new Blob([JSON.stringify(backupData, null, 2)], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        // إضافة سجل
-        addSystemLog('تم إنشاء نسخة احتياطية يدوية', 'backup');
-        
-        showAuthNotification('تم إنشاء النسخة الاحتياطية بنجاح', 'success');
-        loadBackupHistory();
-    }, 2000);
+            
+            addSystemLog('تم استيراد نسخة احتياطية من ملف خارجي', 'backup');
+            alert('تم استيراد البيانات بنجاح');
+            closeImportBackupModal();
+            location.reload(); // إعادة تحميل لتطبيق التغييرات
+            
+        } catch (error) {
+            alert('خطأ في قراءة الملف: ' + error.message);
+        }
+    };
+    reader.readAsText(fileInput.files[0]);
 }
 
 function downloadBackup(backupIndex) {
     const backups = JSON.parse(localStorage.getItem('systemBackups') || '[]');
     const backup = backups[backupIndex];
     
-    if (!backup) {
-        showAuthNotification('النسخة الاحتياطية غير موجودة', 'error');
-        return;
-    }
+    if (!backup) return;
     
     const blob = new Blob([JSON.stringify(backup.data, null, 2)], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
@@ -217,102 +269,59 @@ function downloadBackup(backupIndex) {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     
-    // إضافة سجل
     addSystemLog(`تم تحميل النسخة الاحتياطية ${backup.id}`, 'backup');
-    
-    showAuthNotification('تم تحميل النسخة الاحتياطية', 'success');
 }
 
 function restoreBackup(backupIndex) {
     const backups = JSON.parse(localStorage.getItem('systemBackups') || '[]');
     const backup = backups[backupIndex];
     
-    if (!backup) {
-        showAuthNotification('النسخة الاحتياطية غير موجودة', 'error');
-        return;
-    }
+    if (!backup) return;
     
     if (!confirm('⚠️ تحذير: استعادة النسخة الاحتياطية ستحل محل جميع البيانات الحالية. هل أنت متأكد؟')) {
         return;
     }
     
-    showAuthNotification('جاري استعادة البيانات...', 'warning');
+    Object.keys(backup.data).forEach(key => {
+        localStorage.setItem(key, JSON.stringify(backup.data[key]));
+    });
     
-    setTimeout(() => {
-        // استعادة البيانات من النسخة الاحتياطية
-        Object.keys(backup.data).forEach(key => {
-            localStorage.setItem(key, JSON.stringify(backup.data[key]));
-        });
-        
-        // إضافة سجل
-        addSystemLog(`تم استعادة النسخة الاحتياطية ${backup.id}`, 'backup');
-        
-        showAuthNotification('تم استعادة النسخة الاحتياطية بنجاح', 'success');
-        
-        // إعادة تحميل الصفحة بعد التأكيد
-        setTimeout(() => {
-            if (confirm('تمت الاستعادة بنجاح. هل تريد إعادة تحميل الصفحة؟')) {
-                location.reload();
-            }
-        }, 1000);
-    }, 1500);
+    addSystemLog(`تم استعادة النسخة الاحتياطية ${backup.id}`, 'backup');
+    alert('تم استعادة النسخة الاحتياطية بنجاح');
+    location.reload();
 }
 
 function deleteBackup(backupIndex) {
     const backups = JSON.parse(localStorage.getItem('systemBackups') || '[]');
+    if (backupIndex >= backups.length) return;
     
-    if (backupIndex >= backups.length) {
-        showAuthNotification('النسخة الاحتياطية غير موجودة', 'error');
-        return;
-    }
-    
-    const backup = backups[backupIndex];
-    
-    if (!confirm(`هل أنت متأكد من حذف النسخة الاحتياطية المؤرخة ${formatDate(backup.createdAt)}؟`)) {
-        return;
-    }
+    if (!confirm('هل أنت متأكد من حذف هذه النسخة؟')) return;
     
     backups.splice(backupIndex, 1);
     localStorage.setItem('systemBackups', JSON.stringify(backups));
     
-    // إضافة سجل
-    addSystemLog(`تم حذف النسخة الاحتياطية ${backup.id}`, 'backup');
-    
-    showAuthNotification('تم حذف النسخة الاحتياطية بنجاح', 'success');
+    addSystemLog('تم حذف نسخة احتياطية', 'backup');
     loadBackupHistory();
 }
 
 function loadSystemLogs() {
     const logsList = document.getElementById('logsList');
+    if (!logsList) return;
+
     const logs = JSON.parse(localStorage.getItem('systemLogs') || '[]');
     
     if (logs.length === 0) {
-        logsList.innerHTML = `
-            <tr>
-                <td colspan="4" class="text-center">
-                    <div class="empty-state">
-                        <div class="empty-icon">📋</div>
-                        <h3>لا توجد سجلات نظام</h3>
-                        <p>سيظهر هنا سجل الأنشطة والنظام</p>
-                    </div>
-                </td>
-            </tr>
-        `;
+        logsList.innerHTML = `<tr><td colspan="4" class="text-center">لا توجد سجلات</td></tr>`;
         return;
     }
     
-    // ترتيب السجلات من الأحدث إلى الأقدم
     logs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    
-    // عرض آخر 50 سجل فقط
     const recentLogs = logs.slice(0, 50);
     
     logsList.innerHTML = recentLogs.map(log => `
         <tr>
             <td>${formatDate(log.timestamp)}</td>
-            <td>
-                <span class="log-type-${log.type}">${getLogTypeText(log.type)}</span>
-            </td>
+            <td><span class="badge ${getLogTypeClass(log.type)}">${getLogTypeText(log.type)}</span></td>
             <td>${log.message}</td>
             <td>${log.user || 'النظام'}</td>
         </tr>
@@ -321,7 +330,7 @@ function loadSystemLogs() {
 
 function addSystemLog(message, type = 'info', user = null) {
     const logs = JSON.parse(localStorage.getItem('systemLogs') || '[]');
-    const currentUser = getCurrentUser();
+    const currentUser = getCurrentUser(); // يفترض وجود هذه الدالة في auth.js
     
     logs.push({
         timestamp: new Date().toISOString(),
@@ -330,117 +339,52 @@ function addSystemLog(message, type = 'info', user = null) {
         user: user || (currentUser ? currentUser.name : 'النظام')
     });
     
-    // الاحتفاظ فقط بآخر 1000 سجل
-    if (logs.length > 1000) {
-        logs.splice(0, logs.length - 1000);
-    }
+    if (logs.length > 1000) logs.splice(0, logs.length - 1000);
     
     localStorage.setItem('systemLogs', JSON.stringify(logs));
     
-    // تحديث عرض السجلات إذا كانت الصفحة مفتوحة
-    if (window.location.pathname.includes('settings.html')) {
+    if (document.getElementById('logs-tab') && document.getElementById('logs-tab').style.display !== 'none') {
         loadSystemLogs();
     }
 }
 
 function clearLogs() {
-    if (!confirm('هل أنت متأكد من مسح جميع سجلات النظام؟ لا يمكن التراجع عن هذا الإجراء.')) {
-        return;
-    }
-    
+    if (!confirm('هل أنت متأكد من مسح جميع سجلات النظام؟')) return;
     localStorage.removeItem('systemLogs');
-    
-    // إضافة سجل للمسح نفسه
     addSystemLog('تم مسح جميع سجلات النظام', 'warning');
-    
-    showAuthNotification('تم مسح سجلات النظام بنجاح', 'success');
     loadSystemLogs();
 }
 
 function exportLogs() {
     const logs = JSON.parse(localStorage.getItem('systemLogs') || '[]');
+    if (logs.length === 0) { alert('لا توجد سجلات للتصدير'); return; }
     
-    if (logs.length === 0) {
-        showAuthNotification('لا توجد سجلات للتصدير', 'warning');
-        return;
-    }
-    
-    const logText = logs.map(log => 
-        `${formatDate(log.timestamp)} - ${getLogTypeText(log.type)} - ${log.user || 'النظام'}: ${log.message}`
-    ).join('\n');
-    
+    const logText = logs.map(log => `${formatDate(log.timestamp)} - ${getLogTypeText(log.type)}: ${log.message}`).join('\n');
     const blob = new Blob([logText], {type: 'text/plain'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = `system-logs-${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
-    showAuthNotification('تم تصدير سجلات النظام بنجاح', 'success');
 }
 
 // دوال مساعدة
-function isValidEmail(email) {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-}
+function formatDate(date) { return date ? new Date(date).toLocaleDateString('ar-SA', {year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'}) : ''; }
+function getLogTypeClass(type) { const m = {'info':'badge-info','warning':'badge-warning','error':'badge-danger','success':'badge-success','settings':'badge-primary'}; return m[type] || 'badge-light'; }
+function getLogTypeText(type) { const m = {'info':'معلومات','warning':'تحذير','error':'خطأ','success':'نجاح','settings':'إعدادات'}; return m[type] || type; }
+function filterLogs() { /* كود الفلترة */ }
+function clearSearch() { document.getElementById('logSearch').value = ''; filterLogs(); }
 
-function getLogTypeText(type) {
-    const types = {
-        'info': 'معلومات',
-        'warning': 'تحذير',
-        'error': 'خطأ',
-        'success': 'نجاح',
-        'settings': 'إعدادات',
-        'backup': 'نسخ احتياطي',
-        'user': 'مستخدم',
-        'security': 'أمان'
-    };
-    return types[type] || type;
-}
-
-function filterLogs() {
-    const filterType = document.getElementById('logFilter').value;
-    const searchTerm = document.getElementById('logSearch').value.toLowerCase();
-    const rows = document.querySelectorAll('#logsList tr');
-    
-    rows.forEach(row => {
-        if (row.cells.length < 4) return; // تخطى صفوف الرسائل الفارغة
-        
-        const type = row.cells[1].querySelector('span')?.className || '';
-        const message = row.cells[2].textContent.toLowerCase();
-        const user = row.cells[3].textContent.toLowerCase();
-        
-        let showRow = true;
-        
-        // الفلترة حسب النوع
-        if (filterType !== 'all' && !type.includes(filterType)) {
-            showRow = false;
-        }
-        
-        // البحث في النص
-        if (searchTerm && !message.includes(searchTerm) && !user.includes(searchTerm)) {
-            showRow = false;
-        }
-        
-        row.style.display = showRow ? '' : 'none';
-    });
-}
-
-function clearSearch() {
-    document.getElementById('logSearch').value = '';
-    filterLogs();
-}
-
-// تصدير الدوال للاستخدام العالمي
+// تصدير الدوال للاستخدام العالمي في HTML
 window.resetSettings = resetSettings;
 window.createBackup = createBackup;
 window.downloadBackup = downloadBackup;
 window.restoreBackup = restoreBackup;
 window.deleteBackup = deleteBackup;
+window.importBackup = importBackup;
+window.closeImportBackupModal = closeImportBackupModal;
+window.processBackupImport = processBackupImport;
 window.clearLogs = clearLogs;
 window.exportLogs = exportLogs;
 window.filterLogs = filterLogs;

@@ -1078,3 +1078,80 @@ function returnTestForResubmission() {
     closeModal('reviewTestModal');
     alert('تمت الإعادة');
 }
+
+// ============================================
+// 🔥 5. دوال إسناد الدروس من المكتبة (الإضافة المفقودة)
+// ============================================
+
+function showAssignLibraryLessonModal() {
+    const select = document.getElementById('libraryLessonSelect');
+    if (!select) return;
+
+    // جلب جميع الدروس من مكتبة النظام
+    const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+    
+    select.innerHTML = '<option value="">اختر درساً من القائمة...</option>';
+
+    if (allLessons.length === 0) {
+        select.innerHTML += '<option value="" disabled>مكتبة الدروس فارغة</option>';
+    } else {
+        allLessons.forEach(l => {
+            select.innerHTML += `<option value="${l.id}">${l.title} ${l.subject ? `(${l.subject})` : ''}</option>`;
+        });
+    }
+
+    // إظهار النافذة
+    document.getElementById('assignLibraryLessonModal').classList.add('show');
+}
+
+function assignLibraryLesson() {
+    const select = document.getElementById('libraryLessonSelect');
+    const lessonId = select.value;
+
+    if (!lessonId) {
+        alert('يرجى اختيار درس لإسناده');
+        return;
+    }
+
+    const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+    const targetLesson = allLessons.find(l => l.id == lessonId);
+
+    if (!targetLesson) {
+        alert('الدرس المختار لم يعد موجوداً');
+        return;
+    }
+
+    // جلب دروس الطالب الحالية لإضافته في النهاية
+    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    
+    // إنشاء سجل الدرس الجديد للطالب
+    const newStudentLesson = {
+        id: Date.now(),
+        studentId: currentStudentId,
+        title: targetLesson.title,
+        objective: targetLesson.linkedInstructionalGoal || 'درس إضافي',
+        originalLessonId: targetLesson.id,
+        status: 'pending',
+        assignedDate: new Date().toISOString(),
+        orderIndex: studentLessons.filter(l => l.studentId == currentStudentId).length // ترتيبه في آخر القائمة
+    };
+
+    studentLessons.push(newStudentLesson);
+    localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
+    
+    // إغلاق النافذة وتحديث العرض
+    closeModal('assignLibraryLessonModal');
+    loadLessonsTab(); // تحديث تبويب الدروس
+    
+    // إذا كان تبويب الخطة نشطاً، نحدثه أيضاً
+    if (document.getElementById('section-iep').classList.contains('active')) {
+        loadIEPTab();
+    }
+    
+    alert('تم إسناد الدرس للطالب بنجاح ✅');
+}
+
+// دالة تجديد/تحديث الدروس من الخطة (موجودة في الزر أيضاً)
+function regenerateLessons() {
+    autoGenerateLessons(); // تعيد استخدام الدالة الموجودة مسبقاً
+}

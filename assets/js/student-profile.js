@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (التقدم، الخطة، الدروس، والواجبات - النسخة النهائية)
+// الوصف: إدارة ملف الطالب (التقدم، الخطة، الدروس، والواجبات - النسخة النهائية مع التقويم الدراسي)
 // ============================================
 
 let currentStudentId = null;
@@ -64,7 +64,7 @@ function switchSection(sectionId) {
 }
 
 // ============================================
-// 🔥 1. سجل التقدم (Progress Tab)
+// 🔥 1. سجل التقدم (Progress Tab) - محدث مع التقويم
 // ============================================
 
 function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDate) {
@@ -74,6 +74,9 @@ function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDa
     today.setHours(23, 59, 59, 999);
     const dayMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     
+    // [جديد] جلب قائمة الإجازات الرسمية للتحقق منها
+    const holidays = JSON.parse(localStorage.getItem('academicCalendar') || '[]');
+
     let newEvents = [];
     let hasChanges = false;
 
@@ -81,7 +84,25 @@ function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDa
     let lessonTitleForAbsence = pendingLesson ? pendingLesson.title : 'درس غير محدد';
 
     for (let d = new Date(planStartDate); d < today; d.setDate(d.getDate() + 1)) {
+        // تخطي اليوم الحالي
         if (d.toDateString() === new Date().toDateString()) continue;
+
+        // [جديد] التحقق: هل هذا التاريخ يوافق إجازة رسمية؟
+        const isHoliday = holidays.some(h => {
+            const start = new Date(h.startDate);
+            const end = new Date(h.endDate);
+            // ضبط الوقت للمقارنة الصحيحة
+            start.setHours(0, 0, 0, 0);
+            end.setHours(23, 59, 59, 999);
+            
+            const checkDate = new Date(d);
+            checkDate.setHours(12, 0, 0, 0); // المقارنة بمنتصف النهار لتجنب فروق التوقيت
+            
+            return checkDate >= start && checkDate <= end;
+        });
+
+        // إذا كان اليوم إجازة رسمية، تجاوز الدورة ولا تسجل غياباً
+        if (isHoliday) continue;
 
         const dateStr = d.toDateString();
         const hasLesson = myList.some(l => l.historyLog && l.historyLog.some(log => new Date(log.date).toDateString() === dateStr));
@@ -288,7 +309,7 @@ function loadProgressTab() {
 }
 
 // ============================================
-// 🔥 2. واجهة الواجبات ( Assignments Tab) - المعدلة
+// 🔥 2. واجهة الواجبات ( Assignments Tab)
 // ============================================
 
 function loadAssignmentsTab() {

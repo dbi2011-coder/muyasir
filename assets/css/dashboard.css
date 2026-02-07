@@ -86,7 +86,7 @@
    ========================================= */
 .main-content-dashboard {
     flex: 1;
-    margin-right: 280px; /* نفس عرض السايدبار */
+    margin-right: 280px;
     transition: all 0.3s ease;
     display: flex;
     flex-direction: column;
@@ -148,7 +148,7 @@
 }
 
 /* =========================================
-   منطقة المحتوى والبطاقات (Stats Grid)
+   محتوى الصفحة والبطاقات (Stats Grid)
    ========================================= */
 .dashboard-content {
     padding: 30px;
@@ -167,158 +167,202 @@
     margin: 0;
 }
 
-/* --- تنسيق شبكة البطاقات (Compact Mode) --- */
+/* --- الشبكة: عرض البطاقات في صف واحد --- */
 .stats-grid {
     display: grid;
-    /* تقسيم الشبكة إلى 4 أعمدة متساوية لفرض صف واحد */
-    grid-template-columns: repeat(4, 1fr); 
-    gap: 15px;
+    grid-template-columns: repeat(4, 1fr); /* 4 أعمدة متساوية */
+    gap: 20px;
     margin-bottom: 30px;
 }
 
-/* تصميم البطاقة */
+/* --- التصميم العام للبطاقة (مشترك) --- */
 .stat-card {
-    background: white;
-    padding: 16px; /* حشوة أصغر */
-    border-radius: 12px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    background: #fff;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
-    border: 1px solid #edf2f7;
+    border: 1px solid rgba(0,0,0,0.05);
+    position: relative;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    min-height: 110px; /* ارتفاع أدنى لتوحيد الشكل */
 }
 
 .stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 15px rgba(0,0,0,0.08);
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
 }
 
-/* الجزء العلوي (النص والأيقونة) */
+/* --- الألوان والخلفيات (Gradients) --- */
+
+/* 1. الافتراضي / الأساسي (أزرق) */
+.stat-card:not(.success):not(.warning):not(.danger) {
+    background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
+    border-bottom: 3px solid #3498db;
+}
+.stat-card:not(.success):not(.warning):not(.danger) .stat-icon,
+.stat-card:not(.success):not(.warning):not(.danger) .stat-icon-wrapper {
+    background: rgba(52, 152, 219, 0.15);
+    color: #3498db;
+}
+.stat-card:not(.success):not(.warning):not(.danger) .stat-number {
+    color: #2c3e50;
+}
+
+/* 2. النجاح (أخضر) */
+.stat-card.success {
+    background: linear-gradient(135deg, #ffffff 0%, #f0fff4 100%);
+    border-bottom: 3px solid #2ecc71;
+}
+.stat-card.success .stat-icon,
+.stat-card.success .stat-icon-wrapper {
+    background: rgba(46, 204, 113, 0.15);
+    color: #2ecc71;
+}
+.stat-card.success .stat-number {
+    color: #27ae60;
+}
+
+/* 3. التحذير (برتقالي) */
+.stat-card.warning {
+    background: linear-gradient(135deg, #ffffff 0%, #fffaf0 100%);
+    border-bottom: 3px solid #f1c40f;
+}
+.stat-card.warning .stat-icon,
+.stat-card.warning .stat-icon-wrapper {
+    background: rgba(241, 196, 15, 0.15);
+    color: #f1c40f;
+}
+.stat-card.warning .stat-number {
+    color: #d35400;
+}
+
+/* 4. الخطر (أحمر) */
+.stat-card.danger {
+    background: linear-gradient(135deg, #ffffff 0%, #fff5f5 100%);
+    border-bottom: 3px solid #e74c3c;
+}
+.stat-card.danger .stat-icon,
+.stat-card.danger .stat-icon-wrapper {
+    background: rgba(231, 76, 60, 0.15);
+    color: #e74c3c;
+}
+.stat-card.danger .stat-number {
+    color: #c0392b;
+}
+
+/* --- تنسيقات العناصر الداخلية (دعم الصفحتين) --- */
+
+/* أ. تنسيق صفحة لوحة التحكم (Dashboard Style) */
 .stat-main {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 10px;
 }
-
-.stat-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.stat-label {
-    color: #718096;
-    font-size: 0.85rem;
-    font-weight: 500;
-    margin-bottom: 4px;
-}
-
-.stat-number {
-    font-size: 1.6rem; /* حجم رقم متوسط */
-    font-weight: 700;
-    color: var(--secondary-color);
-    line-height: 1.2;
-}
-
-/* حاوية الأيقونة */
 .stat-icon-wrapper {
-    width: 42px;
-    height: 42px;
-    border-radius: 10px;
+    width: 45px;
+    height: 45px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2rem;
-    background: rgba(52, 152, 219, 0.1);
-    color: var(--primary-color);
-    flex-shrink: 0; /* منع تقلص الأيقونة */
+    font-size: 1.4rem;
 }
-
-/* ألوان الأيقونات حسب النوع */
-.stat-card.success .stat-icon-wrapper { background: rgba(39, 174, 96, 0.1); color: var(--success-color); }
-.stat-card.warning .stat-icon-wrapper { background: rgba(243, 156, 18, 0.1); color: var(--warning-color); }
-.stat-card.danger .stat-icon-wrapper { background: rgba(231, 76, 60, 0.1); color: var(--danger-color); }
-
-/* الجزء السفلي (مؤشر الأداء Trend) */
 .stat-footer {
-    border-top: 1px solid #f7fafc;
-    padding-top: 8px;
-    margin-top: auto; /* دفع الفوتر للأسفل دائماً */
+    border-top: 1px solid rgba(0,0,0,0.05);
+    padding-top: 10px;
+    margin-top: auto;
     display: flex;
     align-items: center;
     gap: 8px;
 }
-
 .trend {
     font-size: 0.75rem;
     font-weight: 600;
     padding: 2px 8px;
     border-radius: 12px;
-    display: inline-flex;
+}
+.trend.positive { color: #27ae60; background: rgba(39, 174, 96, 0.1); }
+.trend.negative { color: #c0392b; background: rgba(192, 57, 43, 0.1); }
+.trend.neutral { color: #2980b9; background: rgba(41, 128, 185, 0.1); }
+
+/* ب. تنسيق صفحة المعلمين (Teachers Style) */
+.stat-header {
+    display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 15px;
+    width: 100%;
+}
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
+}
+.stat-numbers {
+    display: flex;
+    flex-direction: column;
 }
 
-.trend.positive { color: #27ae60; background: #e8f8f5; }
-.trend.negative { color: #c0392b; background: #fdedec; }
-.trend.neutral { color: #2980b9; background: #eaf2f8; }
+/* النصوص المشتركة */
+.stat-label {
+    color: #7f8c8d;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
 
+.stat-number {
+    font-size: 1.8rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-top: 5px;
+}
 .footer-text {
-    color: #a0aec0;
+    color: #95a5a6;
     font-size: 0.75rem;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 /* =========================================
    التجاوب (Responsive Design)
    ========================================= */
 
-/* شاشات متوسطة (تابلت) */
+/* للتابلت: بطاقتين في الصف */
 @media (max-width: 1024px) {
     .sidebar { width: 240px; }
     .main-content-dashboard { margin-right: 240px; }
     
-    /* عند تصغير الشاشة قليلاً، نجعلها بطاقتين في الصف */
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
-/* شاشات صغيرة (موبايل) */
+/* للموبايل: بطاقة واحدة */
 @media (max-width: 768px) {
     .sidebar {
-        transform: translateX(100%); /* إخفاء السايدبار */
+        transform: translateX(100%);
         width: 260px;
     }
-    
     .sidebar.active {
         transform: translateX(0);
     }
-    
     .main-content-dashboard {
         margin-right: 0;
     }
-    
     .dashboard-header {
         padding: 15px 20px;
     }
-    
     .dashboard-content {
         padding: 20px;
     }
-    
-    /* في الموبايل، بطاقة واحدة في الصف */
     .stats-grid {
         grid-template-columns: 1fr;
-        gap: 20px;
-    }
-    
-    .stat-card {
-        padding: 20px; /* تكبير الحشوة قليلاً في الموبايل لسهولة اللمس */
     }
 }
 

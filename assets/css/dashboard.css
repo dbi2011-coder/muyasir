@@ -1,11 +1,16 @@
-/* أنماط أساسية للوحات التحكم */
+/* =========================================
+   أنماط أساسية وهيكل الصفحة
+   ========================================= */
 .dashboard-container {
     display: flex;
     min-height: 100vh;
     background-color: #f8f9fa;
+    font-family: 'Tajawal', sans-serif;
 }
 
-/* الشريط الجانبي */
+/* =========================================
+   الشريط الجانبي (Sidebar)
+   ========================================= */
 .sidebar {
     width: 280px;
     background: var(--secondary-color);
@@ -76,18 +81,24 @@
     text-align: center;
 }
 
-/* المحتوى الرئيسي */
+/* =========================================
+   المحتوى الرئيسي (Main Content)
+   ========================================= */
 .main-content-dashboard {
     flex: 1;
-    margin-right: 280px;
+    margin-right: 280px; /* نفس عرض السايدبار */
     transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
 }
 
-/* رأس لوحة التحكم */
+/* =========================================
+   رأس الصفحة (Header)
+   ========================================= */
 .dashboard-header {
     background: white;
-    padding: 20px 30px;
-    box-shadow: var(--shadow);
+    padding: 15px 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -107,19 +118,19 @@
 }
 
 .user-welcome .welcome-text {
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: #666;
 }
 
 .user-welcome .user-name {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--secondary-color);
 }
 
 .user-avatar {
-    width: 45px;
-    height: 45px;
+    width: 40px;
+    height: 40px;
     background: var(--primary-color);
     border-radius: 50%;
     display: flex;
@@ -127,7 +138,7 @@
     justify-content: center;
     color: white;
     font-weight: 700;
-    font-size: 1.1rem;
+    font-size: 1rem;
 }
 
 .header-actions {
@@ -136,7 +147,9 @@
     align-items: center;
 }
 
-/* محتوى لوحة التحكم */
+/* =========================================
+   منطقة المحتوى والبطاقات (Stats Grid)
+   ========================================= */
 .dashboard-content {
     padding: 30px;
 }
@@ -145,121 +158,171 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
+    margin-bottom: 25px;
 }
 
 .content-header h1 {
     color: var(--secondary-color);
-    font-size: 1.8rem;
+    font-size: 1.6rem;
     margin: 0;
 }
 
-/* --- تحسين البطاقات الإحصائية الجديد --- */
+/* --- تنسيق شبكة البطاقات (Compact Mode) --- */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 25px;
-    margin-bottom: 40px;
+    /* تقسيم الشبكة إلى 4 أعمدة متساوية لفرض صف واحد */
+    grid-template-columns: repeat(4, 1fr); 
+    gap: 15px;
+    margin-bottom: 30px;
 }
 
+/* تصميم البطاقة */
 .stat-card {
     background: white;
-    padding: 22px;
-    border-radius: 15px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    transition: all 0.3s ease;
-    border: 1px solid #f0f0f0;
+    padding: 16px; /* حشوة أصغر */
+    border-radius: 12px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid #edf2f7;
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
+    min-height: 110px; /* ارتفاع أدنى لتوحيد الشكل */
 }
 
 .stat-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 15px rgba(0,0,0,0.08);
 }
 
+/* الجزء العلوي (النص والأيقونة) */
 .stat-main {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 18px;
+    margin-bottom: 10px;
+}
+
+.stat-info {
+    display: flex;
+    flex-direction: column;
 }
 
 .stat-label {
     color: #718096;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     font-weight: 500;
+    margin-bottom: 4px;
 }
 
 .stat-number {
-    font-size: 2.2rem;
+    font-size: 1.6rem; /* حجم رقم متوسط */
     font-weight: 700;
     color: var(--secondary-color);
-    margin-top: 5px;
+    line-height: 1.2;
 }
 
 /* حاوية الأيقونة */
 .stat-icon-wrapper {
-    width: 55px;
-    height: 55px;
-    border-radius: 14px;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.6rem;
+    font-size: 1.2rem;
     background: rgba(52, 152, 219, 0.1);
     color: var(--primary-color);
+    flex-shrink: 0; /* منع تقلص الأيقونة */
 }
 
-/* تخصيص الألوان */
-.stat-card.success { border-right: none; } /* إزالة الخط القديم */
+/* ألوان الأيقونات حسب النوع */
 .stat-card.success .stat-icon-wrapper { background: rgba(39, 174, 96, 0.1); color: var(--success-color); }
-
 .stat-card.warning .stat-icon-wrapper { background: rgba(243, 156, 18, 0.1); color: var(--warning-color); }
-
 .stat-card.danger .stat-icon-wrapper { background: rgba(231, 76, 60, 0.1); color: var(--danger-color); }
 
-/* تذييل البطاقة */
+/* الجزء السفلي (مؤشر الأداء Trend) */
 .stat-footer {
-    border-top: 1px solid #f8f9fa;
-    padding-top: 15px;
+    border-top: 1px solid #f7fafc;
+    padding-top: 8px;
+    margin-top: auto; /* دفع الفوتر للأسفل دائماً */
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .trend {
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 20px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
-.trend.positive { color: var(--success-color); background: rgba(39, 174, 96, 0.08); }
-.trend.negative { color: var(--danger-color); background: rgba(231, 76, 60, 0.08); }
-.trend.neutral { color: var(--primary-color); background: rgba(52, 152, 219, 0.08); }
+.trend.positive { color: #27ae60; background: #e8f8f5; }
+.trend.negative { color: #c0392b; background: #fdedec; }
+.trend.neutral { color: #2980b9; background: #eaf2f8; }
 
 .footer-text {
     color: #a0aec0;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* التجاوب */
+/* =========================================
+   التجاوب (Responsive Design)
+   ========================================= */
+
+/* شاشات متوسطة (تابلت) */
 @media (max-width: 1024px) {
-    .sidebar { width: 250px; }
-    .main-content-dashboard { margin-right: 250px; }
+    .sidebar { width: 240px; }
+    .main-content-dashboard { margin-right: 240px; }
+    
+    /* عند تصغير الشاشة قليلاً، نجعلها بطاقتين في الصف */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
+/* شاشات صغيرة (موبايل) */
 @media (max-width: 768px) {
-    .sidebar { transform: translateX(100%); }
-    .sidebar.active { transform: translateX(0); }
-    .main-content-dashboard { margin-right: 0; }
-    .dashboard-header { padding: 15px 20px; }
-    .dashboard-content { padding: 20px; }
-    .stats-grid { grid-template-columns: 1fr; }
+    .sidebar {
+        transform: translateX(100%); /* إخفاء السايدبار */
+        width: 260px;
+    }
+    
+    .sidebar.active {
+        transform: translateX(0);
+    }
+    
+    .main-content-dashboard {
+        margin-right: 0;
+    }
+    
+    .dashboard-header {
+        padding: 15px 20px;
+    }
+    
+    .dashboard-content {
+        padding: 20px;
+    }
+    
+    /* في الموبايل، بطاقة واحدة في الصف */
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .stat-card {
+        padding: 20px; /* تكبير الحشوة قليلاً في الموبايل لسهولة اللمس */
+    }
 }
 
-/* زر القائمة المتنقلة */
+/* زر القائمة للموبايل */
 .mobile-menu-btn {
     display: none;
     background: none;
@@ -267,8 +330,11 @@
     font-size: 1.5rem;
     color: var(--secondary-color);
     cursor: pointer;
+    padding: 5px;
 }
 
 @media (max-width: 768px) {
-    .mobile-menu-btn { display: block; }
+    .mobile-menu-btn {
+        display: block;
+    }
 }

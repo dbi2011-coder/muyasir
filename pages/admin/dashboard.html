@@ -49,43 +49,74 @@
             <div class="dashboard-content">
                 <div class="content-header">
                     <h1>لوحة تحكم المدير</h1>
-                    </div>
+                </div>
 
                 <div class="stats-grid">
                     <div class="stat-card">
-                        <div class="stat-header">
-                            <div class="stat-icon">👨‍🏫</div>
+                        <div class="stat-main">
+                            <div class="stat-info">
+                                <span class="stat-label">عدد المعلمين</span>
+                                <div class="stat-number" id="teachersCount">0</div>
+                            </div>
+                            <div class="stat-icon-wrapper">
+                                <i class="fas fa-chalkboard-teacher"></i>
+                            </div>
                         </div>
-                        <div class="stat-number" id="teachersCount">0</div>
-                        <div class="stat-label">عدد المعلمين</div>
+                        <div class="stat-footer">
+                            <span class="trend positive"><i class="fas fa-arrow-up"></i> نشط</span>
+                            <span class="footer-text">إجمالي الكادر التعليمي</span>
+                        </div>
                     </div>
                     
                     <div class="stat-card success">
-                        <div class="stat-header">
-                            <div class="stat-icon">🎓</div>
+                        <div class="stat-main">
+                            <div class="stat-info">
+                                <span class="stat-label">عدد الطلاب</span>
+                                <div class="stat-number" id="studentsCount">0</div>
+                            </div>
+                            <div class="stat-icon-wrapper">
+                                <i class="fas fa-user-graduate"></i>
+                            </div>
                         </div>
-                        <div class="stat-number" id="studentsCount">0</div>
-                        <div class="stat-label">عدد الطلاب</div>
+                        <div class="stat-footer">
+                            <span class="trend positive"><i class="fas fa-chart-line"></i> متزايد</span>
+                            <span class="footer-text">إجمالي الطلاب المسجلين</span>
+                        </div>
                     </div>
                     
                     <div class="stat-card warning">
-                        <div class="stat-header">
-                            <div class="stat-icon">📚</div>
+                        <div class="stat-main">
+                            <div class="stat-info">
+                                <span class="stat-label">جلسات نشطة</span>
+                                <div class="stat-number" id="activeSessions">0</div>
+                            </div>
+                            <div class="stat-icon-wrapper">
+                                <i class="fas fa-clock"></i>
+                            </div>
                         </div>
-                        <div class="stat-number" id="activeSessions">0</div>
-                        <div class="stat-label">جلسات نشطة</div>
+                        <div class="stat-footer">
+                            <span class="trend neutral"><i class="fas fa-sync-alt"></i> مباشر</span>
+                            <span class="footer-text">يتم التحديث الآن</span>
+                        </div>
                     </div>
                     
                     <div class="stat-card danger">
-                        <div class="stat-header">
-                            <div class="stat-icon">⚠️</div>
+                        <div class="stat-main">
+                            <div class="stat-info">
+                                <span class="stat-label">إجراءات معلقة</span>
+                                <div class="stat-number" id="pendingActions">0</div>
+                            </div>
+                            <div class="stat-icon-wrapper">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
                         </div>
-                        <div class="stat-number" id="pendingActions">0</div>
-                        <div class="stat-label">إجراءات معلقة</div>
+                        <div class="stat-footer">
+                            <span class="trend negative"><i class="fas fa-bolt"></i> عاجل</span>
+                            <span class="footer-text">تنتظر المراجعة</span>
+                        </div>
                     </div>
                 </div>
-
-                </div>
+            </div>
         </main>
     </div>
 

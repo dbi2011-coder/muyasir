@@ -63,10 +63,10 @@
                         <div class="stat-icon">
                             <i class="fas fa-chalkboard-teacher"></i>
                         </div>
-                        <div class="stat-numbers">
-                            <div class="stat-number" id="teachersCount">0</div>
-                            <div class="stat-label">معلم مسجل</div>
-                        </div>
+                    </div>
+                    <div class="stat-numbers">
+                        <div class="stat-number" id="teachersCount">0</div>
+                        <div class="stat-label">معلم مسجل</div>
                     </div>
                 </div>
                 
@@ -75,10 +75,10 @@
                         <div class="stat-icon">
                             <i class="fas fa-user-check"></i>
                         </div>
-                        <div class="stat-numbers">
-                            <div class="stat-number" id="activeTeachers">0</div>
-                            <div class="stat-label">معلم نشط</div>
-                        </div>
+                    </div>
+                    <div class="stat-numbers">
+                        <div class="stat-number" id="activeTeachers">0</div>
+                        <div class="stat-label">معلم نشط</div>
                     </div>
                 </div>
                 
@@ -87,10 +87,10 @@
                         <div class="stat-icon">
                             <i class="fas fa-user-clock"></i>
                         </div>
-                        <div class="stat-numbers">
-                            <div class="stat-number" id="inactiveTeachers">0</div>
-                            <div class="stat-label">معلم غير نشط</div>
-                        </div>
+                    </div>
+                    <div class="stat-numbers">
+                        <div class="stat-number" id="inactiveTeachers">0</div>
+                        <div class="stat-label">معلم غير نشط</div>
                     </div>
                 </div>
                 
@@ -99,10 +99,10 @@
                         <div class="stat-icon">
                             <i class="fas fa-user-slash"></i>
                         </div>
-                        <div class="stat-numbers">
-                            <div class="stat-number" id="suspendedTeachers">0</div>
-                            <div class="stat-label">معلم موقوف</div>
-                        </div>
+                    </div>
+                    <div class="stat-numbers">
+                        <div class="stat-number" id="suspendedTeachers">0</div>
+                        <div class="stat-label">معلم موقوف</div>
                     </div>
                 </div>
             </div>
@@ -161,8 +161,7 @@
 
             <div class="recent-activity">
                 <h3><i class="fas fa-history"></i> النشاط الأخير</h3>
-                <div class="activity-list" id="activityList">
-                    </div>
+                <div class="activity-list" id="activityList"></div>
             </div>
         </div>
     </div>
@@ -171,44 +170,44 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h3><i class="fas fa-user-plus"></i> إضافة معلم جديد</h3>
-                <button class="modal-close" onclick="closeAddTeacherModal()">×</button>
+                <button class="modal-close" onclick="closeAddTeacherModal()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
+            
             <div class="modal-body">
                 <form id="addTeacherForm">
                     <div class="form-group">
-                        <label class="form-label">اسم المعلم *</label>
-                        <input type="text" id="teacherName" class="form-control" required>
+                        <label class="form-label">اسم المعلم <span style="color:red">*</span></label>
+                        <input type="text" id="teacherName" class="form-control" placeholder="اكتب الاسم الكامل" required>
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">رقم الجوال *</label>
-                        <input type="tel" id="teacherPhone" class="form-control" required>
+                        <label class="form-label">رقم الجوال <span style="color:red">*</span></label>
+                        <input type="tel" id="teacherPhone" class="form-control" placeholder="05xxxxxxxx" required>
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">اسم المستخدم *</label>
-                        <input type="text" id="teacherUsername" class="form-control" required>
-                        <small class="form-text text-muted">سيستخدمه المعلم لتسجيل الدخول</small>
+                        <label class="form-label">اسم المستخدم <span style="color:red">*</span></label>
+                        <input type="text" id="teacherUsername" class="form-control" placeholder="اسم للدخول للنظام" required>
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">كلمة المرور *</label>
-                        <input type="password" id="teacherPassword" class="form-control" required>
-                        <small class="form-text text-muted">يجب أن تكون 6 أحرف على الأقل</small>
+                        <label class="form-label">كلمة المرور <span style="color:red">*</span></label>
+                        <input type="password" id="teacherPassword" class="form-control" placeholder="******" required>
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">تأكيد كلمة المرور *</label>
-                        <input type="password" id="confirmPassword" class="form-control" required>
+                        <label class="form-label">تأكيد كلمة المرور <span style="color:red">*</span></label>
+                        <input type="password" id="confirmPassword" class="form-control" placeholder="أعد كتابة كلمة المرور" required>
                     </div>
                 </form>
             </div>
+            
             <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAddTeacherModal()">إلغاء</button>
                 <button type="button" class="btn btn-primary" onclick="addNewTeacher()">
-                    <i class="fas fa-save"></i> حفظ
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="closeAddTeacherModal()">
-                    إلغاء
+                    <i class="fas fa-save"></i> حفظ البيانات
                 </button>
             </div>
         </div>
@@ -305,7 +304,7 @@
                     </div>
                 </div>
                 
-                <div class="credentials-actions">
+                <div class="credentials-actions" style="margin-top: 20px; display:flex; gap:10px; flex-wrap:wrap;">
                     <button class="btn btn-info" onclick="editTeacherCredentials()">
                         <i class="fas fa-edit"></i> تعديل البيانات
                     </button>
@@ -344,7 +343,7 @@
                         <label class="form-label">كلمة المرور الجديدة (اختياري)</label>
                         <input type="password" id="editCredTeacherPassword" class="form-control" 
                                placeholder="اتركه فارغاً للحفاظ على كلمة المرور الحالية">
-                        <small class="password-hint">يجب أن تكون 6 أحرف على الأقل</small>
+                        <small class="password-hint" style="color:#777; font-size:0.8rem;">يجب أن تكون 6 أحرف على الأقل</small>
                     </div>
                     
                     <div class="security-warning">
@@ -374,10 +373,10 @@
         
         // تحديث بيانات المستخدم عند تحميل الصفحة
         document.addEventListener('DOMContentLoaded', function() {
-            const user = getCurrentUser();
+            const user = getCurrentUser(); // التأكد من وجود هذه الدالة في auth.js
             if (user) {
-                document.getElementById('userName').textContent = user.name;
-                document.getElementById('userAvatar').textContent = user.name.charAt(0);
+                if(document.getElementById('userName')) document.getElementById('userName').textContent = user.name;
+                if(document.getElementById('userAvatar')) document.getElementById('userAvatar').textContent = user.name.charAt(0);
             }
         });
     </script>

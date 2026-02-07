@@ -221,7 +221,7 @@ body {
 
 /* --- الألوان (Gradients) حسب النوع --- */
 
-/* 1. الافتراضي (أزرق) */
+/* 1. الافتراضي (أزرق) - معلم مسجل */
 .stat-card:not(.success):not(.warning):not(.danger) {
     background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
     border-bottom: 3px solid #3498db;
@@ -234,7 +234,7 @@ body {
 .stat-card:not(.success):not(.warning):not(.danger) .stat-number { color: #2c3e50; }
 .stat-card:not(.success):not(.warning):not(.danger)::after { background: #3498db; }
 
-/* 2. النجاح (أخضر) */
+/* 2. النجاح (أخضر) - معلم نشط */
 .stat-card.success {
     background: linear-gradient(135deg, #ffffff 0%, #f0fff4 100%);
     border-bottom: 3px solid #2ecc71;
@@ -247,7 +247,7 @@ body {
 .stat-card.success .stat-number { color: #27ae60; }
 .stat-card.success::after { background: #2ecc71; }
 
-/* 3. التحذير (برتقالي) */
+/* 3. التحذير (برتقالي) - معلم غير نشط */
 .stat-card.warning {
     background: linear-gradient(135deg, #ffffff 0%, #fffaf0 100%);
     border-bottom: 3px solid #f1c40f;
@@ -260,7 +260,7 @@ body {
 .stat-card.warning .stat-number { color: #d35400; }
 .stat-card.warning::after { background: #f1c40f; }
 
-/* 4. الخطر (أحمر) */
+/* 4. الخطر (أحمر) - معلم موقوف */
 .stat-card.danger {
     background: linear-gradient(135deg, #ffffff 0%, #fff5f5 100%);
     border-bottom: 3px solid #e74c3c;
@@ -273,11 +273,11 @@ body {
 .stat-card.danger .stat-number { color: #c0392b; }
 .stat-card.danger::after { background: #e74c3c; }
 
-/* --- محتوى البطاقة الداخلي (توافق مع الصفحتين) --- */
-.stat-main, .stat-header {
+/* --- محتوى البطاقة الداخلي --- */
+.stat-header, .stat-main {
     display: flex;
     justify-content: space-between;
-    align-items: center; /* محاذاة عمودية */
+    align-items: center; 
     width: 100%;
     position: relative;
     z-index: 1;
@@ -296,7 +296,7 @@ body {
 }
 
 /* النصوص والأرقام */
-.stat-info, .stat-numbers {
+.stat-numbers, .stat-info {
     display: flex;
     flex-direction: column;
 }
@@ -314,7 +314,7 @@ body {
     line-height: 1.2;
 }
 
-/* تذييل البطاقة (Dashboard Only) */
+/* تذييل البطاقة (لوحة التحكم) */
 .stat-footer {
     border-top: 1px solid rgba(0,0,0,0.05);
     padding-top: 10px;
@@ -334,11 +334,7 @@ body {
 .trend.positive { color: #27ae60; background: rgba(39, 174, 96, 0.1); }
 .trend.negative { color: #c0392b; background: rgba(192, 57, 43, 0.1); }
 .trend.neutral { color: #2980b9; background: rgba(41, 128, 185, 0.1); }
-
-.footer-text {
-    color: #95a5a6;
-    font-size: 0.75rem;
-}
+.footer-text { color: #95a5a6; font-size: 0.75rem; }
 
 /* =========================================
    5. النوافذ المنبثقة (Modals) المحسنة
@@ -350,18 +346,19 @@ body {
     transition: opacity 0.3s ease;
 }
 
+/* تحديث مهم: صندوق المحتوى المرن */
 .modal-content {
     background-color: #fff;
-    margin: 5% auto;
-    padding: 0;
-    border: none;
-    width: 90%;
+    margin: 2% auto; /* هوامش متوازنة */
+    width: 95%;
     max-width: 550px;
     border-radius: 20px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    overflow: hidden;
-    animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex;          /* لجعل العناصر تتوزع بمرونة */
+    flex-direction: column; /* ترتيب عمودي */
+    max-height: 90vh;       /* أقصى ارتفاع لا يتجاوز الشاشة */
     position: relative;
+    animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes slideDown {
@@ -369,6 +366,7 @@ body {
     to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
+/* الرأس ثابت */
 .modal-header {
     background: #f8fafc;
     padding: 20px 30px;
@@ -376,6 +374,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-shrink: 0; /* منع التقلص */
 }
 
 .modal-header h3 {
@@ -405,11 +404,14 @@ body {
     background-color: #fff5f5;
 }
 
+/* الجسم قابل للتمرير (Scrolling) */
 .modal-body {
-    padding: 30px;
+    padding: 25px 30px;
+    overflow-y: auto; /* هذا السطر يحل مشكلة اختفاء الأزرار */
+    flex: 1;          /* يملأ المساحة المتاحة */
 }
 
-/* تحسين النماذج (Forms) داخل المودال */
+/* تحسين النماذج (Forms) */
 .form-group {
     margin-bottom: 20px;
 }
@@ -446,6 +448,7 @@ body {
     margin-top: 6px;
 }
 
+/* التذييل ثابت */
 .modal-footer {
     padding: 20px 30px;
     background-color: #f8fafc;
@@ -453,6 +456,7 @@ body {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
+    flex-shrink: 0; /* منع التقلص */
 }
 
 .modal-footer .btn {
@@ -475,18 +479,15 @@ body {
    6. التجاوب (Responsive Design)
    ========================================= */
 
-/* أجهزة لوحية (Tablets) */
 @media (max-width: 1024px) {
     .sidebar { width: 240px; }
     .main-content-dashboard { margin-right: 240px; }
     
-    /* تقسيم البطاقات لصفين إذا كانت الشاشة متوسطة */
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
-/* أجهزة جوال (Mobile) */
 @media (max-width: 768px) {
     .sidebar {
         transform: translateX(100%);
@@ -500,18 +501,16 @@ body {
     .dashboard-header { padding: 15px 20px; }
     .dashboard-content { padding: 20px; }
     
-    /* بطاقة واحدة في الصف للجوال */
     .stats-grid {
         grid-template-columns: 1fr;
     }
     
     .modal-content {
         width: 95%;
-        margin: 10% auto;
+        margin: 5% auto;
     }
 }
 
-/* زر القائمة للجوال */
 .mobile-menu-btn {
     display: none;
     background: none;

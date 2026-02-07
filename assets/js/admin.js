@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/admin.js
-// الوصف: لوحة تحكم المدير (إصلاح شامل للتصدير والاستيراد مع الطلاب)
+// الوصف: لوحة تحكم المدير (تحديث شامل مع تحسين نافذة الإضافة)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -30,7 +30,7 @@ function getAdminSession() {
 }
 
 // ---------------------------------------------------------
-// 2. عرض الجدول والأزرار (مع زر التصدير)
+// 2. عرض الجدول والأزرار
 // ---------------------------------------------------------
 function loadTeachersData() {
     const tableBody = document.getElementById('teachersTableBody');
@@ -103,11 +103,8 @@ function showAddTeacherModal() {
     clearValue('teacherName');
     clearValue('teacherUsername');
     clearValue('teacherPassword');
+    clearValue('confirmPassword'); // تفريغ حقل التأكيد
     clearValue('teacherPhone');
-    // دعم الحقول البديلة
-    clearValue('newTeacherName');
-    clearValue('newTeacherUsername');
-    clearValue('newTeacherPassword');
 
     const modal = document.getElementById('addTeacherModal');
     if(modal) modal.classList.add('show');
@@ -118,17 +115,53 @@ function closeAddTeacherModal() {
     if(modal) modal.classList.remove('show');
 }
 
+// 🔥 دالة إضافة المعلم المحسنة (الجديدة)
 function addNewTeacher() {
-    const nameVal = getValue('teacherName') || getValue('newTeacherName');
-    const userVal = getValue('teacherUsername') || getValue('newTeacherUsername');
-    const passVal = getValue('teacherPassword') || getValue('newTeacherPassword');
-    const phoneVal = getValue('teacherPhone') || '';
+    // 1. جلب القيم
+    const nameInput = document.getElementById('teacherName');
+    const phoneInput = document.getElementById('teacherPhone');
+    const userInput = document.getElementById('teacherUsername');
+    const passInput = document.getElementById('teacherPassword');
+    const confirmPassInput = document.getElementById('confirmPassword'); // الحقل الجديد
 
-    if (!nameVal || !userVal || !passVal) return alert('البيانات ناقصة');
+    const nameVal = nameInput.value.trim();
+    const phoneVal = phoneInput.value.trim();
+    const userVal = userInput.value.trim();
+    const passVal = passInput.value;
+    const confirmVal = confirmPassInput ? confirmPassInput.value : ''; // قد يكون null في الإصدار القديم
 
+    // 2. التحقق من الحقول الفارغة
+    if (!nameVal || !phoneVal || !userVal || !passVal) {
+        alert('⚠️ يرجى تعبئة جميع الحقول المطلوبة.');
+        return;
+    }
+
+    // 3. التحقق من طول كلمة المرور
+    if (passVal.length < 6) {
+        alert('⚠️ كلمة المرور يجب أن تكون 6 أحرف على الأقل.');
+        passInput.focus();
+        return;
+    }
+
+    // 4. التحقق من تطابق كلمتي المرور (إذا وجد حقل التأكيد)
+    if (confirmPassInput && passVal !== confirmVal) {
+        alert('❌ خطأ: كلمتا المرور غير متطابقتين.');
+        confirmPassInput.style.borderColor = '#e74c3c'; // تلوين الحقل بالأحمر
+        confirmPassInput.focus();
+        return;
+    } 
+    
+    if(confirmPassInput) confirmPassInput.style.borderColor = '#e9ecef'; // إعادة اللون الطبيعي
+
+    // 5. التحقق من عدم تكرار اسم المستخدم
     const users = JSON.parse(localStorage.getItem('users') || '[]');
-    if (users.some(u => u.username === userVal)) return alert('اسم المستخدم مسجل مسبقاً');
+    if (users.some(u => u.username === userVal)) {
+        alert('⚠️ اسم المستخدم هذا مسجل مسبقاً، يرجى اختيار اسم آخر.');
+        userInput.focus();
+        return;
+    }
 
+    // 6. الحفظ
     users.push({
         id: Date.now(),
         role: 'teacher',
@@ -141,9 +174,19 @@ function addNewTeacher() {
     });
 
     localStorage.setItem('users', JSON.stringify(users));
-    alert('تمت الإضافة بنجاح ✅');
     
+    // 7. النجاح والتنظيف
+    alert('✅ تم إضافة المعلم بنجاح');
     closeAddTeacherModal();
+    
+    // تفريغ الحقول
+    nameInput.value = '';
+    phoneInput.value = '';
+    userInput.value = '';
+    passInput.value = '';
+    if(confirmPassInput) confirmPassInput.value = '';
+
+    // تحديث الجدول والإحصائيات
     loadTeachersData();
     loadAdminStats();
 }
@@ -261,7 +304,7 @@ function saveTeacherCredentials() {
 }
 
 // ---------------------------------------------------------
-// 5. ميزات التصدير والاستيراد (محدثة بالكامل)
+// 5. ميزات التصدير والاستيراد (كاملة)
 // ---------------------------------------------------------
 
 function exportTeacherData(teacherId) {
@@ -300,7 +343,7 @@ function exportTeacherData(teacherId) {
         },
         profile: teacherProfile,
         data: {
-            students: teacherStudents, // تضمين الطلاب أمر ضروري
+            students: teacherStudents, 
             schedule: teacherSchedule,
             tests: teacherTests,
             lessons: teacherLessons,
@@ -357,13 +400,10 @@ function importTeacherData() {
                 // 2. استيراد الطلاب (حل مشكلة اختفاء الطلاب)
                 if (importedData.data.students && importedData.data.students.length > 0) {
                     importedData.data.students.forEach(importedStudent => {
-                        // التحقق من وجود الطالب مسبقاً
                         const sIdx = users.findIndex(u => u.id == importedStudent.id);
                         if (sIdx !== -1) {
-                            // تحديث بيانات الطالب الموجود لضمان ارتباطه بالمعلم الصحيح
                             users[sIdx] = importedStudent;
                         } else {
-                            // إضافة الطالب الجديد
                             users.push(importedStudent);
                         }
                     });

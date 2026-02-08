@@ -1,15 +1,11 @@
 // ============================================
-// 📁 المسار: assets/js/teacher.js
-// الوصف: إدارة المعلم + نظام الحماية الشامل (منع التكرار عبر النظام كاملاً)
+// 📁 الملف: assets/js/teacher.js (مع التمويه الأمني)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
     const path = window.location.pathname;
-    if (path.includes('dashboard.html')) {
-        initializeTeacherDashboard();
-    } else if (path.includes('students.html')) {
-        initializeStudentsPage();
-    }
+    if (path.includes('dashboard.html')) initializeTeacherDashboard();
+    else if (path.includes('students.html')) initializeStudentsPage();
 });
 
 function initializeStudentsPage() {
@@ -26,7 +22,6 @@ function initializeTeacherDashboard() {
     loadTeacherStats();
 }
 
-// 1. الإحصائيات
 function loadTeacherStats() {
     const currentTeacher = getCurrentUser();
     if (!currentTeacher) return;
@@ -45,7 +40,6 @@ function loadTeacherStats() {
     if (document.getElementById('unreadMessages')) document.getElementById('unreadMessages').innerText = messagesCount;
 }
 
-// 2. إدارة الطلاب
 function loadStudentsData() {
     const loadingState = document.getElementById('loadingState');
     const emptyState = document.getElementById('emptyState');
@@ -71,86 +65,41 @@ function loadStudentsData() {
         tableBody.innerHTML = students.map((student, index) => {
             const progress = student.progress || 0;
             const progressColor = progress >= 80 ? 'success' : progress >= 50 ? 'warning' : 'danger';
-            return `
-                <tr>
-                    <td>${index + 1}</td>
-                    <td>${student.name}</td>
-                    <td>${student.grade}</td>
-                    <td>${student.subject}</td>
-                    <td class="progress-cell">
-                        <div class="progress-text text-${progressColor}">${progress}%</div>
-                        <div class="progress-bar"><div class="progress-fill bg-${progressColor}" style="width: ${progress}%"></div></div>
-                    </td>
-                    <td>
-                        <div class="student-actions" style="display: flex; gap: 5px; flex-wrap: wrap;">
-                            <button class="btn btn-sm btn-primary" onclick="openStudentFile(${student.id})" title="ملف الطالب"><i class="fas fa-file-alt"></i> ملف</button>
-                            <button class="btn btn-sm btn-secondary" onclick="showStudentLoginData(${student.id})" title="بيانات الدخول"><i class="fas fa-key"></i></button>
-                            <button class="btn btn-sm btn-warning" onclick="editStudent(${student.id})" title="تعديل"><i class="fas fa-edit"></i></button>
-                            <button class="btn btn-sm btn-info" onclick="exportStudentData(${student.id})" title="تصدير"><i class="fas fa-file-export"></i> تصدير</button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})" title="حذف"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </td>
-                </tr>`;
+            return `<tr><td>${index + 1}</td><td>${student.name}</td><td>${student.grade}</td><td>${student.subject}</td><td class="progress-cell"><div class="progress-text text-${progressColor}">${progress}%</div><div class="progress-bar"><div class="progress-fill bg-${progressColor}" style="width: ${progress}%"></div></div></td><td><div class="student-actions" style="display: flex; gap: 5px; flex-wrap: wrap;"><button class="btn btn-sm btn-primary" onclick="openStudentFile(${student.id})">ملف</button><button class="btn btn-sm btn-secondary" onclick="showStudentLoginData(${student.id})">بيانات</button><button class="btn btn-sm btn-warning" onclick="editStudent(${student.id})">تعديل</button><button class="btn btn-sm btn-info" onclick="exportStudentData(${student.id})">تصدير</button><button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})">حذف</button></div></td></tr>`;
         }).join('');
     }, 200);
 }
 
-// 🔥 دالة إضافة طالب (محدثة: تفحص كل النظام عند التوليد التلقائي)
 function addNewStudent() {
     const name = document.getElementById('studentName').value.trim();
     const grade = document.getElementById('studentGrade').value;
     const subject = document.getElementById('studentSubject').value;
 
-    if (!name || !grade || !subject) {
-        if(typeof showAuthNotification === 'function') showAuthNotification('يرجى ملء جميع الحقول', 'error');
-        else alert('يرجى ملء جميع الحقول');
-        return;
-    }
+    if (!name || !grade || !subject) return alert('يرجى ملء جميع الحقول');
 
-    // 1. جلب كافة الحسابات (معلمين/طلاب/لجنة)
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     const allAccounts = [...users, ...committeeMembers];
-    
     const currentTeacher = getCurrentUser();
 
-    // 2. توليد بيانات دخول فريدة على مستوى النظام كاملاً
     let username = '';
     let password = '123';
     let isUnique = false;
 
+    // توليد اسم فريد دائماً
     while (!isUnique) {
         username = 's_' + Math.floor(Math.random() * 10000);
-        
-        // هل هذا المزيج (User+Pass) موجود في أي مكان؟
         const exists = allAccounts.some(u => String(u.username) === String(username) && String(u.password) === String(password));
-        
-        if (!exists) {
-            isUnique = true;
-        }
+        if (!exists) isUnique = true;
     }
 
     const newStudent = {
-        id: Date.now(),
-        teacherId: currentTeacher.id,
-        role: 'student',
-        name: name,
-        grade: grade,
-        subject: subject,
-        username: username,
-        password: password,
-        progress: 0,
-        createdAt: new Date().toISOString()
+        id: Date.now(), teacherId: currentTeacher.id, role: 'student', name: name, grade: grade, subject: subject, username: username, password: password, progress: 0, createdAt: new Date().toISOString()
     };
-
     users.push(newStudent);
     localStorage.setItem('users', JSON.stringify(users));
-
-    if(typeof showAuthNotification === 'function') showAuthNotification('تم إضافة الطالب بنجاح ✅', 'success');
-    else alert('تم إضافة الطالب بنجاح ✅');
-    
-    closeAddStudentModal();
-    loadStudentsData();
+    alert('تم إضافة الطالب بنجاح ✅');
+    closeAddStudentModal(); loadStudentsData();
 }
 
 function editStudent(studentId) {
@@ -166,7 +115,7 @@ function editStudent(studentId) {
     document.getElementById('editStudentModal').classList.add('show');
 }
 
-// 🔥 دالة تعديل الطالب (محدثة: الفحص الشامل)
+// 🔥 دالة التعديل (مع التمويه)
 function updateStudentData() {
     const idInput = document.getElementById('editStudentId').value;
     const currentId = String(idInput);
@@ -182,46 +131,29 @@ function updateStudentData() {
         let finalUsername = document.getElementById('editStudentUsername').value.trim() || currentUser.username;
         let finalPassword = document.getElementById('editStudentPassword').value.trim() || currentUser.password;
 
-        // 1. تجميع كل الحسابات للفحص
         const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
         const allAccounts = [...users, ...committeeMembers];
 
-        // 2. البحث عن تكرار شامل
         const duplicateUser = allAccounts.find(u => {
-            if (String(u.id) === currentId) return false; // تجاهل نفس الطالب
+            if (String(u.id) === currentId) return false;
             const uName = String(u.username || '').trim();
             const uPass = String(u.password || '').trim();
             return uName === String(finalUsername) && uPass === String(finalPassword);
         });
         
         if (duplicateUser) {
-            const errorMsg = `⛔ خطأ أمني:\nبيانات الدخول هذه (المستخدم + المرور) متطابقة مع حساب "${duplicateUser.name}" (الذي قد يكون طالباً آخر أو عضو لجنة).\n\nيمنع النظام تكرار بيانات الدخول لمنع تداخل الصلاحيات.`;
-            if(typeof showAuthNotification === 'function') {
-                showAuthNotification('بيانات مكررة! يرجى تغيير كلمة المرور.', 'error');
-                setTimeout(() => alert(errorMsg), 500);
-            } else {
-                alert(errorMsg);
-            }
+            // 🎭 رسالة التمويه
+            alert('⚠️ خطأ: كلمة المرور ضعيفة وغير آمنة.\nيرجى اختيار كلمة مرور أخرى أكثر تعقيداً.');
             return;
         }
 
-        // الحفظ
-        users[index].name = newName;
-        users[index].grade = newGrade;
-        users[index].subject = newSubject;
-        users[index].username = finalUsername;
-        users[index].password = finalPassword;
-
+        users[index].name = newName; users[index].grade = newGrade; users[index].subject = newSubject;
+        users[index].username = finalUsername; users[index].password = finalPassword;
         localStorage.setItem('users', JSON.stringify(users));
-        
-        if(typeof showAuthNotification === 'function') showAuthNotification('تم التحديث بنجاح ✅', 'success');
-        else alert('تم التحديث بنجاح ✅');
-
+        alert('تم التحديث بنجاح ✅');
         document.getElementById('editStudentModal').classList.remove('show');
         loadStudentsData();
-    } else {
-        alert('خطأ: الطالب غير موجود.');
-    }
+    } else { alert('خطأ: الطالب غير موجود.'); }
 }
 
 function deleteStudent(studentId) {
@@ -232,7 +164,6 @@ function deleteStudent(studentId) {
     loadStudentsData();
 }
 
-// 3. النقل والاستيراد
 function exportStudentData(studentId) {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const student = users.find(u => u.id == studentId);
@@ -246,21 +177,16 @@ function exportStudentData(studentId) {
             progress: getStudentData('studentProgress', studentId),
             events: getStudentData('studentEvents', studentId),
             activities: getStudentData('studentActivities', studentId)
-        },
-        meta: { exportedBy: getCurrentUser().name, date: new Date().toISOString() }
+        }, meta: { exportedBy: getCurrentUser().name, date: new Date().toISOString() }
     };
-    const fileName = `student_${student.name.replace(/\s+/g, '_')}.json`;
+    const fileName = `student_${student.name}.json`;
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = fileName;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
 function showImportStudentModal() {
-    const fileInput = document.getElementById('studentJsonFile');
-    if(fileInput) fileInput.value = '';
-    const modal = document.getElementById('importStudentModal');
-    if(modal) modal.classList.add('show');
+    const fileInput = document.getElementById('studentJsonFile'); if(fileInput) fileInput.value = '';
+    const modal = document.getElementById('importStudentModal'); if(modal) modal.classList.add('show');
 }
 
 function processStudentImport() {
@@ -272,29 +198,20 @@ function processStudentImport() {
         try {
             const imported = JSON.parse(e.target.result);
             if (!imported.info || !imported.data) throw new Error('الملف غير صالح');
-            
             const studentInfo = imported.info;
             studentInfo.teacherId = currentUser.id; 
 
-            // فحص التكرار عند الاستيراد أيضاً
             let users = JSON.parse(localStorage.getItem('users') || '[]');
             const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
             const allAccounts = [...users, ...committeeMembers];
 
-            // إذا كان المستخدم الجديد يطابق حساباً موجوداً (غير نفسه)
-            const collision = allAccounts.find(u => 
-                u.username === studentInfo.username && 
-                u.password === studentInfo.password &&
-                u.id != studentInfo.id // في حال كنا نستورد نفس الطالب مرة أخرى للتحديث فلا بأس
-            );
+            const collision = allAccounts.find(u => u.username === studentInfo.username && u.password === studentInfo.password && u.id != studentInfo.id);
 
             if(collision && collision.id != studentInfo.id) {
-                // حل التعارض تلقائياً عند الاستيراد
                 studentInfo.username = studentInfo.username + '_imp';
-                alert('تنبيه: تم تغيير اسم مستخدم الطالب المستورد لوجود تطابق مع حساب آخر.');
+                alert('تنبيه: تم تعديل اسم المستخدم تلقائياً لوجود تطابق في البيانات.');
             }
 
-            // استكمال الاستيراد...
             const existingIndex = users.findIndex(u => u.username === studentInfo.username);
             if (existingIndex !== -1) {
                 if (!confirm(`الطالب "${studentInfo.name}" موجود. تحديث؟`)) return;
@@ -303,81 +220,27 @@ function processStudentImport() {
             }
             users.push(studentInfo);
             localStorage.setItem('users', JSON.stringify(users));
-
-            mergeData('studentTests', imported.data.tests);
-            mergeData('studentLessons', imported.data.lessons);
-            mergeData('studentAssignments', imported.data.assignments);
-            mergeData('studentProgress', imported.data.progress);
-            mergeData('studentEvents', imported.data.events);
-            mergeData('studentActivities', imported.data.activities);
-
-            if(typeof showAuthNotification === 'function') showAuthNotification('تم الاستيراد بنجاح', 'success');
-            else alert('تم الاستيراد بنجاح');
-            closeModal('importStudentModal');
-            loadStudentsData();
+            mergeData('studentTests', imported.data.tests); mergeData('studentLessons', imported.data.lessons); mergeData('studentAssignments', imported.data.assignments); mergeData('studentProgress', imported.data.progress); mergeData('studentEvents', imported.data.events); mergeData('studentActivities', imported.data.activities);
+            alert('تم الاستيراد بنجاح'); closeModal('importStudentModal'); loadStudentsData();
         } catch (err) { alert('خطأ: ' + err.message); }
-    };
-    reader.readAsText(fileInput.files[0]);
+    }; reader.readAsText(fileInput.files[0]);
 }
 
 function getStudentData(key, id) { return JSON.parse(localStorage.getItem(key) || '[]').filter(x => x.studentId == id); }
-function mergeData(key, newData) {
-    if (!newData || !newData.length) return;
-    let current = JSON.parse(localStorage.getItem(key) || '[]');
-    current = current.filter(x => x.studentId != newData[0].studentId);
-    localStorage.setItem(key, JSON.stringify([...current, ...newData]));
-}
-function cleanStudentOldData(id) {
-    ['studentTests', 'studentLessons', 'studentAssignments', 'studentEvents'].forEach(key => {
-        let data = JSON.parse(localStorage.getItem(key) || '[]');
-        localStorage.setItem(key, JSON.stringify(data.filter(x => x.studentId != id)));
-    });
-}
-
+function mergeData(key, newData) { if (!newData || !newData.length) return; let current = JSON.parse(localStorage.getItem(key) || '[]'); current = current.filter(x => x.studentId != newData[0].studentId); localStorage.setItem(key, JSON.stringify([...current, ...newData])); }
+function cleanStudentOldData(id) { ['studentTests', 'studentLessons', 'studentAssignments', 'studentEvents'].forEach(key => { let data = JSON.parse(localStorage.getItem(key) || '[]'); localStorage.setItem(key, JSON.stringify(data.filter(x => x.studentId != id))); }); }
 function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser')).user; }
 function openStudentFile(id) { window.location.href = `student-profile.html?id=${id}`; }
-function showStudentLoginData(id) {
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const s = users.find(u => u.id == id);
-    if(s) {
-        document.getElementById('loginDataUsername').value = s.username;
-        document.getElementById('loginDataPassword').value = s.password;
-        document.getElementById('studentLoginDataModal').classList.add('show');
-    }
-}
-function copyToClipboard(id) {
-    const el = document.getElementById(id); el.select(); document.execCommand('copy');
-    if(typeof showAuthNotification === 'function') showAuthNotification('تم النسخ', 'success'); else alert('تم النسخ');
-}
+function showStudentLoginData(id) { const users = JSON.parse(localStorage.getItem('users') || '[]'); const s = users.find(u => u.id == id); if(s) { document.getElementById('loginDataUsername').value = s.username; document.getElementById('loginDataPassword').value = s.password; document.getElementById('studentLoginDataModal').classList.add('show'); } }
+function copyToClipboard(id) { const el = document.getElementById(id); el.select(); document.execCommand('copy'); alert('تم النسخ'); }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 function closeAddStudentModal() { document.getElementById('addStudentModal').classList.remove('show'); }
 function showAddStudentModal() { document.getElementById('addStudentModal').classList.add('show'); }
-function searchStudents() {
-    const term = document.getElementById('studentSearch').value.toLowerCase();
-    document.querySelectorAll('#studentsTableBody tr').forEach(row => {
-        row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
-    });
-}
-function filterStudents() {
-    const grade = document.getElementById('gradeFilter').value;
-    document.querySelectorAll('#studentsTableBody tr').forEach(row => {
-        row.style.display = (grade === 'all' || row.children[2].innerText.includes(grade)) ? '' : 'none';
-    });
-}
+function searchStudents() { const term = document.getElementById('studentSearch').value.toLowerCase(); document.querySelectorAll('#studentsTableBody tr').forEach(row => { row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none'; }); }
+function filterStudents() { const grade = document.getElementById('gradeFilter').value; document.querySelectorAll('#studentsTableBody tr').forEach(row => { row.style.display = (grade === 'all' || row.children[2].innerText.includes(grade)) ? '' : 'none'; }); }
 
-window.addNewStudent = addNewStudent;
-window.editStudent = editStudent;
-window.updateStudentData = updateStudentData;
-window.deleteStudent = deleteStudent;
-window.openStudentFile = openStudentFile;
-window.showStudentLoginData = showStudentLoginData;
-window.copyToClipboard = copyToClipboard;
-window.loadStudentsData = loadStudentsData;
-window.showAddStudentModal = showAddStudentModal;
-window.closeAddStudentModal = closeAddStudentModal;
-window.showImportStudentModal = showImportStudentModal;
-window.exportStudentData = exportStudentData;
-window.processStudentImport = processStudentImport;
-window.searchStudents = searchStudents;
-window.filterStudents = filterStudents;
-window.closeModal = closeModal;
+window.addNewStudent = addNewStudent; window.editStudent = editStudent; window.updateStudentData = updateStudentData;
+window.deleteStudent = deleteStudent; window.openStudentFile = openStudentFile; window.showStudentLoginData = showStudentLoginData;
+window.copyToClipboard = copyToClipboard; window.loadStudentsData = loadStudentsData; window.showAddStudentModal = showAddStudentModal;
+window.closeAddStudentModal = closeAddStudentModal; window.showImportStudentModal = showImportStudentModal; window.exportStudentData = exportStudentData;
+window.processStudentImport = processStudentImport; window.searchStudents = searchStudents; window.filterStudents = filterStudents; window.closeModal = closeModal;

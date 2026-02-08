@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/teacher.js
-// الوصف: إدارة المعلم + نظام منع التكرار الصارم جداً (Debug Version)
+// الوصف: إدارة المعلم + نظام الحماية الشامل (منع التكرار عبر النظام كاملاً)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -26,22 +26,16 @@ function initializeTeacherDashboard() {
     loadTeacherStats();
 }
 
-// ============================================
-// 1. تحديث إحصائيات لوحة التحكم
-// ============================================
+// 1. الإحصائيات
 function loadTeacherStats() {
     const currentTeacher = getCurrentUser();
     if (!currentTeacher) return;
-
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const studentsCount = users.filter(u => u.role === 'student' && u.teacherId === currentTeacher.id).length;
-    
     const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
     const lessonsCount = lessons.filter(l => l.teacherId === currentTeacher.id).length;
-    
     const assignments = JSON.parse(localStorage.getItem('assignments') || '[]');
     const assignmentsCount = assignments.filter(a => a.teacherId === currentTeacher.id).length;
-
     const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
     const messagesCount = messages.filter(m => m.teacherId === currentTeacher.id && m.isFromStudent && !m.isRead).length;
 
@@ -51,9 +45,7 @@ function loadTeacherStats() {
     if (document.getElementById('unreadMessages')) document.getElementById('unreadMessages').innerText = messagesCount;
 }
 
-// ============================================
-// 2. إدارة الطلاب (المنطق المعدل)
-// ============================================
+// 2. إدارة الطلاب
 function loadStudentsData() {
     const loadingState = document.getElementById('loadingState');
     const emptyState = document.getElementById('emptyState');
@@ -79,7 +71,6 @@ function loadStudentsData() {
         tableBody.innerHTML = students.map((student, index) => {
             const progress = student.progress || 0;
             const progressColor = progress >= 80 ? 'success' : progress >= 50 ? 'warning' : 'danger';
-            
             return `
                 <tr>
                     <td>${index + 1}</td>
@@ -88,35 +79,23 @@ function loadStudentsData() {
                     <td>${student.subject}</td>
                     <td class="progress-cell">
                         <div class="progress-text text-${progressColor}">${progress}%</div>
-                        <div class="progress-bar">
-                            <div class="progress-fill bg-${progressColor}" style="width: ${progress}%"></div>
-                        </div>
+                        <div class="progress-bar"><div class="progress-fill bg-${progressColor}" style="width: ${progress}%"></div></div>
                     </td>
                     <td>
                         <div class="student-actions" style="display: flex; gap: 5px; flex-wrap: wrap;">
-                            <button class="btn btn-sm btn-primary" onclick="openStudentFile(${student.id})" title="ملف الطالب">
-                                <i class="fas fa-file-alt"></i> ملف
-                            </button>
-                            <button class="btn btn-sm btn-secondary" onclick="showStudentLoginData(${student.id})" title="بيانات الدخول">
-                                <i class="fas fa-key"></i>
-                            </button>
-                            <button class="btn btn-sm btn-warning" onclick="editStudent(${student.id})" title="تعديل">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-info" onclick="exportStudentData(${student.id})" title="تصدير ملف الطالب">
-                                <i class="fas fa-file-export"></i> تصدير
-                            </button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})" title="حذف">
-                                <i class="fas fa-trash"></i>
-                            </button>
+                            <button class="btn btn-sm btn-primary" onclick="openStudentFile(${student.id})" title="ملف الطالب"><i class="fas fa-file-alt"></i> ملف</button>
+                            <button class="btn btn-sm btn-secondary" onclick="showStudentLoginData(${student.id})" title="بيانات الدخول"><i class="fas fa-key"></i></button>
+                            <button class="btn btn-sm btn-warning" onclick="editStudent(${student.id})" title="تعديل"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-info" onclick="exportStudentData(${student.id})" title="تصدير"><i class="fas fa-file-export"></i> تصدير</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})" title="حذف"><i class="fas fa-trash"></i></button>
                         </div>
                     </td>
-                </tr>
-            `;
+                </tr>`;
         }).join('');
     }, 200);
 }
 
+// 🔥 دالة إضافة طالب (محدثة: تفحص كل النظام عند التوليد التلقائي)
 function addNewStudent() {
     const name = document.getElementById('studentName').value.trim();
     const grade = document.getElementById('studentGrade').value;
@@ -128,18 +107,24 @@ function addNewStudent() {
         return;
     }
 
+    // 1. جلب كافة الحسابات (معلمين/طلاب/لجنة)
     const users = JSON.parse(localStorage.getItem('users') || '[]');
+    const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
+    const allAccounts = [...users, ...committeeMembers];
+    
     const currentTeacher = getCurrentUser();
 
-    // 🔥 توليد تلقائي يضمن عدم التكرار
+    // 2. توليد بيانات دخول فريدة على مستوى النظام كاملاً
     let username = '';
     let password = '123';
     let isUnique = false;
 
     while (!isUnique) {
         username = 's_' + Math.floor(Math.random() * 10000);
-        // هل هذا المزيج موجود؟
-        const exists = users.some(u => String(u.username) === String(username) && String(u.password) === String(password));
+        
+        // هل هذا المزيج (User+Pass) موجود في أي مكان؟
+        const exists = allAccounts.some(u => String(u.username) === String(username) && String(u.password) === String(password));
+        
         if (!exists) {
             isUnique = true;
         }
@@ -170,77 +155,57 @@ function addNewStudent() {
 
 function editStudent(studentId) {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
-    // استخدام == للمقارنة الآمنة بين النص والرقم
     const student = users.find(u => u.id == studentId);
     if (!student) return;
-
     document.getElementById('editStudentId').value = student.id;
     document.getElementById('editStudentName').value = student.name;
     document.getElementById('editStudentGrade').value = student.grade;
     document.getElementById('editStudentSubject').value = student.subject;
-    
     if(document.getElementById('editStudentUsername')) document.getElementById('editStudentUsername').value = student.username || '';
-    // تفريغ حقل كلمة المرور ليعرف المعلم أنه إذا تركه فارغاً لن يتغير
     if(document.getElementById('editStudentPassword')) document.getElementById('editStudentPassword').value = '';
-
     document.getElementById('editStudentModal').classList.add('show');
 }
 
-// 🔥🔥🔥 الدالة التي تم إصلاحها جذرياً 🔥🔥🔥
+// 🔥 دالة تعديل الطالب (محدثة: الفحص الشامل)
 function updateStudentData() {
-    // 1. جلب المعرف وتحويله لنص لضمان المقارنة
     const idInput = document.getElementById('editStudentId').value;
     const currentId = String(idInput);
-
-    // 2. تحديث قائمة المستخدمين من LocalStorage
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const index = users.findIndex(u => String(u.id) === currentId);
 
     if (index !== -1) {
         const currentUser = users[index];
-
         const newName = document.getElementById('editStudentName').value.trim();
         const newGrade = document.getElementById('editStudentGrade').value;
         const newSubject = document.getElementById('editStudentSubject').value;
         
-        // 3. تحديد اسم المستخدم النهائي (الجديد أو القديم)
-        let finalUsername = document.getElementById('editStudentUsername').value.trim();
-        if (!finalUsername) finalUsername = currentUser.username;
-        
-        // 4. تحديد كلمة المرور النهائية (الجديدة أو القديمة)
-        let finalPassword = document.getElementById('editStudentPassword').value.trim();
-        if (!finalPassword) finalPassword = currentUser.password;
+        let finalUsername = document.getElementById('editStudentUsername').value.trim() || currentUser.username;
+        let finalPassword = document.getElementById('editStudentPassword').value.trim() || currentUser.password;
 
-        console.log(`Checking collision for: User=${finalUsername}, Pass=${finalPassword}, MyID=${currentId}`);
+        // 1. تجميع كل الحسابات للفحص
+        const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
+        const allAccounts = [...users, ...committeeMembers];
 
-        // 5. 🔥 الفحص الصارم 🔥
-        // نبحث عن "أي" مستخدم آخر لديه نفس اسم المستخدم ونفس كلمة المرور
-        const duplicateUser = users.find(u => {
-            // تجاهل الطالب نفسه (مهم جداً)
-            if (String(u.id) === currentId) return false;
-
+        // 2. البحث عن تكرار شامل
+        const duplicateUser = allAccounts.find(u => {
+            if (String(u.id) === currentId) return false; // تجاهل نفس الطالب
             const uName = String(u.username || '').trim();
             const uPass = String(u.password || '').trim();
-
-            // هل هناك تطابق كامل؟
             return uName === String(finalUsername) && uPass === String(finalPassword);
         });
         
         if (duplicateUser) {
-            console.warn("Collision found with user:", duplicateUser);
-            
-            const errorMsg = `⛔ خطأ: تكرار بيانات!\n\nهذه البيانات مطابقة تماماً للطالب: "${duplicateUser.name}".\nلا يمكن لطالبين امتلاك نفس اسم المستخدم وكلمة المرور معاً.\n\nالرجاء تغيير كلمة المرور.`;
-            
+            const errorMsg = `⛔ خطأ أمني:\nبيانات الدخول هذه (المستخدم + المرور) متطابقة مع حساب "${duplicateUser.name}" (الذي قد يكون طالباً آخر أو عضو لجنة).\n\nيمنع النظام تكرار بيانات الدخول لمنع تداخل الصلاحيات.`;
             if(typeof showAuthNotification === 'function') {
-                showAuthNotification('بيانات مكررة! الرجاء تغيير كلمة المرور.', 'error');
+                showAuthNotification('بيانات مكررة! يرجى تغيير كلمة المرور.', 'error');
                 setTimeout(() => alert(errorMsg), 500);
             } else {
                 alert(errorMsg);
             }
-            return; // 🛑 إيقاف الحفظ
+            return;
         }
 
-        // 6. الحفظ
+        // الحفظ
         users[index].name = newName;
         users[index].grade = newGrade;
         users[index].subject = newSubject;
@@ -249,13 +214,13 @@ function updateStudentData() {
 
         localStorage.setItem('users', JSON.stringify(users));
         
-        if(typeof showAuthNotification === 'function') showAuthNotification('تم تحديث البيانات بنجاح ✅', 'success');
+        if(typeof showAuthNotification === 'function') showAuthNotification('تم التحديث بنجاح ✅', 'success');
         else alert('تم التحديث بنجاح ✅');
 
         document.getElementById('editStudentModal').classList.remove('show');
         loadStudentsData();
     } else {
-        alert('حدث خطأ: لم يتم العثور على الطالب في قاعدة البيانات.');
+        alert('خطأ: الطالب غير موجود.');
     }
 }
 
@@ -267,16 +232,11 @@ function deleteStudent(studentId) {
     loadStudentsData();
 }
 
-// ============================================
-// 🚀 3. نظام نقل الطلاب
-// ============================================
-
+// 3. النقل والاستيراد
 function exportStudentData(studentId) {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const student = users.find(u => u.id == studentId);
-    
     if (!student) return alert('بيانات الطالب غير موجودة');
-
     const exportData = {
         info: student,
         data: {
@@ -287,29 +247,18 @@ function exportStudentData(studentId) {
             events: getStudentData('studentEvents', studentId),
             activities: getStudentData('studentActivities', studentId)
         },
-        meta: {
-            exportedBy: getCurrentUser().name,
-            date: new Date().toISOString()
-        }
+        meta: { exportedBy: getCurrentUser().name, date: new Date().toISOString() }
     };
-
     const fileName = `student_${student.name.replace(/\s+/g, '_')}.json`;
-    const dataStr = JSON.stringify(exportData, null, 2);
-    const blob = new Blob([dataStr], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    const a = document.createElement('a'); a.href = url; a.download = fileName;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
 function showImportStudentModal() {
     const fileInput = document.getElementById('studentJsonFile');
     if(fileInput) fileInput.value = '';
-    
     const modal = document.getElementById('importStudentModal');
     if(modal) modal.classList.add('show');
 }
@@ -317,27 +266,41 @@ function showImportStudentModal() {
 function processStudentImport() {
     const fileInput = document.getElementById('studentJsonFile');
     if (!fileInput || !fileInput.files[0]) return alert('يرجى اختيار ملف الطالب أولاً');
-
     const currentUser = getCurrentUser();
-
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
             const imported = JSON.parse(e.target.result);
             if (!imported.info || !imported.data) throw new Error('الملف غير صالح');
-
+            
             const studentInfo = imported.info;
             studentInfo.teacherId = currentUser.id; 
 
+            // فحص التكرار عند الاستيراد أيضاً
             let users = JSON.parse(localStorage.getItem('users') || '[]');
+            const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
+            const allAccounts = [...users, ...committeeMembers];
+
+            // إذا كان المستخدم الجديد يطابق حساباً موجوداً (غير نفسه)
+            const collision = allAccounts.find(u => 
+                u.username === studentInfo.username && 
+                u.password === studentInfo.password &&
+                u.id != studentInfo.id // في حال كنا نستورد نفس الطالب مرة أخرى للتحديث فلا بأس
+            );
+
+            if(collision && collision.id != studentInfo.id) {
+                // حل التعارض تلقائياً عند الاستيراد
+                studentInfo.username = studentInfo.username + '_imp';
+                alert('تنبيه: تم تغيير اسم مستخدم الطالب المستورد لوجود تطابق مع حساب آخر.');
+            }
+
+            // استكمال الاستيراد...
             const existingIndex = users.findIndex(u => u.username === studentInfo.username);
-            
             if (existingIndex !== -1) {
-                if (!confirm(`الطالب "${studentInfo.name}" موجود لدى معلم آخر . هل تريد نقله إليك ؟`)) return;
+                if (!confirm(`الطالب "${studentInfo.name}" موجود. تحديث؟`)) return;
                 cleanStudentOldData(users[existingIndex].id);
                 users.splice(existingIndex, 1);
             }
-
             users.push(studentInfo);
             localStorage.setItem('users', JSON.stringify(users));
 
@@ -348,31 +311,22 @@ function processStudentImport() {
             mergeData('studentEvents', imported.data.events);
             mergeData('studentActivities', imported.data.activities);
 
-            if(typeof showAuthNotification === 'function') showAuthNotification(`تم استيراد الطالب "${studentInfo.name}" بنجاح! 🎉`, 'success');
-            else alert(`تم استيراد الطالب "${studentInfo.name}" بنجاح! 🎉`);
-
+            if(typeof showAuthNotification === 'function') showAuthNotification('تم الاستيراد بنجاح', 'success');
+            else alert('تم الاستيراد بنجاح');
             closeModal('importStudentModal');
             loadStudentsData();
-
-        } catch (err) {
-            alert('حدث خطأ: ملف غير صالح.');
-            console.error(err);
-        }
+        } catch (err) { alert('خطأ: ' + err.message); }
     };
     reader.readAsText(fileInput.files[0]);
 }
 
-function getStudentData(key, id) {
-    return JSON.parse(localStorage.getItem(key) || '[]').filter(x => x.studentId == id);
-}
-
+function getStudentData(key, id) { return JSON.parse(localStorage.getItem(key) || '[]').filter(x => x.studentId == id); }
 function mergeData(key, newData) {
     if (!newData || !newData.length) return;
     let current = JSON.parse(localStorage.getItem(key) || '[]');
     current = current.filter(x => x.studentId != newData[0].studentId);
     localStorage.setItem(key, JSON.stringify([...current, ...newData]));
 }
-
 function cleanStudentOldData(id) {
     ['studentTests', 'studentLessons', 'studentAssignments', 'studentEvents'].forEach(key => {
         let data = JSON.parse(localStorage.getItem(key) || '[]');
@@ -380,7 +334,6 @@ function cleanStudentOldData(id) {
     });
 }
 
-// أدوات عامة
 function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser')).user; }
 function openStudentFile(id) { window.location.href = `student-profile.html?id=${id}`; }
 function showStudentLoginData(id) {
@@ -393,11 +346,8 @@ function showStudentLoginData(id) {
     }
 }
 function copyToClipboard(id) {
-    const el = document.getElementById(id);
-    el.select();
-    document.execCommand('copy');
-    if(typeof showAuthNotification === 'function') showAuthNotification('تم النسخ للحافظة', 'success');
-    else alert('تم النسخ');
+    const el = document.getElementById(id); el.select(); document.execCommand('copy');
+    if(typeof showAuthNotification === 'function') showAuthNotification('تم النسخ', 'success'); else alert('تم النسخ');
 }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 function closeAddStudentModal() { document.getElementById('addStudentModal').classList.remove('show'); }
@@ -415,7 +365,6 @@ function filterStudents() {
     });
 }
 
-// تصدير الدوال
 window.addNewStudent = addNewStudent;
 window.editStudent = editStudent;
 window.updateStudentData = updateStudentData;

@@ -1,12 +1,13 @@
 // ============================================
 // 📁 الملف: assets/js/auth.js
-// الوصف: نظام الدخول المطور (تشفير البيانات + حظر الحسابات)
+// الوصف: نظام الدخول المطور (يدعم العربية + تشفير البيانات + حظر الحسابات)
 // ============================================
 
 // 1. البيانات الأساسية للمدير (مشفرة لحماية الكود المصدري)
+// المستخدم: Zooro12500 | كلمة المرور: 430106043123
 const ADMIN_CREDENTIALS = {
-    u: "Wm9vcm8xMjUwMA==", // Zooro12500 مشفرة
-    p: "NDMwMTA2MDQzMTIz"  // 430106043123 مشفرة
+    u: "Wm9vcm8xMjUwMA==", 
+    p: "NDMwMTA2MDQzMTIz"  
 };
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -19,11 +20,21 @@ document.addEventListener('DOMContentLoaded', function() {
         newBtn.addEventListener('click', login);
     }
     
-    // التحقق من الجلسة (إلا في صفحة الدخول)
+    // التحقق من الجلسة (إلا في صفحة الدخول والرئيسية)
     if (!window.location.href.includes('index.html') && !window.location.href.includes('login.html')) {
         checkAuth();
     }
 });
+
+// دالة مساعدة لتحويل النصوص (بما فيها العربية) إلى Base64 دون أخطاء
+function utf8_to_btoa(str) {
+    try {
+        return btoa(unescape(encodeURIComponent(str)));
+    } catch (err) {
+        console.error("Encoding error:", err);
+        return "";
+    }
+}
 
 // دالة تسجيل الدخول الرئيسية
 function login() {
@@ -35,8 +46,8 @@ function login() {
         return;
     }
 
-    // أ) التحقق من حساب المدير الجديد (المشفر)
-    if (btoa(userInp) === ADMIN_CREDENTIALS.u && btoa(passInp) === ADMIN_CREDENTIALS.p) {
+    // أ) التحقق من حساب المدير الجديد (باستخدام التشفير الآمن للعربية)
+    if (utf8_to_btoa(userInp) === ADMIN_CREDENTIALS.u && utf8_to_btoa(passInp) === ADMIN_CREDENTIALS.p) {
         const adminUser = {
             id: 1,
             name: "مدير النظام",
@@ -48,7 +59,7 @@ function login() {
         return;
     }
 
-    // ب) البحث في قائمة المستخدمين المخزنة (معلمين/طلاب)
+    // ب) البحث في قائمة المستخدمين المخزنة (معلمين/طلاب) ببياناتهم الأصلية
     let users = JSON.parse(localStorage.getItem('users') || '[]');
     let user = users.find(u => u.username == userInp && u.password == passInp);
 
@@ -66,14 +77,13 @@ function login() {
     const member = committeeMembers.find(m => m.username === userInp && m.password === passInp);
     
     if (member) {
-        const committeeUser = {
+        saveSessionAndRedirect({
             id: member.id,
             name: member.name,
             username: member.username,
             role: 'committee_member',
             status: 'active'
-        };
-        saveSessionAndRedirect(committeeUser);
+        });
         return;
     }
 
@@ -85,6 +95,7 @@ function login() {
 function saveSessionAndRedirect(user) {
     sessionStorage.setItem('currentUser', JSON.stringify(user));
     
+    // تحديد المسار (تعديل بسيط لضمان صحة الروابط)
     let prefix = window.location.href.includes('/pages/') ? '../' : 'pages/';
     
     const routes = {
@@ -97,18 +108,15 @@ function saveSessionAndRedirect(user) {
     window.location.href = prefix + (routes[user.role] || routes['student']);
 }
 
-// ============================================
-// 🔔 نظام الإشعارات والخدمات المساعدة
-// ============================================
-
+// نظام الإشعارات (Toast)
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast-notification toast-${type}`;
     toast.style.cssText = `
         position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
-        padding: 15px 30px; border-radius: 8px; color: #fff; font-weight: bold;
-        z-index: 99999; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-        font-family: Tajawal, sans-serif; transition: all 0.5s ease;
+        padding: 12px 25px; border-radius: 8px; color: #fff; font-weight: bold;
+        z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        font-family: 'Tajawal', sans-serif; transition: all 0.4s ease;
         background-color: ${type === 'error' ? '#e74c3c' : '#2ecc71'};
     `;
     toast.innerText = message;
@@ -116,21 +124,20 @@ function showToast(message, type = 'info') {
 
     setTimeout(() => {
         toast.style.opacity = '0';
-        toast.style.top = '0px';
-        setTimeout(() => toast.remove(), 500);
+        toast.style.transform = 'translate(-50%, -10px)';
+        setTimeout(() => toast.remove(), 400);
     }, 3000);
 }
 
-// استبدال alert بـ Toast تلقائياً
+// استبدال التنبيهات الافتراضية بتصميمك الجديد
 window.alert = (msg) => showToast(msg, 'info');
 
 function checkAuth() {
     const session = sessionStorage.getItem('currentUser');
     if (!session) {
-        window.location.href = '../../index.html';
-        return null;
+        let backPath = window.location.href.includes('/pages/') ? '../../index.html' : 'index.html';
+        window.location.href = backPath;
     }
-    return JSON.parse(session);
 }
 
 function logout() {
@@ -142,9 +149,8 @@ function getCurrentUser() {
     return JSON.parse(sessionStorage.getItem('currentUser') || 'null');
 }
 
-// تصدير الدوال للنافذة العالمية
+// تصدير للوصول العالمي
 window.login = login;
-window.checkAuth = checkAuth;
 window.logout = logout;
 window.getCurrentUser = getCurrentUser;
 window.showToast = showToast;

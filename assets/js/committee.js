@@ -1,9 +1,9 @@
 // ============================================
 // 📁 الملف: assets/js/committee.js
-// الوصف: إدارة اللجنة (النسخة التفاعلية الكاملة + عزل البيانات)
+// الوصف: إدارة اللجنة (اجتماعات تفاعلية + أمان عدم تعارض الحسابات)
 // ============================================
 
-// --- إعدادات قاعدة البيانات ---
+// --- إعدادات قاعدة البيانات (IndexedDB) للاجتماعات ---
 const DB_NAME = 'CommitteeAppDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'meetings';
@@ -19,6 +19,7 @@ function getCurrentUser() {
     } catch (e) { return null; }
 }
 
+// فتح قاعدة البيانات
 function openDB() {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -30,17 +31,19 @@ function openDB() {
         request.onerror = (e) => reject('خطأ DB');
     });
 }
+
+// دوال التعامل مع قاعدة البيانات
 function dbGetAll() { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readonly'); const r = tx.objectStore(STORE_NAME).getAll(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
 function dbPut(item) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readwrite'); const r = tx.objectStore(STORE_NAME).put(item); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
 function dbGet(id) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readonly'); const r = tx.objectStore(STORE_NAME).get(id); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
 function dbDelete(id) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readwrite'); const r = tx.objectStore(STORE_NAME).delete(id); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
 
-// --- التشغيل ---
+// --- عند تحميل الصفحة ---
 document.addEventListener('DOMContentLoaded', async function() {
     const user = getCurrentUser();
     if (user) {
         if(document.getElementById('userName')) document.getElementById('userName').textContent = user.name;
-        // 🔥 إصلاح البيانات القديمة تلقائياً (الأعضاء)
+        // إصلاح البيانات القديمة تلقائياً
         autoFixMembers(user);
     }
 
@@ -49,7 +52,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     loadMeetings();
 });
 
-// إصلاح الأعضاء القدامى (ربطهم بك)
+// إصلاح الأعضاء القدامى (ربطهم بالمعلم الحالي)
 function autoFixMembers(user) {
     let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     let modified = false;
@@ -60,6 +63,7 @@ function autoFixMembers(user) {
     if (modified) localStorage.setItem('committeeMembers', JSON.stringify(members));
 }
 
+// التنقل بين التبويبات
 function switchTab(tab) {
     document.getElementById('members-view').classList.remove('active');
     document.getElementById('meetings-view').classList.remove('active');
@@ -69,7 +73,106 @@ function switchTab(tab) {
     document.getElementById(`tab-${tab}`).classList.add('active');
 }
 
-// --- 🛠️ أدوات بناء الاجتماع التفاعلي ---
+// ==========================================
+// 👥 إدارة الأعضاء (مع الحماية الأمنية الجديدة)
+// ==========================================
+
+function loadMembers() {
+    const user = getCurrentUser();
+    const allMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
+    // عرض أعضاء هذا المعلم فقط
+    const myMembers = allMembers.filter(m => m.ownerId == user.id);
+    
+    const container = document.getElementById('membersListContainer');
+    if (myMembers.length === 0) { container.innerHTML = '<div class="alert alert-info">لا يوجد أعضاء.</div>'; return; }
+    
+    let html = '<table class="table table-bordered bg-white"><thead><tr><th>الاسم</th><th>الصفة</th><th>المستخدم</th><th>المرور</th><th>إجراءات</th></tr></thead><tbody>';
+    myMembers.forEach(m => { html += `<tr><td>${m.name}</td><td>${m.role}</td><td>${m.username}</td><td>${m.password}</td><td><button class="btn btn-sm btn-primary" onclick="editMember(${m.id})">تعديل</button> <button class="btn btn-sm btn-danger" onclick="deleteMember(${m.id})">حذف</button></td></tr>`; });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function showAddMemberModal() {
+    document.getElementById('addMemberModal').classList.add('show');
+    document.getElementById('editMemId').value='';
+    document.getElementById('memName').value='';
+    document.getElementById('memUser').value='';
+    document.getElementById('memPass').value='';
+}
+
+// 🔥 دالة الحفظ المعدلة (مع فحص التكرار)
+function saveMember() {
+    const user = getCurrentUser();
+    const id = document.getElementById('editMemId').value;
+    const name = document.getElementById('memName').value.trim();
+    const role = document.getElementById('memRole').value;
+    const username = document.getElementById('memUser').value.trim();
+    const pass = document.getElementById('memPass').value.trim();
+    
+    if(!name || !username || !pass) return alert('البيانات ناقصة');
+    
+    // 1. الفحص الأمني الشامل (بحث في المعلمين والطلاب وأعضاء اللجان)
+    const mainUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
+    
+    // دمج القائمتين
+    const allAccounts = [...mainUsers, ...committeeMembers];
+
+    // هل يوجد حساب آخر له نفس اسم المستخدم وكلمة المرور معاً؟
+    const isDuplicate = allAccounts.some(account => {
+        // نتجاهل العضو نفسه في حالة التعديل
+        if (id && account.id == id) return false;
+
+        // الشرط: تطابق الاثنين معاً
+        return account.username === username && account.password === pass;
+    });
+
+    if (isDuplicate) {
+        alert('⚠️ تنبيه أمني:\nهذا "اسم المستخدم" مع "كلمة المرور" مستخدمان بالفعل لشخص آخر في النظام.\n\nلمنع تداخل الحسابات، يرجى تغيير أحدهما (مثلاً تغيير كلمة المرور).');
+        return; // إيقاف الحفظ
+    }
+    
+    // 2. الحفظ بعد اجتياز الفحص
+    let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
+    
+    if(id) {
+        const idx = members.findIndex(x => x.id == id);
+        if(idx !== -1) members[idx] = { id: parseInt(id), ownerId: members[idx].ownerId, name, role, username, password: pass };
+    } else {
+        members.push({ id: Date.now(), ownerId: user.id, name, role, username, password: pass });
+    }
+    
+    localStorage.setItem('committeeMembers', JSON.stringify(members));
+    closeModal('addMemberModal');
+    loadMembers();
+    alert('تم حفظ العضو بنجاح ✅');
+}
+
+function editMember(id) {
+    const members = JSON.parse(localStorage.getItem('committeeMembers')||'[]');
+    const m = members.find(x => x.id === id);
+    if(m) {
+        document.getElementById('editMemId').value = m.id;
+        document.getElementById('memName').value = m.name;
+        document.getElementById('memRole').value = m.role;
+        document.getElementById('memUser').value = m.username;
+        document.getElementById('memPass').value = m.password;
+        document.getElementById('addMemberModal').classList.add('show');
+    }
+}
+
+function deleteMember(id) {
+    if(confirm('هل أنت متأكد من الحذف؟')) {
+        let members = JSON.parse(localStorage.getItem('committeeMembers')||'[]');
+        members = members.filter(x => x.id !== id);
+        localStorage.setItem('committeeMembers', JSON.stringify(members));
+        loadMembers();
+    }
+}
+
+// ==========================================
+// 🛠️ أدوات بناء الاجتماع التفاعلي
+// ==========================================
 
 function addPollTool() {
     const container = document.getElementById('dynamicToolsContainer');
@@ -97,10 +200,9 @@ function addStudentFeedbackTool() {
     const container = document.getElementById('dynamicToolsContainer');
     const id = Date.now();
     
-    // جلب الطلاب (يمكنك هنا إضافة فلترة لطلاب المعلم أيضاً إذا أردت، لكن سنبقيها عامة للآن)
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const teacherUser = getCurrentUser();
-    // عرض طلاب المعلم فقط في القائمة
+    // عرض طلاب هذا المعلم فقط
     const students = users.filter(u => u.role === 'student' && u.teacherId == teacherUser.id);
     
     let options = '';
@@ -125,13 +227,11 @@ function removeTool(id) { document.getElementById(id).remove(); }
 
 // فتح نافذة اجتماع جديد
 function showNewMeetingModal() {
-    // تصفية الحقول
     ['meetTitle', 'meetDate', 'meetContent', 'meetPdf', 'meetImg'].forEach(id => {
         if(document.getElementById(id)) document.getElementById(id).value = '';
     });
     document.getElementById('dynamicToolsContainer').innerHTML = '';
 
-    // تحميل المدعوين (أعضاء لجنتك فقط)
     const user = getCurrentUser();
     const allMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     const myMembers = allMembers.filter(m => m.ownerId == user.id);
@@ -150,7 +250,7 @@ function showNewMeetingModal() {
     document.getElementById('meetingModal').classList.add('show');
 }
 
-// ✅ حفظ الاجتماع (تفاعلي + معزول)
+// حفظ الاجتماع
 async function saveMeeting() {
     const user = getCurrentUser();
     const title = document.getElementById('meetTitle').value;
@@ -192,7 +292,7 @@ async function saveMeeting() {
 
     const newMeeting = {
         id: Date.now(),
-        teacherId: user.id, // 🔥 بصمة المعلم للعزل
+        teacherId: user.id,
         title, date, content,
         polls, 
         requestedFeedback,
@@ -210,7 +310,7 @@ async function saveMeeting() {
     } catch(e) { console.error(e); alert('خطأ في الحفظ'); }
 }
 
-// تحميل القائمة (معزولة)
+// تحميل الاجتماعات
 async function loadMeetings() {
     const container = document.getElementById('meetingsListContainer');
     const user = getCurrentUser();
@@ -218,14 +318,14 @@ async function loadMeetings() {
     try {
         let meetings = await dbGetAll();
 
-        // 🔥 إصلاح الاجتماعات القديمة
+        // إصلاح الاجتماعات القديمة
         let dbFix = false;
         for(let m of meetings) {
             if(!m.teacherId) { m.teacherId = user.id; await dbPut(m); dbFix = true; }
         }
         if(dbFix) meetings = await dbGetAll();
 
-        // 🔥 فلترة: اجتماعاتي فقط
+        // اجتماعاتي فقط
         const myMeetings = meetings.filter(m => m.teacherId == user.id);
 
         if(myMeetings.length === 0) { container.innerHTML = '<div class="alert alert-info">لا توجد اجتماعات.</div>'; return; }
@@ -249,7 +349,7 @@ async function loadMeetings() {
     } catch(e) { console.error(e); }
 }
 
-// ✅ عرض المحضر + النتائج (نفس الوظيفة السابقة تماماً)
+// عرض التفاصيل
 async function viewMeetingDetails(id) {
     const meeting = await dbGet(id);
     if(!meeting) return;
@@ -313,16 +413,13 @@ async function viewMeetingDetails(id) {
         if(meeting.imgFile) { imgDisplay.src = meeting.imgFile; imgContainer.style.display='block'; } else imgContainer.style.display='none';
     } else { attachSection.style.display = 'none'; }
 
-    // 4. جدول التوقيعات (تحميل الأعضاء المعزولين)
+    // 4. جدول التوقيعات
     const tableBody = document.getElementById('signaturesTableBody');
     tableBody.innerHTML = '';
     
-    // 🔥 تحميل أعضائي فقط
     const user = getCurrentUser();
     const allMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     const myMembers = allMembers.filter(m => m.ownerId == user.id);
-    
-    // فلترة من تم دعوتهم فقط
     const attendeesList = myMembers.filter(m => (meeting.attendees||[]).includes(m.id));
 
     if(attendeesList.length === 0) tableBody.innerHTML = '<tr><td colspan="3">لا يوجد مدعوون.</td></tr>';
@@ -342,82 +439,8 @@ async function viewMeetingDetails(id) {
 }
 
 // دوال مساعدة
-async function deleteMeeting(id) { if(confirm('حذف؟')) { await dbDelete(id); loadMeetings(); } }
+async function deleteMeeting(id) { if(confirm('هل أنت متأكد من الحذف؟')) { await dbDelete(id); loadMeetings(); } }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
-
-// ==========================================
-// 👥 إدارة الأعضاء (معزولة)
-// ==========================================
-function loadMembers() {
-    const user = getCurrentUser();
-    const allMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    // 🔥 فلترة الأعضاء
-    const myMembers = allMembers.filter(m => m.ownerId == user.id);
-    
-    const container = document.getElementById('membersListContainer');
-    if (myMembers.length === 0) { container.innerHTML = '<div class="alert alert-info">لا يوجد أعضاء.</div>'; return; }
-    
-    let html = '<table class="table table-bordered bg-white"><thead><tr><th>الاسم</th><th>الصفة</th><th>المستخدم</th><th>المرور</th><th>إجراءات</th></tr></thead><tbody>';
-    myMembers.forEach(m => { html += `<tr><td>${m.name}</td><td>${m.role}</td><td>${m.username}</td><td>${m.password}</td><td><button class="btn btn-sm btn-primary" onclick="editMember(${m.id})">تعديل</button> <button class="btn btn-sm btn-danger" onclick="deleteMember(${m.id})">حذف</button></td></tr>`; });
-    html += '</tbody></table>';
-    container.innerHTML = html;
-}
-
-function showAddMemberModal() {
-    document.getElementById('addMemberModal').classList.add('show');
-    document.getElementById('editMemId').value='';
-    document.getElementById('memName').value='';
-    document.getElementById('memUser').value='';
-    document.getElementById('memPass').value='';
-}
-
-function saveMember() {
-    const user = getCurrentUser();
-    const id = document.getElementById('editMemId').value;
-    const name = document.getElementById('memName').value;
-    const role = document.getElementById('memRole').value;
-    const username = document.getElementById('memUser').value;
-    const pass = document.getElementById('memPass').value;
-    
-    if(!name || !username || !pass) return alert('البيانات ناقصة');
-    
-    let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    
-    if(id) {
-        const idx = members.findIndex(x => x.id == id);
-        // عند التعديل، نحافظ على ownerId القديم
-        if(idx !== -1) members[idx] = { id: parseInt(id), ownerId: members[idx].ownerId, name, role, username, password: pass };
-    } else {
-        // عند الإضافة، نضيف ownerId
-        members.push({ id: Date.now(), ownerId: user.id, name, role, username, password: pass });
-    }
-    
-    localStorage.setItem('committeeMembers', JSON.stringify(members));
-    closeModal('addMemberModal');
-    loadMembers();
-}
-
-function editMember(id) {
-    const members = JSON.parse(localStorage.getItem('committeeMembers')||'[]');
-    const m = members.find(x => x.id === id);
-    if(m) {
-        document.getElementById('editMemId').value = m.id;
-        document.getElementById('memName').value = m.name;
-        document.getElementById('memRole').value = m.role;
-        document.getElementById('memUser').value = m.username;
-        document.getElementById('memPass').value = m.password;
-        document.getElementById('addMemberModal').classList.add('show');
-    }
-}
-
-function deleteMember(id) {
-    if(confirm('حذف؟')) {
-        let members = JSON.parse(localStorage.getItem('committeeMembers')||'[]');
-        members = members.filter(x => x.id !== id);
-        localStorage.setItem('committeeMembers', JSON.stringify(members));
-        loadMembers();
-    }
-}
 
 // تصدير الدوال
 window.addPollTool = addPollTool;

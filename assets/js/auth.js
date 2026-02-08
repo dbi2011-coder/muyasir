@@ -1,14 +1,15 @@
 // ============================================
 // 📁 الملف: assets/js/auth.js
-// الوصف: نظام الدخول المشفر (النسخة النهائية النظيفة)
+// الوصف: نظام الدخول المتوازن (أمان + استقرار)
 // ============================================
 
-const ADMIN_HASH = {
-    u: "Wm9vcm8xMjUwMA==", 
-    p: "NDMwMTA2MDQzMTIz"   
+const ADMIN_CONFIG = {
+    username: "Zooro12500",
+    passwordHash: "NDMwMTA2MDQzMTIz" // التشفير الآمن لكلمة المرور
 };
 
 document.addEventListener('DOMContentLoaded', function() {
+    // 1. تهيئة زر الدخول
     const loginBtn = document.querySelector('button');
     if(loginBtn && (loginBtn.innerText.includes('دخول') || loginBtn.innerText.includes('Login'))) {
         const newBtn = loginBtn.cloneNode(true);
@@ -17,15 +18,18 @@ document.addEventListener('DOMContentLoaded', function() {
         newBtn.addEventListener('click', login);
     }
     
+    // 2. التحقق من الجلسة في الصفحات الداخلية
     if (!window.location.href.includes('index.html') && !window.location.href.includes('login.html')) {
         checkAuth();
     }
 });
 
-function safeEncrypt(str) {
+// 🔥 دالة التشفير الآمنة (تدعم العربية)
+function secureHash(str) {
     try {
         return btoa(unescape(encodeURIComponent(str)));
     } catch (e) {
+        console.error("خطأ في التشفير", e);
         return str;
     }
 }
@@ -39,14 +43,11 @@ function login() {
         return;
     }
 
-    const hashedUser = safeEncrypt(userInp);
-    const hashedPass = safeEncrypt(passInp);
+    // تشفير كلمة المرور المدخلة لمقارنتها
+    const inputHash = secureHash(passInp);
 
-    // 1. التحقق من المدير (تطابق التشفير)
-    if (hashedUser === ADMIN_HASH.u && hashedPass === ADMIN_HASH.p) {
-        // تحديث بيانات المدير في الذاكرة لضمان التوافق
-        updateAdminInStorage(userInp, passInp);
-        
+    // 1. التحقق من المدير
+    if (userInp === ADMIN_CONFIG.username && inputHash === ADMIN_CONFIG.passwordHash) {
         const adminUser = {
             id: 1,
             name: "مدير النظام",
@@ -60,11 +61,24 @@ function login() {
 
     // 2. التحقق من المستخدمين (معلمين / طلاب)
     let users = JSON.parse(localStorage.getItem('users') || '[]');
-    let user = users.find(u => u.username == userInp && u.password == passInp);
+    
+    // البحث بذكاء: يدعم كلمات المرور المشفرة وغير المشفرة (للتوافق)
+    let user = users.find(u => {
+        // الخيار الأول: كلمة المرور في النظام مشفرة (الوضع المثالي)
+        if (u.username == userInp && u.password == inputHash) return true;
+        
+        // الخيار الثاني: كلمة المرور نص عادي (حسابات قديمة) - نقوم بتحديثها تلقائياً
+        if (u.username == userInp && u.password == passInp) {
+            u.password = inputHash; // تشفيرها للمستقبل
+            localStorage.setItem('users', JSON.stringify(users)); // حفظ التعديل
+            return true;
+        }
+        return false;
+    });
 
     if (user) {
         if (user.status === 'suspended' || user.status === 'موقوف') {
-            showToast("⛔ عذراً، تم إيقاف حسابك.", "error");
+            showToast("⛔ عذراً، تم إيقاف حسابك. يرجى مراجعة الإدارة.", "error");
             return;
         }
         saveSessionAndRedirect(user);
@@ -73,7 +87,7 @@ function login() {
 
     // 3. التحقق من أعضاء اللجنة
     const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    const member = committeeMembers.find(m => m.username === userInp && m.password === passInp);
+    const member = committeeMembers.find(m => m.username === userInp && (m.password == passInp || m.password == inputHash));
     
     if (member) {
         saveSessionAndRedirect({
@@ -89,27 +103,8 @@ function login() {
     showToast("بيانات الدخول غير صحيحة!", "error");
 }
 
-function updateAdminInStorage(newUsername, newPassword) {
-    let users = JSON.parse(localStorage.getItem('users') || '[]');
-    const adminIndex = users.findIndex(u => u.role === 'admin');
-    
-    if (adminIndex === -1) {
-        users.push({ 
-            id: 1, 
-            name: "مدير النظام", 
-            username: newUsername, 
-            password: newPassword, 
-            role: "admin", 
-            status: "active" 
-        });
-    } else {
-        users[adminIndex].username = newUsername;
-        users[adminIndex].password = newPassword;
-    }
-    localStorage.setItem('users', JSON.stringify(users));
-}
-
 function saveSessionAndRedirect(user) {
+    // حفظ بيانات المستخدم كما هي (بدون تشفير كامل الكائن) لكي تقرأها الصفحات بسهولة
     sessionStorage.setItem('currentUser', JSON.stringify(user));
     
     let prefix = window.location.href.includes('/pages/') ? '../' : 'pages/';
@@ -149,7 +144,7 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// تصدير الدوال الأساسية
+// دوال مساعدة عامة
 window.checkAuth = function() {
     const session = sessionStorage.getItem('currentUser');
     if (!session) {

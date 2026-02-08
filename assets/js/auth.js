@@ -35,7 +35,7 @@ function login() {
     
     // ضمان وجود المدير دائماً
     if (!users.some(u => u.role === 'admin')) {
-        users.push({ id: 1, name: "مدير النظام", username: "admin", password: "123", role: "admin", status: "active" });
+        users.push({ id: 1, name: "مدير النظام", username: "Epson", password: "430106043", role: "admin", status: "active" });
         localStorage.setItem('users', JSON.stringify(users));
     }
 
@@ -182,3 +182,4 @@ window.showAuthNotification = function(message, type) {
     const styleType = (type === 'success') ? 'success' : 'error';
     showToast(message, styleType);
 };
+

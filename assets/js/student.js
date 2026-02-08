@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student.js
-// الوصف: الدوال الرئيسية لواجهة الطالب (تم إصلاح خطأ الأفاتار والاسم)
+// الوصف: النسخة المحدثة والمتوافقة مع نظام الدخول الجديد Zooro12500
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -11,18 +11,18 @@ document.addEventListener('DOMContentLoaded', function() {
 function initializeStudentDashboard() {
     let currentStudent = null;
     
-    // محاولة جلب المستخدم بأكثر من طريقة لضمان النجاح
     try {
-        if (typeof getCurrentUser === 'function') {
-            currentStudent = getCurrentUser();
+        // جلب البيانات من الجلسة (متوافق مع auth.js المحدث)
+        const sessionData = sessionStorage.getItem('currentUser');
+        if (sessionData) {
+            currentStudent = JSON.parse(sessionData);
         }
-        if (!currentStudent && sessionStorage.getItem('currentUser')) {
-            currentStudent = JSON.parse(sessionStorage.getItem('currentUser')).user;
-        }
-    } catch(e) { console.log('Error fetching user', e); }
+    } catch(e) { 
+        console.error('Error fetching user', e); 
+    }
     
-    if (currentStudent) {
-        // ✅ إصلاح الخطأ: التأكد من وجود الاسم، أو استخدام بديل
+    // التأكد أن المستخدم موجود ودوره "طالب"
+    if (currentStudent && (currentStudent.role === 'student' || currentStudent.role === 'طالب')) {
         const studentName = currentStudent.name || 'طالب';
         
         const userNameEl = document.getElementById('userName');
@@ -31,44 +31,25 @@ function initializeStudentDashboard() {
         if(userNameEl) userNameEl.textContent = studentName;
         if(userAvatarEl) userAvatarEl.textContent = studentName.charAt(0);
         
-        // تحديث الإحصائيات
-        updateStudentStats();
-        
-        // تحميل النشاط الأخير
-        loadRecentActivity();
+        // إخفاء حالة التحميل إذا وجدت
+        const loadingState = document.getElementById('loadingState');
+        if(loadingState) loadingState.style.display = 'none';
+
+        // تحديث الإحصائيات وتحميل النشاط
+        updateStudentStats(currentStudent.id);
+        loadRecentActivity(currentStudent.id);
+    } else {
+        // إذا لم يكن طالباً أو لم يسجل الدخول، يتم توجيهه للرئيسية
+        console.warn('لم يتم العثور على بيانات طالب صحيحة');
+        // window.location.href = '../../index.html'; 
     }
 }
 
-function setupStudentTabs() {
-    const tabBtns = document.querySelectorAll('.tests-tabs .tab-btn, .lessons-tabs .tab-btn');
-    
-    tabBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const tabId = this.getAttribute('data-tab');
-            
-            // إزالة النشاط من جميع الأزرار في نفس المجموعة
-            const parentTabs = this.closest('.tests-tabs, .lessons-tabs');
-            if(parentTabs) {
-                parentTabs.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-                parentTabs.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-                
-                // إضافة النشاط للزر والتبويب المحدد
-                this.classList.add('active');
-                const targetPane = parentTabs.querySelector(`#${tabId}-tab`);
-                if(targetPane) targetPane.classList.add('active');
-            }
-        });
-    });
-}
-
-function updateStudentStats() {
-    const currentStudent = getCurrentUser();
-    if(!currentStudent) return;
-
-    const pendingTests = getPendingTestsCount(currentStudent.id);
-    const currentLessons = getCurrentLessonsCount(currentStudent.id);
-    const pendingAssignments = getPendingAssignmentsCount(currentStudent.id);
-    const progressPercentage = getStudentProgress(currentStudent.id);
+function updateStudentStats(studentId) {
+    const pendingTests = getPendingTestsCount(studentId);
+    const currentLessons = getCurrentLessonsCount(studentId);
+    const pendingAssignments = getPendingAssignmentsCount(studentId);
+    const progressPercentage = getStudentProgress(studentId);
     
     if(document.getElementById('pendingTests')) document.getElementById('pendingTests').textContent = pendingTests;
     if(document.getElementById('currentLessons')) document.getElementById('currentLessons').textContent = currentLessons;
@@ -76,19 +57,16 @@ function updateStudentStats() {
     if(document.getElementById('progressPercentage')) document.getElementById('progressPercentage').textContent = `${progressPercentage}%`;
 }
 
-function loadRecentActivity() {
+function loadRecentActivity(studentId) {
     const activityList = document.getElementById('activityList');
     if(!activityList) return;
 
-    const currentStudent = getCurrentUser();
-    if(!currentStudent) return;
-
-    const activities = getStudentRecentActivities(currentStudent.id);
+    const activities = getStudentRecentActivities(studentId);
     
     if (activities.length === 0) {
         activityList.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">📊</div>
+            <div class="empty-state" style="text-align: center; padding: 20px;">
+                <div class="empty-icon" style="font-size: 3rem;">📊</div>
                 <h3>لا يوجد نشاط حديث</h3>
                 <p>سيظهر نشاطك هنا عند بدء استخدام النظام</p>
             </div>
@@ -108,14 +86,8 @@ function loadRecentActivity() {
     `).join('');
 }
 
-// دوال التنقل
-function openMyTests() { window.location.href = 'my-tests.html'; }
-function openMyLessons() { window.location.href = 'my-lessons.html'; }
-function openMyAssignments() { window.location.href = 'my-assignments.html'; }
-function openMyIEP() { window.location.href = 'my-iep.html'; }
-function openMessages() { window.location.href = 'messages.html'; }
+// --- الدوال المساعدة لجلب البيانات من الذاكرة المحلية ---
 
-// دوال مساعدة
 function getPendingTestsCount(studentId) {
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     return studentTests.filter(test => String(test.studentId) === String(studentId) && test.status === 'pending').length;
@@ -123,7 +95,6 @@ function getPendingTestsCount(studentId) {
 
 function getCurrentLessonsCount(studentId) {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    // نعتبر الدروس غير المكتملة هي الحالية
     return studentLessons.filter(lesson => String(lesson.studentId) === String(studentId) && lesson.status !== 'completed').length;
 }
 
@@ -146,29 +117,42 @@ function getStudentRecentActivities(studentId) {
         .slice(0, 5);
 }
 
-function getActivityIcon(activityType) {
+// --- دوال التحكم بالتبويبات والتنقل ---
+
+function setupStudentTabs() {
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tabId = this.getAttribute('data-tab');
+            const parent = this.closest('.tab-container') || document;
+            
+            parent.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            parent.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+            
+            this.classList.add('active');
+            const target = document.getElementById(`${tabId}-tab`);
+            if(target) target.classList.add('active');
+        });
+    });
+}
+
+function getActivityIcon(type) {
     const icons = { 'test': '📝', 'lesson': '📚', 'assignment': '📋', 'message': '💬', 'progress': '📊' };
-    return icons[activityType] || '📄';
+    return icons[type] || '📄';
 }
 
 function formatTimeAgo(timestamp) {
-    const now = new Date();
-    const time = new Date(timestamp);
-    const diffInMinutes = Math.floor((now - time) / (1000 * 60));
-    
-    if (diffInMinutes < 1) return 'الآن';
-    if (diffInMinutes < 60) return `قبل ${diffInMinutes} دقيقة`;
-    
-    const diffInHours = Math.floor(diffInMinutes / 60);
-    if (diffInHours < 24) return `قبل ${diffInHours} ساعة`;
-    
-    const diffInDays = Math.floor(diffInHours / 24);
-    return `قبل ${diffInDays} يوم`;
+    const diff = Math.floor((new Date() - new Date(timestamp)) / (1000 * 60));
+    if (diff < 1) return 'الآن';
+    if (diff < 60) return `قبل ${diff} دقيقة`;
+    const hours = Math.floor(diff / 60);
+    if (hours < 24) return `قبل ${hours} ساعة`;
+    return `قبل ${Math.floor(hours / 24)} يوم`;
 }
 
-// تصدير الدوال
-window.openMyTests = openMyTests;
-window.openMyLessons = openMyLessons;
-window.openMyAssignments = openMyAssignments;
-window.openMyIEP = openMyIEP;
-window.openMessages = openMessages;
+// تصدير الدوال للوصول إليها من HTML
+window.openMyTests = () => window.location.href = 'my-tests.html';
+window.openMyLessons = () => window.location.href = 'my-lessons.html';
+window.openMyAssignments = () => window.location.href = 'my-assignments.html';
+window.openMyIEP = () => window.location.href = 'my-iep.html';
+window.openMessages = () => window.location.href = 'messages.html';

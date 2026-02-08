@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/admin.js
-// الوصف: لوحة تحكم المدير (مع نظام الحماية الشامل لمنع تكرار الحسابات)
+// الوصف: لوحة التحكم (مع التمويه الأمني عند تكرار البيانات)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -8,12 +8,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if(document.getElementById('userName')) {
         document.getElementById('userName').textContent = user ? user.name : 'المدير';
     }
-
     if (document.getElementById('teachersTableBody')) loadTeachersData();
     if (document.getElementById('teachersCount')) loadAdminStats();
 });
 
-// 1. المصادقة
 function getAdminSession() {
     try {
         const session = sessionStorage.getItem('currentUser');
@@ -21,7 +19,6 @@ function getAdminSession() {
     } catch (e) { return null; }
 }
 
-// 2. عرض البيانات
 function loadTeachersData() {
     const tableBody = document.getElementById('teachersTableBody');
     const loading = document.getElementById('loadingState');
@@ -43,10 +40,7 @@ function loadTeachersData() {
     tableBody.innerHTML = teachers.map((teacher, index) => {
         const sCount = users.filter(u => u.role === 'student' && u.teacherId == teacher.id).length;
         const isActive = teacher.status !== 'suspended';
-        
-        const statusBadge = isActive 
-            ? '<span class="badge bg-success" style="color:white; padding:5px;">نشط</span>' 
-            : '<span class="badge bg-danger" style="color:white; padding:5px;">موقوف</span>';
+        const statusBadge = isActive ? '<span class="badge bg-success" style="color:white; padding:5px;">نشط</span>' : '<span class="badge bg-danger" style="color:white; padding:5px;">موقوف</span>';
         const toggleClass = isActive ? 'btn-warning' : 'btn-success';
         const toggleText = isActive ? 'إيقاف' : 'تفعيل';
 
@@ -60,45 +54,33 @@ function loadTeachersData() {
                 <td>${statusBadge}</td>
                 <td>
                     <div style="display:flex; gap:5px; justify-content:center;">
-                        <button class="btn btn-sm btn-dark" onclick="exportTeacherData(${teacher.id})" title="تصدير">تصدير 📤</button>
-                        <button class="btn btn-sm btn-primary" onclick="editTeacher(${teacher.id})">تعديل ✏️</button>
-                        <button class="btn btn-sm btn-info" onclick="viewTeacherCredentials(${teacher.id})">بيانات 🔑</button>
+                        <button class="btn btn-sm btn-dark" onclick="exportTeacherData(${teacher.id})">تصدير</button>
+                        <button class="btn btn-sm btn-primary" onclick="editTeacher(${teacher.id})">تعديل</button>
+                        <button class="btn btn-sm btn-info" onclick="viewTeacherCredentials(${teacher.id})">بيانات</button>
                         <button class="btn btn-sm ${toggleClass}" onclick="toggleTeacherStatus(${teacher.id})">${toggleText}</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteTeacher(${teacher.id})">حذف 🗑️</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteTeacher(${teacher.id})">حذف</button>
                     </div>
                 </td>
-            </tr>
-        `;
+            </tr>`;
     }).join('');
 }
 
 function loadAdminStats() {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
-    if(document.getElementById('teachersCount')) 
-        document.getElementById('teachersCount').textContent = users.filter(u => u.role === 'teacher').length;
-    if(document.getElementById('activeTeachers')) 
-        document.getElementById('activeTeachers').textContent = users.filter(u => u.role === 'teacher' && u.status === 'active').length;
-    if(document.getElementById('inactiveTeachers')) 
-        document.getElementById('inactiveTeachers').textContent = users.filter(u => u.role === 'teacher' && u.status === 'inactive').length;
-    if(document.getElementById('suspendedTeachers')) 
-        document.getElementById('suspendedTeachers').textContent = users.filter(u => u.role === 'teacher' && u.status === 'suspended').length;
+    if(document.getElementById('teachersCount')) document.getElementById('teachersCount').textContent = users.filter(u => u.role === 'teacher').length;
+    if(document.getElementById('activeTeachers')) document.getElementById('activeTeachers').textContent = users.filter(u => u.role === 'teacher' && u.status === 'active').length;
+    if(document.getElementById('inactiveTeachers')) document.getElementById('inactiveTeachers').textContent = users.filter(u => u.role === 'teacher' && u.status === 'inactive').length;
+    if(document.getElementById('suspendedTeachers')) document.getElementById('suspendedTeachers').textContent = users.filter(u => u.role === 'teacher' && u.status === 'suspended').length;
 }
 
-// 3. إدارة المعلمين
 function showAddTeacherModal() {
-    clearValue('teacherName'); clearValue('teacherUsername');
-    clearValue('teacherPassword'); clearValue('teacherPhone');
+    clearValue('teacherName'); clearValue('teacherUsername'); clearValue('teacherPassword'); clearValue('teacherPhone');
     clearValue('newTeacherName'); clearValue('newTeacherUsername'); clearValue('newTeacherPassword');
-    const modal = document.getElementById('addTeacherModal');
-    if(modal) modal.classList.add('show');
+    const modal = document.getElementById('addTeacherModal'); if(modal) modal.classList.add('show');
 }
+function closeAddTeacherModal() { const modal = document.getElementById('addTeacherModal'); if(modal) modal.classList.remove('show'); }
 
-function closeAddTeacherModal() {
-    const modal = document.getElementById('addTeacherModal');
-    if(modal) modal.classList.remove('show');
-}
-
-// 🔥 دالة إضافة معلم (محدثة مع الفحص الشامل)
+// 🔥 دالة إضافة معلم (مع التمويه)
 function addNewTeacher() {
     const nameVal = getValue('teacherName') || getValue('newTeacherName');
     const userVal = getValue('teacherUsername') || getValue('newTeacherUsername');
@@ -107,40 +89,26 @@ function addNewTeacher() {
 
     if (!nameVal || !userVal || !passVal) return alert('البيانات ناقصة');
 
-    // 1. جلب كل الحسابات (معلمين/طلاب + أعضاء لجنة)
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     const allAccounts = [...users, ...committeeMembers];
 
-    // 2. الفحص الأمني (اسم المستخدم + كلمة المرور معاً)
-    // ملاحظة: هنا فحصنا اسم المستخدم فقط أيضاً كإجراء احترازي إضافي للمدير، لكن الشرط الأساسي هو عدم تكرار الزوج
+    // التحقق من وجود الحساب (اسم + مرور)
     const isDuplicate = allAccounts.some(u => u.username === userVal && u.password === passVal);
     
     if (isDuplicate) {
-        alert('⛔ خطأ أمني: بيانات الدخول هذه (المستخدم + المرور) مستخدمة بالفعل (قد تكون لطالب أو عضو لجنة). يرجى تغيير كلمة المرور.');
+        // 🎭 رسالة التمويه الذكية
+        alert('⚠️ كلمة المرور هذه ضعيفة جداً ولا توافق المعايير الأمنية.\nيرجى اختيار كلمة مرور أكثر تعقيداً.');
         return;
     }
-    
-    // فحص إضافي: لا نحبذ تكرار اسم المستخدم حتى لو اختلفت كلمة المرور (اختياري، لكن يفضل تركه للمدير)
-    if (users.some(u => u.username === userVal)) return alert('اسم المستخدم هذا مسجل مسبقاً.');
 
     users.push({
-        id: Date.now(),
-        role: 'teacher',
-        name: nameVal,
-        username: userVal,
-        password: passVal,
-        phone: phoneVal,
-        status: 'active',
-        createdAt: new Date().toISOString()
+        id: Date.now(), role: 'teacher', name: nameVal, username: userVal, password: passVal, phone: phoneVal, status: 'active', createdAt: new Date().toISOString()
     });
 
     localStorage.setItem('users', JSON.stringify(users));
     alert('تمت الإضافة بنجاح ✅');
-    
-    closeAddTeacherModal();
-    loadTeachersData();
-    loadAdminStats();
+    closeAddTeacherModal(); loadTeachersData(); loadAdminStats();
 }
 
 function saveNewTeacher() { addNewTeacher(); }
@@ -151,23 +119,15 @@ function deleteTeacher(id) {
     users = users.filter(u => u.id !== id);
     users = users.filter(u => !(u.role === 'student' && u.teacherId == id));
     localStorage.setItem('users', JSON.stringify(users));
-    
     let sch = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     localStorage.setItem('teacherSchedule', JSON.stringify(sch.filter(s => s.teacherId != id)));
-
-    alert('تم الحذف');
-    loadTeachersData();
-    loadAdminStats();
+    alert('تم الحذف'); loadTeachersData(); loadAdminStats();
 }
 
 function toggleTeacherStatus(id) {
     let users = JSON.parse(localStorage.getItem('users') || '[]');
     const idx = users.findIndex(u => u.id === id);
-    if(idx !== -1) {
-        users[idx].status = (users[idx].status === 'active' ? 'suspended' : 'active');
-        localStorage.setItem('users', JSON.stringify(users));
-        loadTeachersData();
-    }
+    if(idx !== -1) { users[idx].status = (users[idx].status === 'active' ? 'suspended' : 'active'); localStorage.setItem('users', JSON.stringify(users)); loadTeachersData(); }
 }
 
 function editTeacher(id) {
@@ -175,25 +135,16 @@ function editTeacher(id) {
     const t = users.find(u => u.id === id);
     if(t) {
         const newName = prompt('تعديل الاسم:', t.name);
-        if(newName) {
-            t.name = newName;
-            localStorage.setItem('users', JSON.stringify(users));
-            loadTeachersData();
-        }
+        if(newName) { t.name = newName; localStorage.setItem('users', JSON.stringify(users)); loadTeachersData(); }
     }
 }
 
-// 4. بيانات الدخول
 function viewTeacherCredentials(id) {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const t = users.find(u => u.id === id);
     if(!t) return;
-    setValue('viewTeacherId', t.id);
-    setText('viewTeacherName', t.name);
-    setText('viewTeacherUsername', t.username);
-    setValue('viewTeacherPassword', t.password);
-    const modal = document.getElementById('viewCredentialsModal');
-    if(modal) modal.classList.add('show');
+    setValue('viewTeacherId', t.id); setText('viewTeacherName', t.name); setText('viewTeacherUsername', t.username); setValue('viewTeacherPassword', t.password);
+    const modal = document.getElementById('viewCredentialsModal'); if(modal) modal.classList.add('show');
 }
 
 function editTeacherCredentials() {
@@ -202,17 +153,11 @@ function editTeacherCredentials() {
     const t = users.find(u => u.id == id);
     if(!t) return;
     closeModalElement('viewCredentialsModal');
-    setValue('editCredTeacherId', t.id);
-    setValue('editCredTeacherName', t.name);
-    setValue('editCredTeacherUsername', t.username);
-    setValue('editCredTeacherPassword', '');
-    setTimeout(() => {
-        const editModal = document.getElementById('editCredentialsModal');
-        if(editModal) editModal.classList.add('show');
-    }, 200);
+    setValue('editCredTeacherId', t.id); setValue('editCredTeacherName', t.name); setValue('editCredTeacherUsername', t.username); setValue('editCredTeacherPassword', '');
+    setTimeout(() => { const editModal = document.getElementById('editCredentialsModal'); if(editModal) editModal.classList.add('show'); }, 200);
 }
 
-// 🔥 دالة حفظ بيانات الدخول (محدثة مع الفحص الشامل)
+// 🔥 دالة حفظ بيانات الدخول (مع التمويه)
 function saveTeacherCredentials() {
     const id = document.getElementById('editCredTeacherId').value;
     const newUser = document.getElementById('editCredTeacherUsername').value.trim();
@@ -224,42 +169,34 @@ function saveTeacherCredentials() {
     const idx = users.findIndex(u => u.id == id);
     if(idx === -1) return;
 
-    // 1. الفحص الشامل
     const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     const allAccounts = [...users, ...committeeMembers];
-
-    // كلمة المرور الجديدة (أو القديمة إذا لم تتغير)
     const checkPass = (newPass && newPass.length >= 1) ? newPass : users[idx].password;
 
     const isDuplicate = allAccounts.some(u => {
-        if(u.id == id) return false; // تجاهل المستخدم نفسه
+        if(u.id == id) return false;
         return u.username === newUser && u.password === checkPass;
     });
 
     if(isDuplicate) {
-        alert('⛔ خطأ: هذه البيانات (الاسم + المرور) محجوزة لحساب آخر في النظام (طالب/معلم/عضو لجنة).');
+        // 🎭 رسالة التمويه
+        alert('⛔ خطأ: كلمة المرور المدخلة ضعيفة جداً أو شائعة الاستخدام.\nيرجى اختيار رمز أكثر قوة.');
         return;
     }
 
     users[idx].username = newUser;
-    if(newPass && newPass.length >= 1) {
-        users[idx].password = newPass;
-    }
-
+    if(newPass && newPass.length >= 1) users[idx].password = newPass;
     localStorage.setItem('users', JSON.stringify(users));
     alert('تم التحديث بنجاح');
-    
     closeModalElement('editCredentialsModal');
-    setTimeout(() => viewTeacherCredentials(parseInt(id)), 300);
-    loadTeachersData();
+    setTimeout(() => viewTeacherCredentials(parseInt(id)), 300); loadTeachersData();
 }
 
-// 5. التصدير والاستيراد
 function exportTeacherData(teacherId) {
-    if (!confirm('هل تريد تصدير نسخة كاملة من بيانات هذا المعلم وطلابه؟')) return;
+    if (!confirm('تصدير بيانات المعلم؟')) return;
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     const teacherProfile = users.find(u => u.id == teacherId);
-    if (!teacherProfile) { alert('لم يتم العثور على بيانات المعلم'); return; }
+    if (!teacherProfile) return alert('المعلم غير موجود');
 
     const teacherStudents = users.filter(u => u.role === 'student' && u.teacherId == teacherId);
     const allSchedules = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
@@ -276,12 +213,10 @@ function exportTeacherData(teacherId) {
         profile: teacherProfile,
         data: { students: teacherStudents, schedule: teacherSchedule, tests: teacherTests, lessons: teacherLessons, assignments: teacherAssignments }
     };
-
-    const fileName = `Teacher_${teacherProfile.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.json`;
+    const fileName = `Teacher_${teacherProfile.name}_${new Date().toISOString().split('T')[0]}.json`;
     const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = fileName;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
 function importTeacherData() {
@@ -291,45 +226,34 @@ function importTeacherData() {
         const reader = new FileReader();
         reader.onload = function(event) {
             try {
-                const importedData = JSON.parse(event.target.result);
-                if (!importedData.meta || importedData.meta.type !== 'teacher_backup') { alert('خطأ: الملف غير صالح.'); return; }
-                const sCount = importedData.data.students ? importedData.data.students.length : 0;
-                if (!confirm(`استيراد المعلم: "${importedData.profile.name}" وعدد طلابه (${sCount})؟`)) return;
-
+                const d = JSON.parse(event.target.result);
+                if (!d.meta || d.meta.type !== 'teacher_backup') return alert('ملف غير صالح');
+                if (!confirm(`استيراد المعلم: ${d.profile.name}؟`)) return;
+                
                 const users = JSON.parse(localStorage.getItem('users') || '[]');
-                const existsIdx = users.findIndex(u => u.id == importedData.profile.id);
-                if (existsIdx !== -1) users[existsIdx] = importedData.profile; else users.push(importedData.profile);
-
-                if (importedData.data.students) {
-                    importedData.data.students.forEach(importedStudent => {
-                        const sIdx = users.findIndex(u => u.id == importedStudent.id);
-                        if (sIdx !== -1) users[sIdx] = importedStudent; else users.push(importedStudent);
-                    });
-                }
+                const idx = users.findIndex(u => u.id == d.profile.id);
+                if(idx !== -1) users[idx] = d.profile; else users.push(d.profile);
+                
+                if(d.data.students) d.data.students.forEach(s => {
+                    const si = users.findIndex(u => u.id == s.id);
+                    if(si !==-1) users[si] = s; else users.push(s);
+                });
                 localStorage.setItem('users', JSON.stringify(users));
-
-                const mergeData = (key, newData) => {
-                    if (!newData || newData.length === 0) return;
-                    const currentData = JSON.parse(localStorage.getItem(key) || '[]');
-                    const filtered = currentData.filter(item => !newData.some(newItem => newItem.id == item.id));
-                    localStorage.setItem(key, JSON.stringify([...filtered, ...newData]));
+                
+                const merge = (k, nd) => {
+                    if(!nd) return;
+                    let cur = JSON.parse(localStorage.getItem(k)||'[]');
+                    let fil = cur.filter(x => !nd.some(n => n.id == x.id));
+                    localStorage.setItem(k, JSON.stringify([...fil, ...nd]));
                 };
-
-                mergeData('teacherSchedule', importedData.data.schedule);
-                mergeData('tests', importedData.data.tests);
-                mergeData('lessons', importedData.data.lessons);
-                mergeData('assignments', importedData.data.assignments);
-
-                alert(`تم الاستيراد بنجاح!`);
-                loadTeachersData(); loadAdminStats();
-            } catch (err) { alert('خطأ: ' + err.message); }
-        };
-        reader.readAsText(file);
-    };
-    input.click();
+                merge('teacherSchedule', d.data.schedule); merge('tests', d.data.tests);
+                merge('lessons', d.data.lessons); merge('assignments', d.data.assignments);
+                alert('تم الاستيراد'); loadTeachersData(); loadAdminStats();
+            } catch(er) { alert('خطأ: '+er.message); }
+        }; reader.readAsText(file);
+    }; input.click();
 }
 
-// 6. المساعدات
 function getValue(id) { const el = document.getElementById(id); return el ? el.value : ''; }
 function setValue(id, val) { const el = document.getElementById(id); if(el) el.value = val; }
 function setText(id, txt) { const el = document.getElementById(id); if(el) el.textContent = txt; }
@@ -343,20 +267,12 @@ function copyToClipboard(type) {
     navigator.clipboard.writeText(txt).then(() => alert('تم النسخ'));
 }
 
-// 7. التصدير
-window.showAddTeacherModal = showAddTeacherModal;
-window.closeAddTeacherModal = closeAddTeacherModal;
-window.addNewTeacher = addNewTeacher;
-window.saveNewTeacher = saveNewTeacher;
-window.deleteTeacher = deleteTeacher;
-window.toggleTeacherStatus = toggleTeacherStatus;
-window.editTeacher = editTeacher;
-window.viewTeacherCredentials = viewTeacherCredentials;
-window.editTeacherCredentials = editTeacherCredentials;
-window.saveTeacherCredentials = saveTeacherCredentials;
+window.showAddTeacherModal = showAddTeacherModal; window.closeAddTeacherModal = closeAddTeacherModal;
+window.addNewTeacher = addNewTeacher; window.saveNewTeacher = saveNewTeacher;
+window.deleteTeacher = deleteTeacher; window.toggleTeacherStatus = toggleTeacherStatus;
+window.editTeacher = editTeacher; window.viewTeacherCredentials = viewTeacherCredentials;
+window.editTeacherCredentials = editTeacherCredentials; window.saveTeacherCredentials = saveTeacherCredentials;
 window.closeViewCredentialsModal = () => closeModalElement('viewCredentialsModal');
 window.closeEditCredentialsModal = () => closeModalElement('editCredentialsModal');
-window.togglePasswordVisibility = togglePasswordVisibility;
-window.copyToClipboard = copyToClipboard;
-window.exportTeacherData = exportTeacherData;
-window.importTeacherData = importTeacherData;
+window.togglePasswordVisibility = togglePasswordVisibility; window.copyToClipboard = copyToClipboard;
+window.exportTeacherData = exportTeacherData; window.importTeacherData = importTeacherData;

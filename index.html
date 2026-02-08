@@ -12,7 +12,6 @@
     <link rel="icon" href="assets/images/favicon.ico" type="image/x-icon">
 </head>
 <body>
-    <!-- رأس الصفحة -->
     <header class="header">
         <div class="container">
             <div class="header-content">
@@ -29,7 +28,6 @@
         </div>
     </header>
 
-    <!-- القسم الرئيسي -->
     <main class="main-content">
         <section class="hero-section">
             <div class="container">
@@ -48,7 +46,6 @@
             </div>
         </section>
 
-        <!-- ميزات النظام -->
         <section class="features-section">
             <div class="container">
                 <h3>ميزات النظام المتقدمة</h3>
@@ -87,7 +84,6 @@
             </div>
         </section>
 
-        <!-- فكرة عن واجهات المستخدم -->
         <section class="interfaces-preview">
             <div class="container">
                 <h3>واجهات النظام</h3>
@@ -117,7 +113,6 @@
         </section>
     </main>
 
-    <!-- تذييل الصفحة -->
     <footer class="footer">
         <div class="container">
             <div class="footer-content">
@@ -128,5 +123,13 @@
     </footer>
 
     <script src="assets/js/main.js"></script>
+    <script>
+        // تحديث السنة تلقائياً
+        document.getElementById('currentYear').textContent = new Date().getFullYear();
+        
+        function showAbout() {
+            alert('نظام ميسر التعلم هو منصة تعليمية متكاملة تهدف لخدمة ذوي صعوبات التعلم وتوفير بيئة تعليمية محفزة وداعمة.');
+        }
+    </script>
 </body>
 </html>

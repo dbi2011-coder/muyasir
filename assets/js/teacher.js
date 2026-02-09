@@ -1,5 +1,5 @@
 // ============================================
-// 📁 الملف: assets/js/teacher.js (مع التمويه الأمني)
+// 📁 الملف: assets/js/teacher.js
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -86,7 +86,6 @@ function addNewStudent() {
     let password = '123';
     let isUnique = false;
 
-    // توليد اسم فريد دائماً
     while (!isUnique) {
         username = 's_' + Math.floor(Math.random() * 10000);
         const exists = allAccounts.some(u => String(u.username) === String(username) && String(u.password) === String(password));
@@ -142,8 +141,8 @@ function updateStudentData() {
         });
         
         if (duplicateUser) {
-            // 🎭 رسالة التمويه
-            alert('⚠️ خطأ: كلمة المرور ضعيفة وغير آمنة.\nيرجى اختيار كلمة مرور أخرى أكثر تعقيداً.');
+            // ✅ تم تغيير الرسالة
+            alert('اسم المستخدم غير متاح . يرجى اختيار اسم آخر');
             return;
         }
 

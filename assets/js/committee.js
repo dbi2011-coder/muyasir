@@ -8,7 +8,6 @@ const DB_VERSION = 1;
 const STORE_NAME = 'meetings';
 let db;
 
-// دالة مساعدة لجلب المستخدم الحالي
 function getCurrentUser() {
     try {
         const session = sessionStorage.getItem('currentUser');
@@ -18,7 +17,6 @@ function getCurrentUser() {
     } catch (e) { return null; }
 }
 
-// فتح قاعدة البيانات
 function openDB() {
     return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -31,13 +29,11 @@ function openDB() {
     });
 }
 
-// دوال التعامل مع قاعدة البيانات
 function dbGetAll() { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readonly'); const r = tx.objectStore(STORE_NAME).getAll(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
 function dbPut(item) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readwrite'); const r = tx.objectStore(STORE_NAME).put(item); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
 function dbGet(id) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readonly'); const r = tx.objectStore(STORE_NAME).get(id); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
 function dbDelete(id) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readwrite'); const r = tx.objectStore(STORE_NAME).delete(id); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
 
-// --- عند تحميل الصفحة ---
 document.addEventListener('DOMContentLoaded', async function() {
     const user = getCurrentUser();
     if (user) {
@@ -46,11 +42,10 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
 
     await openDB();
-    loadMembers(); // تحميل الأعضاء
-    loadMeetings(); // تحميل الاجتماعات
+    loadMembers();
+    loadMeetings();
 });
 
-// إصلاح الأعضاء القدامى
 function autoFixMembers(user) {
     let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     let modified = false;
@@ -61,24 +56,14 @@ function autoFixMembers(user) {
     if (modified) localStorage.setItem('committeeMembers', JSON.stringify(members));
 }
 
-// 🔥 دالة التبويبات (التي كانت مفقودة) 🔥
 function switchTab(tab) {
-    // إخفاء كل المحتويات
     document.getElementById('members-view').classList.remove('active');
     document.getElementById('meetings-view').classList.remove('active');
-    
-    // إزالة التنشيط من الأزرار
     document.getElementById('tab-members').classList.remove('active');
     document.getElementById('tab-meetings').classList.remove('active');
-    
-    // تفعيل التبويب المختار
     document.getElementById(`${tab}-view`).classList.add('active');
     document.getElementById(`tab-${tab}`).classList.add('active');
 }
-
-// ==========================================
-// 👥 إدارة الأعضاء
-// ==========================================
 
 function loadMembers() {
     const user = getCurrentUser();
@@ -102,7 +87,6 @@ function showAddMemberModal() {
     document.getElementById('memPass').value='';
 }
 
-// 🔥 دالة الحفظ (مع التمويه الأمني - Deception) 🔥
 function saveMember() {
     const user = getCurrentUser();
     const id = document.getElementById('editMemId').value;
@@ -113,27 +97,20 @@ function saveMember() {
     
     if(!name || !username || !pass) return alert('البيانات ناقصة');
     
-    // 1. الفحص الشامل
     const mainUsers = JSON.parse(localStorage.getItem('users') || '[]');
     const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     const allAccounts = [...mainUsers, ...committeeMembers];
 
-    // 2. هل يوجد تطابق تام (اسم مستخدم + كلمة مرور)؟
     const isDuplicate = allAccounts.some(account => {
-        // نتجاهل العضو نفسه في حالة التعديل
         if (id && account.id == id) return false;
-        
-        // شرط التطابق التام
         return account.username === username && account.password === pass;
     });
 
     if (isDuplicate) {
-        // ✅ تم تغيير الرسالة
         alert('اسم المستخدم غير متاح . يرجى اختيار اسم آخر');
-        return; // إيقاف الحفظ
+        return; 
     }
     
-    // 3. الحفظ
     let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     
     if(id) {
@@ -162,18 +139,16 @@ function editMember(id) {
     }
 }
 
+// 🔥 تحديث حذف العضو
 function deleteMember(id) {
-    if(confirm('هل أنت متأكد من الحذف؟')) {
+    showConfirmModal('هل أنت متأكد من حذف هذا العضو؟', function() {
         let members = JSON.parse(localStorage.getItem('committeeMembers')||'[]');
         members = members.filter(x => x.id !== id);
         localStorage.setItem('committeeMembers', JSON.stringify(members));
         loadMembers();
-    }
+        showSuccess('تم الحذف');
+    });
 }
-
-// ==========================================
-// 🛠️ أدوات ومرفقات الاجتماع
-// ==========================================
 
 function addPollTool() {
     const container = document.getElementById('dynamicToolsContainer');
@@ -222,8 +197,6 @@ function addStudentFeedbackTool() {
 }
 
 function removeTool(id) { document.getElementById(id).remove(); }
-
-// ----------------------------------------------------------------
 
 function showNewMeetingModal() {
     ['meetTitle', 'meetDate', 'meetContent', 'meetPdf', 'meetImg'].forEach(id => {
@@ -344,7 +317,6 @@ async function viewMeetingDetails(id) {
     document.getElementById('viewMeetDate').textContent = meeting.date;
     document.getElementById('viewMeetContent').textContent = meeting.content;
 
-    // النتائج
     const pollsContainer = document.getElementById('viewPollsResults');
     pollsContainer.innerHTML = '';
     if(meeting.polls && meeting.polls.length > 0) {
@@ -367,7 +339,6 @@ async function viewMeetingDetails(id) {
         });
     }
 
-    // المرئيات
     const feedbackContainer = document.getElementById('viewStudentsFeedback');
     feedbackContainer.innerHTML = '';
     if(meeting.requestedFeedback && meeting.requestedFeedback.length > 0) {
@@ -387,7 +358,6 @@ async function viewMeetingDetails(id) {
         });
     }
 
-    // المرفقات
     const attachSection = document.getElementById('viewAttachments');
     const pdfContainer = document.getElementById('pdfContainer');
     const imgContainer = document.getElementById('imgContainer');
@@ -399,7 +369,6 @@ async function viewMeetingDetails(id) {
         if(meeting.imgFile) { imgDisplay.src = meeting.imgFile; imgContainer.style.display='block'; } else imgContainer.style.display='none';
     } else { attachSection.style.display = 'none'; }
 
-    // التوقيعات
     const tableBody = document.getElementById('signaturesTableBody');
     tableBody.innerHTML = '';
     
@@ -424,10 +393,17 @@ async function viewMeetingDetails(id) {
     document.getElementById('viewMeetingModal').classList.add('show');
 }
 
-async function deleteMeeting(id) { if(confirm('هل أنت متأكد من الحذف؟')) { await dbDelete(id); loadMeetings(); } }
+// 🔥 تحديث حذف الاجتماع
+async function deleteMeeting(id) { 
+    showConfirmModal('هل أنت متأكد من حذف هذا الاجتماع نهائياً؟', async function() {
+        await dbDelete(id); 
+        loadMeetings(); 
+        showSuccess('تم الحذف');
+    });
+}
+
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
-// تصدير الدوال
 window.addPollTool = addPollTool;
 window.addPollOption = addPollOption;
 window.addStudentFeedbackTool = addStudentFeedbackTool;

@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-messages.js
-// الوصف: شات الطالب (تحسين مكان الرموز لتجنب القائمة الجانبية)
+// الوصف: شات الطالب (إصلاح اختفاء الأزرار + تحسين تجاوب الرموز)
 // ============================================
 
 let attachmentData = null;
@@ -99,7 +99,7 @@ function injectChatStyles() {
     if (document.getElementById('chatStyles')) return;
     const style = document.createElement('style');
     style.id = 'chatStyles';
-    // 🔥 تم التعديل: إزاحة النافذة لليسار (right: 100px) ورفع الطبقة (z-index)
+    // 🔥 تم تحديث CSS لمنع اختفاء الأزرار وإصلاح مكان الرموز 🔥
     style.innerHTML = `
         .chat-container { display: flex; height: 80vh; background: #fff; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #d1d5db; margin-top: 0px; font-family: 'Tajawal', sans-serif; position: relative; z-index: 1; }
         .chat-main { flex: 1; display: flex; flex-direction: column; background: #fff; }
@@ -123,17 +123,30 @@ function injectChatStyles() {
         .msg-dropdown-item:hover { background: #f8f9fa; color: #007bff; }
         .msg-dropdown-item.delete:hover { color: #dc3545; background: #fff5f5; }
 
-        .chat-input-area { padding: 15px 20px; border-top: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; gap: 10px; position: relative; min-height: 80px; z-index: 50; }
-        .chat-input { flex: 1; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 25px; outline: none; font-size: 1rem; background: #f8fafc; margin: 0 5px; }
+        .chat-input-area { padding: 15px 10px; border-top: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; gap: 8px; position: relative; min-height: 80px; z-index: 50; flex-wrap: nowrap; overflow-x: auto; }
+        
+        .chat-input { 
+            flex: 1; 
+            padding: 12px 15px; 
+            border: 2px solid #e2e8f0; 
+            border-radius: 25px; 
+            outline: none; 
+            font-size: 1rem; 
+            background: #f8fafc; 
+            margin: 0 5px; 
+            min-width: 100px; /* ضمان عدم اختفاء حقل الكتابة */
+        }
         .chat-input:focus { border-color: #007bff; background: #fff; }
         .chat-input.editing { border-color: #f59e0b; background: #fffbeb; }
 
+        /* 🔥 أهم تعديل: منع انكماش الأزرار */
         .btn-tool { 
-            width: 45px; height: 45px; border-radius: 50%; 
+            width: 42px; height: 42px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
-            font-size: 1.2rem; cursor: pointer; transition: 0.2s; border: none;
+            font-size: 1.1rem; cursor: pointer; transition: 0.2s; border: none;
             color: white !important; 
             box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            flex-shrink: 0; /* ممنوع التصغير */
         }
         .btn-tool:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.3); filter: brightness(1.1); }
         
@@ -142,7 +155,13 @@ function injectChatStyles() {
         .btn-cam { background: #0d47a1; }
         .btn-mic { background: #b71c1c; }
 
-        .btn-send-pill { background-color: #28a745; color: white; border: none; padding: 10px 25px; border-radius: 50px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(40, 167, 69, 0.2); }
+        .btn-send-pill { 
+            background-color: #28a745; color: white; border: none; 
+            padding: 10px 20px; border-radius: 50px; font-size: 0.95rem; font-weight: bold; 
+            cursor: pointer; display: flex; align-items: center; gap: 8px; 
+            box-shadow: 0 4px 6px rgba(40, 167, 69, 0.2);
+            flex-shrink: 0; /* ممنوع التصغير */
+        }
         .btn-send-pill:hover { background-color: #218838; transform: translateY(-1px); }
         .btn-send-pill.update-mode { background-color: #f59e0b; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2); }
 
@@ -155,13 +174,45 @@ function injectChatStyles() {
         .recording-wave { width: 12px; height: 12px; background: #b71c1c; border-radius: 50%; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
 
-        /* 🔥 تعديل الموقع هنا: right: 100px */
+        /* 🔥 تعديل مكان الرموز ليكون متجاوباً تماماً */
         .attachment-preview { position: absolute; bottom: 85px; right: 20px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; display: none; z-index: 100000; }
-        .emoji-popup { position: absolute; bottom: 80px; right: 100px; width: 320px; height: 250px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); display: none; padding: 10px; grid-template-columns: repeat(7, 1fr); gap: 5px; overflow-y: auto; z-index: 100000; }
+        
+        .emoji-popup { 
+            position: absolute; 
+            bottom: 85px; 
+            right: 60px; /* مكان افتراضي */
+            width: 320px; 
+            height: 250px; 
+            background: white; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.25); 
+            display: none; 
+            padding: 10px; 
+            grid-template-columns: repeat(7, 1fr); 
+            gap: 5px; 
+            overflow-y: auto; 
+            z-index: 100000; 
+        }
         .emoji-item { font-size: 1.4rem; cursor: pointer; text-align: center; padding: 5px; border-radius: 5px; transition: 0.2s; }
         .emoji-item:hover { background: #f1f5f9; transform: scale(1.2); }
         
-        @media (max-width: 768px) { .chat-container { height: 85vh; margin-top: 0; } }
+        /* تحسينات للجوال */
+        @media (max-width: 768px) { 
+            .chat-container { height: 85vh; margin-top: 0; }
+            
+            /* الرموز تملأ العرض على الجوال وتبتعد عن القائمة */
+            .emoji-popup {
+                width: 90%;
+                right: 5%;
+                left: 5%;
+                bottom: 80px;
+            }
+            
+            /* إخفاء كلمة "أرسل" والاكتفاء بالأيقونة في الشاشات الضيقة جداً */
+            .btn-send-pill span { display: none; }
+            .btn-send-pill { padding: 10px; border-radius: 50%; width: 42px; height: 42px; justify-content: center; }
+        }
     `;
     document.head.appendChild(style);
 }
@@ -232,7 +283,7 @@ function renderStudentChatLayout() {
                         <input type="file" id="chatCamInput" accept="image/*" capture="environment" style="display:none" onchange="handleChatAttachment(this)">
                     </label>
 
-                    <input type="text" class="chat-input" id="chatInput" placeholder="اكتب رسالة للمعلم..." onkeypress="handleEnter(event)">
+                    <input type="text" class="chat-input" id="chatInput" placeholder="رسالة..." onkeypress="handleEnter(event)">
                     
                     <button class="btn-tool btn-mic" onclick="startRecording()" title="تسجيل صوتي">
                         <i class="fas fa-microphone"></i>
@@ -241,7 +292,7 @@ function renderStudentChatLayout() {
                     <button class="btn-tool" onclick="cancelEdit()" id="cancelEditBtn" style="display:none; background:#ffebee; color:red;" title="إلغاء"><i class="fas fa-times"></i></button>
 
                     <button class="btn-send-pill" id="sendBtn" onclick="sendToTeacher()">
-                        أرسل <i class="fas fa-paper-plane"></i>
+                        <span>أرسل</span> <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
             </div>

@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-messages.js
-// الوصف: شات الطالب (واجهة نظيفة بدون إحصائيات + MP3 + ألوان غامقة)
+// الوصف: شات الطالب (إصلاح الرموز + تحديث تلقائي للرسائل)
 // ============================================
 
 let attachmentData = null;
@@ -9,22 +9,33 @@ let mediaRecorder = null;
 let audioChunks = [];
 let recordingInterval = null;
 let recordingStartTime = null;
+let chatRefreshInterval = null; // متغير لحفظ مؤقت التحديث
 
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('messages.html')) {
         try {
             injectFontAwesome();
-            cleanInterfaceAggressive(); // 🔥 دالة تنظيف الواجهة من الإحصائيات والفلاتر 🔥
+            cleanInterfaceAggressive();
             injectChatStyles();
             renderStudentChatLayout();
+            
+            // تحميل الشات فوراً
             loadChatWithTeacher();
             
+            // 🔥 تحديث تلقائي للشات كل 3 ثوانٍ (Live Chat) 🔥
+            if (chatRefreshInterval) clearInterval(chatRefreshInterval);
+            chatRefreshInterval = setInterval(loadChatWithTeacher, 3000);
+            
+            // إغلاق النوافذ عند الضغط في الخارج
             document.addEventListener('click', function(e) {
                 const popup = document.getElementById('emojiPopup');
                 const btn = document.getElementById('emojiBtn');
+                
+                // إذا لم يكن الضغط على القائمة أو زر الفتح -> اغلقها
                 if (popup && btn && !popup.contains(e.target) && !btn.contains(e.target)) {
                     popup.style.display = 'none';
                 }
+                
                 if (!e.target.closest('.msg-options-btn')) {
                     document.querySelectorAll('.msg-dropdown').forEach(menu => menu.style.display = 'none');
                 }
@@ -33,12 +44,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// 🔥 دالة لإخفاء الإحصائيات والفلاتر القديمة 🔥
+// إخفاء العناصر غير المرغوبة
 function cleanInterfaceAggressive() {
     const targetContainer = document.getElementById('messagesList');
     if (!targetContainer) return;
     
-    // إخفاء جميع العناصر المجاورة (إحصائيات، فلاتر)
     const parent = targetContainer.parentElement;
     if (parent) {
         Array.from(parent.children).forEach(child => {
@@ -47,10 +57,7 @@ function cleanInterfaceAggressive() {
             }
         });
     }
-    
-    // إخفاء أي عناصر تحمل كلاسات الإحصائيات المعروفة
     document.querySelectorAll('.stat-card, .filter-group, .row.mb-4, .card-body h5, .d-flex.justify-content-between').forEach(el => {
-        // التأكد من عدم إخفاء الشات نفسه
         if (!el.contains(targetContainer) && el.id !== 'chatHeader') {
             el.style.display = 'none';
         }
@@ -103,7 +110,6 @@ function injectChatStyles() {
         .chat-input:focus { border-color: #007bff; background: #fff; }
         .chat-input.editing { border-color: #f59e0b; background: #fffbeb; }
 
-        /* الأزرار الملونة الغامقة */
         .btn-tool { 
             width: 45px; height: 45px; border-radius: 50%; 
             display: flex; align-items: center; justify-content: center; 
@@ -193,7 +199,7 @@ function renderStudentChatLayout() {
                         </div>
                     </div>
 
-                    <button id="emojiBtn" class="btn-tool btn-emoji" onclick="toggleEmojiPopup()" title="رموز">
+                    <button id="emojiBtn" class="btn-tool btn-emoji" onclick="toggleEmojiPopup(event)" title="رموز">
                         <i class="far fa-smile"></i>
                     </button>
                     
@@ -224,14 +230,24 @@ function renderStudentChatLayout() {
     `;
 }
 
+// 🔥 دالة البحث عن المعلم (محسنة)
 function getMyTeacherId() {
     const me = getCurrentUser();
     if (me.teacherId) return me.teacherId;
-    const teachers = JSON.parse(localStorage.getItem('teachers') || '[]');
+    
+    // إذا لم يكن هناك معلم محدد، ابحث في جدول المستخدمين عن أي معلم
+    const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    const teachers = allUsers.filter(u => u.role === 'teacher');
+    
     return teachers.length > 0 ? teachers[0].id : null;
 }
 
 function loadChatWithTeacher() {
+    // ⚠️ منع إعادة رسم الشات إذا كنا نسجل صوتاً حالياً (حتى لا يقطع التسجيل)
+    if (mediaRecorder && mediaRecorder.state === 'recording') return;
+    // ⚠️ منع التحديث إذا كان المستخدم يكتب رسالة أو يعدل رسالة
+    if (editingMessageId || (document.getElementById('chatInput') && document.getElementById('chatInput').value.length > 0)) return;
+
     const teacherId = getMyTeacherId();
     if (!teacherId) {
         document.getElementById('studentChatArea').innerHTML = '<div class="text-center p-5">لا يوجد معلم مرتبط.</div>';
@@ -240,39 +256,57 @@ function loadChatWithTeacher() {
     const messages = JSON.parse(localStorage.getItem('studentMessages') || '[]');
     const currentUser = getCurrentUser();
     const myMsgs = messages.filter(m => m.studentId === currentUser.id);
+    
+    // ترتيب الرسائل
     myMsgs.sort((a, b) => new Date(a.sentAt) - new Date(b.sentAt));
+    
     const area = document.getElementById('studentChatArea');
-    area.innerHTML = '';
-    if (myMsgs.length === 0) { area.innerHTML = '<div class="text-center text-muted mt-5"><i class="far fa-comments fa-3x mb-3" style="color:#cbd5e1;"></i><p>ابدأ المحادثة مع معلمك الآن</p></div>'; }
-    myMsgs.forEach(msg => {
-        const isMe = !msg.isFromTeacher;
-        const bubbleClass = isMe ? 'msg-me' : 'msg-other';
-        let contentHtml = msg.content;
-        
-        // مشغل الصوت فقط (MP3)
-        if (msg.isVoice) {
-            contentHtml = `
-            <div style="display:flex; align-items:center; gap:5px;">
-                <audio controls src="${msg.content}"></audio>
-            </div>`;
-        }
+    
+    // حفظ موضع التمرير الحالي
+    const isScrolledToBottom = area.scrollHeight - area.clientHeight <= area.scrollTop + 50;
 
-        let attachHtml = '';
-        if (msg.attachment) { const isImg = msg.attachment.startsWith('data:image'); attachHtml = `<a href="${msg.attachment}" download="file" class="msg-attachment">${isImg ? `<img src="${msg.attachment}">` : ''} 📎 فتح</a>`; }
-        let menuHtml = '';
-        if (isMe) {
-            menuHtml = `<div class="msg-options-btn" onclick="toggleMessageMenu(event, ${msg.id})">⋮</div>
-            <div class="msg-dropdown" id="msgMenu_${msg.id}">
-                ${!msg.isVoice ? `<div class="msg-dropdown-item" onclick="startEditMessage(${msg.id})"><i class="fas fa-pen"></i> تعديل</div>` : ''}
-                <div class="msg-dropdown-item delete" onclick="deleteMessage(${msg.id})"><i class="fas fa-trash"></i> حذف</div>
-            </div>`;
-        }
-        const html = `<div class="msg-bubble ${bubbleClass}">${menuHtml} ${contentHtml} ${attachHtml} <span class="msg-time">${new Date(msg.sentAt).toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'})}</span></div>`;
-        area.innerHTML += html;
-        if (msg.isFromTeacher && !msg.isRead) msg.isRead = true;
-    });
-    localStorage.setItem('studentMessages', JSON.stringify(messages));
-    area.scrollTop = area.scrollHeight;
+    let htmlBuffer = '';
+    
+    if (myMsgs.length === 0) { 
+        htmlBuffer = '<div class="text-center text-muted mt-5"><i class="far fa-comments fa-3x mb-3" style="color:#cbd5e1;"></i><p>ابدأ المحادثة مع معلمك الآن</p></div>'; 
+    } else {
+        myMsgs.forEach(msg => {
+            const isMe = !msg.isFromTeacher;
+            const bubbleClass = isMe ? 'msg-me' : 'msg-other';
+            let contentHtml = msg.content;
+            
+            if (msg.isVoice) {
+                contentHtml = `
+                <div style="display:flex; align-items:center; gap:5px;">
+                    <audio controls src="${msg.content}"></audio>
+                </div>`;
+            }
+
+            let attachHtml = '';
+            if (msg.attachment) { const isImg = msg.attachment.startsWith('data:image'); attachHtml = `<a href="${msg.attachment}" download="file" class="msg-attachment">${isImg ? `<img src="${msg.attachment}">` : ''} 📎 فتح</a>`; }
+            let menuHtml = '';
+            if (isMe) {
+                menuHtml = `<div class="msg-options-btn" onclick="toggleMessageMenu(event, ${msg.id})">⋮</div>
+                <div class="msg-dropdown" id="msgMenu_${msg.id}">
+                    ${!msg.isVoice ? `<div class="msg-dropdown-item" onclick="startEditMessage(${msg.id})"><i class="fas fa-pen"></i> تعديل</div>` : ''}
+                    <div class="msg-dropdown-item delete" onclick="deleteMessage(${msg.id})"><i class="fas fa-trash"></i> حذف</div>
+                </div>`;
+            }
+            htmlBuffer += `<div class="msg-bubble ${bubbleClass}">${menuHtml} ${contentHtml} ${attachHtml} <span class="msg-time">${new Date(msg.sentAt).toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'})}</span></div>`;
+            
+            // تحديث حالة القراءة
+            if (msg.isFromTeacher && !msg.isRead) msg.isRead = true;
+        });
+    }
+
+    // تحديث المحتوى فقط إذا تغير لتجنب الوميض (اختياري، هنا نحدثه دائماً)
+    area.innerHTML = htmlBuffer;
+    localStorage.setItem('studentMessages', JSON.stringify(messages)); // حفظ حالة القراءة
+
+    // التمرير للأسفل إذا كان المستخدم في الأسفل أصلاً
+    if (isScrolledToBottom) {
+        area.scrollTop = area.scrollHeight;
+    }
 }
 
 function startRecording() {
@@ -316,10 +350,32 @@ function sendVoiceMessage(base64Audio) {
 }
 function toggleMessageMenu(e, msgId) { e.stopPropagation(); document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none'); const menu = document.getElementById(`msgMenu_${msgId}`); if (menu) menu.style.display = 'block'; }
 function deleteMessage(messageId) { if (!confirm('حذف هذه الرسالة؟')) return; let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); studentMsgs = studentMsgs.filter(m => m.id !== messageId); localStorage.setItem('studentMessages', JSON.stringify(studentMsgs)); let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); teacherMsgs = teacherMsgs.filter(m => m.id !== (messageId + 1)); localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs)); loadChatWithTeacher(); }
-function startEditMessage(messageId) { const messages = JSON.parse(localStorage.getItem('studentMessages') || '[]'); const msg = messages.find(m => m.id === messageId); if (!msg || msg.isVoice) return; const input = document.getElementById('chatInput'); input.value = msg.content; input.focus(); input.classList.add('editing'); editingMessageId = messageId; const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'تحديث <i class="fas fa-check"></i>'; sendBtn.classList.add('update-mode'); document.getElementById('cancelEditBtn').style.display = 'block'; }
-function cancelEdit() { editingMessageId = null; const input = document.getElementById('chatInput'); input.value = ''; input.classList.remove('editing'); const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'أرسل <i class="fas fa-paper-plane"></i>'; sendBtn.classList.remove('update-mode'); document.getElementById('cancelEditBtn').style.display = 'none'; }
+function startEditMessage(messageId) { 
+    // إيقاف التحديث التلقائي مؤقتاً عند التعديل
+    if(chatRefreshInterval) clearInterval(chatRefreshInterval);
+    
+    const messages = JSON.parse(localStorage.getItem('studentMessages') || '[]'); const msg = messages.find(m => m.id === messageId); if (!msg || msg.isVoice) return; const input = document.getElementById('chatInput'); input.value = msg.content; input.focus(); input.classList.add('editing'); editingMessageId = messageId; const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'تحديث <i class="fas fa-check"></i>'; sendBtn.classList.add('update-mode'); document.getElementById('cancelEditBtn').style.display = 'block'; 
+}
+function cancelEdit() { 
+    editingMessageId = null; const input = document.getElementById('chatInput'); input.value = ''; input.classList.remove('editing'); const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'أرسل <i class="fas fa-paper-plane"></i>'; sendBtn.classList.remove('update-mode'); document.getElementById('cancelEditBtn').style.display = 'none'; 
+    
+    // إعادة تشغيل التحديث التلقائي
+    if(chatRefreshInterval) clearInterval(chatRefreshInterval);
+    chatRefreshInterval = setInterval(loadChatWithTeacher, 3000);
+}
 function handleChatAttachment(input) { if (input.files && input.files[0]) { const file = input.files[0]; const reader = new FileReader(); reader.onload = function(e) { attachmentData = e.target.result; document.getElementById('attachName').textContent = file.name; document.getElementById('attachmentPreviewBox').style.display = 'block'; }; reader.readAsDataURL(file); } }
-function toggleEmojiPopup() { const popup = document.getElementById('emojiPopup'); if (popup.style.display === 'none') popup.style.display = 'grid'; else popup.style.display = 'none'; }
+
+// 🔥 إصلاح مشكلة الإغلاق الفوري للقائمة (Stop Propagation)
+function toggleEmojiPopup(e) { 
+    if(e) e.stopPropagation();
+    const popup = document.getElementById('emojiPopup'); 
+    if (popup.style.display === 'none' || popup.style.display === '') {
+        popup.style.display = 'grid'; 
+    } else {
+        popup.style.display = 'none';
+    }
+}
+
 function addEmoji(char) { const input = document.getElementById('chatInput'); input.value += char; input.focus(); }
 function clearAttachment() { attachmentData = null; document.getElementById('attachmentPreviewBox').style.display = 'none'; document.getElementById('chatFileInput').value = ''; document.getElementById('chatCamInput').value = ''; }
 function sendToTeacher() {

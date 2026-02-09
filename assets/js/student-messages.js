@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-messages.js
-// الوصف: شات الطالب (إصلاح الأخطاء + التوافق مع HTML القديم)
+// الوصف: شات الطالب (تحسين مكان الرموز لتجنب القائمة الجانبية)
 // ============================================
 
 let attachmentData = null;
@@ -37,15 +37,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
-            // 🔥 إصلاح إضافي: إخفاء العناصر القديمة التي قد تكون خارج الحاوية
+            // إخفاء العناصر القديمة
             setTimeout(() => {
                 const oldModals = ['newMessageModal', 'viewMessageModal'];
                 oldModals.forEach(id => {
                     const el = document.getElementById(id);
-                    if(el) el.style.display = 'none'; // إخفاء قسري
+                    if(el) el.style.display = 'none'; 
                 });
                 
-                // إخفاء أي زر "رسالة جديدة" قديم
                 const oldBtns = document.querySelectorAll('button');
                 oldBtns.forEach(btn => {
                     if(btn.innerText.includes('رسالة جديدة') || btn.innerText.includes('New Message')) {
@@ -58,30 +57,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// 🔥 دوال التوافق (Compatibility Layer) لمنع ReferenceError 🔥
-// هذه الدوال موجودة فقط لإسكات الأخطاء إذا ضغط المستخدم على أزرار HTML القديمة
-window.closeNewMessageModal = function() {
-    const m = document.getElementById('newMessageModal');
-    if(m) { m.style.display = 'none'; m.classList.remove('show'); }
-};
-window.closeViewMessageModal = function() {
-    const m = document.getElementById('viewMessageModal');
-    if(m) { m.style.display = 'none'; m.classList.remove('show'); }
-};
-window.openNewMessageModal = function() {
-    // توجيه المستخدم للشات بدلاً من المودال القديم
-    const chatInput = document.getElementById('chatInput');
-    if(chatInput) chatInput.focus();
-    else alert('استخدم صندوق المحادثة في الأسفل للمراسلة.');
-};
-
-// ... (باقي الكود كما هو بدون تغيير) ...
+// دوال التوافق
+window.closeNewMessageModal = function() { const m = document.getElementById('newMessageModal'); if(m) { m.style.display = 'none'; m.classList.remove('show'); } };
+window.closeViewMessageModal = function() { const m = document.getElementById('viewMessageModal'); if(m) { m.style.display = 'none'; m.classList.remove('show'); } };
+window.openNewMessageModal = function() { const chatInput = document.getElementById('chatInput'); if(chatInput) chatInput.focus(); else alert('استخدم صندوق المحادثة في الأسفل للمراسلة.'); };
 
 function cleanInterfaceAggressive() {
     const targetContainer = document.getElementById('messagesList');
     if (!targetContainer) return;
     
-    // محاولة إخفاء كل أشقاء الكونتينر
     const parent = targetContainer.parentElement;
     if (parent) {
         Array.from(parent.children).forEach(child => {
@@ -90,7 +74,6 @@ function cleanInterfaceAggressive() {
             }
         });
     }
-    // إخفاء العناصر بالكلاسات المعروفة
     document.querySelectorAll('.stat-card, .filter-group, .row.mb-4, .card-body h5, .d-flex.justify-content-between').forEach(el => {
         if (!el.contains(targetContainer) && el.id !== 'chatHeader') {
             el.style.display = 'none';
@@ -116,8 +99,9 @@ function injectChatStyles() {
     if (document.getElementById('chatStyles')) return;
     const style = document.createElement('style');
     style.id = 'chatStyles';
+    // 🔥 تم التعديل: إزاحة النافذة لليسار (right: 100px) ورفع الطبقة (z-index)
     style.innerHTML = `
-        .chat-container { display: flex; height: 80vh; background: #fff; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #d1d5db; margin-top: 0px; font-family: 'Tajawal', sans-serif; }
+        .chat-container { display: flex; height: 80vh; background: #fff; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #d1d5db; margin-top: 0px; font-family: 'Tajawal', sans-serif; position: relative; z-index: 1; }
         .chat-main { flex: 1; display: flex; flex-direction: column; background: #fff; }
         .messages-area { flex: 1; padding: 20px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 15px; }
         
@@ -139,7 +123,7 @@ function injectChatStyles() {
         .msg-dropdown-item:hover { background: #f8f9fa; color: #007bff; }
         .msg-dropdown-item.delete:hover { color: #dc3545; background: #fff5f5; }
 
-        .chat-input-area { padding: 15px 20px; border-top: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; gap: 10px; position: relative; min-height: 80px; }
+        .chat-input-area { padding: 15px 20px; border-top: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; gap: 10px; position: relative; min-height: 80px; z-index: 50; }
         .chat-input { flex: 1; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 25px; outline: none; font-size: 1rem; background: #f8fafc; margin: 0 5px; }
         .chat-input:focus { border-color: #007bff; background: #fff; }
         .chat-input.editing { border-color: #f59e0b; background: #fffbeb; }
@@ -171,8 +155,9 @@ function injectChatStyles() {
         .recording-wave { width: 12px; height: 12px; background: #b71c1c; border-radius: 50%; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
 
-        .attachment-preview { position: absolute; bottom: 85px; right: 20px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; display: none; z-index: 10; }
-        .emoji-popup { position: absolute; bottom: 80px; right: 20px; width: 320px; height: 250px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: none; padding: 10px; grid-template-columns: repeat(7, 1fr); gap: 5px; overflow-y: auto; z-index: 100; }
+        /* 🔥 تعديل الموقع هنا: right: 100px */
+        .attachment-preview { position: absolute; bottom: 85px; right: 20px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; display: none; z-index: 100000; }
+        .emoji-popup { position: absolute; bottom: 80px; right: 100px; width: 320px; height: 250px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); display: none; padding: 10px; grid-template-columns: repeat(7, 1fr); gap: 5px; overflow-y: auto; z-index: 100000; }
         .emoji-item { font-size: 1.4rem; cursor: pointer; text-align: center; padding: 5px; border-radius: 5px; transition: 0.2s; }
         .emoji-item:hover { background: #f1f5f9; transform: scale(1.2); }
         

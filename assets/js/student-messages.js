@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-messages.js
-// الوصف: شات الطالب (إصلاح نهائي للرموز + تحديث تلقائي + تصحيح جلب المعلم)
+// الوصف: شات الطالب (إصلاح الأخطاء + التوافق مع HTML القديم)
 // ============================================
 
 let attachmentData = null;
@@ -9,46 +9,79 @@ let mediaRecorder = null;
 let audioChunks = [];
 let recordingInterval = null;
 let recordingStartTime = null;
-let chatRefreshInterval = null; // متغير لحفظ مؤقت التحديث
+let chatRefreshInterval = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('messages.html')) {
         try {
             injectFontAwesome();
-            cleanInterfaceAggressive();
+            cleanInterfaceAggressive(); 
             injectChatStyles();
             renderStudentChatLayout();
             
-            // تحميل الشات فوراً
             loadChatWithTeacher();
             
-            // 🔥 تحديث تلقائي للشات كل 3 ثوانٍ (Live Chat) 🔥
+            // تحديث تلقائي كل 3 ثوانٍ
             if (chatRefreshInterval) clearInterval(chatRefreshInterval);
             chatRefreshInterval = setInterval(loadChatWithTeacher, 3000);
             
-            // إغلاق النوافذ عند الضغط في الخارج
+            // أحداث الإغلاق
             document.addEventListener('click', function(e) {
                 const popup = document.getElementById('emojiPopup');
                 const btn = document.getElementById('emojiBtn');
-                
-                // إذا لم يكن الضغط على القائمة أو زر الفتح -> اغلقها
                 if (popup && btn && !popup.contains(e.target) && !btn.contains(e.target)) {
                     popup.style.display = 'none';
                 }
-                
                 if (!e.target.closest('.msg-options-btn')) {
                     document.querySelectorAll('.msg-dropdown').forEach(menu => menu.style.display = 'none');
                 }
             });
+
+            // 🔥 إصلاح إضافي: إخفاء العناصر القديمة التي قد تكون خارج الحاوية
+            setTimeout(() => {
+                const oldModals = ['newMessageModal', 'viewMessageModal'];
+                oldModals.forEach(id => {
+                    const el = document.getElementById(id);
+                    if(el) el.style.display = 'none'; // إخفاء قسري
+                });
+                
+                // إخفاء أي زر "رسالة جديدة" قديم
+                const oldBtns = document.querySelectorAll('button');
+                oldBtns.forEach(btn => {
+                    if(btn.innerText.includes('رسالة جديدة') || btn.innerText.includes('New Message')) {
+                        btn.style.display = 'none';
+                    }
+                });
+            }, 500);
+
         } catch(e) { console.error(e); }
     }
 });
 
-// إخفاء العناصر غير المرغوبة
+// 🔥 دوال التوافق (Compatibility Layer) لمنع ReferenceError 🔥
+// هذه الدوال موجودة فقط لإسكات الأخطاء إذا ضغط المستخدم على أزرار HTML القديمة
+window.closeNewMessageModal = function() {
+    const m = document.getElementById('newMessageModal');
+    if(m) { m.style.display = 'none'; m.classList.remove('show'); }
+};
+window.closeViewMessageModal = function() {
+    const m = document.getElementById('viewMessageModal');
+    if(m) { m.style.display = 'none'; m.classList.remove('show'); }
+};
+window.openNewMessageModal = function() {
+    // توجيه المستخدم للشات بدلاً من المودال القديم
+    const chatInput = document.getElementById('chatInput');
+    if(chatInput) chatInput.focus();
+    else alert('استخدم صندوق المحادثة في الأسفل للمراسلة.');
+};
+
+// ... (باقي الكود كما هو بدون تغيير) ...
+
 function cleanInterfaceAggressive() {
     const targetContainer = document.getElementById('messagesList');
     if (!targetContainer) return;
     
+    // محاولة إخفاء كل أشقاء الكونتينر
     const parent = targetContainer.parentElement;
     if (parent) {
         Array.from(parent.children).forEach(child => {
@@ -57,6 +90,7 @@ function cleanInterfaceAggressive() {
             }
         });
     }
+    // إخفاء العناصر بالكلاسات المعروفة
     document.querySelectorAll('.stat-card, .filter-group, .row.mb-4, .card-body h5, .d-flex.justify-content-between').forEach(el => {
         if (!el.contains(targetContainer) && el.id !== 'chatHeader') {
             el.style.display = 'none';
@@ -230,22 +264,16 @@ function renderStudentChatLayout() {
     `;
 }
 
-// 🔥 دالة البحث عن المعلم (محسنة: تبحث في Users الموحد)
 function getMyTeacherId() {
     const me = getCurrentUser();
     if (me.teacherId) return me.teacherId;
-    
-    // إذا لم يكن هناك معلم محدد، ابحث في جدول المستخدمين عن أي معلم
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
     const teachers = allUsers.filter(u => u.role === 'teacher');
-    
     return teachers.length > 0 ? teachers[0].id : null;
 }
 
 function loadChatWithTeacher() {
-    // ⚠️ منع إعادة رسم الشات إذا كنا نسجل صوتاً حالياً (حتى لا يقطع التسجيل)
     if (mediaRecorder && mediaRecorder.state === 'recording') return;
-    // ⚠️ منع التحديث إذا كان المستخدم يكتب رسالة أو يعدل رسالة
     if (editingMessageId || (document.getElementById('chatInput') && document.getElementById('chatInput').value.length > 0)) return;
 
     const teacherId = getMyTeacherId();
@@ -257,12 +285,9 @@ function loadChatWithTeacher() {
     const currentUser = getCurrentUser();
     const myMsgs = messages.filter(m => m.studentId === currentUser.id);
     
-    // ترتيب الرسائل
     myMsgs.sort((a, b) => new Date(a.sentAt) - new Date(b.sentAt));
     
     const area = document.getElementById('studentChatArea');
-    
-    // حفظ موضع التمرير الحالي
     const isScrolledToBottom = area.scrollHeight - area.clientHeight <= area.scrollTop + 50;
 
     let htmlBuffer = '';
@@ -294,16 +319,13 @@ function loadChatWithTeacher() {
             }
             htmlBuffer += `<div class="msg-bubble ${bubbleClass}">${menuHtml} ${contentHtml} ${attachHtml} <span class="msg-time">${new Date(msg.sentAt).toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'})}</span></div>`;
             
-            // تحديث حالة القراءة
             if (msg.isFromTeacher && !msg.isRead) msg.isRead = true;
         });
     }
 
-    // تحديث المحتوى
     area.innerHTML = htmlBuffer;
     localStorage.setItem('studentMessages', JSON.stringify(messages)); 
 
-    // التمرير للأسفل إذا كان المستخدم في الأسفل أصلاً
     if (isScrolledToBottom) {
         area.scrollTop = area.scrollHeight;
     }
@@ -351,21 +373,16 @@ function sendVoiceMessage(base64Audio) {
 function toggleMessageMenu(e, msgId) { e.stopPropagation(); document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none'); const menu = document.getElementById(`msgMenu_${msgId}`); if (menu) menu.style.display = 'block'; }
 function deleteMessage(messageId) { if (!confirm('حذف هذه الرسالة؟')) return; let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); studentMsgs = studentMsgs.filter(m => m.id !== messageId); localStorage.setItem('studentMessages', JSON.stringify(studentMsgs)); let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); teacherMsgs = teacherMsgs.filter(m => m.id !== (messageId + 1)); localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs)); loadChatWithTeacher(); }
 function startEditMessage(messageId) { 
-    // إيقاف التحديث التلقائي مؤقتاً عند التعديل
     if(chatRefreshInterval) clearInterval(chatRefreshInterval);
-    
     const messages = JSON.parse(localStorage.getItem('studentMessages') || '[]'); const msg = messages.find(m => m.id === messageId); if (!msg || msg.isVoice) return; const input = document.getElementById('chatInput'); input.value = msg.content; input.focus(); input.classList.add('editing'); editingMessageId = messageId; const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'تحديث <i class="fas fa-check"></i>'; sendBtn.classList.add('update-mode'); document.getElementById('cancelEditBtn').style.display = 'block'; 
 }
 function cancelEdit() { 
     editingMessageId = null; const input = document.getElementById('chatInput'); input.value = ''; input.classList.remove('editing'); const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'أرسل <i class="fas fa-paper-plane"></i>'; sendBtn.classList.remove('update-mode'); document.getElementById('cancelEditBtn').style.display = 'none'; 
-    
-    // إعادة تشغيل التحديث التلقائي
     if(chatRefreshInterval) clearInterval(chatRefreshInterval);
     chatRefreshInterval = setInterval(loadChatWithTeacher, 3000);
 }
 function handleChatAttachment(input) { if (input.files && input.files[0]) { const file = input.files[0]; const reader = new FileReader(); reader.onload = function(e) { attachmentData = e.target.result; document.getElementById('attachName').textContent = file.name; document.getElementById('attachmentPreviewBox').style.display = 'block'; }; reader.readAsDataURL(file); } }
 
-// 🔥 إصلاح مشكلة الإغلاق الفوري للقائمة (Stop Propagation)
 function toggleEmojiPopup(e) { 
     if(e) e.stopPropagation();
     const popup = document.getElementById('emojiPopup'); 

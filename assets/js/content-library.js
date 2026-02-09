@@ -1,12 +1,10 @@
 // ============================================
 // 📁 المسار: assets/js/content-library.js
-// الوصف: إدارة مكتبة المحتوى (إصلاح شامل لربط الواجبات + بناء النوافذ)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    // التأكد من تحميل المكتبة إذا وجدت عناصرها
     if (document.getElementById('testsGrid') || document.getElementById('lessonsGrid')) {
-        injectLinkContentModal(); // 🔥 بناء نافذة الربط لضمان وجودها
+        injectLinkContentModal(); 
         loadContentLibrary();
     }
 });
@@ -18,9 +16,6 @@ function loadContentLibrary() {
     try { loadHomeworks(); } catch(e) { console.error(e); }
 }
 
-// ==========================================
-// 1. دوال العرض
-// ==========================================
 function loadTests() {
     const grid = document.getElementById('testsGrid'); if(!grid) return;
     const tests = JSON.parse(localStorage.getItem('tests') || '[]').filter(t => t.teacherId === getCurrentUser().id);
@@ -59,16 +54,12 @@ function loadHomeworks() {
     }).join('');
 }
 
-// ==========================================
-// 🏗️ محرك بناء الأسئلة
-// ==========================================
-
 function addQuestion() { addQuestionToContainer(document.getElementById('questionsContainer'), 'سؤال'); }
 function addLessonQuestion(id) { addQuestionToContainer(document.getElementById(id), 'سؤال'); }
 function addHomeworkQuestion() { addQuestionToContainer(document.getElementById('homeworkQuestionsContainer'), 'سؤال'); }
 
 function addQuestionToContainer(container, lbl, data = null) {
-    const idx = container.children.length; // Question Index
+    const idx = container.children.length; 
     const type = data ? data.type : 'mcq';
     const score = data ? data.passingScore : 1;
 
@@ -122,7 +113,6 @@ function renderQuestionInputs(selectElem, idx, data = null) {
     const card = selectElem.closest('.question-card');
     const area = card.querySelector('.question-inputs-area');
     
-    // Reset Stripe
     const stripe = card.querySelector('.q-stripe');
     stripe.className = 'q-stripe';
     if(type.includes('drag')) stripe.classList.add('drag');
@@ -324,15 +314,11 @@ async function collectQuestionsFromContainer(id) {
     return qs;
 }
 
-// ==========================================
-// 📥 الدوال الأساسية (مع إصلاح الربط وبناء النافذة)
-// ==========================================
 function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser')).user; }
 function getAllObjectives() { return JSON.parse(localStorage.getItem('objectives') || '[]').filter(o => o.teacherId === getCurrentUser().id); }
 
-// 🔥 دالة بناء نافذة الربط (جديدة لضمان الوجود)
 function injectLinkContentModal() {
-    if (document.getElementById('linkContentModal')) return; // موجودة مسبقاً
+    if (document.getElementById('linkContentModal')) return;
     const html = `
     <div id="linkContentModal" class="modal">
         <div class="modal-content" style="max-width: 600px;">
@@ -353,7 +339,6 @@ function injectLinkContentModal() {
     document.body.insertAdjacentHTML('beforeend', html);
 }
 
-// 🔥 دالة عرض نافذة الربط (محدثة لدعم الواجبات بدقة)
 function showLinkModal(type, id) {
     document.getElementById('linkTargetId').value = id;
     document.getElementById('linkTargetType').value = type;
@@ -419,7 +404,6 @@ function showLinkModal(type, id) {
     document.getElementById('linkContentModal').classList.add('show');
 }
 
-// 🔥 دالة حفظ الربط (محدثة لحفظ الواجبات في 'assignments')
 function saveContentLinks() {
     const id = parseInt(document.getElementById('linkTargetId').value);
     const type = document.getElementById('linkTargetType').value;
@@ -453,33 +437,60 @@ function saveContentLinks() {
         }
     }
     document.getElementById('linkContentModal').classList.remove('show');
-    alert('تم حفظ الارتباطات بنجاح');
+    showSuccess('تم حفظ الارتباطات بنجاح');
 }
-
-function showExportModal() { const container = document.getElementById('exportListsContainer'); container.innerHTML = ''; const data = { tests: JSON.parse(localStorage.getItem('tests') || '[]').filter(x => x.teacherId === getCurrentUser().id), lessons: JSON.parse(localStorage.getItem('lessons') || '[]').filter(x => x.teacherId === getCurrentUser().id), objectives: JSON.parse(localStorage.getItem('objectives') || '[]').filter(x => x.teacherId === getCurrentUser().id), homeworks: JSON.parse(localStorage.getItem('assignments') || '[]').filter(x => x.teacherId === getCurrentUser().id) }; const categories = [ { key: 'tests', label: 'الاختبارات التشخيصية' }, { key: 'lessons', label: 'الدروس التفاعلية' }, { key: 'objectives', label: 'الأهداف قصيرة المدى' }, { key: 'homeworks', label: 'الواجبات' } ]; categories.forEach(cat => { const items = data[cat.key]; if (items.length > 0) { let html = `<div class="export-section"><div class="export-section-header"><span>${cat.label}</span><div><input type="checkbox" onchange="toggleCategorySelect(this, '${cat.key}')" id="cat_all_${cat.key}"><label for="cat_all_${cat.key}" style="font-size:0.8rem; cursor:pointer;">الكل</label></div></div><div class="export-list">`; items.forEach(item => { const title = item.title || item.shortTermGoal; html += `<div class="export-item"><input type="checkbox" class="export-check-item ${cat.key}-item" value="${item.id}" data-category="${cat.key}"><label>${title}</label></div>`; }); html += `</div></div>`; container.insertAdjacentHTML('beforeend', html); } }); if(container.innerHTML === '') container.innerHTML = '<p class="text-center text-muted">المكتبة فارغة، لا يوجد محتوى للتصدير.</p>'; document.getElementById('selectAllGlobal').checked = false; document.getElementById('exportContentModal').classList.add('show'); }
-function toggleCategorySelect(checkbox, category) { document.querySelectorAll(`.${category}-item`).forEach(cb => cb.checked = checkbox.checked); }
-function toggleGlobalSelect(checkbox) { document.querySelectorAll('.export-check-item').forEach(cb => cb.checked = checkbox.checked); document.querySelectorAll('[id^="cat_all_"]').forEach(cb => cb.checked = checkbox.checked); }
-function executeExport() { const exportData = { tests: [], lessons: [], objectives: [], assignments: [], version: "1.0", exportedAt: new Date().toISOString() }; const tests = JSON.parse(localStorage.getItem('tests') || '[]'); document.querySelectorAll('.tests-item:checked').forEach(cb => { const item = tests.find(t => t.id == cb.value); if(item) { const clean = JSON.parse(JSON.stringify(item)); if(clean.questions) clean.questions.forEach(q => delete q.linkedGoalId); exportData.tests.push(clean); } }); const lessons = JSON.parse(localStorage.getItem('lessons') || '[]'); document.querySelectorAll('.lessons-item:checked').forEach(cb => { const item = lessons.find(l => l.id == cb.value); if(item) { const clean = JSON.parse(JSON.stringify(item)); delete clean.linkedInstructionalGoal; exportData.lessons.push(clean); } }); const objectives = JSON.parse(localStorage.getItem('objectives') || '[]'); document.querySelectorAll('.objectives-item:checked').forEach(cb => { const item = objectives.find(o => o.id == cb.value); if(item) exportData.objectives.push(item); }); const homeworks = JSON.parse(localStorage.getItem('assignments') || '[]'); document.querySelectorAll('.homeworks-item:checked').forEach(cb => { const item = homeworks.find(h => h.id == cb.value); if(item) { const clean = JSON.parse(JSON.stringify(item)); delete clean.linkedInstructionalGoal; exportData.assignments.push(clean); } }); const totalCount = exportData.tests.length + exportData.lessons.length + exportData.objectives.length + exportData.assignments.length; if(totalCount === 0) { alert('لم تقم بتحديد أي عنصر للتصدير.'); return; } const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `ContentLibrary_Export_${new Date().toISOString().slice(0,10)}.json`; document.body.appendChild(a); a.click(); document.body.removeChild(a); document.getElementById('exportContentModal').classList.remove('show'); }
-function importContent(input) { const file = input.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(e) { try { const data = JSON.parse(e.target.result); const teacherId = getCurrentUser().id; let count = 0; const addItem = (key, item) => { const arr = JSON.parse(localStorage.getItem(key) || '[]'); item.id = Date.now() + Math.floor(Math.random() * 1000); item.teacherId = teacherId; if(item.questions) item.questions.forEach(q => delete q.linkedGoalId); delete item.linkedInstructionalGoal; arr.push(item); localStorage.setItem(key, JSON.stringify(arr)); count++; }; if (data.version && (data.tests || data.lessons || data.objectives || data.assignments)) { if(data.tests) data.tests.forEach(i => addItem('tests', i)); if(data.lessons) data.lessons.forEach(i => addItem('lessons', i)); if(data.objectives) data.objectives.forEach(i => addItem('objectives', i)); if(data.assignments) data.assignments.forEach(i => addItem('assignments', i)); } else if (data.contentType) { if (data.contentType === 'test') addItem('tests', data); else if (data.contentType === 'lesson') addItem('lessons', data); else if (data.contentType === 'homework') addItem('assignments', data); else if (data.contentType === 'objective') addItem('objectives', data); } else { const type = guessContentType(data); if(type === 'objective') addItem('objectives', data); else if(type === 'lesson') addItem('lessons', data); else if(type === 'test') addItem('tests', data); else if(type === 'homework') addItem('assignments', data); else { alert('تعذر التعرف على نوع الملف.'); return; } } alert(`تم استيراد ${count} عنصر بنجاح!`); loadContentLibrary(); } catch (err) { console.error(err); alert('حدث خطأ أثناء قراءة الملف.'); } input.value = ''; }; reader.readAsText(file); }
-function guessContentType(data) { if (data.shortTermGoal) return 'objective'; if (data.intro) return 'lesson'; if (data.questions && data.description !== undefined && !data.intro) return 'test'; if (data.questions && !data.intro) return 'homework'; return null; }
 
 function showCreateTestModal() { document.getElementById('editTestId').value=''; document.getElementById('testTitle').value=''; document.getElementById('testSubject').value='لغتي'; document.getElementById('testDescription').value=''; document.getElementById('questionsContainer').innerHTML=''; addQuestion(); document.getElementById('createTestModal').classList.add('show'); }
 async function saveTest() { const t=document.getElementById('testTitle').value; if(!t)return; const qs = await collectQuestionsFromContainer('questionsContainer'); const ts=JSON.parse(localStorage.getItem('tests')||'[]'); const id=document.getElementById('editTestId').value; const d={id:id?parseInt(id):Date.now(), teacherId:getCurrentUser().id, title:t, subject:document.getElementById('testSubject').value, description:document.getElementById('testDescription').value, questions:qs, createdAt:new Date().toISOString()}; if(id){const i=ts.findIndex(x=>x.id==id); if(i!==-1)ts[i]=d;}else ts.push(d); localStorage.setItem('tests',JSON.stringify(ts)); document.getElementById('createTestModal').classList.remove('show'); loadTests(); }
 function editTest(id) { const t=JSON.parse(localStorage.getItem('tests')).find(x=>x.id===id); if(!t)return; document.getElementById('editTestId').value=t.id; document.getElementById('testTitle').value=t.title; document.getElementById('testSubject').value=t.subject; document.getElementById('testDescription').value=t.description; const c=document.getElementById('questionsContainer'); c.innerHTML=''; (t.questions||[]).forEach(q=>addQuestionToContainer(c,'سؤال',q)); document.getElementById('createTestModal').classList.add('show'); }
-function deleteTest(id) { if(confirm('حذف؟')){const t=JSON.parse(localStorage.getItem('tests')).filter(x=>x.id!==id); localStorage.setItem('tests',JSON.stringify(t)); loadTests();} }
+
+// 🔥 تحديث عمليات الحذف
+function deleteTest(id) { 
+    showConfirmModal('هل أنت متأكد من حذف هذا الاختبار؟', function() {
+        const t = JSON.parse(localStorage.getItem('tests')).filter(x => x.id !== id); 
+        localStorage.setItem('tests', JSON.stringify(t)); 
+        loadTests();
+        showSuccess('تم الحذف');
+    });
+}
 
 function showCreateHomeworkModal() { document.getElementById('editHomeworkId').value=''; document.getElementById('homeworkTitle').value=''; document.getElementById('homeworkDescription').value=''; document.getElementById('homeworkQuestionsContainer').innerHTML=''; addHomeworkQuestion(); document.getElementById('createHomeworkModal').classList.add('show'); }
 async function saveHomework() { const id=document.getElementById('editHomeworkId').value; const t=document.getElementById('homeworkTitle').value; if(!t)return; const qs = await collectQuestionsFromContainer('homeworkQuestionsContainer'); const hws=JSON.parse(localStorage.getItem('assignments')||'[]'); const d={id:id?parseInt(id):Date.now(), teacherId:getCurrentUser().id, title:t, subject:document.getElementById('homeworkSubject').value, description:document.getElementById('homeworkDescription').value, questions:qs, createdAt:new Date().toISOString()}; if(id){const i=hws.findIndex(x=>x.id==id); if(i!==-1)hws[i]=d;}else hws.push(d); localStorage.setItem('assignments',JSON.stringify(hws)); document.getElementById('createHomeworkModal').classList.remove('show'); loadHomeworks(); }
 function editHomework(id) { const h=JSON.parse(localStorage.getItem('assignments')).find(x=>x.id===id); if(!h)return; document.getElementById('editHomeworkId').value=h.id; document.getElementById('homeworkTitle').value=h.title; document.getElementById('homeworkSubject').value=h.subject; document.getElementById('homeworkDescription').value=h.description; const c=document.getElementById('homeworkQuestionsContainer'); c.innerHTML=''; (h.questions||[]).forEach(q=>addQuestionToContainer(c,'سؤال',q)); document.getElementById('createHomeworkModal').classList.add('show'); }
-function deleteHomework(id) { if(confirm('حذف؟')){const h=JSON.parse(localStorage.getItem('assignments')).filter(x=>x.id!==id); localStorage.setItem('assignments',JSON.stringify(h)); loadHomeworks();} }
+
+function deleteHomework(id) { 
+    showConfirmModal('هل أنت متأكد من حذف هذا الواجب؟', function() {
+        const h = JSON.parse(localStorage.getItem('assignments')).filter(x => x.id !== id); 
+        localStorage.setItem('assignments', JSON.stringify(h)); 
+        loadHomeworks();
+        showSuccess('تم الحذف');
+    });
+}
 
 function showCreateLessonModal() { document.getElementById('editLessonId').value=''; document.getElementById('lessonTitle').value=''; document.getElementById('introUrl').value=''; document.getElementById('introText').value=''; document.getElementById('exercisesContainer').innerHTML=''; document.getElementById('assessmentContainer').innerHTML=''; addLessonQuestion('exercisesContainer'); addLessonQuestion('assessmentContainer'); switchLessonStep('intro'); document.getElementById('createLessonModal').classList.add('show'); }
 function editLesson(id) { const l=JSON.parse(localStorage.getItem('lessons')).find(x=>x.id===id); if(!l)return; document.getElementById('editLessonId').value=l.id; document.getElementById('lessonTitle').value=l.title; document.getElementById('lessonSubject').value=l.subject; if(l.intro){document.getElementById('introType').value=l.intro.type; document.getElementById('introUrl').value=l.intro.url; document.getElementById('introText').value=l.intro.text; toggleIntroInputs();} document.getElementById('exercisesPassScore').value=l.exercises?.passScore||80; const ec=document.getElementById('exercisesContainer'); ec.innerHTML=''; (l.exercises?.questions||[]).forEach(q=>addQuestionToContainer(ec,'سؤال',q)); const ac=document.getElementById('assessmentContainer'); ac.innerHTML=''; (l.assessment?.questions||[]).forEach(q=>addQuestionToContainer(ac,'سؤال',q)); switchLessonStep('intro'); document.getElementById('createLessonModal').classList.add('show'); }
 async function saveLesson() { const id=document.getElementById('editLessonId').value; const t=document.getElementById('lessonTitle').value; if(!t)return; const intro={type:document.getElementById('introType').value, url:document.getElementById('introUrl').value, text:document.getElementById('introText').value}; const ex={passScore:document.getElementById('exercisesPassScore').value, questions: await collectQuestionsFromContainer('exercisesContainer')}; const as={questions: await collectQuestionsFromContainer('assessmentContainer')}; const ls=JSON.parse(localStorage.getItem('lessons')||'[]'); const d={id:id?parseInt(id):Date.now(), teacherId:getCurrentUser().id, title:t, subject:document.getElementById('lessonSubject').value, intro, exercises:ex, assessment:as, createdAt:new Date().toISOString()}; if(id){const i=ls.findIndex(x=>x.id==id); if(i!==-1)ls[i]=d;}else ls.push(d); localStorage.setItem('lessons',JSON.stringify(ls)); document.getElementById('createLessonModal').classList.remove('show'); loadLessons(); }
-function deleteLesson(id) { if(confirm('حذف؟')){const l=JSON.parse(localStorage.getItem('lessons')).filter(x=>x.id!==id); localStorage.setItem('lessons',JSON.stringify(l)); loadLessons();} }
+
+function deleteLesson(id) { 
+    showConfirmModal('هل أنت متأكد من حذف هذا الدرس؟', function() {
+        const l = JSON.parse(localStorage.getItem('lessons')).filter(x => x.id !== id); 
+        localStorage.setItem('lessons', JSON.stringify(l)); 
+        loadLessons();
+        showSuccess('تم الحذف');
+    });
+}
+
 function toggleIntroInputs() { const t=document.getElementById('introType').value; const u=document.getElementById('introUrl'); u.placeholder=t==='video'?'رابط يوتيوب':(t==='image'?'رابط الصورة':'رابط'); }
 function showCreateObjectiveModal() { document.getElementById('editObjectiveId').value=''; document.getElementById('shortTermGoal').value=''; document.getElementById('instructionalGoalsContainer').innerHTML=''; addInstructionalGoalInput(); document.getElementById('createObjectiveModal').classList.add('show'); }
 function editObjective(id) { const o=JSON.parse(localStorage.getItem('objectives')).find(x=>x.id===id); if(!o)return; document.getElementById('editObjectiveId').value=o.id; document.getElementById('objSubject').value=o.subject; document.getElementById('shortTermGoal').value=o.shortTermGoal; const c=document.getElementById('instructionalGoalsContainer'); c.innerHTML=''; if(o.instructionalGoals?.length>0)o.instructionalGoals.forEach(g=>addInstructionalGoalInput(g)); else addInstructionalGoalInput(); document.getElementById('createObjectiveModal').classList.add('show'); }
 function addInstructionalGoalInput(v='') { const c=document.getElementById('instructionalGoalsContainer'); const d=document.createElement('div'); d.className='d-flex mb-2'; d.innerHTML=`<input type="text" class="form-control instructional-goal-input" value="${v}" placeholder="هدف تدريسي فرعي"><button class="btn btn-outline-danger btn-sm ml-2" onclick="this.parentElement.remove()">×</button>`; c.appendChild(d); }
 function saveObjective() { const id=document.getElementById('editObjectiveId').value; const s=document.getElementById('objSubject').value; const g=document.getElementById('shortTermGoal').value; if(!g)return; const ig=[]; document.querySelectorAll('.instructional-goal-input').forEach(i=>{if(i.value.trim())ig.push(i.value.trim())}); const objs=JSON.parse(localStorage.getItem('objectives')||'[]'); const d={id:id?parseInt(id):Date.now(), teacherId:getCurrentUser().id, subject:s, shortTermGoal:g, instructionalGoals:ig}; if(id){const i=objs.findIndex(x=>x.id==id); if(i!==-1)objs[i]=d;}else objs.push(d); localStorage.setItem('objectives',JSON.stringify(objs)); document.getElementById('createObjectiveModal').classList.remove('show'); loadObjectives(); }
-function deleteObjective(id) { if(confirm('حذف؟')){const o=JSON.parse(localStorage.getItem('objectives')).filter(x=>x.id!==id); localStorage.setItem('objectives',JSON.stringify(o)); loadObjectives();} }
+
+function deleteObjective(id) { 
+    showConfirmModal('هل أنت متأكد من حذف هذا الهدف؟', function() {
+        const o = JSON.parse(localStorage.getItem('objectives')).filter(x => x.id !== id); 
+        localStorage.setItem('objectives', JSON.stringify(o)); 
+        loadObjectives();
+        showSuccess('تم الحذف');
+    });
+}

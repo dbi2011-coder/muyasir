@@ -114,7 +114,6 @@ function editStudent(studentId) {
     document.getElementById('editStudentModal').classList.add('show');
 }
 
-// 🔥 دالة التعديل (مع التمويه)
 function updateStudentData() {
     const idInput = document.getElementById('editStudentId').value;
     const currentId = String(idInput);
@@ -141,7 +140,6 @@ function updateStudentData() {
         });
         
         if (duplicateUser) {
-            // ✅ تم تغيير الرسالة
             alert('اسم المستخدم غير متاح . يرجى اختيار اسم آخر');
             return;
         }
@@ -155,12 +153,15 @@ function updateStudentData() {
     } else { alert('خطأ: الطالب غير موجود.'); }
 }
 
+// 🔥 تحديث الحذف
 function deleteStudent(studentId) {
-    if (!confirm('هل أنت متأكد من حذف هذا الطالب؟')) return;
-    let users = JSON.parse(localStorage.getItem('users') || '[]');
-    users = users.filter(u => u.id != studentId);
-    localStorage.setItem('users', JSON.stringify(users));
-    loadStudentsData();
+    showConfirmModal('⚠️ هل أنت متأكد من حذف هذا الطالب؟', function() {
+        let users = JSON.parse(localStorage.getItem('users') || '[]');
+        users = users.filter(u => u.id != studentId);
+        localStorage.setItem('users', JSON.stringify(users));
+        showSuccess('تم الحذف بنجاح');
+        loadStudentsData();
+    });
 }
 
 function exportStudentData(studentId) {
@@ -212,15 +213,24 @@ function processStudentImport() {
             }
 
             const existingIndex = users.findIndex(u => u.username === studentInfo.username);
+            
+            const doImport = () => {
+                users.push(studentInfo);
+                localStorage.setItem('users', JSON.stringify(users));
+                mergeData('studentTests', imported.data.tests); mergeData('studentLessons', imported.data.lessons); mergeData('studentAssignments', imported.data.assignments); mergeData('studentProgress', imported.data.progress); mergeData('studentEvents', imported.data.events); mergeData('studentActivities', imported.data.activities);
+                alert('تم الاستيراد بنجاح'); closeModal('importStudentModal'); loadStudentsData();
+            };
+
             if (existingIndex !== -1) {
-                if (!confirm(`الطالب "${studentInfo.name}" موجود. تحديث؟`)) return;
-                cleanStudentOldData(users[existingIndex].id);
-                users.splice(existingIndex, 1);
+                showConfirmModal(`الطالب "${studentInfo.name}" موجود. هل تريد تحديث بياناته؟`, function() {
+                    cleanStudentOldData(users[existingIndex].id);
+                    users.splice(existingIndex, 1);
+                    doImport();
+                });
+            } else {
+                doImport();
             }
-            users.push(studentInfo);
-            localStorage.setItem('users', JSON.stringify(users));
-            mergeData('studentTests', imported.data.tests); mergeData('studentLessons', imported.data.lessons); mergeData('studentAssignments', imported.data.assignments); mergeData('studentProgress', imported.data.progress); mergeData('studentEvents', imported.data.events); mergeData('studentActivities', imported.data.activities);
-            alert('تم الاستيراد بنجاح'); closeModal('importStudentModal'); loadStudentsData();
+
         } catch (err) { alert('خطأ: ' + err.message); }
     }; reader.readAsText(fileInput.files[0]);
 }

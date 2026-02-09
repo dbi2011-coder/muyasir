@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/auth.js
-// الوصف: نظام الدخول (مع تفعيل الحظر للحسابات الموقوفة)
+// الوصف: نظام الدخول (محدث: تمرير ownerId لعزل بيانات عضو اللجنة)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -41,11 +41,11 @@ function login() {
 
     let user = users.find(u => u.username == userInp && u.password == passInp);
 
-    // 🔥🔥 هنا التعديل الجوهري: فحص حالة الحساب 🔥🔥
+    // التحقق من حالة الحظر
     if (user) {
         if (user.status === 'suspended' || user.status === 'موقوف') {
             showAuthNotification("⛔ عذراً، تم إيقاف حسابك. يرجى مراجعة الإدارة.", "error");
-            return; // 🛑 إيقاف العملية ومنع الدخول
+            return; 
         }
     }
 
@@ -61,7 +61,9 @@ function login() {
                 username: member.username,
                 role: 'committee_member', 
                 title: member.role,
-                status: 'active' // أعضاء اللجنة فعالين افتراضياً
+                status: 'active',
+                // 🔥 التعديل الهام: تمرير معرف المعلم (المالك) للجلسة
+                ownerId: member.ownerId 
             };
         }
     }
@@ -87,57 +89,6 @@ function login() {
     }
 }
 
-// دالة الإشعارات
-function showAuthNotification(message, type = 'info') {
-    const div = document.createElement('div');
-    div.innerText = message;
-    div.style.position = 'fixed';
-    div.style.top = '20px';
-    div.style.left = '50%';
-    div.style.transform = 'translateX(-50%)';
-    div.style.padding = '15px 30px';
-    div.style.borderRadius = '8px';
-    div.style.color = '#fff';
-    div.style.fontWeight = 'bold';
-    div.style.zIndex = '99999';
-    div.style.boxShadow = '0 4px 10px rgba(0,0,0,0.2)';
-    div.style.fontFamily = 'Tajawal, sans-serif';
-    
-    // لون أحمر للخطأ/الحظر، وأخضر للنجاح
-    div.style.backgroundColor = type === 'error' ? '#e74c3c' : '#2ecc71';
-    
-    document.body.appendChild(div);
-    setTimeout(() => {
-        div.style.opacity = '0';
-        div.style.transition = 'opacity 0.5s';
-        setTimeout(() => div.remove(), 500);
-    }, 3000);
-}
-
-function checkAuth() {
-    const session = sessionStorage.getItem('currentUser');
-    if (!session) {
-        window.location.href = '../../index.html';
-        return null;
-    }
-    return JSON.parse(session);
-}
-
-function logout() {
-    sessionStorage.removeItem('currentUser');
-    window.location.href = '../../index.html';
-}
-
-function getCurrentUser() {
-    return JSON.parse(sessionStorage.getItem('currentUser') || 'null');
-}
-
-// تصدير الدوال
-window.login = login;
-window.checkAuth = checkAuth;
-window.logout = logout;
-window.getCurrentUser = getCurrentUser;
-window.showAuthNotification = showAuthNotification;
 // ============================================
 // 🔔 نظام الإشعارات الموحد (استبدال Alert)
 // ============================================
@@ -164,21 +115,42 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
-// 2. 🔥 السحر: استبدال دالة alert الأصلية
-// هذا السطر سيجعل أي كود قديم يستخدم alert() يستخدم تصميمك الجديد تلقائياً!
+// 2. استبدال دالة alert الأصلية
 window.alert = function(message) {
-    // نعتبر الـ alert العادي رسالة "تنبيه/خطأ" أو حسب السياق
-    // يمكنك تغيير 'error' إلى 'info' إذا أردت اللون الأزرق
     showToast(message, 'info'); 
 };
 
-// 3. دالة مساعدة لرسائل النجاح والخطأ المحددة
-// يمكنك استخدامها في الكود الجديد: showSuccess('تم الحفظ')
+// 3. دوال مساعدة لرسائل النجاح والخطأ
 window.showSuccess = (msg) => showToast(msg, 'success');
 window.showError = (msg) => showToast(msg, 'error');
 
-// 4. تحديث دالة showAuthNotification القديمة (إن وجدت) لتعمل بالتصميم الجديد
+// 4. تحديث دالة showAuthNotification لتعمل بالتصميم الجديد
 window.showAuthNotification = function(message, type) {
     const styleType = (type === 'success') ? 'success' : 'error';
     showToast(message, styleType);
 };
+
+// دوال إدارة الجلسة
+function checkAuth() {
+    const session = sessionStorage.getItem('currentUser');
+    if (!session) {
+        window.location.href = '../../index.html';
+        return null;
+    }
+    return JSON.parse(session);
+}
+
+function logout() {
+    sessionStorage.removeItem('currentUser');
+    window.location.href = '../../index.html';
+}
+
+function getCurrentUser() {
+    return JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+}
+
+// تصدير الدوال
+window.login = login;
+window.checkAuth = checkAuth;
+window.logout = logout;
+window.getCurrentUser = getCurrentUser;

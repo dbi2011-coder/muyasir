@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/auth.js
-// الوصف: نظام الدخول + نافذة التأكيد الموحدة (Custom Confirm Modal)
+// الوصف: نظام الدخول + نافذة التأكيد الموحدة (بدون تأكيد للخروج)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
         checkAuth();
     }
 
-    // 3. 🔥 حقن نافذة الحذف الموحدة في الصفحة
+    // 3. حقن نافذة الحذف الموحدة
     injectGlobalConfirmModal();
 });
 
@@ -75,7 +75,7 @@ function login() {
 // 🗑️ نظام نافذة الحذف الموحدة (Global Confirm Modal)
 // ============================================
 
-let confirmCallback = null; // متغير لحفظ العملية المراد تنفيذها
+let confirmCallback = null;
 
 function injectGlobalConfirmModal() {
     if (document.getElementById('globalConfirmModal')) return;
@@ -99,17 +99,15 @@ function injectGlobalConfirmModal() {
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 }
 
-// 🔥 الدالة الجديدة التي ستستخدمها بدلاً من confirm()
 window.showConfirmModal = function(message, callback) {
     const modal = document.getElementById('globalConfirmModal');
     const msgElem = document.getElementById('globalConfirmMessage');
     
     if (modal && msgElem) {
         msgElem.textContent = message;
-        confirmCallback = callback; // حفظ الوظيفة لتنفيذها لاحقاً
+        confirmCallback = callback;
         modal.classList.add('show');
     } else {
-        // احتياطي في حال لم يتم تحميل النافذة
         if(confirm(message)) callback();
     }
 };
@@ -150,12 +148,13 @@ function checkAuth() {
     if (!session) { window.location.href = '../../index.html'; return null; }
     return JSON.parse(session);
 }
+
+// 🔥 تم التعديل: تسجيل الخروج الفوري بدون رسالة تأكيد
 function logout() {
-    showConfirmModal('هل أنت متأكد من تسجيل الخروج؟', function() {
-        sessionStorage.removeItem('currentUser');
-        window.location.href = '../../index.html';
-    });
+    sessionStorage.removeItem('currentUser');
+    window.location.href = '../../index.html';
 }
+
 function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser') || 'null'); }
 
 window.login = login;

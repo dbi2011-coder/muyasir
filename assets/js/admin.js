@@ -79,7 +79,6 @@ function showAddTeacherModal() {
 }
 function closeAddTeacherModal() { const modal = document.getElementById('addTeacherModal'); if(modal) modal.classList.remove('show'); }
 
-// 🔥 دالة إضافة معلم (مع التمويه)
 function addNewTeacher() {
     const nameVal = getValue('teacherName') || getValue('newTeacherName');
     const userVal = getValue('teacherUsername') || getValue('newTeacherUsername');
@@ -92,11 +91,9 @@ function addNewTeacher() {
     const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
     const allAccounts = [...users, ...committeeMembers];
 
-    // التحقق من وجود الحساب (اسم + مرور)
     const isDuplicate = allAccounts.some(u => u.username === userVal && u.password === passVal);
     
     if (isDuplicate) {
-        // ✅ تم تغيير الرسالة
         alert('اسم المستخدم غير متاح . يرجى اختيار اسم آخر');
         return;
     }
@@ -112,15 +109,21 @@ function addNewTeacher() {
 
 function saveNewTeacher() { addNewTeacher(); }
 
+// 🔥 تحديث الحذف لاستخدام النافذة الجديدة
 function deleteTeacher(id) {
-    if(!confirm('هل أنت متأكد من حذف المعلم وجميع طلابه؟')) return;
-    let users = JSON.parse(localStorage.getItem('users') || '[]');
-    users = users.filter(u => u.id !== id);
-    users = users.filter(u => !(u.role === 'student' && u.teacherId == id));
-    localStorage.setItem('users', JSON.stringify(users));
-    let sch = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
-    localStorage.setItem('teacherSchedule', JSON.stringify(sch.filter(s => s.teacherId != id)));
-    alert('تم الحذف'); loadTeachersData(); loadAdminStats();
+    showConfirmModal('⚠️ هل أنت متأكد تماماً؟ سيتم حذف المعلم وجميع طلابه نهائياً.', function() {
+        let users = JSON.parse(localStorage.getItem('users') || '[]');
+        users = users.filter(u => u.id !== id);
+        users = users.filter(u => !(u.role === 'student' && u.teacherId == id));
+        localStorage.setItem('users', JSON.stringify(users));
+        
+        let sch = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
+        localStorage.setItem('teacherSchedule', JSON.stringify(sch.filter(s => s.teacherId != id)));
+
+        showSuccess('تم الحذف بنجاح');
+        loadTeachersData();
+        loadAdminStats();
+    });
 }
 
 function toggleTeacherStatus(id) {
@@ -156,7 +159,6 @@ function editTeacherCredentials() {
     setTimeout(() => { const editModal = document.getElementById('editCredentialsModal'); if(editModal) editModal.classList.add('show'); }, 200);
 }
 
-// 🔥 دالة حفظ بيانات الدخول (مع التمويه)
 function saveTeacherCredentials() {
     const id = document.getElementById('editCredTeacherId').value;
     const newUser = document.getElementById('editCredTeacherUsername').value.trim();
@@ -178,7 +180,6 @@ function saveTeacherCredentials() {
     });
 
     if(isDuplicate) {
-        // ✅ تم تغيير الرسالة
         alert('اسم المستخدم غير متاح . يرجى اختيار اسم آخر');
         return;
     }
@@ -192,30 +193,31 @@ function saveTeacherCredentials() {
 }
 
 function exportTeacherData(teacherId) {
-    if (!confirm('تصدير بيانات المعلم؟')) return;
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const teacherProfile = users.find(u => u.id == teacherId);
-    if (!teacherProfile) return alert('المعلم غير موجود');
+    showConfirmModal('هل تريد تصدير بيانات هذا المعلم وطلابه؟', function() {
+        const users = JSON.parse(localStorage.getItem('users') || '[]');
+        const teacherProfile = users.find(u => u.id == teacherId);
+        if (!teacherProfile) return alert('المعلم غير موجود');
 
-    const teacherStudents = users.filter(u => u.role === 'student' && u.teacherId == teacherId);
-    const allSchedules = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
-    const teacherSchedule = allSchedules.filter(s => s.teacherId == teacherId);
-    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
-    const teacherTests = allTests.filter(t => t.authorId == teacherId || t.teacherId == teacherId);
-    const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const teacherLessons = allLessons.filter(l => l.authorId == teacherId || l.teacherId == teacherId);
-    const allAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
-    const teacherAssignments = allAssignments.filter(a => a.authorId == teacherId || a.teacherId == teacherId);
+        const teacherStudents = users.filter(u => u.role === 'student' && u.teacherId == teacherId);
+        const allSchedules = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
+        const teacherSchedule = allSchedules.filter(s => s.teacherId == teacherId);
+        const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+        const teacherTests = allTests.filter(t => t.authorId == teacherId || t.teacherId == teacherId);
+        const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+        const teacherLessons = allLessons.filter(l => l.authorId == teacherId || l.teacherId == teacherId);
+        const allAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
+        const teacherAssignments = allAssignments.filter(a => a.authorId == teacherId || a.teacherId == teacherId);
 
-    const exportData = {
-        meta: { type: 'teacher_backup', version: '1.2', exportedAt: new Date().toISOString() },
-        profile: teacherProfile,
-        data: { students: teacherStudents, schedule: teacherSchedule, tests: teacherTests, lessons: teacherLessons, assignments: teacherAssignments }
-    };
-    const fileName = `Teacher_${teacherProfile.name}_${new Date().toISOString().split('T')[0]}.json`;
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        const exportData = {
+            meta: { type: 'teacher_backup', version: '1.2', exportedAt: new Date().toISOString() },
+            profile: teacherProfile,
+            data: { students: teacherStudents, schedule: teacherSchedule, tests: teacherTests, lessons: teacherLessons, assignments: teacherAssignments }
+        };
+        const fileName = `Teacher_${teacherProfile.name}_${new Date().toISOString().split('T')[0]}.json`;
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    });
 }
 
 function importTeacherData() {
@@ -227,27 +229,28 @@ function importTeacherData() {
             try {
                 const d = JSON.parse(event.target.result);
                 if (!d.meta || d.meta.type !== 'teacher_backup') return alert('ملف غير صالح');
-                if (!confirm(`استيراد المعلم: ${d.profile.name}؟`)) return;
                 
-                const users = JSON.parse(localStorage.getItem('users') || '[]');
-                const idx = users.findIndex(u => u.id == d.profile.id);
-                if(idx !== -1) users[idx] = d.profile; else users.push(d.profile);
-                
-                if(d.data.students) d.data.students.forEach(s => {
-                    const si = users.findIndex(u => u.id == s.id);
-                    if(si !==-1) users[si] = s; else users.push(s);
+                showConfirmModal(`استيراد المعلم: ${d.profile.name}؟`, function() {
+                    const users = JSON.parse(localStorage.getItem('users') || '[]');
+                    const idx = users.findIndex(u => u.id == d.profile.id);
+                    if(idx !== -1) users[idx] = d.profile; else users.push(d.profile);
+                    
+                    if(d.data.students) d.data.students.forEach(s => {
+                        const si = users.findIndex(u => u.id == s.id);
+                        if(si !==-1) users[si] = s; else users.push(s);
+                    });
+                    localStorage.setItem('users', JSON.stringify(users));
+                    
+                    const merge = (k, nd) => {
+                        if(!nd) return;
+                        let cur = JSON.parse(localStorage.getItem(k)||'[]');
+                        let fil = cur.filter(x => !nd.some(n => n.id == x.id));
+                        localStorage.setItem(k, JSON.stringify([...fil, ...nd]));
+                    };
+                    merge('teacherSchedule', d.data.schedule); merge('tests', d.data.tests);
+                    merge('lessons', d.data.lessons); merge('assignments', d.data.assignments);
+                    alert('تم الاستيراد'); loadTeachersData(); loadAdminStats();
                 });
-                localStorage.setItem('users', JSON.stringify(users));
-                
-                const merge = (k, nd) => {
-                    if(!nd) return;
-                    let cur = JSON.parse(localStorage.getItem(k)||'[]');
-                    let fil = cur.filter(x => !nd.some(n => n.id == x.id));
-                    localStorage.setItem(k, JSON.stringify([...fil, ...nd]));
-                };
-                merge('teacherSchedule', d.data.schedule); merge('tests', d.data.tests);
-                merge('lessons', d.data.lessons); merge('assignments', d.data.assignments);
-                alert('تم الاستيراد'); loadTeachersData(); loadAdminStats();
             } catch(er) { alert('خطأ: '+er.message); }
         }; reader.readAsText(file);
     }; input.click();

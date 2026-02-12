@@ -8,6 +8,41 @@
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="stylesheet" href="../../assets/css/teacher.css">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* ستايلات إضافية للنظام الاحترافي */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.7); /* خلفية داكنة احترافية */
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 450px;
+            text-align: center;
+            animation: modalSlideUp 0.3s ease-out;
+        }
+        @keyframes modalSlideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        #toastContainer {
+            position: fixed;
+            bottom: 30px;
+            left: 30px;
+            z-index: 10000;
+        }
+    </style>
 </head>
 <body>
     <div class="dashboard-container">
@@ -18,38 +53,24 @@
                     <h2>ميسر التعلم</h2>
                 </div>
             </div>
-            
             <ul class="sidebar-menu">
                 <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
                 <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
                 <li><a href="content-library.html"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
                 <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
-                <li><a href="messages.html" class="active"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
-                <li><a href="reports.html"><span class="menu-icon">📋</span>التقارير</a></li>
-                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة صعوبات التعلم</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
+                <li class="active"><a href="messages.html"><span class="menu-icon">💬</span>المراسلات</a></li>
+                <li><a href="settings.html"><span class="menu-icon">⚙️</span>الإعدادات</a></li>
             </ul>
         </aside>
 
-        <main class="main-content-dashboard">
-            <header class="dashboard-header">
-                <button class="mobile-menu-btn">☰</button>
-                <div class="user-info">
-                    <div class="user-welcome">
-                        <div class="welcome-text">مرحباً بعودتك</div>
-                        <div class="user-name" id="userName">أ/ اسم المعلم</div>
-                    </div>
-                    <div class="user-avatar" id="userAvatar">م</div>
+        <main class="main-content">
+            <header class="main-header">
+                <div class="header-title">
+                    <h1>💬 مراسلة الطلاب</h1>
                 </div>
-                <div class="header-actions">
-                    </div>
             </header>
 
-            <div class="dashboard-content">
-                <div class="content-header" style="margin-bottom: 10px;">
-                    <h1>مراسلة الطلاب</h1>
-                </div>
-
+            <div class="content-body">
                 <div class="messages-container" style="background: transparent; box-shadow: none; padding: 0;">
                     <div id="messagesList" style="width: 100%;"></div>
                 </div>
@@ -58,26 +79,42 @@
     </div>
 
     <div id="newMessageModal" class="modal">
-        <div class="modal-content" style="max-width: 400px;">
-            <div class="modal-header"><h3>بدء محادثة جديدة</h3><button class="modal-close" onclick="closeNewMessageModal()">&times;</button></div>
-            <div class="modal-body">
-                <form id="newMessageForm">
-                    <div class="form-group">
-                        <label for="messageRecipient" class="form-label">اختر الطالب:</label>
-                        <select id="messageRecipient" class="form-control" required><option value="">جاري تحميل القائمة...</option></select>
-                    </div>
-                </form>
+        <div class="modal-content">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">بدء محادثة جديدة</h3>
+                <button onclick="closeNewMessageModal()" style="background:none; border:none; font-size: 24px; cursor:pointer;">&times;</button>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeNewMessageModal()">إلغاء</button>
-                <button type="button" class="btn btn-primary" onclick="sendNewMessage()">ابدأ المحادثة</button>
+            <div class="form-group" style="text-align: right; margin-bottom: 20px;">
+                <label for="messageRecipient" class="form-label">اختر الطالب:</label>
+                <select id="messageRecipient" class="form-control" style="width: 100%; padding: 10px; border-radius: 8px;">
+                    <option value="">جاري تحميل القائمة...</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-primary" onclick="sendNewMessage()" style="flex: 2;">ابدأ المحادثة</button>
+                <button class="btn btn-secondary" onclick="closeNewMessageModal()" style="flex: 1;">إلغاء</button>
             </div>
         </div>
     </div>
 
+    <div id="confirmModal" class="modal">
+        <div class="modal-content">
+            <div style="margin-bottom: 20px;">
+                <i class="fas fa-exclamation-triangle" style="font-size: 50px; color: #ef4444;"></i>
+            </div>
+            <h3 style="color: #1e293b; margin-bottom: 10px;">تأكيد الحذف</h3>
+            <p id="confirmMessage" style="color: #64748b; line-height: 1.6; margin-bottom: 25px;"></p>
+            <div style="display: flex; gap: 12px; justify-content: center;">
+                <button id="confirmBtnOk" class="btn btn-danger" style="flex: 1; padding: 12px; border-radius: 10px;">حذف نهائي</button>
+                <button onclick="closeConfirmModal()" class="btn btn-secondary" style="flex: 1; padding: 12px; border-radius: 10px;">تراجع</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer"></div>
+
     <script src="../../assets/js/dashboard.js"></script>
     <script src="../../assets/js/teacher.js"></script>
     <script src="../../assets/js/messages.js"></script> 
-    <script src="../../assets/js/auth.js"></script>
 </body>
 </html>

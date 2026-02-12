@@ -40,14 +40,47 @@
                     </div>
                     <div class="user-avatar" id="userAvatar">ط</div>
                 </div>
+                <div class="header-actions">
+                    </div>
             </header>
 
             <div class="dashboard-content">
                 <div class="content-header">
                     <h1>مراسلة المعلم</h1>
+                    <p>إرسال واستقبال الرسائل من المعلم</p>
+                    <div class="header-actions">
+                        <button class="btn btn-success" onclick="showNewMessageModal()">✉️ رسالة جديدة</button>
+                    </div>
                 </div>
 
                 <div class="messages-container">
+                    <div class="messages-stats">
+                        <div class="stat-card">
+                            <div class="stat-value" id="totalMessages">0</div>
+                            <div class="stat-label">إجمالي الرسائل</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="unreadMessages">0</div>
+                            <div class="stat-label">رسائل غير مقروءة</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="teacherReplies">0</div>
+                            <div class="stat-label">ردود المعلم</div>
+                        </div>
+                    </div>
+
+                    <div class="messages-filters">
+                        <div class="filter-group">
+                            <label for="messageFilter">تصفية حسب:</label>
+                            <select id="messageFilter" class="form-control" onchange="filterMessages()">
+                                <option value="all">جميع الرسائل</option>
+                                <option value="unread">غير مقروءة</option>
+                                <option value="read">مقروءة</option>
+                                <option value="replied">تم الرد</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="messages-list" id="messagesList">
                         </div>
                 </div>
@@ -55,7 +88,65 @@
         </main>
     </div>
 
-    <script src="../../assets/js/auth.js"></script> <script src="../../assets/js/dashboard.js"></script>
+    <div id="newMessageModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>رسالة جديدة للمعلم</h3>
+                <button class="modal-close" onclick="closeNewMessageModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="newMessageForm">
+                    <div class="form-group">
+                        <label for="messageSubject" class="form-label">الموضوع</label>
+                        <input type="text" id="messageSubject" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="messageContent" class="form-label">نص الرسالة</label>
+                        <textarea id="messageContent" class="form-control" rows="6" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="messageAttachment" class="form-label">مرفق (اختياري)</label>
+                        <input type="file" id="messageAttachment" class="form-control">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeNewMessageModal()">إلغاء</button>
+                <button type="button" class="btn btn-success" onclick="sendNewMessage()">إرسال</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="viewMessageModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="viewMessageSubject">عنوان الرسالة</h3>
+                <button class="modal-close" onclick="closeViewMessageModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="message-details">
+                    <div class="message-meta">
+                        <span id="viewMessageFrom">من: </span>
+                        <span id="viewMessageDate">التاريخ: </span>
+                    </div>
+                    <div class="message-content" id="viewMessageContent">
+                        محتوى الرسالة...
+                    </div>
+                    <div class="message-attachment" id="viewMessageAttachment">
+                        </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeViewMessageModal()">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../../assets/js/dashboard.js"></script>
     <script src="../../assets/js/student.js"></script>
-    <script src="../../assets/js/student-messages.js"></script> </body>
+    <script src="../../assets/js/student-messages.js"></script>
+    <script src="../../assets/js/auth.js"></script>
+</body>
 </html>

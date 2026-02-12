@@ -1,300 +1,339 @@
 // ============================================
-// 📁 المسار: assets/js/student-lessons.js
-// الوصف: واجهة الطالب (كاملة: عرض، قفل صارم، سجل تاريخي، نوافذ العرض)
+// 📁 المسار: assets/js/student-messages.js
+// الوصف: شات الطالب (واجهة نظيفة بدون إحصائيات + MP3 + ألوان غامقة)
 // ============================================
 
-let currentAssignmentId = null;
-let currentLessonContent = null;
+let attachmentData = null;
+let editingMessageId = null;
+let mediaRecorder = null;
+let audioChunks = [];
+let recordingInterval = null;
+let recordingStartTime = null;
 
 document.addEventListener('DOMContentLoaded', function() {
-    // حقن كود النافذة المنبثقة أولاً
-    injectLessonModalHTML();
-    
-    if (document.getElementById('lessonsContainer')) {
-        loadStudentLessons();
+    if (window.location.pathname.includes('messages.html')) {
+        try {
+            injectFontAwesome();
+            cleanInterfaceAggressive(); // 🔥 دالة تنظيف الواجهة من الإحصائيات والفلاتر 🔥
+            injectChatStyles();
+            renderStudentChatLayout();
+            loadChatWithTeacher();
+            
+            document.addEventListener('click', function(e) {
+                const popup = document.getElementById('emojiPopup');
+                const btn = document.getElementById('emojiBtn');
+                if (popup && btn && !popup.contains(e.target) && !btn.contains(e.target)) {
+                    popup.style.display = 'none';
+                }
+                if (!e.target.closest('.msg-options-btn')) {
+                    document.querySelectorAll('.msg-dropdown').forEach(menu => menu.style.display = 'none');
+                }
+            });
+        } catch(e) { console.error(e); }
     }
 });
 
-function loadStudentLessons() {
-    const container = document.getElementById('lessonsContainer');
+// 🔥 دالة لإخفاء الإحصائيات والفلاتر القديمة 🔥
+function cleanInterfaceAggressive() {
+    const targetContainer = document.getElementById('messagesList');
+    if (!targetContainer) return;
     
-    // 1. التحقق من المستخدم
-    let currentStudent = null;
-    try {
-        if (typeof getCurrentUser === 'function') currentStudent = getCurrentUser();
-        if (!currentStudent && sessionStorage.getItem('currentUser')) currentStudent = JSON.parse(sessionStorage.getItem('currentUser'));
-    } catch (e) {}
-    if (currentStudent && currentStudent.user) currentStudent = currentStudent.user;
-
-    if (!currentStudent || !currentStudent.id) {
-        container.innerHTML = '<div class="alert alert-danger">يرجى تسجيل الدخول.</div>';
-        return;
-    }
-
-    // 2. جلب البيانات
-    let allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    const lessonsLib = JSON.parse(localStorage.getItem('lessons') || '[]');
-    let myLessons = allStudentLessons.filter(l => String(l.studentId) === String(currentStudent.id));
-    
-    if (myLessons.length === 0) {
-        container.innerHTML = `<div class="empty-state"><h3>لا توجد دروس حالياً</h3></div>`;
-        return;
-    }
-
-    // 3. الترتيب الحاسم
-    myLessons.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
-
-    // 4. فحص الغياب الذكي وتسجيله قبل العرض
-    let dataChanged = false;
-    const todayStr = new Date().toISOString().split('T')[0];
-    
-    const activeLessonIndex = myLessons.findIndex(l => l.status !== 'completed' && l.status !== 'accelerated');
-    
-    if (activeLessonIndex !== -1) {
-        const activeLesson = myLessons[activeLessonIndex];
-        if (activeLesson.historyLog && activeLesson.historyLog.length > 0) {
-            const lastLogDate = activeLesson.historyLog[activeLesson.historyLog.length - 1].date.split('T')[0];
-            if (lastLogDate !== todayStr) {
-                const diffDays = Math.floor((new Date() - new Date(lastLogDate)) / (1000 * 60 * 60 * 24));
-                if (diffDays > 1) {
-                    activeLesson.historyLog.push({
-                        date: new Date(Date.now() - 86400000).toISOString(),
-                        status: 'absence'
-                    });
-                    dataChanged = true;
-                }
+    // إخفاء جميع العناصر المجاورة (إحصائيات، فلاتر)
+    const parent = targetContainer.parentElement;
+    if (parent) {
+        Array.from(parent.children).forEach(child => {
+            if (child.id !== 'messagesList' && child.tagName !== 'SCRIPT' && child.tagName !== 'STYLE') {
+                child.style.display = 'none';
             }
-        }
-    }
-
-    if (dataChanged) {
-        myLessons.forEach(myL => {
-            const mainIdx = allStudentLessons.findIndex(al => al.id == myL.id);
-            if(mainIdx !== -1) allStudentLessons[mainIdx] = myL;
         });
-        localStorage.setItem('studentLessons', JSON.stringify(allStudentLessons));
     }
+    
+    // إخفاء أي عناصر تحمل كلاسات الإحصائيات المعروفة
+    document.querySelectorAll('.stat-card, .filter-group, .row.mb-4, .card-body h5, .d-flex.justify-content-between').forEach(el => {
+        // التأكد من عدم إخفاء الشات نفسه
+        if (!el.contains(targetContainer) && el.id !== 'chatHeader') {
+            el.style.display = 'none';
+        }
+    });
+}
 
-    // 5. بناء الواجهة
-    container.innerHTML = '';
-    myLessons.forEach((lesson, index) => {
-        const originalLesson = lessonsLib.find(l => l.id == lesson.originalLessonId) || { title: lesson.title, exercises: { questions: [] } };
+function injectFontAwesome() {
+    if (!document.getElementById('fontAwesomeLink')) {
+        const link = document.createElement('link');
+        link.id = 'fontAwesomeLink';
+        link.rel = 'stylesheet';
+        link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
+        document.head.appendChild(link);
+    }
+}
+
+function getCurrentUser() {
+    return JSON.parse(sessionStorage.getItem('currentUser')).user;
+}
+
+function injectChatStyles() {
+    if (document.getElementById('chatStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'chatStyles';
+    style.innerHTML = `
+        .chat-container { display: flex; height: 80vh; background: #fff; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #d1d5db; margin-top: 0px; font-family: 'Tajawal', sans-serif; }
+        .chat-main { flex: 1; display: flex; flex-direction: column; background: #fff; }
+        .messages-area { flex: 1; padding: 20px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 15px; }
         
-        // منطق القفل الصارم
-        let isLocked = false;
-        let lockMessage = '';
+        .msg-bubble { max-width: 75%; padding: 12px 18px; border-radius: 15px; position: relative; font-size: 0.95rem; line-height: 1.6; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .msg-me { align-self: flex-start; background: #007bff; color: white; border-bottom-right-radius: 2px; } 
+        .msg-other { align-self: flex-end; background: #fff; color: #334155; border: 1px solid #e2e8f0; border-bottom-left-radius: 2px; }
+        
+        audio { height: 35px; width: 220px; margin-top: 5px; border-radius: 20px; outline: none; }
+        .msg-me audio { filter: invert(1) grayscale(1) brightness(2); }
 
-        if (index === 0) {
-            isLocked = false;
-        } else {
-            const prevLesson = myLessons[index - 1];
-            if (prevLesson.status !== 'completed' && prevLesson.status !== 'accelerated') {
-                isLocked = true;
-                lockMessage = `أكمل السابق: ${prevLesson.title}`;
-            }
+        .msg-time { font-size: 0.7rem; margin-top: 5px; opacity: 0.8; display:block; text-align:left; }
+        .msg-attachment { margin-top: 8px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 8px; display: flex; align-items: center; gap: 5px; text-decoration: none; color: inherit; }
+        .msg-attachment img { max-width: 100%; border-radius: 5px; }
+
+        .msg-options-btn { position: absolute; top: 5px; left: 8px; color: inherit; opacity: 0.6; cursor: pointer; padding: 2px 5px; font-size: 1.1rem; }
+        .msg-options-btn:hover { opacity: 1; }
+        .msg-dropdown { position: absolute; top: 25px; left: 5px; background: #fff; color: #333; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); width: 120px; z-index: 100; display: none; overflow: hidden; border: 1px solid #eee; }
+        .msg-dropdown-item { padding: 10px 15px; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.1s; }
+        .msg-dropdown-item:hover { background: #f8f9fa; color: #007bff; }
+        .msg-dropdown-item.delete:hover { color: #dc3545; background: #fff5f5; }
+
+        .chat-input-area { padding: 15px 20px; border-top: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; gap: 10px; position: relative; min-height: 80px; }
+        .chat-input { flex: 1; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 25px; outline: none; font-size: 1rem; background: #f8fafc; margin: 0 5px; }
+        .chat-input:focus { border-color: #007bff; background: #fff; }
+        .chat-input.editing { border-color: #f59e0b; background: #fffbeb; }
+
+        /* الأزرار الملونة الغامقة */
+        .btn-tool { 
+            width: 45px; height: 45px; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 1.2rem; cursor: pointer; transition: 0.2s; border: none;
+            color: white !important; 
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
         }
+        .btn-tool:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.3); filter: brightness(1.1); }
+        
+        .btn-emoji { background: #f57f17; }
+        .btn-attach { background: #37474f; }
+        .btn-cam { background: #0d47a1; }
+        .btn-mic { background: #b71c1c; }
 
-        let cardClass = '';
-        let badge = '';
-        let btnAction = '';
+        .btn-send-pill { background-color: #28a745; color: white; border: none; padding: 10px 25px; border-radius: 50px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 6px rgba(40, 167, 69, 0.2); }
+        .btn-send-pill:hover { background-color: #218838; transform: translateY(-1px); }
+        .btn-send-pill.update-mode { background-color: #f59e0b; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2); }
 
-        if (lesson.status === 'completed') {
-            cardClass = 'completed';
-            badge = '<span class="badge badge-success">✅ مكتمل</span>';
-            btnAction = `<button class="btn btn-outline-primary w-100" onclick="openLessonOverlay(${lesson.id}, ${lesson.originalLessonId})">مراجعة</button>`;
-        } else if (lesson.status === 'accelerated') {
-            cardClass = 'accelerated';
-            badge = '<span class="badge badge-warning" style="background:gold; color:black;">⚡ تم التسريع</span>';
-            btnAction = `<button class="btn btn-outline-warning w-100" onclick="openLessonOverlay(${lesson.id}, ${lesson.originalLessonId})">مراجعة (تفوق)</button>`;
-        } else if (isLocked) {
-            cardClass = 'locked';
-            badge = '<span class="badge badge-secondary">🔒 مقفل</span>';
-            btnAction = `<button class="btn btn-secondary w-100" disabled>${lockMessage}</button>`;
-        } else {
-            cardClass = 'active';
-            badge = '<span class="badge badge-primary">🔓 ابدأ الآن</span>';
-            btnAction = `<button class="btn btn-success w-100" onclick="startAndOpenLesson(${lesson.id}, ${lesson.originalLessonId})">ابدأ الدرس</button>`;
+        .recording-area {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff; display: none; align-items: center; justify-content: space-between;
+            padding: 0 20px; z-index: 50; border-radius: 12px;
         }
+        .recording-timer { font-weight: bold; color: #b71c1c; font-size: 1.1rem; display:flex; align-items:center; gap:10px; }
+        .recording-wave { width: 12px; height: 12px; background: #b71c1c; border-radius: 50%; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
 
-        const html = `
-            <div class="test-card ${cardClass}" style="${lesson.status === 'accelerated' ? 'border: 2px solid gold; background: #fffbf0;' : ''}">
-                <div class="card-header">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span class="badge badge-light">#${index + 1}</span>
-                        ${badge}
+        .attachment-preview { position: absolute; bottom: 85px; right: 20px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; display: none; z-index: 10; }
+        .emoji-popup { position: absolute; bottom: 80px; right: 20px; width: 320px; height: 250px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: none; padding: 10px; grid-template-columns: repeat(7, 1fr); gap: 5px; overflow-y: auto; z-index: 100; }
+        .emoji-item { font-size: 1.4rem; cursor: pointer; text-align: center; padding: 5px; border-radius: 5px; transition: 0.2s; }
+        .emoji-item:hover { background: #f1f5f9; transform: scale(1.2); }
+        
+        @media (max-width: 768px) { .chat-container { height: 85vh; margin-top: 0; } }
+    `;
+    document.head.appendChild(style);
+}
+
+function renderStudentChatLayout() {
+    const container = document.getElementById('messagesList');
+    container.innerHTML = '';
+    container.className = '';
+    
+    // فيسات
+    const emojis = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾','👋','🤚','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦵','🦶','👂','🦻','👃','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','✅','❌','❓','❗️','✔️','🆗'];
+    const emojiHtml = emojis.map(e => `<div class="emoji-item" onclick="addEmoji('${e}')">${e}</div>`).join('');
+
+    container.innerHTML = `
+        <div class="chat-container">
+            <div class="chat-main">
+                <div class="chat-header" style="padding:15px; border-bottom:1px solid #eee; background:#fff; display:flex; align-items:center;">
+                    <div style="width:40px; height:40px; background:#eff6ff; color:#007bff; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-left:10px; font-size:1.2rem;">👨‍🏫</div>
+                    <div>
+                        <span style="font-weight:bold; display:block; color:#1e293b;">معلمي</span>
+                        <span style="font-size:0.75rem; color:#64748b;">المشرف على الخطة</span>
                     </div>
-                    <h3 style="margin-top:10px;">${lesson.title}</h3>
                 </div>
-                <div style="margin-top:auto;">${btnAction}</div>
+                
+                <div class="messages-area" id="studentChatArea">
+                    <div class="text-center text-muted mt-5">جاري التحميل...</div>
+                </div>
+
+                <div id="attachmentPreviewBox" class="attachment-preview">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                        <strong style="font-size:0.8rem;">معاينة</strong>
+                        <i class="fas fa-times" style="color:red; cursor:pointer;" onclick="clearAttachment()"></i>
+                    </div>
+                    <span id="attachName" style="font-size:0.85rem; color:#555;"></span>
+                </div>
+
+                <div id="emojiPopup" class="emoji-popup">
+                    ${emojiHtml}
+                </div>
+
+                <div class="chat-input-area">
+                    <div class="recording-area" id="recordingArea">
+                        <div class="recording-timer">
+                            <div class="recording-wave"></div>
+                            <span id="recordTimer">00:00</span>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn-tool" style="background:#dc3545; color:white;" onclick="cancelRecording()" title="إلغاء">
+                                <i class="fas fa-times"></i>
+                            </button>
+                            <button class="btn-tool" style="background:#28a745; color:white;" onclick="stopRecording()" title="إرسال">
+                                <i class="fas fa-check"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button id="emojiBtn" class="btn-tool btn-emoji" onclick="toggleEmojiPopup()" title="رموز">
+                        <i class="far fa-smile"></i>
+                    </button>
+                    
+                    <label class="btn-tool btn-attach" title="ملف">
+                        <i class="fas fa-paperclip"></i>
+                        <input type="file" id="chatFileInput" style="display:none" onchange="handleChatAttachment(this)">
+                    </label>
+                    
+                    <label class="btn-tool btn-cam" title="كاميرا">
+                        <i class="fas fa-camera"></i>
+                        <input type="file" id="chatCamInput" accept="image/*" capture="environment" style="display:none" onchange="handleChatAttachment(this)">
+                    </label>
+
+                    <input type="text" class="chat-input" id="chatInput" placeholder="اكتب رسالة للمعلم..." onkeypress="handleEnter(event)">
+                    
+                    <button class="btn-tool btn-mic" onclick="startRecording()" title="تسجيل صوتي">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    
+                    <button class="btn-tool" onclick="cancelEdit()" id="cancelEditBtn" style="display:none; background:#ffebee; color:red;" title="إلغاء"><i class="fas fa-times"></i></button>
+
+                    <button class="btn-send-pill" id="sendBtn" onclick="sendToTeacher()">
+                        أرسل <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
             </div>
-        `;
-        container.insertAdjacentHTML('beforeend', html);
-    });
+        </div>
+    `;
 }
 
-// دالة تسجيل الدخول (بدأ/تمديد) ثم الفتح
-function startAndOpenLesson(assignmentId, originalLessonId) {
-    let allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    const idx = allStudentLessons.findIndex(l => l.id == assignmentId);
-    
-    if (idx !== -1) {
-        const lesson = allStudentLessons[idx];
-        if (!lesson.historyLog) lesson.historyLog = [];
-        
-        const todayStr = new Date().toISOString();
-        const todayDateOnly = todayStr.split('T')[0];
-        const hasLogToday = lesson.historyLog.some(log => log.date.startsWith(todayDateOnly));
-        
-        if (!hasLogToday) {
-            const type = lesson.historyLog.length === 0 ? 'started' : 'extension';
-            lesson.historyLog.push({ date: todayStr, status: type });
-            localStorage.setItem('studentLessons', JSON.stringify(allStudentLessons));
-        }
-    }
-    
-    openLessonOverlay(assignmentId, originalLessonId);
+function getMyTeacherId() {
+    const me = getCurrentUser();
+    if (me.teacherId) return me.teacherId;
+    const teachers = JSON.parse(localStorage.getItem('teachers') || '[]');
+    return teachers.length > 0 ? teachers[0].id : null;
 }
 
-// ============================================
-// دوال العرض والنافذة (تمت كتابتها بالكامل)
-// ============================================
-
-function openLessonOverlay(assignmentId, originalLessonId) {
-    const lessonsLib = JSON.parse(localStorage.getItem('lessons') || '[]');
-    currentLessonContent = lessonsLib.find(l => l.id == originalLessonId);
-    currentAssignmentId = assignmentId;
-
-    if (!currentLessonContent) {
-        alert('عذراً، محتوى هذا الدرس غير متوفر.');
+function loadChatWithTeacher() {
+    const teacherId = getMyTeacherId();
+    if (!teacherId) {
+        document.getElementById('studentChatArea').innerHTML = '<div class="text-center p-5">لا يوجد معلم مرتبط.</div>';
         return;
     }
-
-    const modal = document.getElementById('lessonFocusMode');
-    if(modal) {
-        document.getElementById('lessonFocusTitle').textContent = currentLessonContent.title;
-        const passScore = (currentLessonContent.exercises && currentLessonContent.exercises.passScore) ? currentLessonContent.exercises.passScore : 50;
-        const scoreSpan = document.getElementById('reqScore');
-        if(scoreSpan) scoreSpan.textContent = passScore;
-
-        renderIntro();
-        renderQuestions((currentLessonContent.exercises ? currentLessonContent.exercises.questions : []), 'exercisesList');
-        renderQuestions((currentLessonContent.assessment ? currentLessonContent.assessment.questions : []), 'assessmentList');
-
-        modal.style.display = 'block';
-        showStage('intro');
-    } else {
-        console.error('Modal not found');
-    }
-}
-
-function renderIntro() {
-    const container = document.getElementById('introContent');
-    const intro = currentLessonContent.intro || {};
-    container.innerHTML = '';
-    
-    if (intro.text) container.innerHTML += `<div class="alert alert-info" style="font-size:1.1rem; line-height:1.6;">${intro.text}</div>`;
-    
-    if (intro.type === 'video' && intro.url) {
-        let videoId = intro.url.split('v=')[1];
-        if (!videoId && intro.url.includes('youtu.be')) videoId = intro.url.split('/').pop();
-        const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}` : intro.url;
-        container.innerHTML += `<div style="position:relative; padding-bottom:56.25%; height:0; overflow:hidden; border-radius:10px; margin-top:15px;"><iframe style="position:absolute; top:0; left:0; width:100%; height:100%;" src="${embedUrl}" frameborder="0" allowfullscreen></iframe></div>`;
-    } else if (intro.type === 'image' && intro.url) {
-        container.innerHTML += `<img src="${intro.url}" style="max-width:100%; border-radius:10px; margin-top:15px;">`;
-    }
-}
-
-function renderQuestions(questions, containerId) {
-    const container = document.getElementById(containerId);
-    if (!questions || questions.length === 0) { container.innerHTML = '<p class="text-muted text-center">لا توجد أسئلة.</p>'; return; }
-    
-    container.innerHTML = questions.map((q, i) => {
-        let inputHtml = '';
-        if (q.type === 'multiple-choice') {
-            inputHtml = (q.choices || []).map((c, idx) => `
-                <div class="form-check" style="margin-bottom:8px; background:white; padding:10px; border-radius:5px; border:1px solid #eee;">
-                    <input class="form-check-input" type="radio" name="${containerId}_q_${i}" id="${containerId}_q_${i}_${idx}" value="${c}">
-                    <label class="form-check-label" for="${containerId}_q_${i}_${idx}" style="margin-right:10px; width:100%; cursor:pointer;">${c}</label>
-                </div>`).join('');
-        } else {
-            inputHtml = `<input type="text" class="form-control" name="${containerId}_q_${i}" placeholder="الإجابة..." style="padding:10px;">`;
+    const messages = JSON.parse(localStorage.getItem('studentMessages') || '[]');
+    const currentUser = getCurrentUser();
+    const myMsgs = messages.filter(m => m.studentId === currentUser.id);
+    myMsgs.sort((a, b) => new Date(a.sentAt) - new Date(b.sentAt));
+    const area = document.getElementById('studentChatArea');
+    area.innerHTML = '';
+    if (myMsgs.length === 0) { area.innerHTML = '<div class="text-center text-muted mt-5"><i class="far fa-comments fa-3x mb-3" style="color:#cbd5e1;"></i><p>ابدأ المحادثة مع معلمك الآن</p></div>'; }
+    myMsgs.forEach(msg => {
+        const isMe = !msg.isFromTeacher;
+        const bubbleClass = isMe ? 'msg-me' : 'msg-other';
+        let contentHtml = msg.content;
+        
+        // مشغل الصوت فقط (MP3)
+        if (msg.isVoice) {
+            contentHtml = `
+            <div style="display:flex; align-items:center; gap:5px;">
+                <audio controls src="${msg.content}"></audio>
+            </div>`;
         }
-        return `<div class="question-box" style="background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:20px; border:1px solid #ddd;"><h5 style="margin-bottom:15px;"><strong>س${i+1}:</strong> ${q.text}</h5>${inputHtml}</div>`;
-    }).join('');
-}
 
-function showStage(stageName) {
-    document.querySelectorAll('.lesson-stage').forEach(el => el.classList.remove('active'));
-    const stage = document.getElementById(`stage-${stageName}`);
-    if(stage) stage.classList.add('active');
-    
-    const steps = ['intro', 'exercises', 'assessment'];
-    const currentIdx = steps.indexOf(stageName);
-    document.querySelectorAll('.progress-step').forEach((el, idx) => {
-        el.className = 'progress-step';
-        if (idx < currentIdx) el.classList.add('completed');
-        if (idx === currentIdx) el.classList.add('active');
+        let attachHtml = '';
+        if (msg.attachment) { const isImg = msg.attachment.startsWith('data:image'); attachHtml = `<a href="${msg.attachment}" download="file" class="msg-attachment">${isImg ? `<img src="${msg.attachment}">` : ''} 📎 فتح</a>`; }
+        let menuHtml = '';
+        if (isMe) {
+            menuHtml = `<div class="msg-options-btn" onclick="toggleMessageMenu(event, ${msg.id})">⋮</div>
+            <div class="msg-dropdown" id="msgMenu_${msg.id}">
+                ${!msg.isVoice ? `<div class="msg-dropdown-item" onclick="startEditMessage(${msg.id})"><i class="fas fa-pen"></i> تعديل</div>` : ''}
+                <div class="msg-dropdown-item delete" onclick="deleteMessage(${msg.id})"><i class="fas fa-trash"></i> حذف</div>
+            </div>`;
+        }
+        const html = `<div class="msg-bubble ${bubbleClass}">${menuHtml} ${contentHtml} ${attachHtml} <span class="msg-time">${new Date(msg.sentAt).toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'})}</span></div>`;
+        area.innerHTML += html;
+        if (msg.isFromTeacher && !msg.isRead) msg.isRead = true;
     });
+    localStorage.setItem('studentMessages', JSON.stringify(messages));
+    area.scrollTop = area.scrollHeight;
 }
 
-function submitExercises() { showStage('assessment'); }
-
-function submitAssessment() {
-    const allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    const idx = allStudentLessons.findIndex(l => l.id == currentAssignmentId);
-    if (idx !== -1) {
-        const answers = [];
-        const questions = (currentLessonContent.assessment && currentLessonContent.assessment.questions) ? currentLessonContent.assessment.questions : [];
-        
-        questions.forEach((q, i) => {
-            const txt = document.querySelector(`input[name="assessmentList_q_${i}"][type="text"]`);
-            const rad = document.querySelector(`input[name="assessmentList_q_${i}"]:checked`);
-            let val = '';
-            if (txt) val = txt.value;
-            if (rad) val = rad.value;
-            answers.push({ questionText: q.text, value: val });
-        });
-
-        allStudentLessons[idx].status = 'completed';
-        allStudentLessons[idx].completedDate = new Date().toISOString();
-        
-        if (!allStudentLessons[idx].historyLog) allStudentLessons[idx].historyLog = [];
-        allStudentLessons[idx].historyLog.push({ date: new Date().toISOString(), status: 'completed' });
-        
-        allStudentLessons[idx].answers = answers;
-        localStorage.setItem('studentLessons', JSON.stringify(allStudentLessons));
-        
-        alert('أحسنت! تم إكمال الدرس.');
-        closeLessonMode();
+function startRecording() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { alert('المتصفح لا يدعم التسجيل'); return; }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+        mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+            const reader = new FileReader();
+            reader.onload = function(e) { sendVoiceMessage(e.target.result); };
+            reader.readAsDataURL(audioBlob);
+            stream.getTracks().forEach(track => track.stop());
+        };
+        mediaRecorder.start();
+        document.getElementById('recordingArea').style.display = 'flex';
+        recordingStartTime = Date.now();
+        recordingInterval = setInterval(updateRecordTimer, 1000);
+        updateRecordTimer();
+    }).catch(() => alert('تعذر الوصول للمايكروفون'));
+}
+function updateRecordTimer() {
+    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
+    const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+    const secs = (elapsed % 60).toString().padStart(2, '0');
+    document.getElementById('recordTimer').textContent = `${mins}:${secs}`;
+}
+function stopRecording() { if (mediaRecorder && mediaRecorder.state === 'recording') { mediaRecorder.stop(); clearInterval(recordingInterval); document.getElementById('recordingArea').style.display = 'none'; } }
+function cancelRecording() { if (mediaRecorder && mediaRecorder.state === 'recording') { mediaRecorder.onstop = null; mediaRecorder.stop(); clearInterval(recordingInterval); document.getElementById('recordingArea').style.display = 'none'; } }
+function sendVoiceMessage(base64Audio) {
+    const teacherId = getMyTeacherId(); if (!teacherId) return;
+    const currentUser = getCurrentUser();
+    const studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
+    studentMsgs.push({ id: Date.now(), studentId: currentUser.id, teacherId: teacherId, content: base64Audio, attachment: null, isVoice: true, sentAt: new Date().toISOString(), isRead: true, isFromTeacher: false });
+    localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
+    const teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
+    teacherMsgs.push({ id: Date.now() + 1, teacherId: teacherId, studentId: currentUser.id, content: base64Audio, attachment: null, isVoice: true, sentAt: new Date().toISOString(), isRead: false, isFromStudent: true });
+    localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
+    loadChatWithTeacher();
+}
+function toggleMessageMenu(e, msgId) { e.stopPropagation(); document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none'); const menu = document.getElementById(`msgMenu_${msgId}`); if (menu) menu.style.display = 'block'; }
+function deleteMessage(messageId) { if (!confirm('حذف هذه الرسالة؟')) return; let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); studentMsgs = studentMsgs.filter(m => m.id !== messageId); localStorage.setItem('studentMessages', JSON.stringify(studentMsgs)); let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); teacherMsgs = teacherMsgs.filter(m => m.id !== (messageId + 1)); localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs)); loadChatWithTeacher(); }
+function startEditMessage(messageId) { const messages = JSON.parse(localStorage.getItem('studentMessages') || '[]'); const msg = messages.find(m => m.id === messageId); if (!msg || msg.isVoice) return; const input = document.getElementById('chatInput'); input.value = msg.content; input.focus(); input.classList.add('editing'); editingMessageId = messageId; const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'تحديث <i class="fas fa-check"></i>'; sendBtn.classList.add('update-mode'); document.getElementById('cancelEditBtn').style.display = 'block'; }
+function cancelEdit() { editingMessageId = null; const input = document.getElementById('chatInput'); input.value = ''; input.classList.remove('editing'); const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'أرسل <i class="fas fa-paper-plane"></i>'; sendBtn.classList.remove('update-mode'); document.getElementById('cancelEditBtn').style.display = 'none'; }
+function handleChatAttachment(input) { if (input.files && input.files[0]) { const file = input.files[0]; const reader = new FileReader(); reader.onload = function(e) { attachmentData = e.target.result; document.getElementById('attachName').textContent = file.name; document.getElementById('attachmentPreviewBox').style.display = 'block'; }; reader.readAsDataURL(file); } }
+function toggleEmojiPopup() { const popup = document.getElementById('emojiPopup'); if (popup.style.display === 'none') popup.style.display = 'grid'; else popup.style.display = 'none'; }
+function addEmoji(char) { const input = document.getElementById('chatInput'); input.value += char; input.focus(); }
+function clearAttachment() { attachmentData = null; document.getElementById('attachmentPreviewBox').style.display = 'none'; document.getElementById('chatFileInput').value = ''; document.getElementById('chatCamInput').value = ''; }
+function sendToTeacher() {
+    const teacherId = getMyTeacherId(); if (!teacherId) { alert('خطأ: لا يوجد معلم'); return; }
+    const input = document.getElementById('chatInput'); const content = input.value.trim();
+    if ((!content && !attachmentData)) return;
+    if (editingMessageId) {
+        let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); const sIndex = studentMsgs.findIndex(m => m.id === editingMessageId); if (sIndex !== -1) { studentMsgs[sIndex].content = content; if (attachmentData) studentMsgs[sIndex].attachment = attachmentData; localStorage.setItem('studentMessages', JSON.stringify(studentMsgs)); }
+        let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); const tIndex = teacherMsgs.findIndex(m => m.id === (editingMessageId + 1)); if (tIndex !== -1) { teacherMsgs[tIndex].content = content; if (attachmentData) teacherMsgs[tIndex].attachment = attachmentData; localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs)); }
+        cancelEdit(); loadChatWithTeacher(); return;
     }
+    const currentUser = getCurrentUser();
+    const studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); studentMsgs.push({ id: Date.now(), studentId: currentUser.id, teacherId: teacherId, content: content || (attachmentData ? 'مرفق' : ''), attachment: attachmentData, isVoice: false, sentAt: new Date().toISOString(), isRead: true, isFromTeacher: false }); localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
+    const teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); teacherMsgs.push({ id: Date.now() + 1, teacherId: teacherId, studentId: currentUser.id, content: content || (attachmentData ? 'مرفق' : ''), attachment: attachmentData, isVoice: false, sentAt: new Date().toISOString(), isRead: false, isFromStudent: true }); localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
+    input.value = ''; clearAttachment(); document.getElementById('emojiPopup').style.display = 'none'; loadChatWithTeacher();
 }
-
-function closeLessonMode() {
-    document.getElementById('lessonFocusMode').style.display = 'none';
-    loadStudentLessons(); // تحديث القائمة لفتح الدرس التالي
-}
-
-function injectLessonModalHTML() {
-    if (document.getElementById('lessonFocusMode')) return;
-    document.body.insertAdjacentHTML('beforeend', `
-    <div id="lessonFocusMode" class="lesson-focus-mode">
-        <div class="focus-header">
-            <h3 style="margin:0;"><span id="lessonFocusTitle">عنوان الدرس</span></h3>
-            <div class="lesson-progress-bar"><span class="progress-step">1. الشرح</span><span class="progress-step">2. التمارين</span><span class="progress-step">3. التقييم</span></div>
-            <button onclick="closeLessonMode()" class="btn btn-sm btn-danger">خروج ✕</button>
-        </div>
-        <div class="lesson-container">
-            <div id="stage-intro" class="lesson-stage"><div id="introContent"></div><hr style="margin:20px 0;"><button class="btn btn-primary btn-block mt-3" onclick="showStage('exercises')">التالي: التمارين ⬅</button></div>
-            <div id="stage-exercises" class="lesson-stage"><div class="alert alert-warning">المحك: <span id="reqScore"></span>%</div><div id="exercisesList"></div><button class="btn btn-success btn-block mt-3" onclick="submitExercises()">التالي: التقييم النهائي ⬅</button></div>
-            <div id="stage-assessment" class="lesson-stage"><div class="alert alert-info">التقييم النهائي:</div><div id="assessmentList"></div><button class="btn btn-primary btn-block mt-3" onclick="submitAssessment()">✅ تسليم وإنهاء</button></div>
-        </div>
-    </div>`);
-}
-
-// تصدير الدوال
-window.openLessonOverlay = openLessonOverlay;
-window.startAndOpenLesson = startAndOpenLesson;
-window.submitAssessment = submitAssessment;
-window.submitExercises = submitExercises;
-window.closeLessonMode = closeLessonMode;
-window.showStage = showStage;
+function handleEnter(e) { if (e.key === 'Enter') sendToTeacher(); }

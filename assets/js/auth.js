@@ -1,46 +1,51 @@
 // ============================================
 // 📁 الملف: assets/js/auth.js
-// الوصف: نظام الدخول + نافذة التأكيد الموحدة (بدون تأكيد للخروج)
+// الوصف: نظام الدخول وإدارة الجلسات (تمت إزالة نافذة الحذف)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
     // 1. ربط زر الدخول
+    // ملاحظة: يبحث عن أول زر في الصفحة، يفضل تخصيص ID للزر لضمان الدقة
     const loginBtn = document.querySelector('button');
     if(loginBtn && (loginBtn.innerText.includes('دخول') || loginBtn.innerText.includes('Login'))) {
         const newBtn = loginBtn.cloneNode(true);
         loginBtn.parentNode.replaceChild(newBtn, loginBtn);
-        newBtn.type = 'button';
+        newBtn.type = 'button'; // تحويله لزر عادي لمنع إعادة تحميل الصفحة
         newBtn.addEventListener('click', login);
     }
     
-    // 2. التحقق من الجلسة
+    // 2. التحقق من الجلسة (باستثناء صفحات الدخول والرئيسية)
     if (!window.location.href.includes('index.html') && !window.location.href.includes('login.html')) {
         checkAuth();
     }
-
-    // 3. حقن نافذة الحذف الموحدة
-    injectGlobalConfirmModal();
 });
 
-// دالة تسجيل الدخول
+// ============================================
+// 🔐 دالة تسجيل الدخول
+// ============================================
 function login() {
     const userInp = document.getElementById('username').value.trim();
     const passInp = document.getElementById('password').value.trim();
 
+    // التحقق من إدخال البيانات
     if (!userInp || !passInp) {
         showAuthNotification("الرجاء إدخال البيانات", "error");
         return;
     }
 
+    // جلب المستخدمين من التخزين المحلي
     let users = JSON.parse(localStorage.getItem('users') || '[]');
     
+    // إنشاء مستخدم أدمن افتراضي إذا لم يوجد
     if (!users.some(u => u.role === 'admin')) {
         users.push({ id: 1, name: "مدير النظام", username: "admin", password: "123", role: "admin", status: "active" });
         localStorage.setItem('users', JSON.stringify(users));
     }
 
+    // البحث عن المستخدم
     let user = users.find(u => u.username == userInp && u.password == passInp);
 
+    // التحقق من حالة الحساب
     if (user) {
         if (user.status === 'suspended' || user.status === 'موقوف') {
             showAuthNotification("⛔ عذراً، تم إيقاف حسابك. يرجى مراجعة الإدارة.", "error");
@@ -48,6 +53,7 @@ function login() {
         }
     }
 
+    // البحث في أعضاء اللجنة إذا لم يتم العثور عليه في المستخدمين الأساسيين
     if (!user) {
         const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
         const member = committeeMembers.find(m => m.username === userInp && m.password === passInp);
@@ -59,9 +65,11 @@ function login() {
         }
     }
 
+    // التوجيه حسب الدور
     if (user) {
         sessionStorage.setItem('currentUser', JSON.stringify(user));
         let prefix = window.location.href.includes('/pages/') ? '../' : 'pages/';
+        
         if (user.role === 'admin') window.location.href = prefix + 'admin/dashboard.html';
         else if (user.role === 'teacher') window.location.href = prefix + 'teacher/dashboard.html';
         else if (user.role === 'committee_member') window.location.href = prefix + 'member/dashboard.html'; 
@@ -72,91 +80,73 @@ function login() {
 }
 
 // ============================================
-// 🗑️ نظام نافذة الحذف الموحدة (Global Confirm Modal)
-// ============================================
-
-let confirmCallback = null;
-
-function injectGlobalConfirmModal() {
-    if (document.getElementById('globalConfirmModal')) return;
-
-    const modalHtml = `
-    <div id="globalConfirmModal" class="modal" style="z-index: 100000;">
-        <div class="modal-content" style="max-width: 400px; text-align: center; border-radius: 12px; overflow: hidden; padding: 0;">
-            <div style="background: #dc3545; color: white; padding: 15px;">
-                <i class="fas fa-exclamation-triangle fa-3x mb-2"></i>
-                <h3 style="margin: 0;">تأكيد الحذف</h3>
-            </div>
-            <div style="padding: 25px;">
-                <p id="globalConfirmMessage" style="font-size: 1.1rem; color: #555; margin-bottom: 20px;">هل أنت متأكد؟</p>
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button class="btn btn-secondary" onclick="closeConfirmModal()">إلغاء</button>
-                    <button class="btn btn-danger" onclick="executeConfirmAction()">نعم، احذف</button>
-                </div>
-            </div>
-        </div>
-    </div>`;
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-}
-
-window.showConfirmModal = function(message, callback) {
-    const modal = document.getElementById('globalConfirmModal');
-    const msgElem = document.getElementById('globalConfirmMessage');
-    
-    if (modal && msgElem) {
-        msgElem.textContent = message;
-        confirmCallback = callback;
-        modal.classList.add('show');
-    } else {
-        if(confirm(message)) callback();
-    }
-};
-
-window.closeConfirmModal = function() {
-    document.getElementById('globalConfirmModal').classList.remove('show');
-    confirmCallback = null;
-};
-
-window.executeConfirmAction = function() {
-    if (confirmCallback) confirmCallback();
-    closeConfirmModal();
-};
-
-// ============================================
-// 🔔 نظام الإشعارات (Toast)
+// 🔔 نظام الإشعارات (Toast Notifications)
 // ============================================
 
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast-notification toast-${type}`;
     toast.innerText = message;
+    
+    // تنسيق الإشعار (يفضل نقله لملف CSS)
+    toast.style.position = 'fixed';
+    toast.style.top = '20px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translate(-50%, 0)';
+    toast.style.padding = '10px 20px';
+    toast.style.borderRadius = '5px';
+    toast.style.color = '#fff';
+    toast.style.zIndex = '10000';
+    toast.style.transition = 'all 0.3s ease';
+    
+    if (type === 'success') toast.style.backgroundColor = '#28a745';
+    else if (type === 'error') toast.style.backgroundColor = '#dc3545';
+    else toast.style.backgroundColor = '#17a2b8';
+
     document.body.appendChild(toast);
+    
+    // إخفاء الإشعار بعد 3 ثواني
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translate(-50%, -20px)';
-        setTimeout(() => { if (document.body.contains(toast)) document.body.removeChild(toast); }, 500);
+        setTimeout(() => { 
+            if (document.body.contains(toast)) document.body.removeChild(toast); 
+        }, 500);
     }, 3000);
 }
 
+// دوال مساعدة للإشعارات
 window.alert = function(message) { showToast(message, 'info'); };
 window.showSuccess = (msg) => showToast(msg, 'success');
 window.showError = (msg) => showToast(msg, 'error');
-window.showAuthNotification = function(message, type) { showToast(message, type === 'success' ? 'success' : 'error'); };
+window.showAuthNotification = function(message, type) { 
+    showToast(message, type === 'success' ? 'success' : 'error'); 
+};
+
+// ============================================
+// 🛠️ دوال مساعدة (Helpers)
+// ============================================
 
 function checkAuth() {
     const session = sessionStorage.getItem('currentUser');
-    if (!session) { window.location.href = '../../index.html'; return null; }
+    if (!session) { 
+        window.location.href = '../../index.html'; 
+        return null; 
+    }
     return JSON.parse(session);
 }
 
-// 🔥 تم التعديل: تسجيل الخروج الفوري بدون رسالة تأكيد
+// تسجيل الخروج
 function logout() {
     sessionStorage.removeItem('currentUser');
     window.location.href = '../../index.html';
 }
 
-function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser') || 'null'); }
+function getCurrentUser() { 
+    return JSON.parse(sessionStorage.getItem('currentUser') || 'null'); 
+}
 
+// تصدير الدوال للنطاق العام (Global Scope)
 window.login = login;
 window.checkAuth = checkAuth;
 window.logout = logout;

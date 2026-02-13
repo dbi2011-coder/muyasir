@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-messages.js
-// الوصف: شات الطالب (واجهة نظيفة بدون إحصائيات + MP3 + ألوان غامقة)
+// الوصف: شات الطالب (واجهة نظيفة + إصلاح الفيسات + MP3 + ألوان غامقة)
 // ============================================
 
 let attachmentData = null;
@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
             renderStudentChatLayout();
             loadChatWithTeacher();
             
+            // إغلاق النوافذ المنبثقة عند النقر خارجها
             document.addEventListener('click', function(e) {
                 const popup = document.getElementById('emojiPopup');
                 const btn = document.getElementById('emojiBtn');
@@ -132,7 +133,26 @@ function injectChatStyles() {
         @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
 
         .attachment-preview { position: absolute; bottom: 85px; right: 20px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; display: none; z-index: 10; }
-        .emoji-popup { position: absolute; bottom: 80px; right: 20px; width: 320px; height: 250px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: none; padding: 10px; grid-template-columns: repeat(7, 1fr); gap: 5px; overflow-y: auto; z-index: 100; }
+        
+        /* 🔥 تعديل مكان الفيسات لتظهر فوق القائمة الجانبية 🔥 */
+        .emoji-popup { 
+            position: absolute; 
+            bottom: 85px; 
+            right: 60px; /* تم التعديل من 20px إلى 60px */
+            width: 320px; 
+            height: 250px; 
+            background: white; 
+            border: 1px solid #e2e8f0; 
+            border-radius: 12px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15); 
+            display: none; 
+            padding: 10px; 
+            grid-template-columns: repeat(7, 1fr); 
+            gap: 5px; 
+            overflow-y: auto; 
+            z-index: 9999; /* طبقة عالية جداً للظهور فوق كل شيء */
+        }
+
         .emoji-item { font-size: 1.4rem; cursor: pointer; text-align: center; padding: 5px; border-radius: 5px; transition: 0.2s; }
         .emoji-item:hover { background: #f1f5f9; transform: scale(1.2); }
         

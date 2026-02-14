@@ -444,7 +444,6 @@ function showCreateTestModal() { document.getElementById('editTestId').value='';
 async function saveTest() { const t=document.getElementById('testTitle').value; if(!t)return; const qs = await collectQuestionsFromContainer('questionsContainer'); const ts=JSON.parse(localStorage.getItem('tests')||'[]'); const id=document.getElementById('editTestId').value; const d={id:id?parseInt(id):Date.now(), teacherId:getCurrentUser().id, title:t, subject:document.getElementById('testSubject').value, description:document.getElementById('testDescription').value, questions:qs, createdAt:new Date().toISOString()}; if(id){const i=ts.findIndex(x=>x.id==id); if(i!==-1)ts[i]=d;}else ts.push(d); localStorage.setItem('tests',JSON.stringify(ts)); document.getElementById('createTestModal').classList.remove('show'); loadTests(); }
 function editTest(id) { const t=JSON.parse(localStorage.getItem('tests')).find(x=>x.id===id); if(!t)return; document.getElementById('editTestId').value=t.id; document.getElementById('testTitle').value=t.title; document.getElementById('testSubject').value=t.subject; document.getElementById('testDescription').value=t.description; const c=document.getElementById('questionsContainer'); c.innerHTML=''; (t.questions||[]).forEach(q=>addQuestionToContainer(c,'سؤال',q)); document.getElementById('createTestModal').classList.add('show'); }
 
-// 🔥 تحديث عمليات الحذف
 function deleteTest(id) { 
     showConfirmModal('هل أنت متأكد من حذف هذا الاختبار؟', function() {
         const t = JSON.parse(localStorage.getItem('tests')).filter(x => x.id !== id); 
@@ -493,4 +492,29 @@ function deleteObjective(id) {
         loadObjectives();
         showSuccess('تم الحذف');
     });
+}
+
+// =======================================================
+// ✅ الإضافة الجديدة: دوال نافذة التصدير (Export Modal)
+// =======================================================
+
+function showExportModal() {
+    // محاولة إيجاد النافذة
+    const modal = document.getElementById('exportModal');
+    
+    if (modal) {
+        modal.classList.add('show'); // لإظهار النافذة إذا كنت تستخدم CSS class 'show'
+        modal.style.display = 'block'; // للتأكد من الظهور في حال عدم استخدام الكلاس
+    } else {
+        console.warn('لم يتم العثور على العنصر id="exportModal" في ملف HTML.');
+        alert('نظام التصدير قيد التطوير حالياً.');
+    }
+}
+
+function closeExportModal() {
+    const modal = document.getElementById('exportModal');
+    if (modal) {
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+    }
 }

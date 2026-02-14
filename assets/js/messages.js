@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (النسخة النهائية: MP3 - بدون زر تنزيل - أيقونات غامقة - PDF)
+// الوصف: شات المعلم (النسخة النهائية: MP3 - بدون زر تنزيل - أيقونات غامقة - PDF - نافذة حذف احترافية)
 // ============================================
 
 let activeChatStudentId = null;
@@ -30,6 +30,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 if (!e.target.closest('.msg-options-btn')) {
                     document.querySelectorAll('.msg-dropdown').forEach(menu => menu.style.display = 'none');
+                }
+                // إغلاق نافذة الحذف عند النقر خارجها
+                const deleteModal = document.getElementById('deleteConfirmModal');
+                if (deleteModal && e.target === deleteModal) {
+                    closeDeleteModal();
                 }
             });
         } catch (e) { console.error(e); }
@@ -137,6 +142,38 @@ function injectChatStyles() {
         .emoji-item { font-size: 1.4rem; cursor: pointer; text-align: center; padding: 5px; border-radius: 5px; transition: 0.2s; }
         .emoji-item:hover { background: #f1f5f9; transform: scale(1.2); }
         .empty-chat { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; }
+
+        /* --- أنماط نافذة الحذف الجديدة --- */
+        .custom-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 2000;
+            display: none; align-items: center; justify-content: center;
+            backdrop-filter: blur(3px); animation: fadeIn 0.2s;
+        }
+        .custom-modal-box {
+            background: #fff; padding: 25px; border-radius: 16px;
+            width: 90%; max-width: 400px; text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            animation: popIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+        }
+        .modal-icon-danger {
+            width: 60px; height: 60px; background: #fee2e2; color: #dc2626;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 1.8rem; margin: 0 auto 15px;
+        }
+        .modal-title { font-size: 1.2rem; font-weight: bold; color: #1f2937; margin-bottom: 8px; }
+        .modal-desc { color: #6b7280; font-size: 0.95rem; margin-bottom: 20px; line-height: 1.5; }
+        .modal-actions { display: flex; gap: 10px; justify-content: center; }
+        .btn-modal {
+            flex: 1; padding: 12px; border-radius: 10px; font-weight: bold;
+            cursor: pointer; border: none; transition: 0.2s; font-size: 0.95rem;
+        }
+        .btn-modal-cancel { background: #f3f4f6; color: #374151; }
+        .btn-modal-cancel:hover { background: #e5e7eb; }
+        .btn-modal-delete { background: #dc2626; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-modal-delete:hover { background: #b91c1c; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); }
+        @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     `;
     document.head.appendChild(style);
 }
@@ -145,7 +182,7 @@ function renderChatLayout() {
     const container = document.getElementById('messagesList');
     container.innerHTML = '';
     container.className = '';
-    const emojis = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','👻','💀','☠️','👽','👾','🤖','🎃','😺','😸','😹','😻','😼','😽','🙀','😿','😾','👋','🤚','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦵','🦶','👂','🦻','👃','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕️','🛑','⛔️','📛','🚫','💯','💢','♨️','❗️','❕','❓','❔','‼️','⁉️','⚠️','✅','❎','🌐','💠','Ⓜ️','🌀','💤','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','#️⃣','*️⃣','▶️','⏸','⏯','⏹','⏺','⏭','⏮','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗','✖️','♾','💲','💱','™️','©️','®️','👁‍🗨','🔚','🔙','🔛','🔝','🔜','✔️','☑️','🔘','🔴','🟠','🟡','🟢','🔵','🟣','⚫️','⚪️','🟤','🔺','🔻','🔸','🔹','🔶','🔷','🔳','🔲','▪️','▫️','◾️','◽️','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛️','⬜️','🟫','🔈','🔇','🔉','🔊','🔔','🔕','📣','📢','💬','💭','🗯','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛'];
+    const emojis = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','👻','💀','☠️','👽','👾','🤖','🎃','😺','😺','😹','😻','😼','😽','🙀','😿','😾','👋','🤚','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦵','🦶','👂','🦻','👃','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕️','🛑','⛔️','📛','🚫','💯','💢','♨️','❗️','❕','❓','❔','‼️','⁉️','⚠️','✅','❎','🌐','💠','Ⓜ️','🌀','💤','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','#️⃣','*️⃣','▶️','⏸','⏯','⏹','⏺','⏭','⏮','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗','✖️','♾','💲','💱','™️','©️','®️','👁‍🗨','🔚','🔙','🔛','🔝','🔜','✔️','☑️','🔘','🔴','🟠','🟡','🟢','🔵','🟣','⚫️','⚪️','🟤','🔺','🔻','🔸','🔹','🔶','🔷','🔳','🔲','▪️','▫️','◾️','◽️','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛️','⬜️','🟫','🔈','🔇','🔉','🔊','🔔','🔕','📣','📢','💬','💭','🗯','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛'];
     const emojiHtml = emojis.map(e => `<div class="emoji-item" onclick="addEmoji('${e}')">${e}</div>`).join('');
 
     container.innerHTML = `
@@ -221,6 +258,25 @@ function renderChatLayout() {
                     <button class="btn-tool btn-mic" onclick="startRecording()" title="تسجيل صوتي"><i class="fas fa-microphone"></i></button>
                     <button class="btn-tool" onclick="cancelEdit()" id="cancelEditBtn" style="display:none; background:#ffebee; color:red;" title="إلغاء التعديل"><i class="fas fa-times"></i></button>
                     <button class="btn-send-pill" id="sendBtn" onclick="sendChatMessage()">أرسل <i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div id="deleteConfirmModal" class="custom-modal-overlay">
+            <div class="custom-modal-box">
+                <div class="modal-icon-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="modal-title">حذف المحادثة؟</div>
+                <div class="modal-desc">
+                    هل أنت متأكد من رغبتك في حذف سجل المحادثة بالكامل؟<br>
+                    <span style="color:#dc2626; font-size:0.85rem;">⚠️ لا يمكن التراجع عن هذا الإجراء</span>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-modal btn-modal-cancel" onclick="closeDeleteModal()">إلغاء</button>
+                    <button class="btn-modal btn-modal-delete" onclick="confirmDeleteAction()">
+                        <i class="fas fa-trash-alt"></i> نعم، حذف
+                    </button>
                 </div>
             </div>
         </div>
@@ -346,19 +402,40 @@ function exportChatToPDF() {
     }
 }
 
+// دالة عرض النافذة المنبثقة بدلاً من confirm
 function deleteEntireConversation() {
     if (!activeChatStudentId) return;
-    if (!confirm('هل أنت متأكد من حذف كامل سجل المحادثة؟')) return;
+    document.getElementById('deleteConfirmModal').style.display = 'flex';
+}
+
+// دالة إغلاق النافذة
+function closeDeleteModal() {
+    document.getElementById('deleteConfirmModal').style.display = 'none';
+}
+
+// دالة تنفيذ الحذف الفعلي (تُستدعى عند الضغط على "نعم، حذف")
+function confirmDeleteAction() {
+    if (!activeChatStudentId) return;
+    
     const currentUser = getCurrentUser();
+    
+    // 1. حذف رسائل المعلم
     let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
     teacherMsgs = teacherMsgs.filter(m => !(m.teacherId === currentUser.id && m.studentId === activeChatStudentId));
     localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
+    
+    // 2. حذف رسائل الطالب (محاكاة)
     let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
     studentMsgs = studentMsgs.filter(m => !(m.teacherId === currentUser.id && m.studentId === activeChatStudentId));
     localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
+    
+    // 3. تحديث الواجهة
     document.getElementById('chatMessagesArea').innerHTML = '';
-    loadConversations();
-    loadChatMessages(activeChatStudentId);
+    loadConversations(); // تحديث القائمة الجانبية
+    loadChatMessages(activeChatStudentId); // تحديث منطقة الشات (ستظهر فارغة)
+    
+    // 4. إغلاق النافذة
+    closeDeleteModal();
 }
 
 function startRecording() {
@@ -430,3 +507,5 @@ function loadStudentsForMessaging() { const recipientSelect = document.getElemen
 window.showNewMessageModal = showNewMessageModal; window.sendNewMessage = function() { const sId = document.getElementById('messageRecipient').value; if(sId) { document.getElementById('newMessageModal').classList.remove('show'); openChat(parseInt(sId)); } }; window.closeNewMessageModal = function() { document.getElementById('newMessageModal').classList.remove('show'); };
 window.deleteEntireConversation = deleteEntireConversation;
 window.exportChatToPDF = exportChatToPDF;
+window.closeDeleteModal = closeDeleteModal;
+window.confirmDeleteAction = confirmDeleteAction;

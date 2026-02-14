@@ -244,8 +244,8 @@ function printProgressLog() {
             <div class="print-header">
                 <div class="header-side">
                     المملكة العربية السعودية<br>
-                    وزارة التعليم<br>
-                    برنامج صعوبات التعلم
+                    برنامج صعوبات التعلم<br>
+                    نظام ميسر التعلم
                 </div>
                 <div class="header-mid">
                     <h2>سجل المتابعة اليومي</h2>
@@ -267,9 +267,9 @@ function printProgressLog() {
             ${tableContent}
 
             <div class="footer-signatures">
-                <div>توقيع معلم البرنامج</div>
-                <div>ختم المدرسة</div>
-                <div>توقيع ولي الأمر</div>
+                <div>توقيع معلم صعوبات التعلم</div>
+               
+                <div>توقيع مدير المدرسة</div>
             </div>
             <script>
                 window.onload = function() { window.print(); window.close(); }
@@ -1130,3 +1130,4 @@ function assignLibraryLesson() {
 function regenerateLessons() {
     autoGenerateLessons(); 
 }
+

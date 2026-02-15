@@ -1,247 +1,117 @@
-// ============================================
-// 📁 الملف: assets/js/dashboard.js
-// الوصف: إدارة منطق لوحة التحكم (تم تحديث الخروج الفوري)
-// ============================================
+/* ============================================================
+   ملف التحكم في لوحة القيادة - Dashboard JS
+   ============================================================ */
 
 document.addEventListener('DOMContentLoaded', function() {
-    const currentUser = getCurrentUser();
     
-    // إعداد القائمة المتنقلة
-    setupMobileMenu();
-
-    if (!currentUser) {
-        return;
-    }
-
-    updateUserInterface(currentUser);
-
-    if (currentUser.role === 'student') {
-        updateStudentStats(currentUser.id);
-    } else if (currentUser.role === 'teacher') {
-        updateTeacherStats(currentUser.id);
-    } else if (currentUser.role === 'admin') {
-        updateAdminStats();
-    }
-
-    setupSessionWarning();
-});
-
-// ----------------------------------------------------------------
-// 1. إحصائيات الطالب
-// ----------------------------------------------------------------
-function updateStudentStats(studentId) {
-    if (!document.getElementById('pendingTests')) return;
-
-    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
-
-    const pendingTestsCount = studentTests.filter(t => t.studentId == studentId && t.status === 'pending').length;
-    document.getElementById('pendingTests').textContent = pendingTestsCount;
-
-    const currentLessonsCount = studentLessons.filter(l => l.studentId == studentId && (l.status === 'pending' || l.status === 'started')).length;
-    document.getElementById('currentLessons').textContent = currentLessonsCount;
-
-    const pendingAssignmentsCount = studentAssignments.filter(a => a.studentId == studentId && a.status === 'pending').length;
-    document.getElementById('pendingAssignments').textContent = pendingAssignmentsCount;
-
-    const myLessons = studentLessons.filter(l => l.studentId == studentId);
-    const completedLessons = myLessons.filter(l => l.status === 'completed' || l.status === 'accelerated').length;
-    
-    let progress = 0;
-    if (myLessons.length > 0) {
-        progress = Math.round((completedLessons / myLessons.length) * 100);
-    }
-    document.getElementById('progressPercentage').textContent = progress + '%';
-}
-
-// ----------------------------------------------------------------
-// 2. إحصائيات المعلم
-// ----------------------------------------------------------------
-function updateTeacherStats(teacherId) {
-    if (!document.getElementById('studentsCount')) return;
-
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const assignments = JSON.parse(localStorage.getItem('assignments') || '[]');
-    const messages = JSON.parse(localStorage.getItem('messages') || '[]');
-
-    const myStudentsCount = users.filter(u => u.role === 'student').length; 
-    document.getElementById('studentsCount').textContent = myStudentsCount;
-
-    const myLessonsCount = lessons.length; 
-    document.getElementById('lessonsCount').textContent = myLessonsCount;
-
-    const myAssignmentsCount = assignments.length;
-    document.getElementById('assignmentsCount').textContent = myAssignmentsCount;
-
-    const unreadMsgCount = messages.filter(m => m.toId == teacherId && !m.isRead).length;
-    document.getElementById('unreadMessages').textContent = unreadMsgCount;
-}
-
-// ----------------------------------------------------------------
-// 3. إحصائيات المدير
-// ----------------------------------------------------------------
-function updateAdminStats() {
-    if (!document.getElementById('teachersCount')) return;
-
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    
-    const teachersCount = users.filter(u => u.role === 'teacher').length;
-    document.getElementById('teachersCount').textContent = teachersCount;
-
-    const studentsCount = users.filter(u => u.role === 'student').length;
-    if(document.getElementById('studentsCount')) {
-        document.getElementById('studentsCount').textContent = studentsCount;
-    }
-
-    const activeSessions = Math.floor(Math.random() * 5) + 1; 
-    if(document.getElementById('activeSessions')) {
-        document.getElementById('activeSessions').textContent = activeSessions;
-    }
-
-    const pendingActions = users.filter(u => u.status === 'suspended' || u.status === 'pending').length;
-    if(document.getElementById('pendingActions')) {
-        document.getElementById('pendingActions').textContent = pendingActions;
-    }
-}
-
-// ----------------------------------------------------------------
-// واجهة المستخدم والقوائم
-// ----------------------------------------------------------------
-
-function updateUserInterface(user) {
-    const userNameElement = document.getElementById('userName');
-    const userAvatarElement = document.getElementById('userAvatar');
-    
-    if (userNameElement) {
-        if (user.role === 'teacher') {
-            userNameElement.textContent = `أ/ ${user.name}`;
-        } else if (user.role === 'admin') {
-            userNameElement.textContent = 'مدير النظام';
-        } else if (user.role === 'student') {
-            userNameElement.textContent = user.name;
-        } else {
-            userNameElement.textContent = user.name;
-        }
-    }
-    
-    if (userAvatarElement) {
-        userAvatarElement.textContent = user.name.charAt(0);
-    }
-
-    updatePageTitle(user.role);
-}
-
-function updatePageTitle(role) {
-    const titles = {
-        'admin': 'لوحة تحكم المدير',
-        'teacher': 'لوحة تحكم المعلم',
-        'student': 'لوحة تحكم الطالب',
-        'committee': 'لوحة تحكم اللجنة'
-    };
-    
-    const title = titles[role] || 'لوحة التحكم';
-    if (document.title === 'ميسر التعلم') {
-        document.title = `${title} - ميسر التعلم`;
-    }
-}
-
-function setupMobileMenu() {
-    const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+    // 1. تفعيل زر القائمة للجوال (Mobile Menu Toggle)
+    const mobileBtn = document.querySelector('.mobile-menu-btn');
     const sidebar = document.querySelector('.sidebar');
     
-    if (mobileMenuBtn && sidebar) {
-        const newBtn = mobileMenuBtn.cloneNode(true);
-        mobileMenuBtn.parentNode.replaceChild(newBtn, mobileMenuBtn);
-        
-        newBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
+    // إنشاء طبقة التعتيم (Overlay) ديناميكياً إذا لم تكن موجودة
+    let overlay = document.querySelector('.sidebar-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'sidebar-overlay';
+        document.body.appendChild(overlay);
+    }
+
+    if (mobileBtn && sidebar) {
+        mobileBtn.addEventListener('click', function(e) {
+            e.stopPropagation(); // منع انتقال النقرة
             sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
         });
 
-        document.addEventListener('click', function(event) {
-            if (window.innerWidth <= 768) {
-                const isClickInsideSidebar = sidebar.contains(event.target);
-                const isClickOnMenuBtn = newBtn.contains(event.target);
-                
-                if (!isClickInsideSidebar && !isClickOnMenuBtn && sidebar.classList.contains('active')) {
+        // إغلاق القائمة عند الضغط على طبقة التعتيم
+        overlay.addEventListener('click', function() {
+            sidebar.classList.remove('active');
+            overlay.classList.remove('active');
+        });
+
+        // إغلاق القائمة عند اختيار عنصر منها (للجوال)
+        const sidebarLinks = document.querySelectorAll('.sidebar-menu a');
+        sidebarLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                if (window.innerWidth <= 992) {
                     sidebar.classList.remove('active');
+                    overlay.classList.remove('active');
                 }
-            }
+            });
         });
     }
-}
 
-// ----------------------------------------------------------------
-// دوال مساعدة عامة
-// ----------------------------------------------------------------
-
-function getCurrentUser() {
-    try {
-        const session = sessionStorage.getItem('currentUser');
-        return session ? JSON.parse(session) : null;
-    } catch (e) {
-        return null;
+    // 2. التحقق من تسجيل الدخول (Auth Check)
+    checkAuth();
+    
+    // 3. تحميل اسم المستخدم
+    loadUserInfo();
+    
+    // 4. تحميل الإحصائيات (إذا كنا في الصفحة الرئيسية للوحة التحكم)
+    if (document.getElementById('totalStudents')) {
+        loadDashboardStats();
     }
-}
+});
 
-// 🔥 تم التعديل: تسجيل الخروج الفوري بدون رسالة تأكيد
-function logout() {
-    sessionStorage.removeItem('currentUser');
-    window.location.href = '../../index.html';
-}
-
+// وظيفة التحقق من تسجيل الدخول
 function checkAuth() {
-    const user = getCurrentUser();
+    const user = sessionStorage.getItem('currentUser');
     if (!user) {
         window.location.href = '../../index.html';
-        return null;
     }
-    return user;
 }
 
-function generateId() {
-    return Math.floor(Math.random() * 1000000) + 1;
+// وظيفة تسجيل الخروج
+function logout() {
+    if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+        sessionStorage.removeItem('currentUser');
+        window.location.href = '../../index.html';
+    }
 }
 
-function setupSessionWarning() {
-    setInterval(() => {
-        const loginTime = sessionStorage.getItem('loginTime');
-        if (loginTime) {
-            const now = new Date();
-            const loginDate = new Date(loginTime);
-            const hoursDiff = (now - loginDate) / (1000 * 60 * 60);
-            
-            if (hoursDiff > 7.5) {
-                showSessionWarningUI();
-            }
+// تحميل بيانات المستخدم
+function loadUserInfo() {
+    const userStr = sessionStorage.getItem('currentUser');
+    if (userStr) {
+        const user = JSON.parse(userStr).user;
+        const nameElement = document.getElementById('userName');
+        if (nameElement) {
+            nameElement.textContent = user.name;
         }
-    }, 60000); 
-}
-
-function showSessionWarningUI() {
-    if (!document.getElementById('sessionWarning')) {
-        const warning = document.createElement('div');
-        warning.id = 'sessionWarning';
-        warning.style.cssText = `
-            position: fixed; bottom: 20px; left: 20px; right: 20px;
-            background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px;
-            padding: 15px; z-index: 10000; box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            display: flex; justify-content: space-between; align-items: center; color: #856404;
-        `;
-        warning.innerHTML = `
-            <span>⚠️ جلسة العمل ستنتهي قريباً. يرجى حفظ العمل الحالي.</span>
-            <button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;">✕</button>
-        `;
-        document.body.appendChild(warning);
-        
-        setTimeout(() => {
-            if (warning.parentElement) warning.remove();
-        }, 30000);
     }
 }
 
-function showNotifications() {
-    // يمكن تفعيلها لاحقاً
+// تحميل إحصائيات لوحة التحكم (وهمية للعرض أو حقيقية من التخزين)
+function loadDashboardStats() {
+    const user = JSON.parse(sessionStorage.getItem('currentUser')).user;
+    
+    // جلب البيانات من LocalStorage
+    const students = JSON.parse(localStorage.getItem('students') || '[]').filter(s => s.teacherId === user.id);
+    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]').filter(l => l.teacherId === user.id);
+    const tests = JSON.parse(localStorage.getItem('tests') || '[]').filter(t => t.teacherId === user.id);
+    
+    // تحديث الأرقام في الواجهة
+    updateStat('totalStudents', students.length);
+    updateStat('activeLessons', lessons.length);
+    updateStat('completedTests', tests.length);
+}
+
+function updateStat(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+}
+
+// دوال مساعدة عامة (تستخدم في صفحات أخرى)
+function showSuccess(message) {
+    alert('✅ ' + message);
+}
+
+function showError(message) {
+    alert('❌ ' + message);
+}
+
+function showConfirmModal(message, onConfirm) {
+    if(confirm(message)) {
+        onConfirm();
+    }
 }

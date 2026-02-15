@@ -1,8 +1,4 @@
-// ============================================
-// 📁 الملف: assets/js/committee-reports.js
-// الوصف: إدارة تقارير اللجنة (محدث لإصلاح الجدول الدراسي)
-// ============================================
-
+// إدارة التقارير والإحصائيات للجنة
 let selectedStudents = new Set();
 let currentReportStudentIds = [];
 
@@ -14,14 +10,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// 🔥 دالة إصلاح النصوص (الحل السحري لمشكلة الأحد/الاحد)
-function normalizeText(text) {
-    if (!text) return "";
-    return String(text).trim()
-        .replace(/[أإآ]/g, 'ا') // تحويل جميع الألفات إلى ا
-        .replace(/ة/g, 'ه');    // تحويل التاء المربوطة
-}
-
 function initializeReportsPage() {
     populateTeacherFilter();
     populateGradeFilter();
@@ -29,8 +17,6 @@ function initializeReportsPage() {
 
 function populateTeacherFilter() {
     const teacherFilter = document.getElementById('teacherFilter');
-    if (!teacherFilter) return;
-
     const currentUser = getCurrentUser();
     const assignedTeachers = getAssignedTeachers(currentUser.id);
     
@@ -46,9 +32,8 @@ function populateTeacherFilter() {
 
 function populateGradeFilter() {
     const gradeFilter = document.getElementById('gradeFilter');
-    if (!gradeFilter) return;
-
     const grades = ['الصف الأول', 'الصف الثاني', 'الصف الثالث', 'الصف الرابع', 'الصف الخامس', 'الصف السادس'];
+    
     gradeFilter.innerHTML = '<option value="all">جميع الصفوف</option>';
     
     grades.forEach(grade => {
@@ -61,18 +46,15 @@ function populateGradeFilter() {
 
 function loadStudentsForReports() {
     const tableBody = document.getElementById('studentsTableBody');
-    if (!tableBody) return;
-
     const currentUser = getCurrentUser();
-    // جلب المعلمين المرتبطين بهذا العضو
     const assignedTeacherIds = getAssignedTeacherIds(currentUser.id);
     
+    // جلب جميع طلاب المعلمين المتابعين
     const allStudents = JSON.parse(localStorage.getItem('students') || '[]');
     const teachers = JSON.parse(localStorage.getItem('teachers') || '[]');
     
-    // فلترة الطلاب التابعين للمعلمين المخصصين للجنة
     const filteredStudents = allStudents.filter(student => 
-        assignedTeacherIds.includes(String(student.teacherId))
+        assignedTeacherIds.includes(student.teacherId)
     );
     
     if (filteredStudents.length === 0) {
@@ -91,7 +73,7 @@ function loadStudentsForReports() {
     }
     
     tableBody.innerHTML = filteredStudents.map(student => {
-        const teacher = teachers.find(t => t.id == student.teacherId);
+        const teacher = teachers.find(t => t.id === student.teacherId);
         const progress = student.progress || 0;
         const progressClass = progress < 30 ? 'danger' : progress < 60 ? 'warning' : 'success';
         
@@ -122,6 +104,9 @@ function loadStudentsForReports() {
                         <button class="btn btn-sm btn-primary" onclick="viewStudentReport(${student.id})">
                             <span class="btn-icon">👁️</span>
                         </button>
+                        <button class="btn btn-sm btn-success" onclick="generateStudentReport(${student.id})">
+                            <span class="btn-icon">📄</span>
+                        </button>
                     </div>
                 </td>
             </tr>
@@ -132,8 +117,8 @@ function loadStudentsForReports() {
 function filterStudents() {
     const teacherFilter = document.getElementById('teacherFilter').value;
     const gradeFilter = document.getElementById('gradeFilter').value;
-    const subjectFilter = document.getElementById('subjectFilter') ? document.getElementById('subjectFilter').value : 'all';
-    const progressFilter = document.getElementById('progressFilter') ? document.getElementById('progressFilter').value : 'all';
+    const subjectFilter = document.getElementById('subjectFilter').value;
+    const progressFilter = document.getElementById('progressFilter').value;
     
     const rows = document.querySelectorAll('#studentsTableBody tr[data-student-id]');
     
@@ -145,13 +130,27 @@ function filterStudents() {
         
         let showRow = true;
         
-        if (teacherFilter !== 'all' && teacherFilter != teacherId) showRow = false;
-        if (gradeFilter !== 'all' && gradeFilter !== grade) showRow = false;
-        if (subjectFilter !== 'all' && subjectFilter !== subject) showRow = false;
+        // فلترة حسب المعلم
+        if (teacherFilter !== 'all' && teacherFilter !== teacherId) {
+            showRow = false;
+        }
         
+        // فلترة حسب الصف
+        if (gradeFilter !== 'all' && gradeFilter !== grade) {
+            showRow = false;
+        }
+        
+        // فلترة حسب المادة
+        if (subjectFilter !== 'all' && subjectFilter !== subject) {
+            showRow = false;
+        }
+        
+        // فلترة حسب نسبة التقدم
         if (progressFilter !== 'all') {
             const [min, max] = progressFilter.split('-').map(Number);
-            if (progress < min || progress > max) showRow = false;
+            if (progress < min || progress > max) {
+                showRow = false;
+            }
         }
         
         row.style.display = showRow ? '' : 'none';
@@ -160,11 +159,9 @@ function filterStudents() {
 
 function toggleSelectAll() {
     const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-    const checkboxes = document.querySelectorAll('.student-checkbox');
-    // نختار فقط الظاهرين في حال وجود فلترة
-    const visibleCheckboxes = Array.from(checkboxes).filter(cb => cb.closest('tr').style.display !== 'none');
+    const checkboxes = document.querySelectorAll('.student-checkbox:visible');
     
-    visibleCheckboxes.forEach(checkbox => {
+    checkboxes.forEach(checkbox => {
         checkbox.checked = selectAllCheckbox.checked;
         const studentId = parseInt(checkbox.value);
         
@@ -197,10 +194,8 @@ function toggleStudentSelection(studentId) {
 }
 
 function selectAllStudents() {
-    const checkboxes = document.querySelectorAll('.student-checkbox');
-    const visibleCheckboxes = Array.from(checkboxes).filter(cb => cb.closest('tr').style.display !== 'none');
-
-    visibleCheckboxes.forEach(checkbox => {
+    const checkboxes = document.querySelectorAll('.student-checkbox:visible');
+    checkboxes.forEach(checkbox => {
         checkbox.checked = true;
         const studentId = parseInt(checkbox.value);
         selectedStudents.add(studentId);
@@ -224,22 +219,18 @@ function updateSelectedCount() {
 
 function updateSelectAllCheckbox() {
     const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-    const checkboxes = document.querySelectorAll('.student-checkbox');
-    const visibleCheckboxes = Array.from(checkboxes).filter(cb => cb.closest('tr').style.display !== 'none');
-    const checkedVisibleCheckboxes = visibleCheckboxes.filter(cb => cb.checked);
+    const visibleCheckboxes = document.querySelectorAll('.student-checkbox:visible');
+    const checkedVisibleCheckboxes = document.querySelectorAll('.student-checkbox:visible:checked');
     
-    if (visibleCheckboxes.length > 0) {
-        selectAllCheckbox.checked = visibleCheckboxes.length === checkedVisibleCheckboxes.length;
-        selectAllCheckbox.indeterminate = checkedVisibleCheckboxes.length > 0 && checkedVisibleCheckboxes.length < visibleCheckboxes.length;
-    } else {
-        selectAllCheckbox.checked = false;
-        selectAllCheckbox.indeterminate = false;
-    }
+    selectAllCheckbox.checked = visibleCheckboxes.length > 0 && 
+                               visibleCheckboxes.length === checkedVisibleCheckboxes.length;
+    selectAllCheckbox.indeterminate = checkedVisibleCheckboxes.length > 0 && 
+                                     checkedVisibleCheckboxes.length < visibleCheckboxes.length;
 }
 
 function generateReportForSelected() {
     if (selectedStudents.size === 0) {
-        alert('يرجى تحديد طلاب لإنشاء تقرير لهم');
+        showAuthNotification('يرجى تحديد طلاب لإنشاء تقرير لهم', 'warning');
         return;
     }
     
@@ -263,37 +254,50 @@ function generateReport() {
     const reportNotes = document.getElementById('reportNotes').value;
     
     if (currentReportStudentIds.length === 0) {
-        alert('لم يتم تحديد طلاب');
+        showAuthNotification('لم يتم تحديد طلاب', 'error');
         return;
     }
     
-    const currentUser = getCurrentUser();
+    showAuthNotification('جاري إنشاء التقرير...', 'info');
     
-    // حفظ التقرير في قاعدة البيانات
-    const committeeReports = JSON.parse(localStorage.getItem('committeeReports') || '[]');
-    const reportId = Date.now();
-    
-    const newReport = {
-        id: reportId,
-        committeeId: currentUser.id,
-        studentIds: currentReportStudentIds,
-        reportType: reportType,
-        format: reportFormat,
-        notes: reportNotes,
-        createdAt: new Date().toISOString(),
-        status: 'generated'
-    };
-    
-    committeeReports.push(newReport);
-    localStorage.setItem('committeeReports', JSON.stringify(committeeReports));
-    
-    // عرض التقرير مباشرة
-    showGeneratedReport(reportId);
-    
-    hideReportOptions();
-    selectedStudents.clear();
-    resetCheckboxes();
-    loadGeneratedReports();
+    setTimeout(() => {
+        const currentUser = getCurrentUser();
+        
+        // حفظ التقرير في قاعدة البيانات
+        const committeeReports = JSON.parse(localStorage.getItem('committeeReports') || '[]');
+        const reportId = generateId();
+        
+        const newReport = {
+            id: reportId,
+            committeeId: currentUser.id,
+            studentIds: currentReportStudentIds,
+            reportType: reportType,
+            format: reportFormat,
+            notes: reportNotes,
+            createdAt: new Date().toISOString(),
+            status: 'generated'
+        };
+        
+        committeeReports.push(newReport);
+        localStorage.setItem('committeeReports', JSON.stringify(committeeReports));
+        
+        // إضافة نشاط
+        addCommitteeActivity({
+            type: 'report',
+            title: 'أنشأت تقريراً',
+            description: `تقرير ${getReportTypeName(reportType)} لـ ${currentReportStudentIds.length} طالب`
+        });
+        
+        // عرض التقرير
+        showGeneratedReport(reportId);
+        
+        showAuthNotification('تم إنشاء التقرير بنجاح', 'success');
+        hideReportOptions();
+        selectedStudents.clear();
+        resetCheckboxes();
+        loadGeneratedReports();
+        updateCommitteeStats();
+    }, 2000);
 }
 
 function showGeneratedReport(reportId) {
@@ -301,146 +305,42 @@ function showGeneratedReport(reportId) {
     const report = reports.find(r => r.id === reportId);
     
     if (!report) {
-        alert('التقرير غير موجود');
+        showAuthNotification('التقرير غير موجود', 'error');
         return;
     }
     
     document.getElementById('reportModalTitle').textContent = `تقرير ${getReportTypeName(report.reportType)}`;
     
-    // جلب بيانات الطلاب المحددين في هذا التقرير
+    // بناء معاينة التقرير
     const students = JSON.parse(localStorage.getItem('students') || '[]');
     const selectedStudents = students.filter(s => report.studentIds.includes(s.id));
     
     document.getElementById('reportPreview').innerHTML = `
         <div class="report-preview-content">
             <h4>معلومات التقرير:</h4>
-            <table class="table table-bordered">
-                <tr><th>نوع التقرير</th><td>${getReportTypeName(report.reportType)}</td></tr>
-                <tr><th>عدد الطلاب</th><td>${selectedStudents.length} طالب</td></tr>
-                <tr><th>تاريخ الإنشاء</th><td>${formatDate(report.createdAt)}</td></tr>
-            </table>
+            <p><strong>نوع التقرير:</strong> ${getReportTypeName(report.reportType)}</p>
+            <p><strong>عدد الطلاب:</strong> ${selectedStudents.length} طالب</p>
+            <p><strong>تاريخ الإنشاء:</strong> ${formatDate(report.createdAt)}</p>
+            <p><strong>التنسيق:</strong> ${report.format.toUpperCase()}</p>
+            ${report.notes ? `<p><strong>ملاحظات:</strong> ${report.notes}</p>` : ''}
             
-            ${report.notes ? `<div class="alert alert-info"><strong>ملاحظات:</strong> ${report.notes}</div>` : ''}
+            <h4>الطلاب المشمولين:</h4>
+            <ul>
+                ${selectedStudents.map(student => `
+                    <li>${student.name} - ${student.grade || 'غير محدد'} - ${student.subject || 'غير محدد'}</li>
+                `).join('')}
+            </ul>
             
-            <hr>
+            <h4>محتوى التقرير:</h4>
             ${generateReportContent(report.reportType, selectedStudents)}
             
-            <div class="report-footer" style="margin-top:20px; text-align:center; font-size:0.8rem; color:#777;">
-                <p>تم إنشاء التقرير من موقع ميسر التعلم</p>
+            <div class="report-footer">
+                <p>تم إنشاء التقرير من موقع ميسر التعلم للأستاذ / صالح عبد العزيز عبدالله العجلان</p>
             </div>
         </div>
     `;
     
     document.getElementById('viewReportModal').classList.add('show');
-}
-
-// 🔥 الدالة الرئيسية لتوليد محتوى التقارير (بما فيها الجدول الدراسي)
-function generateReportContent(reportType, students) {
-    switch (reportType) {
-        case 'studentData':
-            return `
-                <h4>بيانات الطلاب</h4>
-                <table class="table table-bordered">
-                    <thead>
-                        <tr style="background:#f0f0f0;">
-                            <th>اسم الطالب</th>
-                            <th>الصف</th>
-                            <th>المادة</th>
-                            <th>نسبة التقدم</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${students.map(student => `
-                            <tr>
-                                <td>${student.name}</td>
-                                <td>${student.grade || '-'}</td>
-                                <td>${student.subject || '-'}</td>
-                                <td>${student.progress || 0}%</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-
-        case 'schedule':
-            // 🔥 هنا يتم استدعاء دالة بناء الجدول التي أضفناها
-            return generateScheduleReportHTML(students);
-            
-        case 'diagnosticTest':
-            return `<div class="alert alert-warning">تقرير الاختبار التشخيصي: سيتم عرض نتائج الاختبارات للطلاب المحددين هنا.</div>`;
-            
-        case 'iep':
-            return `<div class="alert alert-warning">تقرير الخطط الفردية: سيتم عرض تفاصيل الخطط للطلاب المحددين هنا.</div>`;
-            
-        case 'assignments':
-            return `<div class="alert alert-warning">تقرير الواجبات: سيتم عرض حالة تسليم الواجبات للطلاب المحددين هنا.</div>`;
-            
-        default:
-            return `<p>نوع التقرير غير معروف.</p>`;
-    }
-}
-
-// 🔥 دالة بناء الجدول الدراسي لعضو اللجنة (الجديدة كلياً والمصلحة)
-function generateScheduleReportHTML(students) {
-    // 1. جلب جميع الجداول
-    const allSchedules = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
-    const studentIds = students.map(s => String(s.id)); // تحويل لـ String للمقارنة الآمنة
-
-    // 2. بناء هيكل الجدول
-    let html = `
-        <h4 style="text-align:center; margin-bottom:15px;">الجدول الدراسي المجمع</h4>
-        <div class="table-responsive">
-            <table class="table table-bordered schedule-table" style="width:100%; text-align:center; border:2px solid #333;">
-                <thead>
-                    <tr style="background:#333; color:white;">
-                        <th style="width:15%;">اليوم / الحصة</th>
-                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `;
-
-    // 3. التكرار عبر الأيام والحصص
-    const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
-    
-    days.forEach(day => {
-        html += `<tr><td style="font-weight:bold; background:#f0f0f0; border:1px solid #999;">${day}</td>`;
-
-        for (let period = 1; period <= 7; period++) {
-            // 🔥 البحث الذكي:
-            // - نستخدم normalizeText لمطابقة "الاحد" مع "الأحد"
-            // - نبحث في كل الجداول (لأن اللجنة تتابع عدة معلمين)
-            // - نتأكد هل الحصة تحتوي على أحد الطلاب المحددين
-            const session = allSchedules.find(s =>
-                normalizeText(s.day) === normalizeText(day) && 
-                s.period == period && 
-                s.students && 
-                s.students.some(id => studentIds.includes(String(id)))
-            );
-
-            let content = '-';
-            if (session) {
-                // فلترة الطلاب الموجودين في هذه الحصة فقط من ضمن الطلاب المحددين للتقرير
-                const studentsInSession = students.filter(s => 
-                    session.students.map(String).includes(String(s.id))
-                );
-                
-                // عرض الأسماء
-                if (studentsInSession.length > 0) {
-                    content = studentsInSession.map(s => `<span class="badge bg-light text-dark border">${s.name}</span>`).join('<br>');
-                }
-            }
-            html += `<td style="border:1px solid #999; vertical-align:middle;">${content}</td>`;
-        }
-        html += `</tr>`;
-    });
-
-    html += `</tbody></table></div>`;
-    
-    // إضافة مفتاح بسيط
-    html += `<p class="text-muted small mt-2">* يظهر في الجدول فقط الطلاب الذين قمت بتحديدهم في التقرير.</p>`;
-
-    return html;
 }
 
 function closeReportModal() {
@@ -452,26 +352,35 @@ function printReport() {
 }
 
 function downloadReport() {
-    alert('تم تحميل التقرير (محاكاة)');
+    showAuthNotification('جاري تحميل التقرير...', 'info');
+    
+    setTimeout(() => {
+        showAuthNotification('تم تحميل التقرير بنجاح', 'success');
+        // في تطبيق حقيقي، سيتم تنزيل ملف PDF أو Excel
+    }, 1500);
 }
 
 function viewStudentReport(studentId) {
-    // تحديد الطالب الفردي وتوليد تقرير له
+    const student = getStudentById(studentId);
+    
+    if (!student) {
+        showAuthNotification('الطالب غير موجود', 'error');
+        return;
+    }
+    
+    // توجيه إلى نموذج عرض تقرير الطالب المفرد
+    showGeneratedReportForSingleStudent(student);
+}
+
+function generateStudentReport(studentId) {
     selectedStudents.clear();
     selectedStudents.add(studentId);
     currentReportStudentIds = [studentId];
-    
-    // اختيار "بيانات الطالب" افتراضياً
-    const radio = document.querySelector('input[name="reportType"][value="studentData"]');
-    if(radio) radio.checked = true;
-
-    generateReport();
+    showReportOptions();
 }
 
 function loadGeneratedReports() {
     const reportsList = document.getElementById('generatedReportsList');
-    if (!reportsList) return;
-
     const currentUser = getCurrentUser();
     const committeeReports = JSON.parse(localStorage.getItem('committeeReports') || '[]');
     
@@ -494,14 +403,17 @@ function loadGeneratedReports() {
     reportsList.innerHTML = userReports.map(report => {
         const students = JSON.parse(localStorage.getItem('students') || '[]');
         const reportStudents = students.filter(s => report.studentIds.includes(s.id));
+        const isUrgent = report.notes && report.notes.toLowerCase().includes('عاجل');
         
         return `
-            <div class="report-item">
+            <div class="report-item ${isUrgent ? 'urgent' : ''}">
                 <div class="report-info">
                     <div class="report-title">تقرير ${getReportTypeName(report.reportType)}</div>
                     <div class="report-meta">
                         <span>${reportStudents.length} طالب</span>
                         <span>${formatDate(report.createdAt)}</span>
+                        <span>${report.format.toUpperCase()}</span>
+                        ${isUrgent ? '<span class="status-badge status-urgent">عاجل</span>' : ''}
                     </div>
                 </div>
                 <div class="report-actions">
@@ -518,19 +430,22 @@ function loadGeneratedReports() {
 }
 
 function deleteReport(reportId) {
-    if (!confirm('هل أنت متأكد من حذف هذا التقرير؟')) return;
+    if (!confirm('هل أنت متأكد من حذف هذا التقرير؟')) {
+        return;
+    }
     
     const committeeReports = JSON.parse(localStorage.getItem('committeeReports') || '[]');
     const updatedReports = committeeReports.filter(r => r.id !== reportId);
     
     localStorage.setItem('committeeReports', JSON.stringify(updatedReports));
+    
+    showAuthNotification('تم حذف التقرير بنجاح', 'success');
     loadGeneratedReports();
+    updateCommitteeStats();
 }
 
 function resetCheckboxes() {
-    const cbAll = document.getElementById('selectAllCheckbox');
-    if(cbAll) cbAll.checked = false;
-    
+    document.getElementById('selectAllCheckbox').checked = false;
     const checkboxes = document.querySelectorAll('.student-checkbox');
     checkboxes.forEach(checkbox => {
         checkbox.checked = false;
@@ -539,48 +454,98 @@ function resetCheckboxes() {
     updateSelectedCount();
 }
 
-// دوال مساعدة إضافية
+// دوال مساعدة
 function getAssignedTeacherIds(committeeId) {
     const committeeTeachers = JSON.parse(localStorage.getItem('committeeTeachers') || '[]');
     return committeeTeachers
-        .filter(ct => ct.committeeId == committeeId) // استخدام == للمرونة
-        .map(ct => String(ct.teacherId));
+        .filter(ct => ct.committeeId === committeeId)
+        .map(ct => ct.teacherId);
 }
 
-function getAssignedTeachers(committeeId) {
-    const ids = getAssignedTeacherIds(committeeId);
-    const teachers = JSON.parse(localStorage.getItem('teachers') || '[]');
-    return teachers.filter(t => ids.includes(String(t.id)));
+function getStudentById(studentId) {
+    const students = JSON.parse(localStorage.getItem('students') || '[]');
+    return students.find(s => s.id === studentId);
 }
 
-function getReportTypeName(type) {
-    const map = {
-        'studentData': 'بيانات الطلاب',
-        'schedule': 'الجدول الدراسي',
+function getReportTypeName(reportType) {
+    const types = {
+        'studentData': 'بيانات الطالب',
         'diagnosticTest': 'الاختبار التشخيصي',
-        'iep': 'الخطة الفردية',
+        'iep': 'الخطة التربوية الفردية',
         'assignments': 'الواجبات'
     };
-    return map[type] || type;
+    return types[reportType] || 'غير محدد';
 }
 
-function formatDate(dateString) {
-    return new Date(dateString).toLocaleDateString('ar-SA');
+function generateReportContent(reportType, students) {
+    switch (reportType) {
+        case 'studentData':
+            return `
+                <table class="preview-table">
+                    <thead>
+                        <tr>
+                            <th>اسم الطالب</th>
+                            <th>الصف</th>
+                            <th>المادة</th>
+                            <th>نسبة التقدم</th>
+                            <th>آخر دخول</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${students.map(student => `
+                            <tr>
+                                <td>${student.name}</td>
+                                <td>${student.grade || 'غير محدد'}</td>
+                                <td>${student.subject || 'غير محدد'}</td>
+                                <td>${student.progress || 0}%</td>
+                                <td>${student.lastLogin ? formatDateShort(student.lastLogin) : 'لا يوجد'}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            
+        case 'diagnosticTest':
+            return `<p>تقرير يحتوي على نتائج الاختبارات التشخيصية للطلاب المحددين.</p>`;
+            
+        case 'iep':
+            return `<p>تقرير يحتوي على الخطط التربوية الفردية للطلاب المحددين.</p>`;
+            
+        case 'assignments':
+            return `<p>تقرير يحتوي على أداء الطلاب في الواجبات المطلوبة.</p>`;
+            
+        default:
+            return `<p>تقرير عام عن أداء الطلاب.</p>`;
+    }
 }
 
-function formatDateShort(dateString) {
-    const d = new Date(dateString);
-    return `${d.getDate()}/${d.getMonth()+1}`;
+function showGeneratedReportForSingleStudent(student) {
+    document.getElementById('reportModalTitle').textContent = `تقرير ${student.name}`;
+    
+    document.getElementById('reportPreview').innerHTML = `
+        <div class="report-preview-content">
+            <h4>بيانات الطالب:</h4>
+            <table class="preview-table">
+                <tr><td>الاسم</td><td>${student.name}</td></tr>
+                <tr><td>الصف</td><td>${student.grade || 'غير محدد'}</td></tr>
+                <tr><td>المادة</td><td>${student.subject || 'غير محدد'}</td></tr>
+                <tr><td>نسبة التقدم</td><td>${student.progress || 0}%</td></tr>
+                <tr><td>تاريخ التسجيل</td><td>${student.createdAt ? formatDate(student.createdAt) : 'غير محدد'}</td></tr>
+            </table>
+            
+            <h4>الأداء الدراسي:</h4>
+            <p>محتوى تفصيلي عن أداء الطالب...</p>
+            
+            <div class="report-footer">
+                <p>تم إنشاء التقرير من موقع ميسر التعلم للأستاذ / صالح عبد العزيز عبدالله العجلان</p>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('viewReportModal').classList.add('show');
 }
 
-function getCurrentUser() {
-    const session = sessionStorage.getItem('currentUser');
-    if (!session) return null;
-    const data = JSON.parse(session);
-    return data.user || data;
-}
-
-// تصدير الدوال
+// تصدير الدوال للاستخدام العالمي
 window.toggleSelectAll = toggleSelectAll;
 window.toggleStudentSelection = toggleStudentSelection;
 window.selectAllStudents = selectAllStudents;
@@ -591,5 +556,6 @@ window.closeReportModal = closeReportModal;
 window.printReport = printReport;
 window.downloadReport = downloadReport;
 window.viewStudentReport = viewStudentReport;
+window.generateStudentReport = generateStudentReport;
 window.deleteReport = deleteReport;
 window.filterStudents = filterStudents;

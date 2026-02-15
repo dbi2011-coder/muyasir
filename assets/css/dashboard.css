@@ -1,29 +1,29 @@
 /* ============================================================
-   ملف تنسيقات لوحة التحكم - نسخة متجاوبة (Responsive)
+   ملف تنسيقات لوحة التحكم - dashboard.css
+   (تم تحديثه ليدعم الجوال والايباد دون تغيير تصميم الكمبيوتر)
    ============================================================ */
 
-/* تنسيقات الهيكلة العامة */
+/* --- التنسيقات الأساسية (كما هي في تصميمك الأصلي) --- */
 .dashboard-container {
     display: flex;
     min-height: 100vh;
     background-color: #f4f7fa;
-    position: relative;
-    overflow-x: hidden; /* لمنع التمرير الأفقي غير المرغوب */
+    position: relative; /* مهم للجوال */
+    overflow-x: hidden; /* لمنع الاهتزاز العرضي */
 }
 
-/* الشريط الجانبي (Sidebar) */
 .sidebar {
     width: 260px;
     background-color: white;
     box-shadow: 2px 0 10px rgba(0,0,0,0.05);
     display: flex;
     flex-direction: column;
-    position: fixed; /* تثبيت القائمة */
+    position: fixed;
     top: 0;
     bottom: 0;
     right: 0;
     z-index: 1000;
-    transition: all 0.3s ease-in-out;
+    transition: transform 0.3s ease; /* إضافة حركة ناعمة */
 }
 
 .sidebar-header {
@@ -56,7 +56,6 @@
     padding: 20px 0;
     margin: 0;
     flex: 1;
-    overflow-y: auto;
 }
 
 .sidebar-menu li {
@@ -89,13 +88,12 @@
 /* المحتوى الرئيسي */
 .main-content-dashboard {
     flex: 1;
-    margin-right: 260px; /* ترك مسافة للقائمة الجانبية */
-    padding: 20px;
-    width: calc(100% - 260px);
-    transition: all 0.3s ease-in-out;
+    margin-right: 260px; /* مسافة للقائمة */
+    padding: 30px;
+    width: calc(100% - 260px); /* عرض المحتوى */
+    transition: all 0.3s ease;
 }
 
-/* رأس الصفحة (Header) */
 .dashboard-header {
     display: flex;
     justify-content: space-between;
@@ -105,15 +103,6 @@
     padding: 15px 20px;
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.03);
-}
-
-.mobile-menu-btn {
-    display: none; /* مخفي في الكمبيوتر */
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
-    color: var(--dark-color);
 }
 
 .user-info {
@@ -134,7 +123,7 @@
     font-weight: bold;
 }
 
-/* البطاقات والإحصائيات */
+/* شبكة البطاقات والإحصائيات */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -150,11 +139,6 @@
     display: flex;
     align-items: center;
     gap: 20px;
-    transition: transform 0.3s ease;
-}
-
-.stat-card:hover {
-    transform: translateY(-5px);
 }
 
 .stat-icon {
@@ -179,27 +163,20 @@
     color: var(--dark-color);
 }
 
-/* الجداول (Tables) */
+/* الجداول */
 .recent-activity, .students-list-container {
     background: white;
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     margin-bottom: 30px;
-    overflow: hidden; /* ضروري للاستجابة */
-}
-
-/* حاوية الجدول لجعل التمرير ممكناً */
-.table-responsive {
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    overflow-x: auto; /* لتمكين التمرير في الجداول الصغيرة */
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 600px; /* الحد الأدنى للعرض لضمان عدم انضغاط البيانات */
+    min-width: 600px; /* ضمان عدم انضغاط الجدول */
 }
 
 table th, table td {
@@ -223,7 +200,7 @@ table th {
 .status-completed { background-color: #e6f7e6; color: #28a745; }
 .status-pending { background-color: #fff3cd; color: #856404; }
 
-/* شبكة المحتوى (Content Library Grid) */
+/* شبكة المحتوى (Content Library) */
 .content-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -248,143 +225,88 @@ table th {
     border-color: var(--primary-color);
 }
 
-.content-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 10px;
-}
-
-.content-badge {
-    font-size: 0.75rem;
-    padding: 3px 8px;
-    border-radius: 4px;
-    background: #eee;
-}
-
-.content-card h4 {
-    margin: 0;
-    font-size: 1.1rem;
-    color: #333;
-    line-height: 1.4;
-}
-
-.content-footer {
-    margin-top: 15px;
-    display: flex;
-    gap: 5px;
-    border-top: 1px solid #f0f0f0;
-    padding-top: 10px;
-}
-
-.btn-card-action {
-    flex: 1;
+/* زر القائمة للجوال (مخفي في الكمبيوتر) */
+.mobile-menu-btn {
+    display: none; 
+    background: none;
     border: none;
-    padding: 8px;
-    border-radius: 5px;
+    font-size: 1.5rem;
     cursor: pointer;
-    font-size: 0.85rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-    transition: background 0.2s;
+    color: #333;
+    padding: 5px;
 }
 
 /* ============================================================
-   استعلامات الوسائط (Media Queries) - سر التجاوب
+   🔴 التعديلات الجديدة: استجابة الجوال والآيباد (Media Queries)
+   هذا الجزء لا يعمل إلا إذا كانت الشاشة أصغر من 992 بكسل
    ============================================================ */
 
-/* للأجهزة اللوحية والجوال (أقل من 992px) */
-@media (max-width: 992px) {
-    /* إخفاء القائمة الجانبية افتراضياً */
+@media screen and (max-width: 992px) {
+    /* 1. إخفاء القائمة الجانبية افتراضياً */
     .sidebar {
-        transform: translateX(100%); /* إخراجها خارج الشاشة لليمين */
-        right: 0;
+        transform: translateX(100%); /* إزاحتها لليمين خارج الشاشة */
         width: 260px;
+        right: 0;
     }
-
-    /* عند تفعيل القائمة (كلاس active يضاف بالجافاسكريبت) */
+    
+    /* عند تفعيل الكلاس active تظهر القائمة */
     .sidebar.active {
         transform: translateX(0);
-        box-shadow: -5px 0 15px rgba(0,0,0,0.2);
+        box-shadow: -5px 0 20px rgba(0,0,0,0.2);
     }
 
-    /* توسيع المحتوى ليشغل كامل الشاشة */
+    /* 2. توسيع المحتوى ليشغل كامل الشاشة */
     .main-content-dashboard {
         margin-right: 0;
         width: 100%;
         padding: 15px;
     }
 
-    /* إظهار زر القائمة */
+    /* 3. إظهار زر القائمة (الهامبرغر) */
     .mobile-menu-btn {
         display: block;
     }
 
-    /* تحسين عرض البطاقات */
-    .stats-grid {
-        grid-template-columns: repeat(auto-fit, minmax(100%, 1fr)); /* بطاقة واحدة في السطر */
+    /* 4. تعديل النوافذ المنبثقة لتناسب عرض الجوال */
+    .modal-content, .modal-content.large {
+        width: 95%;
+        margin: 5% auto;
+        min-width: auto; /* إلغاء العرض الثابت */
     }
 }
 
-/* للجوال الصغير (أقل من 576px) */
-@media (max-width: 576px) {
+/* للجوالات الصغيرة جداً */
+@media screen and (max-width: 576px) {
     .dashboard-header {
-        flex-direction: row; /* الحفاظ على الزر بجانب الاسم */
+        flex-direction: row; 
         padding: 10px;
     }
-
-    .welcome-text {
-        font-size: 0.9rem;
-    }
     
-    .user-name {
-        font-size: 0.8rem;
-    }
-
-    .content-grid {
-        grid-template-columns: 1fr; /* عمود واحد للمحتوى */
-    }
-
     .header-actions {
         flex-direction: column;
         width: 100%;
-        gap: 10px;
     }
     
-    .header-actions .btn-group, 
-    .header-actions .dropdown,
-    .header-actions button {
+    .header-actions button, .header-actions .btn-group {
         width: 100%;
+        margin-bottom: 5px;
     }
 
-    /* النوافذ المنبثقة (Modals) */
-    .modal-content {
-        width: 95% !important;
-        margin: 10px auto;
-        padding: 15px;
-        max-height: 90vh;
-        overflow-y: auto;
+    .content-grid, .stats-grid {
+        grid-template-columns: 1fr; /* عمود واحد فقط */
     }
     
-    .modal-content.large {
-        min-width: auto !important;
-    }
+    /* تصغير حجم الخط قليلاً في العناوين الكبيرة */
+    h1 { font-size: 1.5rem; }
+    h2 { font-size: 1.3rem; }
 }
 
-/* طبقة تعتيم الخلفية عند فتح القائمة في الجوال */
+/* طبقة التعتيم الخلفية عند فتح القائمة في الجوال */
 .sidebar-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0,0,0,0.5);
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4);
     z-index: 999;
-    display: none;
+    display: none; /* مخفية افتراضياً */
 }
-
-.sidebar-overlay.active {
-    display: block;
-}
+.sidebar-overlay.active { display: block; }

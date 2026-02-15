@@ -4,13 +4,11 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     
-    // ---------------------------------------------------------
-    // 1. كود تفعيل القائمة الجانبية في الجوال (جديد)
-    // ---------------------------------------------------------
+    // --- [جديد] كود تفعيل القائمة للجوال والآيباد ---
     const mobileBtn = document.querySelector('.mobile-menu-btn');
     const sidebar = document.querySelector('.sidebar');
     
-    // إنشاء طبقة التعتيم (Overlay) ديناميكياً
+    // إنشاء طبقة التعتيم الخلفية تلقائياً
     let overlay = document.querySelector('.sidebar-overlay');
     if (!overlay) {
         overlay = document.createElement('div');
@@ -19,20 +17,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (mobileBtn && sidebar) {
-        // عند الضغط على زر القائمة
+        // فتح/إغلاق القائمة
         mobileBtn.addEventListener('click', function(e) {
             e.stopPropagation();
             sidebar.classList.toggle('active');
             overlay.classList.toggle('active');
         });
 
-        // عند الضغط خارج القائمة لإغلاقها
+        // إغلاق عند الضغط خارج القائمة
         overlay.addEventListener('click', function() {
             sidebar.classList.remove('active');
             overlay.classList.remove('active');
         });
         
-        // إغلاق القائمة عند اختيار رابط (اختياري لتحسين التجربة)
+        // إغلاق القائمة عند اختيار رابط (لراحة المستخدم في الجوال)
         sidebar.querySelectorAll('a').forEach(link => {
             link.addEventListener('click', () => {
                 if(window.innerWidth <= 992) {
@@ -43,9 +41,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // ---------------------------------------------------------
-    // 2. الكود الأصلي الخاص بك (التحقق من الدخول والبيانات)
-    // ---------------------------------------------------------
+    // --- [أصلي] الكود الخاص بك كما هو ---
+    
     checkAuth();
     loadUserInfo();
     
@@ -54,10 +51,14 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// دوال المصادقة والعرض (كما هي في ملفك الأصلي)
+// --- الدوال الأصلية (لم يتم تغييرها) ---
+
 function checkAuth() {
     const user = sessionStorage.getItem('currentUser');
-    if (!user) window.location.href = '../../index.html';
+    if (!user) {
+        // يمكن تعديل المسار حسب هيكلة ملفاتك
+        window.location.href = '../../index.html';
+    }
 }
 
 function logout() {
@@ -71,14 +72,17 @@ function loadUserInfo() {
     const userStr = sessionStorage.getItem('currentUser');
     if (userStr) {
         const user = JSON.parse(userStr).user;
-        const nameEl = document.getElementById('userName');
-        if (nameEl) nameEl.textContent = user.name;
+        const nameElement = document.getElementById('userName');
+        if (nameElement) {
+            nameElement.textContent = user.name;
+        }
     }
 }
 
 function loadDashboardStats() {
-    // منطق تحميل الإحصائيات الأصلي الخاص بك
     const user = JSON.parse(sessionStorage.getItem('currentUser')).user;
+    
+    // جلب البيانات مع التعامل مع الاحتمالات الفارغة
     const students = JSON.parse(localStorage.getItem('students') || '[]').filter(s => s.teacherId === user.id);
     const lessons = JSON.parse(localStorage.getItem('lessons') || '[]').filter(l => l.teacherId === user.id);
     const tests = JSON.parse(localStorage.getItem('tests') || '[]').filter(t => t.teacherId === user.id);
@@ -88,7 +92,7 @@ function loadDashboardStats() {
     if(document.getElementById('completedTests')) document.getElementById('completedTests').textContent = tests.length;
 }
 
-// دوال مساعدة للنوافذ المنبثقة
-function showSuccess(msg) { alert('✅ ' + msg); }
-function showError(msg) { alert('❌ ' + msg); }
-function showConfirmModal(msg, callback) { if(confirm(msg)) callback(); }
+// دوال مساعدة
+function showSuccess(message) { alert('✅ ' + message); }
+function showError(message) { alert('❌ ' + message); }
+function showConfirmModal(message, onConfirm) { if(confirm(message)) onConfirm(); }

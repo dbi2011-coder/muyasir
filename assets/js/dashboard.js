@@ -1,14 +1,16 @@
 /* ============================================================
-   ملف التحكم في لوحة القيادة - Dashboard JS
+   ملف التحكم في لوحة القيادة - dashboard.js
    ============================================================ */
 
 document.addEventListener('DOMContentLoaded', function() {
     
-    // 1. تفعيل زر القائمة للجوال (Mobile Menu Toggle)
+    // ---------------------------------------------------------
+    // 1. كود تفعيل القائمة الجانبية في الجوال (جديد)
+    // ---------------------------------------------------------
     const mobileBtn = document.querySelector('.mobile-menu-btn');
     const sidebar = document.querySelector('.sidebar');
     
-    // إنشاء طبقة التعتيم (Overlay) ديناميكياً إذا لم تكن موجودة
+    // إنشاء طبقة التعتيم (Overlay) ديناميكياً
     let overlay = document.querySelector('.sidebar-overlay');
     if (!overlay) {
         overlay = document.createElement('div');
@@ -17,23 +19,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     if (mobileBtn && sidebar) {
+        // عند الضغط على زر القائمة
         mobileBtn.addEventListener('click', function(e) {
-            e.stopPropagation(); // منع انتقال النقرة
+            e.stopPropagation();
             sidebar.classList.toggle('active');
             overlay.classList.toggle('active');
         });
 
-        // إغلاق القائمة عند الضغط على طبقة التعتيم
+        // عند الضغط خارج القائمة لإغلاقها
         overlay.addEventListener('click', function() {
             sidebar.classList.remove('active');
             overlay.classList.remove('active');
         });
-
-        // إغلاق القائمة عند اختيار عنصر منها (للجوال)
-        const sidebarLinks = document.querySelectorAll('.sidebar-menu a');
-        sidebarLinks.forEach(link => {
-            link.addEventListener('click', function() {
-                if (window.innerWidth <= 992) {
+        
+        // إغلاق القائمة عند اختيار رابط (اختياري لتحسين التجربة)
+        sidebar.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                if(window.innerWidth <= 992) {
                     sidebar.classList.remove('active');
                     overlay.classList.remove('active');
                 }
@@ -41,27 +43,23 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 2. التحقق من تسجيل الدخول (Auth Check)
+    // ---------------------------------------------------------
+    // 2. الكود الأصلي الخاص بك (التحقق من الدخول والبيانات)
+    // ---------------------------------------------------------
     checkAuth();
-    
-    // 3. تحميل اسم المستخدم
     loadUserInfo();
     
-    // 4. تحميل الإحصائيات (إذا كنا في الصفحة الرئيسية للوحة التحكم)
     if (document.getElementById('totalStudents')) {
         loadDashboardStats();
     }
 });
 
-// وظيفة التحقق من تسجيل الدخول
+// دوال المصادقة والعرض (كما هي في ملفك الأصلي)
 function checkAuth() {
     const user = sessionStorage.getItem('currentUser');
-    if (!user) {
-        window.location.href = '../../index.html';
-    }
+    if (!user) window.location.href = '../../index.html';
 }
 
-// وظيفة تسجيل الخروج
 function logout() {
     if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
         sessionStorage.removeItem('currentUser');
@@ -69,49 +67,28 @@ function logout() {
     }
 }
 
-// تحميل بيانات المستخدم
 function loadUserInfo() {
     const userStr = sessionStorage.getItem('currentUser');
     if (userStr) {
         const user = JSON.parse(userStr).user;
-        const nameElement = document.getElementById('userName');
-        if (nameElement) {
-            nameElement.textContent = user.name;
-        }
+        const nameEl = document.getElementById('userName');
+        if (nameEl) nameEl.textContent = user.name;
     }
 }
 
-// تحميل إحصائيات لوحة التحكم (وهمية للعرض أو حقيقية من التخزين)
 function loadDashboardStats() {
+    // منطق تحميل الإحصائيات الأصلي الخاص بك
     const user = JSON.parse(sessionStorage.getItem('currentUser')).user;
-    
-    // جلب البيانات من LocalStorage
     const students = JSON.parse(localStorage.getItem('students') || '[]').filter(s => s.teacherId === user.id);
     const lessons = JSON.parse(localStorage.getItem('lessons') || '[]').filter(l => l.teacherId === user.id);
     const tests = JSON.parse(localStorage.getItem('tests') || '[]').filter(t => t.teacherId === user.id);
     
-    // تحديث الأرقام في الواجهة
-    updateStat('totalStudents', students.length);
-    updateStat('activeLessons', lessons.length);
-    updateStat('completedTests', tests.length);
+    if(document.getElementById('totalStudents')) document.getElementById('totalStudents').textContent = students.length;
+    if(document.getElementById('activeLessons')) document.getElementById('activeLessons').textContent = lessons.length;
+    if(document.getElementById('completedTests')) document.getElementById('completedTests').textContent = tests.length;
 }
 
-function updateStat(id, value) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = value;
-}
-
-// دوال مساعدة عامة (تستخدم في صفحات أخرى)
-function showSuccess(message) {
-    alert('✅ ' + message);
-}
-
-function showError(message) {
-    alert('❌ ' + message);
-}
-
-function showConfirmModal(message, onConfirm) {
-    if(confirm(message)) {
-        onConfirm();
-    }
-}
+// دوال مساعدة للنوافذ المنبثقة
+function showSuccess(msg) { alert('✅ ' + msg); }
+function showError(msg) { alert('❌ ' + msg); }
+function showConfirmModal(msg, callback) { if(confirm(msg)) callback(); }

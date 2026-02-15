@@ -3,7 +3,12 @@
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    checkAuth();
+    // التأكد من تسجيل الدخول أولاً
+    if (!sessionStorage.getItem('currentUser')) {
+        window.location.href = '../../index.html';
+        return;
+    }
+
     loadUserInfo();
     initReports();
 });
@@ -18,7 +23,8 @@ function initReports() {
             
             tab.classList.add('active');
             const targetId = tab.getAttribute('data-target');
-            document.getElementById(targetId).classList.add('active');
+            const targetSection = document.getElementById(targetId);
+            if (targetSection) targetSection.classList.add('active');
 
             // تحميل البيانات عند فتح التبويب
             if (targetId === 'schedule-report') {
@@ -29,81 +35,93 @@ function initReports() {
         });
     });
 
-    // تفعيل التبويب الافتراضي (الجدول)
-    if(document.getElementById('schedule-report')) {
+    // تشغيل التقرير الافتراضي إذا كانت الصفحة تحتوي عليه
+    if(document.getElementById('scheduleReportTable')) {
         generateScheduleReport();
     }
 }
 
 // ---------------------------------------------------------
-// 1. تقرير الجدول الدراسي (الإصلاح هنا)
+// دالة تنظيف النصوص (لحل مشكلة الهمزات: الأحد vs الاحد)
+// ---------------------------------------------------------
+function normalizeText(text) {
+    if (!text) return "";
+    return text.toString().trim()
+        .replace(/[أإآ]/g, 'ا')  // استبدال كل أشكال الألف بـ ا
+        .replace(/ة/g, 'ه');     // استبدال ة بـ ه
+}
+
+// ---------------------------------------------------------
+// 1. تقرير الجدول الدراسي (المعدل)
 // ---------------------------------------------------------
 function generateScheduleReport() {
     const tbody = document.querySelector('#scheduleReportTable tbody');
-    if (!tbody) return;
+    if (!tbody) {
+        console.error("لم يتم العثور على جدول التقرير #scheduleReportTable");
+        return;
+    }
 
-    tbody.innerHTML = '';
+    tbody.innerHTML = ''; // مسح المحتوى القديم
     const user = getCurrentUser();
     
-    // جلب البيانات
-    const schedule = JSON.parse(localStorage.getItem('studySchedule') || '[]');
-    const students = JSON.parse(localStorage.getItem('students') || '[]');
-
-    // ✅ مصفوفة الأيام (تم ضبط الهمزات لتطابق المدخلات القياسية)
-    const days = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+    // جلب البيانات مع التعامل مع القيم الفارغة
+    const rawSchedule = localStorage.getItem('studySchedule');
+    const rawStudents = localStorage.getItem('students');
     
-    // عدد الحصص (مثلاً 8 حصص)
-    const periodsCount = 8;
+    const schedule = rawSchedule ? JSON.parse(rawSchedule) : [];
+    const students = rawStudents ? JSON.parse(rawStudents) : [];
 
-    days.forEach(day => {
-        // التحقق من وجود حصص لهذا اليوم للمعلم الحالي
-        // نبحث عن أي حصة في هذا اليوم تخص المعلم
-        // نستخدم s.day.includes لضمان التوافق حتى لو اختلفت الهمزة قليلاً
-        const hasClasses = schedule.some(s => s.teacherId === user.id && s.day === day);
+    // مصفوفة الأيام القياسية للعرض
+    const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+    const periodsCount = 8; // عدد الحصص
 
-        if (true) { // عرض جميع الأيام حتى لو فارغة، أو استخدم if(hasClasses) لإخفاء الأيام الفارغة
-            const tr = document.createElement('tr');
+    // التأكد من وجود بيانات
+    if (schedule.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted p-3">لا يوجد جدول دراسي محفوظ حالياً</td></tr>';
+        return;
+    }
+
+    days.forEach(displayDay => {
+        const tr = document.createElement('tr');
+        
+        // عمود اسم اليوم
+        const tdDay = document.createElement('td');
+        tdDay.className = 'fw-bold bg-light';
+        tdDay.textContent = displayDay; // العرض دائماً بالهمزة الصحيحة
+        tr.appendChild(tdDay);
+
+        // البحث عن الحصص (من 1 إلى 8)
+        for (let i = 1; i <= periodsCount; i++) {
+            const td = document.createElement('td');
             
-            // عمود اليوم
-            const tdDay = document.createElement('td');
-            tdDay.className = 'fw-bold bg-light';
-            tdDay.textContent = day;
-            tr.appendChild(tdDay);
+            // 🔥 البحث الذكي: نقارن النصوص بعد تنظيفها من الهمزات
+            const session = schedule.find(s => 
+                normalizeText(s.day) === normalizeText(displayDay) && 
+                s.period == i &&  // == تسمح بمقارنة النص "1" مع الرقم 1
+                s.teacherId === user.id
+            );
 
-            // إنشاء أعمدة الحصص
-            for (let i = 1; i <= periodsCount; i++) {
-                const td = document.createElement('td');
+            if (session) {
+                // البحث عن الطالب المرتبط بالحصة
+                const student = students.find(st => st.id == session.studentId);
                 
-                // ✅ البحث المرن:
-                // 1. يطابق اليوم
-                // 2. يطابق الحصة (باستخدام == بدلاً من === للتعامل مع النصوص والأرقام)
-                // 3. يطابق المعلم
-                const session = schedule.find(s => 
-                    s.day === day && 
-                    s.period == i && 
-                    s.teacherId === user.id
-                );
-
-                if (session) {
-                    const student = students.find(st => st.id == session.studentId); // بحث مرن عن الطالب
-                    if (student) {
-                        td.innerHTML = `
-                            <div class="report-cell-content">
-                                <span class="student-name">${student.name}</span>
-                                <span class="subject-badge badge-sm">${session.subject}</span>
-                            </div>
-                        `;
-                    } else {
-                        td.innerHTML = '<span class="text-muted small">طالب محذوف</span>';
-                    }
+                if (student) {
+                    td.innerHTML = `
+                        <div class="report-cell-content" style="font-size: 0.85rem;">
+                            <div class="fw-bold text-primary">${student.name}</div>
+                            <div class="badge bg-light text-dark border">${session.subject || 'مادة'}</div>
+                        </div>
+                    `;
                 } else {
-                    td.textContent = '-';
-                    td.className = 'text-center text-muted';
+                    td.innerHTML = '<span class="text-danger small">بيانات الطالب مفقودة</span>';
                 }
-                tr.appendChild(td);
+            } else {
+                td.textContent = '-';
+                td.className = 'text-center text-muted bg-white';
             }
-            tbody.appendChild(tr);
+            tr.appendChild(td);
         }
+        tbody.appendChild(tr);
     });
 }
 
@@ -135,60 +153,57 @@ function generateStudentReport() {
         return;
     }
 
-    const user = getCurrentUser();
     const students = JSON.parse(localStorage.getItem('students') || '[]');
     const student = students.find(s => s.id == studentId);
-    
-    // جلب البيانات المرتبطة بالطالب
-    // (هنا يمكنك إضافة منطق لجلب الدرجات، الملاحظات، الأهداف المحققة من LocalStorage)
-    // كمثال بسيط سأعرض البيانات الأساسية
-    
-    const objectives = JSON.parse(localStorage.getItem('objectives') || '[]').filter(o => o.teacherId === user.id);
-    // افتراض: نحتاج لربط الأهداف بالطلاب في المستقبل (حالياً النظام يربط المحتوى بالأهداف)
+
+    if (!student) return;
     
     const today = new Date().toLocaleDateString('ar-SA');
 
     container.innerHTML = `
-        <div class="report-paper">
-            <div class="report-header text-center mb-4">
-                <h3>تقرير متابعة طالب</h3>
-                <p class="text-muted">تاريخ التقرير: ${today}</p>
+        <div class="report-paper border p-4 bg-white rounded">
+            <div class="report-header text-center mb-4 border-bottom pb-3">
+                <h3 class="mb-2">تقرير متابعة طالب</h3>
+                <p class="text-muted mb-0">تاريخ التقرير: ${today}</p>
             </div>
             
-            <div class="report-section-box mb-4">
-                <h5>بيانات الطالب</h5>
-                <table class="table table-bordered">
-                    <tr><th>الاسم</th><td>${student.name}</td><th>الصف</th><td>${student.grade}</td></tr>
-                    <tr><th>رقم الهوية</th><td>${student.idNumber || '-'}</td><th>تاريخ الميلاد</th><td>${student.dob || '-'}</td></tr>
+            <div class="mb-4">
+                <h5 class="text-primary mb-3">📌 بيانات الطالب</h5>
+                <table class="table table-bordered table-sm">
+                    <tr>
+                        <th class="bg-light" style="width:20%">الاسم</th><td>${student.name}</td>
+                        <th class="bg-light" style="width:20%">الصف</th><td>${student.grade}</td>
+                    </tr>
+                    <tr>
+                        <th class="bg-light">رقم الهوية</th><td>${student.idNumber || '-'}</td>
+                        <th class="bg-light">تاريخ الميلاد</th><td>${student.dob || '-'}</td>
+                    </tr>
                 </table>
             </div>
 
-            <div class="report-section-box mb-4">
-                <h5>ملخص الأداء (تجريبي)</h5>
-                <p class="text-muted">لا توجد بيانات تقييم مرتبطة بهذا الطالب حالياً.</p>
-                </div>
+            <div class="alert alert-info text-center">
+                يمكنك هنا إضافة الرسوم البيانية لدرجات الطالب (ميزة قادمة)
+            </div>
 
-            <div class="text-center mt-4">
-                <button class="btn btn-outline-primary" onclick="window.print()"><i class="fas fa-print"></i> طباعة التقرير</button>
+            <div class="text-center mt-4 no-print">
+                <button class="btn btn-outline-dark" onclick="window.print()">
+                    <i class="fas fa-print"></i> طباعة التقرير
+                </button>
             </div>
         </div>
     `;
 }
 
 // ---------------------------------------------------------
-// دوال مساعدة
+// دوال مساعدة عامة
 // ---------------------------------------------------------
-function checkAuth() {
-    const user = sessionStorage.getItem('currentUser');
-    if (!user) window.location.href = '../../index.html';
-}
-
 function getCurrentUser() {
-    return JSON.parse(sessionStorage.getItem('currentUser')).user;
+    const userStr = sessionStorage.getItem('currentUser');
+    return userStr ? JSON.parse(userStr).user : null;
 }
 
 function loadUserInfo() {
     const user = getCurrentUser();
     const el = document.getElementById('userName');
-    if(el) el.textContent = user.name;
+    if(el && user) el.textContent = user.name;
 }

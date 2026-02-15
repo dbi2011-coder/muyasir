@@ -3,10 +3,9 @@
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    if (document.getElementById('testsGrid') || document.getElementById('lessonsGrid')) {
-        injectLinkContentModal(); 
-        loadContentLibrary();
-    }
+    // حقن نافذة الربط فقط (لأن نافذة التصدير موجودة أصلاً في HTML)
+    injectLinkContentModal(); 
+    loadContentLibrary();
 });
 
 function loadContentLibrary() {
@@ -15,6 +14,10 @@ function loadContentLibrary() {
     try { loadObjectives(); } catch(e) { console.error(e); }
     try { loadHomeworks(); } catch(e) { console.error(e); }
 }
+
+// ---------------------------------------------------------
+// دوال العرض (Tests, Lessons, Objectives, Homeworks)
+// ---------------------------------------------------------
 
 function loadTests() {
     const grid = document.getElementById('testsGrid'); if(!grid) return;
@@ -25,6 +28,7 @@ function loadTests() {
         return `<div class="content-card card-test"><div class="content-header"><h4 title="${t.title}">${t.title}</h4><span class="content-badge subject-${t.subject}">${t.subject}</span></div><div class="content-body"><p class="text-muted small" style="margin-bottom:10px;">${t.description || 'لا يوجد وصف'}</p><div class="content-meta"><span><i class="fas fa-question-circle"></i> ${t.questions?.length || 0} أسئلة</span>${isLinked ? '<span class="text-success"><i class="fas fa-link"></i> مرتبط بأهداف</span>' : ''}</div></div><div class="content-footer"><button class="btn-card-action btn-test-light" onclick="showLinkModal('test', ${t.id})"><i class="fas fa-link"></i> ربط</button><button class="btn-card-action btn-test-light" onclick="editTest(${t.id})"><i class="fas fa-pen"></i> تعديل</button><button class="btn-card-action btn-delete-card" onclick="deleteTest(${t.id})"><i class="fas fa-trash"></i> حذف</button></div></div>`;
     }).join('');
 }
+
 function loadLessons() {
     const grid = document.getElementById('lessonsGrid'); if(!grid) return;
     const lessons = JSON.parse(localStorage.getItem('lessons') || '[]').filter(l => l.teacherId === getCurrentUser().id);
@@ -34,16 +38,19 @@ function loadLessons() {
         return `<div class="content-card card-lesson"><div class="content-header"><h4 title="${l.title}">${l.title}</h4><span class="content-badge subject-${l.subject}">${l.subject}</span></div><div class="content-body"><div class="small text-muted" style="margin-bottom:10px;">تمهيد، تمارين (${l.exercises?.questions?.length || 0})، تقييم (${l.assessment?.questions?.length || 0})</div><div class="content-meta">${isLinked ? '<span class="text-success"><i class="fas fa-link"></i> مرتبط بهدف تدريسي</span>' : '<span><i class="fas fa-unlink"></i> غير مرتبط</span>'}</div></div><div class="content-footer"><button class="btn-card-action btn-lesson-light" onclick="showLinkModal('lesson', ${l.id})"><i class="fas fa-link"></i> ربط</button><button class="btn-card-action btn-lesson-light" onclick="editLesson(${l.id})"><i class="fas fa-pen"></i> تعديل</button><button class="btn-card-action btn-delete-card" onclick="deleteLesson(${l.id})"><i class="fas fa-trash"></i> حذف</button></div></div>`;
     }).join('');
 }
+
 function loadObjectives() {
     const list = document.getElementById('objectivesList'); if (!list) return;
     const objs = JSON.parse(localStorage.getItem('objectives') || '[]').filter(o => o.teacherId === getCurrentUser().id);
     if (objs.length === 0) { list.innerHTML = `<div class="empty-content-state" style="text-align:center;padding:20px;"><h3>لا توجد أهداف</h3><button class="btn btn-success mt-2" onclick="showCreateObjectiveModal()">+ هدف جديد</button></div>`; return; }
     list.innerHTML = objs.map(o => `<div class="objective-row" id="obj-row-${o.id}"><div class="obj-header" onclick="toggleObjective(${o.id})"><div style="display:flex; align-items:center; gap:10px;"><i class="fas fa-chevron-down toggle-icon" id="icon-${o.id}"></i><h4 class="short-term-title">${o.shortTermGoal}</h4><span class="content-badge subject-${o.subject}" style="font-size:0.8rem; padding:2px 8px;">${o.subject}</span></div><div class="obj-actions" onclick="event.stopPropagation()"><button class="btn-card-action btn-lesson-light" onclick="editObjective(${o.id})" title="تعديل"><i class="fas fa-edit"></i></button><button class="btn-card-action btn-delete-card" onclick="deleteObjective(${o.id})" title="حذف"><i class="fas fa-trash"></i></button></div></div><div class="obj-body" id="obj-body-${o.id}">${o.instructionalGoals && o.instructionalGoals.length > 0 ? `<div style="font-weight:bold; margin-bottom:5px; color:#555;">الأهداف التدريسية:</div><ul class="instructional-goals-list">${o.instructionalGoals.map(g => `<li>${g}</li>`).join('')}</ul>` : '<span class="text-muted small">لا توجد أهداف فرعية</span>'}</div></div>`).join('');
 }
+
 function toggleObjective(id) {
     const body = document.getElementById(`obj-body-${id}`); const row = document.getElementById(`obj-row-${id}`);
     if (body.classList.contains('show')) { body.classList.remove('show'); row.classList.remove('expanded'); } else { body.classList.add('show'); row.classList.add('expanded'); }
 }
+
 function loadHomeworks() {
     const grid = document.getElementById('homeworksGrid'); if (!grid) return;
     const homeworks = JSON.parse(localStorage.getItem('assignments') || '[]').filter(h => h.teacherId === getCurrentUser().id);
@@ -53,6 +60,10 @@ function loadHomeworks() {
         return `<div class="content-card card-homework"><div class="content-header"><h4 title="${h.title}">${h.title}</h4><span class="content-badge subject-${h.subject}">${h.subject}</span></div><div class="content-body"><p class="text-muted small" style="margin-bottom:10px;">${h.description || 'لا يوجد وصف'}</p><div class="content-meta"><span><i class="fas fa-list-ol"></i> ${h.questions?.length || 0} أسئلة</span>${isLinked ? '<span class="text-success"><i class="fas fa-link"></i> مرتبط بهدف</span>' : '<span><i class="fas fa-unlink"></i> غير مرتبط</span>'}</div></div><div class="content-footer"><button class="btn-card-action btn-homework-light" onclick="showLinkModal('homework', ${h.id})"><i class="fas fa-link"></i> ربط</button><button class="btn-card-action btn-homework-light" onclick="editHomework(${h.id})"><i class="fas fa-pen"></i> تعديل</button><button class="btn-card-action btn-delete-card" onclick="deleteHomework(${h.id})"><i class="fas fa-trash"></i> حذف</button></div></div>`;
     }).join('');
 }
+
+// ---------------------------------------------------------
+// دوال إدارة الأسئلة (Questions Logic)
+// ---------------------------------------------------------
 
 function addQuestion() { addQuestionToContainer(document.getElementById('questionsContainer'), 'سؤال'); }
 function addLessonQuestion(id) { addQuestionToContainer(document.getElementById(id), 'سؤال'); }
@@ -264,6 +275,10 @@ function readFileAsBase64(file) {
     });
 }
 
+// ---------------------------------------------------------
+// تجميع البيانات للحفظ (Save Logic)
+// ---------------------------------------------------------
+
 async function collectQuestionsFromContainer(id) {
     const cards = document.querySelectorAll(`#${id} .question-card`);
     const qs = [];
@@ -317,26 +332,14 @@ async function collectQuestionsFromContainer(id) {
 function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser')).user; }
 function getAllObjectives() { return JSON.parse(localStorage.getItem('objectives') || '[]').filter(o => o.teacherId === getCurrentUser().id); }
 
+// ---------------------------------------------------------
+// النوافذ المنبثقة (Modals)
+// ---------------------------------------------------------
+
 function injectLinkContentModal() {
     if (document.getElementById('linkContentModal')) return;
-    const html = `
-    <div id="linkContentModal" class="modal">
-        <div class="modal-content" style="max-width: 600px;">
-            <span class="close-btn" onclick="document.getElementById('linkContentModal').classList.remove('show')">&times;</span>
-            <h3>ربط المحتوى بالأهداف</h3>
-            <p class="text-muted" id="linkInstructionText" style="margin-bottom:15px;"></p>
-            <input type="hidden" id="linkTargetId">
-            <input type="hidden" id="linkTargetType">
-            
-            <div id="linkContentBody" style="max-height: 400px; overflow-y: auto; margin-bottom: 15px;">
-                </div>
-            
-            <div class="modal-footer" style="text-align:left;">
-                <button class="btn btn-primary" onclick="saveContentLinks()">حفظ الارتباطات</button>
-            </div>
-        </div>
-    </div>`;
-    document.body.insertAdjacentHTML('beforeend', html);
+    // تم حذف الحقن هنا لأن العنصر موجود بالفعل في HTML
+    console.log("Link Modal already exists in HTML");
 }
 
 function showLinkModal(type, id) {
@@ -495,26 +498,146 @@ function deleteObjective(id) {
 }
 
 // =======================================================
-// ✅ الإضافة الجديدة: دوال نافذة التصدير (Export Modal)
+// ✅ 1. دوال التصدير (Export Logic) - متوافقة مع ملف HTML الخاص بك
 // =======================================================
 
 function showExportModal() {
-    // محاولة إيجاد النافذة
-    const modal = document.getElementById('exportModal');
-    
-    if (modal) {
-        modal.classList.add('show'); // لإظهار النافذة إذا كنت تستخدم CSS class 'show'
-        modal.style.display = 'block'; // للتأكد من الظهور في حال عدم استخدام الكلاس
+    const modal = document.getElementById('exportContentModal');
+    if (!modal) { console.error('exportContentModal not found'); return; }
+
+    const container = document.getElementById('exportListsContainer');
+    container.innerHTML = ''; // تنظيف المحتوى القديم
+
+    // جلب البيانات
+    const user = getCurrentUser();
+    const tests = JSON.parse(localStorage.getItem('tests') || '[]').filter(x => x.teacherId === user.id);
+    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]').filter(x => x.teacherId === user.id);
+    const objectives = JSON.parse(localStorage.getItem('objectives') || '[]').filter(x => x.teacherId === user.id);
+    const homeworks = JSON.parse(localStorage.getItem('assignments') || '[]').filter(x => x.teacherId === user.id);
+
+    // دالة مساعدة لإنشاء قسم (Section) في القائمة
+    const createSection = (title, items, type) => {
+        if (items.length === 0) return '';
+        let html = `<div class="mb-3"><h5 style="border-bottom:1px solid #eee; padding-bottom:5px;">${title}</h5>`;
+        items.forEach(item => {
+            let label = item.title || item.shortTermGoal;
+            html += `
+                <div class="form-check">
+                    <input class="form-check-input export-item" type="checkbox" data-type="${type}" value="${item.id}" id="export-${type}-${item.id}" checked>
+                    <label class="form-check-label" for="export-${type}-${item.id}">${label}</label>
+                </div>`;
+        });
+        html += `</div>`;
+        return html;
+    };
+
+    let contentHtml = '';
+    contentHtml += createSection('الاختبارات التشخيصية', tests, 'tests');
+    contentHtml += createSection('الدروس التفاعلية', lessons, 'lessons');
+    contentHtml += createSection('الأهداف التعليمية', objectives, 'objectives');
+    contentHtml += createSection('الواجبات', homeworks, 'assignments'); // Note: assignments key used for homeworks
+
+    if (contentHtml === '') {
+        container.innerHTML = '<p class="text-center text-muted">لا يوجد محتوى لتصديره.</p>';
     } else {
-        console.warn('لم يتم العثور على العنصر id="exportModal" في ملف HTML.');
-        alert('نظام التصدير قيد التطوير حالياً.');
+        container.innerHTML = contentHtml;
     }
+
+    modal.classList.add('show');
 }
 
-function closeExportModal() {
-    const modal = document.getElementById('exportModal');
-    if (modal) {
-        modal.classList.remove('show');
-        modal.style.display = 'none';
+function toggleGlobalSelect(source) {
+    const checkboxes = document.querySelectorAll('.export-item');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+}
+
+function executeExport() {
+    const selected = {
+        tests: [],
+        lessons: [],
+        objectives: [],
+        assignments: [],
+        exportDate: new Date().toISOString(),
+        exportedBy: getCurrentUser().name
+    };
+
+    document.querySelectorAll('.export-item:checked').forEach(cb => {
+        const type = cb.getAttribute('data-type');
+        const id = parseInt(cb.value);
+        
+        let sourceKey = type;
+        if(type === 'assignments') sourceKey = 'assignments'; // التأكد من المفتاح الصحيح
+
+        const allItems = JSON.parse(localStorage.getItem(sourceKey) || '[]');
+        const item = allItems.find(x => x.id === id);
+        if (item) selected[type].push(item);
+    });
+
+    // التحقق من وجود بيانات
+    const totalCount = selected.tests.length + selected.lessons.length + selected.objectives.length + selected.assignments.length;
+    if (totalCount === 0) {
+        alert('الرجاء تحديد عنصر واحد على الأقل للتصدير.');
+        return;
     }
+
+    // إنشاء الملف والتحميل
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selected));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "muyasir_backup_" + new Date().toISOString().slice(0,10) + ".json");
+    document.body.appendChild(downloadAnchorNode); // required for firefox
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+    
+    document.getElementById('exportContentModal').classList.remove('show');
+    showSuccess(`تم تصدير ${totalCount} عنصر بنجاح`);
+}
+
+// =======================================================
+// ✅ 2. دوال الاستيراد (Import Logic) - لتفعيل زر الاستيراد أيضاً
+// =======================================================
+
+function importContent(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            const user = getCurrentUser();
+            let count = 0;
+
+            // دالة مساعدة لدمج البيانات
+            const mergeData = (key, newItems) => {
+                if (!newItems || newItems.length === 0) return 0;
+                const currentItems = JSON.parse(localStorage.getItem(key) || '[]');
+                let added = 0;
+                newItems.forEach(item => {
+                    // تجنب التكرار بناءً على ID
+                    if (!currentItems.some(x => x.id === item.id)) {
+                        item.teacherId = user.id; // تعيين العنصر للمستخدم الحالي
+                        currentItems.push(item);
+                        added++;
+                    }
+                });
+                localStorage.setItem(key, JSON.stringify(currentItems));
+                return added;
+            };
+
+            count += mergeData('tests', data.tests);
+            count += mergeData('lessons', data.lessons);
+            count += mergeData('objectives', data.objectives);
+            count += mergeData('assignments', data.assignments);
+
+            showSuccess(`تم استيراد ${count} عنصر بنجاح`);
+            loadContentLibrary(); // تحديث العرض
+
+        } catch (err) {
+            console.error(err);
+            alert('حدث خطأ أثناء قراءة الملف. تأكد أنه ملف JSON صالح.');
+        }
+    };
+    reader.readAsText(file);
+    input.value = ''; // تصفير الإدخال للسماح باختيار نفس الملف مرة أخرى
 }

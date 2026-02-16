@@ -1,13 +1,13 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير الشامل (نسخة محدثة - تثبيت اسم التذييل وضمان ظهوره في الطباعة)
+// الوصف: نظام التقارير الشامل (نسخة نهائية - تذييل ثابت وظهور مضمون في الطباعة)
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
 (function injectPrintStyles() {
     const style = document.createElement('style');
     style.innerHTML = `
-        /* تنسيق التذييل العام (يظهر في المعاينة والطباعة) */
+        /* تنسيق التذييل العام */
         .custom-footer {
             width: 100%;
             text-align: center;
@@ -17,14 +17,15 @@
             border-top: 2px solid #000;
             padding-top: 10px;
             margin-top: 20px;
-            background: white;
+            background: white !important;
+            -webkit-print-color-adjust: exact;
         }
 
         @media print {
             @page {
                 size: A4;
                 margin: 10mm;
-                margin-bottom: 20mm; /* مساحة للتذييل */
+                margin-bottom: 25mm; /* 🔥 مساحة إضافية في الأسفل للتذييل */
             }
             body * {
                 visibility: hidden;
@@ -47,14 +48,17 @@
                 z-index: 99999 !important;
             }
             
-            /* تثبيت التذييل أسفل كل صفحة في الطباعة */
+            /* 🔥 إجبار التذييل على الظهور أسفل كل صفحة */
             .custom-footer {
                 position: fixed;
                 bottom: 0;
                 left: 0;
                 right: 0;
                 z-index: 2147483647; /* أعلى طبقة ممكنة */
+                visibility: visible !important;
+                display: block !important;
                 background-color: white !important;
+                padding-bottom: 5px;
             }
 
             table {
@@ -64,7 +68,7 @@
                 font-family: 'Times New Roman', serif;
                 font-size: 12pt;
                 margin-top: 15px;
-                margin-bottom: 30px; /* مسافة إضافية أسفل الجدول */
+                margin-bottom: 30px;
             }
             th, td {
                 border: 1px solid #000 !important;
@@ -175,7 +179,7 @@ window.initiateReport = function() {
 
     const previewArea = document.getElementById('reportPreviewArea');
     
-    // ضمان ظهور منطقة المعاينة
+    // ضمان ظهور منطقة المعاينة فوق كل العناصر
     previewArea.style.zIndex = "99999";
     previewArea.style.position = "absolute";
     previewArea.style.background = "white";

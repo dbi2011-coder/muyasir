@@ -1,110 +1,0 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>إدارة الطلاب - ميسر التعلم</title>
-    <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/teacher.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        /* Responsive Fixes */
-        .table-responsive { overflow-x: auto; width: 100%; -webkit-overflow-scrolling: touch; }
-        
-        @media (max-width: 992px) {
-            .sidebar { position: fixed; right: -280px; top: 0; height: 100vh; z-index: 1100; transition: 0.3s; }
-            .sidebar.active { right: 0; }
-            .main-content-dashboard { margin-right: 0; width: 100%; }
-        }
-        @media (max-width: 768px) {
-            .content-header { flex-direction: column; align-items: stretch; gap: 15px; }
-            .header-actions { flex-direction: column; width: 100%; gap: 10px; }
-            .header-actions .btn { width: 100%; justify-content: center; }
-            .filters-section { flex-direction: column; gap: 10px; }
-            .search-box { width: 100%; }
-            .filter-options { width: 100%; }
-            .modal-content { min-width: 95% !important; margin: 10px; }
-        }
-    </style>
-</head>
-<body>
-    <div class="dashboard-container">
-        <div class="sidebar-overlay" onclick="toggleSidebar()" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1099;"></div>
-        <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header"><div class="logo"><img src="../../assets/images/logo.png"><h2>ميسر التعلم</h2></div></div>
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
-                <li><a href="students.html" class="active"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
-                <li><a href="content-library.html"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
-                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
-                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
-                <li><a href="reports.html"><span class="menu-icon">📋</span>التقارير</a></li>
-                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة صعوبات التعلم</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
-            </ul>
-        </aside>
-
-        <main class="main-content-dashboard">
-            <header class="dashboard-header">
-                <button class="mobile-menu-btn" onclick="toggleSidebar()">☰</button>
-                <div class="user-info"><div class="user-welcome"><div class="welcome-text">مرحباً بعودتك</div><div class="user-name" id="userName">أ/ المعلم</div></div></div>
-            </header>
-
-            <div class="dashboard-content">
-                <div class="content-header">
-                    <h1>إدارة ومتابعة الطلاب</h1>
-                    <div class="header-actions">
-                        <button class="btn btn-success" onclick="showAddStudentModal()"><span>+ إضافة طالب جديد</span></button>
-                        <button class="btn btn-primary" onclick="showImportStudentModal()"><span>📁 استيراد طالب</span></button>
-                    </div>
-                </div>
-
-                <div class="filters-section">
-                    <div class="search-box">
-                        <input type="text" id="studentSearch" placeholder="ابحث عن طالب..." class="form-control" onkeyup="searchStudents()">
-                        <button class="btn btn-primary" onclick="searchStudents()"><i class="fas fa-search"></i></button>
-                    </div>
-                    <div class="filter-options">
-                        <select id="gradeFilter" class="form-control" onchange="filterStudents()">
-                            <option value="all">جميع الصفوف</option>
-                            <option value="1">الصف الأول</option>
-                            <option value="2">الصف الثاني</option>
-                            <option value="3">الصف الثالث</option>
-                            <option value="4">الصف الرابع</option>
-                            <option value="5">الصف الخامس</option>
-                            <option value="6">الصف السادس</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="table-container table-responsive">
-                    <table class="table" id="studentsTable">
-                        <thead><tr><th>#</th><th>اسم الطالب</th><th>الصف</th><th>المادة</th><th>نسبة التقدم</th><th style="min-width: 350px;">الإجراءات</th></tr></thead>
-                        <tbody id="studentsTableBody"></tbody>
-                    </table>
-                    <div id="loadingState" class="loading-state"><div class="loading-spinner"></div><p>جاري تحميل البيانات...</p></div>
-                    <div id="emptyState" class="empty-state" style="display: none;"><div class="empty-icon">👨‍🎓</div><h3>لا يوجد طلاب</h3></div>
-                </div>
-            </div>
-        </main>
-    </div>
-    
-    <div id="addStudentModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>إضافة طالب</h3><button class="modal-close" onclick="closeAddStudentModal()">×</button></div><div class="modal-body"><form id="addStudentForm"><div class="form-group"><label>اسم الطالب</label><input type="text" id="studentName" class="form-control" required></div><div class="form-group"><label>الصف</label><select id="studentGrade" class="form-control"><option value="1">1</option><option value="2">2</option></select></div><div class="form-group"><label>المادة</label><select id="studentSubject" class="form-control"><option value="لغتي">لغتي</option></select></div></form></div><div class="modal-footer"><button class="btn btn-success" onclick="addNewStudent()">حفظ</button></div></div></div>
-    
-    <div id="importStudentModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>استيراد</h3><button class="modal-close" onclick="closeModal('importStudentModal')">×</button></div><div class="modal-body"><input type="file" id="studentJsonFile" class="form-control"></div><div class="modal-footer"><button class="btn btn-success" onclick="processStudentImport()">استيراد</button></div></div></div>
-
-    <script src="../../assets/js/dashboard.js"></script>
-    <script src="../../assets/js/teacher.js"></script>
-    <script src="../../assets/js/auth.js"></script>
-    <script>
-        function toggleSidebar() {
-            const sidebar = document.getElementById('sidebar');
-            const overlay = document.querySelector('.sidebar-overlay');
-            sidebar.classList.toggle('active');
-            overlay.style.display = sidebar.classList.contains('active') ? 'block' : 'none';
-        }
-    </script>
-</body>
-</html>

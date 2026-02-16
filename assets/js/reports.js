@@ -1,16 +1,30 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير الشامل (نسخة محدثة - إصلاح مشكلة الصفحة البيضاء لعضو اللجنة)
+// الوصف: نظام التقارير الشامل (نسخة محدثة - تثبيت اسم التذييل وضمان ظهوره في الطباعة)
 // ============================================
 
-// 1. حقن أنماط الطباعة (CSS) - تم تحديث Z-Index
+// 1. حقن أنماط الطباعة (CSS)
 (function injectPrintStyles() {
     const style = document.createElement('style');
     style.innerHTML = `
+        /* تنسيق التذييل العام (يظهر في المعاينة والطباعة) */
+        .custom-footer {
+            width: 100%;
+            text-align: center;
+            font-size: 11pt;
+            font-weight: bold;
+            color: #000 !important;
+            border-top: 2px solid #000;
+            padding-top: 10px;
+            margin-top: 20px;
+            background: white;
+        }
+
         @media print {
             @page {
                 size: A4;
                 margin: 10mm;
+                margin-bottom: 20mm; /* مساحة للتذييل */
             }
             body * {
                 visibility: hidden;
@@ -30,9 +44,19 @@
                 padding: 0;
                 background: white;
                 direction: rtl;
-                z-index: 99999 !important; /* 🔥 إصلاح: ضمان ظهور التقرير فوق كل شيء */
+                z-index: 99999 !important;
             }
             
+            /* تثبيت التذييل أسفل كل صفحة في الطباعة */
+            .custom-footer {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                z-index: 2147483647; /* أعلى طبقة ممكنة */
+                background-color: white !important;
+            }
+
             table {
                 width: 100% !important;
                 border-collapse: collapse !important;
@@ -40,7 +64,7 @@
                 font-family: 'Times New Roman', serif;
                 font-size: 12pt;
                 margin-top: 15px;
-                margin-bottom: 15px;
+                margin-bottom: 30px; /* مسافة إضافية أسفل الجدول */
             }
             th, td {
                 border: 1px solid #000 !important;
@@ -100,19 +124,6 @@
                 border: 1px solid #000;
             }
 
-            .custom-footer {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                width: 100%;
-                text-align: center;
-                font-size: 10pt;
-                color: #555;
-                border-top: 1px solid #ccc;
-                padding-top: 5px;
-                background: white;
-            }
-
             .page-break {
                 page-break-after: always;
                 display: block;
@@ -148,18 +159,6 @@ function getReportUser() {
     }
 }
 
-// 🔥 دالة مساعدة لجلب اسم المستخدم للطباعة
-function getPrinterName() {
-    const user = getReportUser();
-    if (!user) return "غير معروف";
-    // تحديد اللقب بناءً على الدور
-    let title = "الأستاذ";
-    if (user.role === 'admin') title = "مدير النظام";
-    if (user.role === 'committee') title = "عضو اللجنة";
-    
-    return `${title}/ ${user.name}`;
-}
-
 window.toggleSelectAll = function() {
     const checkboxes = document.querySelectorAll('input[name="selectedStudents"]');
     const allChecked = Array.from(checkboxes).every(cb => cb.checked);
@@ -176,7 +175,7 @@ window.initiateReport = function() {
 
     const previewArea = document.getElementById('reportPreviewArea');
     
-    // 🔥 التأكد من ظهور منطقة المعاينة فوق العناصر الأخرى
+    // ضمان ظهور منطقة المعاينة
     previewArea.style.zIndex = "99999";
     previewArea.style.position = "absolute";
     previewArea.style.background = "white";
@@ -315,7 +314,6 @@ function calculateStudentBalance(studentId, allLessons, allEvents, teacherSchedu
 
     const dayMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
     
-    // فلترة الجدول بناءً على معلم الطالب
     const relevantSchedule = teacherSchedule.filter(s => s.teacherId == studentTeacherId);
 
     for (let d = new Date(planStartDate); d < today; d.setDate(d.getDate() + 1)) {
@@ -329,7 +327,6 @@ function calculateStudentBalance(studentId, allLessons, allEvents, teacherSchedu
 
         const dayKey = dayMap[d.getDay()];
         
-        // التحقق من الجدول الخاص بمعلم الطالب
         const isScheduledDay = relevantSchedule.some(s => 
             normalizeText(s.day) === normalizeText(dayKey) && 
             (s.students && s.students.map(String).includes(String(studentId)))
@@ -365,7 +362,6 @@ function generateAttendanceReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
     const allEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]');
     const printDate = new Date().toLocaleDateString('ar-SA');
-    const printerName = getPrinterName();
 
     let tableHTML = `
         <div style="background:white; padding:20px;">
@@ -415,8 +411,9 @@ function generateAttendanceReport(studentIds, container) {
 
     tableHTML += `</tbody></table>
             <div class="custom-footer">
-                تم طباعة التقرير من نظام ميسر التعلم - ${printerName} - بتاريخ ${printDate}
+                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
             </div>
+            
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
                 <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقرير 🖨️</button>
             </div>
@@ -428,7 +425,6 @@ function generateAchievementReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
     const allLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const printDate = new Date().toLocaleDateString('ar-SA');
-    const printerName = getPrinterName();
 
     let tableHTML = `
         <div style="background:white; padding:20px;">
@@ -480,8 +476,9 @@ function generateAchievementReport(studentIds, container) {
 
     tableHTML += `</tbody></table>
             <div class="custom-footer">
-                تم طباعة التقرير من نظام ميسر التعلم - ${printerName} - بتاريخ ${printDate}
+                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
             </div>
+            
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
                 <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقرير 🖨️</button>
             </div>
@@ -493,7 +490,6 @@ function generateAssignmentsReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
     const allAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
     const printDate = new Date().toLocaleDateString('ar-SA');
-    const printerName = getPrinterName();
 
     let tableHTML = `
         <div style="background:white; padding:20px;">
@@ -553,8 +549,9 @@ function generateAssignmentsReport(studentIds, container) {
 
     tableHTML += `</tbody></table>
             <div class="custom-footer">
-                تم طباعة التقرير من نظام ميسر التعلم - ${printerName} - بتاريخ ${printDate}
+                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
             </div>
+            
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
                 <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقرير 🖨️</button>
             </div>
@@ -573,7 +570,6 @@ function generateIEPReport(studentIds, container) {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     const printDate = new Date().toLocaleDateString('ar-SA');
-    const printerName = getPrinterName();
 
     let fullReportHTML = `<div style="background:white; padding:0;">`;
 
@@ -608,7 +604,6 @@ function generateIEPReport(studentIds, container) {
         if (needsObjects.length === 0 && !completedDiagnostic) needsObjects = [];
 
         const dayKeys = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
-        // 🔥 إصلاح: البحث عن حصة الطالب بغض النظر عن المعلم
         let scheduleCells = dayKeys.map(dk => {
             const session = teacherSchedule.find(s => 
                 normalizeText(s.day) === normalizeText(dk) && 
@@ -710,7 +705,7 @@ function generateIEPReport(studentIds, container) {
             </div>
 
             <div class="custom-footer">
-                تم طباعة التقرير من نظام ميسر التعلم - ${printerName} - بتاريخ ${printDate}
+                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
             </div>
         </div>
         `;
@@ -738,7 +733,6 @@ function generateDiagnosticReport(studentIds, container) {
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
     const printDate = new Date().toLocaleDateString('ar-SA');
-    const printerName = getPrinterName();
 
     let fullReportHTML = `<div style="background:white; padding:0;">`;
 
@@ -844,7 +838,7 @@ function generateDiagnosticReport(studentIds, container) {
 
         fullReportHTML += `
             <div class="custom-footer">
-                تم طباعة التقرير من نظام ميسر التعلم - ${printerName} - بتاريخ ${printDate}
+                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
             </div>
         </div>
         `;
@@ -864,13 +858,12 @@ function generateDiagnosticReport(studentIds, container) {
 }
 
 // ============================================
-// 8. تقرير الجدول الدراسي (المُصلّح تماماً لعضو اللجنة)
+// 8. تقرير الجدول الدراسي
 // ============================================
 function generateScheduleReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
     const scheduleData = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     const printDate = new Date().toLocaleDateString('ar-SA');
-    const printerName = getPrinterName();
     
     const selectedStudents = allUsers.filter(u => studentIds.includes(String(u.id)));
 
@@ -964,7 +957,7 @@ function generateScheduleReport(studentIds, container) {
             ${scheduleHTML}
             
             <div class="custom-footer">
-                تم طباعة التقرير من نظام ميسر التعلم - ${printerName} - بتاريخ ${printDate}
+                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
             </div>
 
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
@@ -977,7 +970,7 @@ function generateScheduleReport(studentIds, container) {
 }
 
 // ============================================
-// 9. تقرير رصيد الحصص (محدث)
+// 9. تقرير رصيد الحصص
 // ============================================
 function generateCreditReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
@@ -985,7 +978,6 @@ function generateCreditReport(studentIds, container) {
     const allEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]');
     const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     const printDate = new Date().toLocaleDateString('ar-SA');
-    const printerName = getPrinterName();
 
     let tableHTML = `
         <div style="background:white; padding:20px;">
@@ -1007,7 +999,6 @@ function generateCreditReport(studentIds, container) {
         const student = allUsers.find(u => u.id == studentId);
         if (!student) return;
 
-        // 🔥 إصلاح: تمرير ID معلم الطالب لحساب الرصيد بشكل صحيح
         const balance = calculateStudentBalance(studentId, allLessons, allEvents, teacherSchedule, student.teacherId); 
 
         let balanceClass = 'balance-neutral';
@@ -1041,7 +1032,7 @@ function generateCreditReport(studentIds, container) {
             </div>
 
             <div class="custom-footer">
-                تم طباعة التقرير من نظام ميسر التعلم - ${printerName} - بتاريخ ${printDate}
+                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
             </div>
 
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">

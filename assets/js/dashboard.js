@@ -1,12 +1,12 @@
 // ============================================
 // 📁 الملف: assets/js/dashboard.js
-// الوصف: إدارة منطق لوحة التحكم (تم تحديث الخروج الفوري)
+// الوصف: إدارة منطق لوحة التحكم والقائمة الجانبية
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
     const currentUser = getCurrentUser();
     
-    // إعداد القائمة المتنقلة
+    // إعداد القائمة المتنقلة (النسخة المحسنة)
     setupMobileMenu();
 
     if (!currentUser) {
@@ -25,6 +25,60 @@ document.addEventListener('DOMContentLoaded', function() {
 
     setupSessionWarning();
 });
+
+// ----------------------------------------------------------------
+// 📱 منطق القائمة الجانبية (تم الإصلاح)
+// ----------------------------------------------------------------
+function toggleSidebar() {
+    // 1. العثور على القائمة
+    let sidebar = document.getElementById('sidebar');
+    if (!sidebar) sidebar = document.querySelector('.sidebar');
+    
+    if (!sidebar) {
+        console.error("القائمة الجانبية غير موجودة");
+        return;
+    }
+
+    // 2. العثور على زر الإغلاق (إن وجد)
+    const closeBtn = document.querySelector('.close-sidebar-btn');
+
+    // 3. إدارة طبقة التعتيم (Overlay)
+    let overlay = document.querySelector('.sidebar-overlay');
+    
+    // إذا لم تكن الطبقة موجودة، نقوم بإنشائها برمجياً
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'sidebar-overlay';
+        overlay.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1099;';
+        overlay.onclick = toggleSidebar; // إغلاق عند الضغط عليها
+        document.body.appendChild(overlay);
+    }
+
+    // 4. التبديل (فتح/إغلاق)
+    sidebar.classList.toggle('active');
+    
+    // التحكم في ظهور الطبقة وزر الإغلاق
+    if (sidebar.classList.contains('active')) {
+        overlay.style.display = 'block';
+        if(closeBtn) closeBtn.style.display = 'block';
+    } else {
+        overlay.style.display = 'none';
+        if(closeBtn) closeBtn.style.display = 'none';
+    }
+}
+
+// جعل الدالة عامة لتعمل مع onclick في HTML
+window.toggleSidebar = toggleSidebar;
+
+function setupMobileMenu() {
+    // هذه الدالة تتأكد فقط من أن زر القائمة يعمل
+    // لم نعد بحاجة لاستبدال الزر (cloneNode) لأنه يسبب المشاكل
+    const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
+    if (mobileMenuBtn) {
+        // نتأكد أن الزر لا يملك مستمعات أحداث قديمة، لكن لا نستبدله
+        // الاعتماد الأساسي الآن على onclick="toggleSidebar()" في الـ HTML
+    }
+}
 
 // ----------------------------------------------------------------
 // 1. إحصائيات الطالب
@@ -107,7 +161,7 @@ function updateAdminStats() {
 }
 
 // ----------------------------------------------------------------
-// واجهة المستخدم والقوائم
+// واجهة المستخدم
 // ----------------------------------------------------------------
 
 function updateUserInterface(user) {
@@ -147,32 +201,6 @@ function updatePageTitle(role) {
     }
 }
 
-function setupMobileMenu() {
-    const mobileMenuBtn = document.querySelector('.mobile-menu-btn');
-    const sidebar = document.querySelector('.sidebar');
-    
-    if (mobileMenuBtn && sidebar) {
-        const newBtn = mobileMenuBtn.cloneNode(true);
-        mobileMenuBtn.parentNode.replaceChild(newBtn, mobileMenuBtn);
-        
-        newBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            sidebar.classList.toggle('active');
-        });
-
-        document.addEventListener('click', function(event) {
-            if (window.innerWidth <= 768) {
-                const isClickInsideSidebar = sidebar.contains(event.target);
-                const isClickOnMenuBtn = newBtn.contains(event.target);
-                
-                if (!isClickInsideSidebar && !isClickOnMenuBtn && sidebar.classList.contains('active')) {
-                    sidebar.classList.remove('active');
-                }
-            }
-        });
-    }
-}
-
 // ----------------------------------------------------------------
 // دوال مساعدة عامة
 // ----------------------------------------------------------------
@@ -186,7 +214,6 @@ function getCurrentUser() {
     }
 }
 
-// 🔥 تم التعديل: تسجيل الخروج الفوري بدون رسالة تأكيد
 function logout() {
     sessionStorage.removeItem('currentUser');
     window.location.href = '../../index.html';
@@ -240,8 +267,4 @@ function showSessionWarningUI() {
             if (warning.parentElement) warning.remove();
         }, 30000);
     }
-}
-
-function showNotifications() {
-    // يمكن تفعيلها لاحقاً
 }

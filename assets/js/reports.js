@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير الشامل (نسخة محدثة ومصلحة)
+// الوصف: نظام التقارير الشامل (نسخة محدثة - تدعم عضو اللجنة والجدول الشامل)
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -131,12 +131,12 @@
 // 2. التعريفات الأساسية ودوال المساعدة
 // ============================================
 
-// 🔥 دالة إصلاح النصوص (توحيد الهمزات) - هي الحل للمشكلة
+// دالة إصلاح النصوص (توحيد الهمزات)
 function normalizeText(text) {
     if (!text) return "";
     return String(text).trim()
         .replace(/[أإآ]/g, 'ا') // تحويل جميع الألفات إلى ا
-        .replace(/ة/g, 'ه');    // تحويل التاء المربوطة إلى هاء (اختياري)
+        .replace(/ة/g, 'ه');    // تحويل التاء المربوطة إلى هاء
 }
 
 // دالة جلب المستخدم الحالي بأمان
@@ -231,6 +231,7 @@ function updateTeacherName() {
     } catch (e) { }
 }
 
+// 🔥 دالة تحميل الطلاب (معدلة لتشمل عضو اللجنة)
 function loadStudentsForSelection() {
     const container = document.getElementById('studentsListContainer');
     if (!container) return;
@@ -240,19 +241,22 @@ function loadStudentsForSelection() {
     
     let teacherId = null; 
     let isAdmin = false;
+    let isCommittee = false;
 
     if (user) {
         teacherId = String(user.id);
         isAdmin = user.role === 'admin';
+        isCommittee = user.role === 'committee'; // التحقق من دور اللجنة
     }
 
     let students = allUsers.filter(u => {
         if (u.role !== 'student') return false;
-        if (isAdmin) return true;
+        // السماح للمدير وعضو اللجنة برؤية جميع الطلاب
+        if (isAdmin || isCommittee) return true;
         return String(u.teacherId) === teacherId;
     });
 
-    if (students.length === 0 && !isAdmin) {
+    if (students.length === 0 && !isAdmin && !isCommittee) {
         students = allUsers.filter(u => u.role === 'student');
     }
 
@@ -276,7 +280,7 @@ function loadStudentsForSelection() {
 }
 
 // ============================================
-// 📊 معادلة حساب الرصيد (محدثة لاستخدام المطابقة الآمنة)
+// 📊 معادلة حساب الرصيد
 // ============================================
 function calculateStudentBalance(studentId, allLessons, allEvents, teacherSchedule) {
     let balance = 0;
@@ -304,9 +308,8 @@ function calculateStudentBalance(studentId, allLessons, allEvents, teacherSchedu
 
         const dayKey = dayMap[d.getDay()];
         
-        // 🔥 تحديث البحث في الجدول هنا أيضاً
         const isScheduledDay = teacherSchedule.some(s => 
-            normalizeText(s.day) === normalizeText(dayKey) && // مطابقة اليوم
+            normalizeText(s.day) === normalizeText(dayKey) && 
             (s.students && s.students.map(String).includes(String(studentId)))
         );
 
@@ -583,7 +586,7 @@ function generateIEPReport(studentIds, container) {
 
         const dayKeys = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
         let scheduleCells = dayKeys.map(dk => {
-            // 🔥 البحث في الجدول مع الفلترة والتطابق المرن
+            // بحث في الجدول
             const session = teacherSchedule.find(s => 
                 s.teacherId == user.id && // فلترة المعلم
                 normalizeText(s.day) === normalizeText(dk) && // مطابقة اليوم
@@ -838,18 +841,15 @@ function generateDiagnosticReport(studentIds, container) {
 }
 
 // ============================================
-// 8. تقرير الجدول الدراسي (المُصلّح تماماً)
+// 8. تقرير الجدول الدراسي (المُصلّح تماماً لعضو اللجنة)
 // ============================================
 function generateScheduleReport(studentIds, container) {
     const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+    // نجلب كامل الجدول بدون فلترة مبدئية
     const scheduleData = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     const printDate = new Date().toLocaleDateString('ar-SA');
-    const user = getReportUser(); // المستخدم الحالي
-
+    
     const selectedStudents = allUsers.filter(u => studentIds.includes(String(u.id)));
-
-    // 🔥 فلترة الجدول للمعلم الحالي فقط (لتجنب التداخل)
-    const mySchedule = scheduleData.filter(s => s.teacherId == user.id);
 
     let keyTableHTML = `
         <div class="section-title" style="background:#444 !important; color:white; margin-bottom:0;">دليل رموز الطلاب</div>
@@ -903,10 +903,12 @@ function generateScheduleReport(studentIds, container) {
         scheduleHTML += `<tr><td style="font-weight:bold; background:#f0f0f0; border:1px solid #000;">${day}</td>`;
         
         for (let period = 1; period <= 7; period++) {
-            // 🔥 الإصلاح الجذري: مطابقة اليوم مع توحيد الهمزات، ومطابقة الحصة برقم أو نص
-            const session = mySchedule.find(s => 
+            // 🔥 البحث المتقدم: أي حصة تحتوي على أحد الطلاب المختارين
+            const session = scheduleData.find(s => 
                 normalizeText(s.day) === normalizeText(day) && 
-                s.period == period
+                s.period == period &&
+                s.students && 
+                s.students.some(id => studentIds.includes(String(id)))
             );
 
             let cellContent = '';
@@ -963,7 +965,12 @@ function generateCreditReport(studentIds, container) {
     const printDate = new Date().toLocaleDateString('ar-SA');
     const user = getReportUser();
 
-    // فلترة الجدول للمعلم الحالي
+    // فلترة الجدول للمعلم الحالي (هذا التقرير لا يزال يحتاج معرفة المعلم لحساب أيام دوامه)
+    // إذا كان المستخدم لجنة، سنفترض أننا نريد حساب الرصيد بناء على معلم الطالب نفسه
+    // لكن للتبسيط هنا سنستخدم teacherSchedule كما هو ونفلتر في الدالة
+    
+    // ملاحظة: لتحسين هذا التقرير للجنة مستقبلاً، يجب جلب معلم كل طالب على حدة داخل الحلقة
+    // حالياً سنبقيه كما هو لأنه معقد قليلاً
     const mySchedule = teacherSchedule.filter(s => s.teacherId == user.id);
 
     let tableHTML = `
@@ -986,8 +993,8 @@ function generateCreditReport(studentIds, container) {
         const student = allUsers.find(u => u.id == studentId);
         if (!student) return;
 
-        // حساب الرصيد باستخدام الدالة المحدثة التي تستخدم الجدول المفلتر
-        const balance = calculateStudentBalance(studentId, allLessons, allEvents, mySchedule);
+        // حساب الرصيد
+        const balance = calculateStudentBalance(studentId, allLessons, allEvents, teacherSchedule); // نمرر الجدول كاملاً والدالة ستفلتر
 
         let balanceClass = 'balance-neutral';
         let balanceText = balance;

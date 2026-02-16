@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مكتبة المحتوى</title>
+    <link rel="stylesheet" href="../../assets/css/main.css">
+    <link rel="stylesheet" href="../../assets/css/dashboard.css">
+    <link rel="stylesheet" href="../../assets/css/teacher.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style> .sidebar { min-width: 260px !important; width: 260px !important; flex-shrink: 0 !important; } </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo"><img src="../../assets/images/logo.png" alt="شعار"><h2>ميسر التعلم</h2></div>
+            </div>
+            <ul class="sidebar-menu">
+                <li><a href="dashboard.html"><span class="menu-icon">📊</span>لوحة التحكم</a></li>
+                <li><a href="students.html"><span class="menu-icon">👨‍🎓</span>الطلاب</a></li>
+                <li><a href="content-library.html" class="active"><span class="menu-icon">📚</span>مكتبة المحتوى</a></li>
+                <li><a href="study-schedule.html"><span class="menu-icon">📅</span>الجدول الدراسي</a></li>
+                <li><a href="messages.html"><span class="menu-icon">💬</span>مراسلة الطلاب</a></li>
+                <li><a href="reports.html"><span class="menu-icon">📝</span>التقارير</a></li>
+                <li><a href="committee.html"><span class="menu-icon">👥</span>لجنة صعوبات التعلم</a></li>
+                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content-dashboard">
+            <header class="dashboard-header">
+                <button class="mobile-menu-btn">☰</button>
+                <div class="user-info">
+                    <div class="user-welcome"><div class="welcome-text">مكتبة المحتوى</div><div class="user-name" id="userName">أ/ المعلم</div></div>
+                </div>
+            </header>
+
+            <div class="dashboard-content">
+                <div class="content-header">
+                    <h1>مكتبة المحتوى التعليمي</h1>
+                    <div class="header-actions">
+                        <div class="btn-group" style="display: flex; gap: 5px;">
+                            <button class="btn btn-import-custom" onclick="document.getElementById('importFileInput').click()"><i class="fas fa-file-import"></i> استيراد محتوى</button>
+                            <button class="btn btn-export-custom" onclick="showExportModal()"><i class="fas fa-file-export"></i> تصدير محتوى</button>
+                        </div>
+                        <input type="file" id="importFileInput" accept=".json" style="display: none;" onchange="importContent(this)">
+
+                        <div class="dropdown">
+                            <button class="btn btn-success dropdown-toggle" onclick="toggleDropdown()">+ إضافة محتوى</button>
+                            <div class="dropdown-menu" id="contentDropdownMenu">
+                                <a class="dropdown-item" href="#" onclick="showCreateTestModal()">اختبار تشخيصي</a>
+                                <a class="dropdown-item" href="#" onclick="showCreateLessonModal()">درس تفاعلي</a>
+                                <a class="dropdown-item" href="#" onclick="showCreateObjectiveModal()">هدف قصير المدى</a>
+                                <a class="dropdown-item" href="#" onclick="showCreateHomeworkModal()">واجب</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="library-sections">
+                    <div class="library-section"><div class="section-header"><h2>الاختبارات التشخيصية</h2></div><div class="content-grid" id="testsGrid"></div></div>
+                    <div class="library-section"><div class="section-header"><h2>الدروس التفاعلية</h2></div><div class="content-grid" id="lessonsGrid"></div></div>
+                    <div class="library-section"><div class="section-header"><h2>الأهداف قصيرة المدى</h2></div><div class="objectives-container" id="objectivesList"></div></div>
+                    <div class="library-section"><div class="section-header"><h2>الواجبات</h2></div><div class="content-grid" id="homeworksGrid"></div></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="exportContentModal" class="modal"><div class="modal-content large"><div class="modal-header"><h3>تصدير المحتوى</h3><button class="modal-close" onclick="closeModal('exportContentModal')">×</button></div><div class="modal-body"><p class="text-muted small mb-3">اختر العناصر التي تريد تصديرها في ملف واحد.</p><div class="form-check mb-3"><input type="checkbox" id="selectAllGlobal" onchange="toggleGlobalSelect(this)"><label for="selectAllGlobal" style="font-weight:bold; color:var(--primary-color);">تحديد كامل المكتبة</label></div><div id="exportListsContainer"></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('exportContentModal')">إلغاء</button><button class="btn btn-success" onclick="executeExport()">تصدير الملف</button></div></div></div>
+    <div id="linkContentModal" class="modal"><div class="modal-content large"><div class="modal-header"><h3 id="linkModalTitle">ربط المحتوى بالأهداف</h3><button class="modal-close" onclick="closeModal('linkContentModal')">×</button></div><div class="modal-body"><input type="hidden" id="linkTargetId"><input type="hidden" id="linkTargetType"><div class="alert alert-info small" id="linkInstructionText"></div><div id="linkContentBody" style="max-height: 400px; overflow-y: auto;"></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('linkContentModal')">إلغاء</button><button class="btn btn-success" onclick="saveContentLinks()">حفظ الربط</button></div></div></div>
+    <div id="createTestModal" class="modal"><div class="modal-content large"><div class="modal-header"><h3>إنشاء اختبار</h3><button class="modal-close" onclick="closeModal('createTestModal')">×</button></div><div class="modal-body"><input type="hidden" id="editTestId"><input type="text" id="testTitle" class="form-control mb-2" placeholder="العنوان"><select id="testSubject" class="form-control mb-2"><option value="لغتي">لغتي</option><option value="رياضيات">رياضيات</option></select><textarea id="testDescription" class="form-control mb-2" placeholder="الوصف"></textarea><div id="questionsContainer"></div><button class="btn btn-primary btn-sm" onclick="addQuestion()">+ سؤال</button></div><div class="modal-footer"><button class="btn btn-success" onclick="saveTest()">حفظ</button></div></div></div>
+    <div id="createLessonModal" class="modal"><div class="modal-content large" style="min-width: 800px;"><div class="modal-header"><h3>إنشاء درس تفاعلي</h3><button class="modal-close" onclick="closeModal('createLessonModal')">×</button></div><div class="modal-body"><input type="hidden" id="editLessonId"><div class="row mb-3" style="display:flex; gap:10px;"><div style="flex:2"><input type="text" id="lessonTitle" class="form-control" placeholder="العنوان"></div><div style="flex:1"><select id="lessonSubject" class="form-control"><option value="لغتي">لغتي</option><option value="رياضيات">رياضيات</option></select></div></div><div class="lesson-steps-nav"><div class="step-tab active" onclick="switchLessonStep('intro')" id="tab-intro">1. التمهيد</div><div class="step-tab" onclick="switchLessonStep('exercises')" id="tab-exercises">2. التمارين</div><div class="step-tab" onclick="switchLessonStep('assessment')" id="tab-assessment">3. التقييم</div></div><div id="step-intro" class="step-content active"><div class="form-group"><label>نوع التمهيد</label><select id="introType" class="form-control" onchange="toggleIntroInputs()"><option value="video">فيديو</option><option value="image">صورة</option><option value="link">رابط</option></select></div><div class="form-group mt-2"><input type="text" id="introUrl" class="form-control"></div><div class="form-group mt-2"><textarea id="introText" class="form-control" rows="3"></textarea></div></div><div id="step-exercises" class="step-content"><div class="form-group mb-3"><label>نسبة الاجتياز (%)</label><input type="number" id="exercisesPassScore" class="form-control" value="80" style="width: 100px;"></div><div id="exercisesContainer"></div><button class="btn btn-primary btn-sm mt-2" onclick="addLessonQuestion('exercisesContainer')">+ تمرين</button></div><div id="step-assessment" class="step-content"><div id="assessmentContainer"></div><button class="btn btn-primary btn-sm mt-2" onclick="addLessonQuestion('assessmentContainer')">+ سؤال</button></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('createLessonModal')">إلغاء</button><button class="btn btn-success" onclick="saveLesson()">حفظ</button></div></div></div>
+    <div id="createObjectiveModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>إدارة هدف تعليمي</h3><button class="modal-close" onclick="closeModal('createObjectiveModal')">×</button></div><div class="modal-body"><input type="hidden" id="editObjectiveId"><div class="form-group mb-2"><label>المادة</label><select id="objSubject" class="form-control"><option value="لغتي">لغتي</option><option value="رياضيات">رياضيات</option></select></div><div class="form-group mb-3"><label>الهدف قصير المدى</label><input type="text" id="shortTermGoal" class="form-control" style="font-weight:bold;"></div><div class="form-group"><label>الأهداف التدريسية</label><div id="instructionalGoalsContainer"></div><button class="btn btn-sm btn-outline-primary mt-2" onclick="addInstructionalGoalInput()">+ إضافة</button></div></div><div class="modal-footer"><button class="btn btn-success" onclick="saveObjective()">حفظ</button></div></div></div>
+    <div id="createHomeworkModal" class="modal"><div class="modal-content large"><div class="modal-header"><h3>إنشاء واجب جديد</h3><button class="modal-close" onclick="closeModal('createHomeworkModal')">×</button></div><div class="modal-body"><input type="hidden" id="editHomeworkId"><input type="text" id="homeworkTitle" class="form-control mb-2" placeholder="عنوان الواجب" required><select id="homeworkSubject" class="form-control mb-2"><option value="لغتي">لغتي</option><option value="رياضيات">رياضيات</option></select><textarea id="homeworkDescription" class="form-control mb-2" placeholder="وصف الواجب"></textarea><hr><h5>أسئلة الواجب</h5><div id="homeworkQuestionsContainer"></div><button class="btn btn-primary btn-sm" onclick="addHomeworkQuestion()">+ سؤال</button></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('createHomeworkModal')">إلغاء</button><button class="btn btn-success" onclick="saveHomework()">حفظ</button></div></div></div>
+
+    <script src="../../assets/js/dashboard.js"></script>
+    <script src="../../assets/js/teacher.js"></script>
+    <script src="../../assets/js/content-library.js"></script>
+    <script src="../../assets/js/auth.js"></script>
+    <script>
+        function toggleDropdown() { document.getElementById('contentDropdownMenu').classList.toggle('show'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+        function switchLessonStep(step) {
+            document.querySelectorAll('.step-tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.step-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`tab-${step}`).classList.add('active');
+            document.getElementById(`step-${step}`).classList.add('active');
+        }
+    </script>
+</body>
+</html>

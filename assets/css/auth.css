@@ -68,4 +68,25 @@
 
 .auth-links a:hover {
     text-decoration: underline;
+
+}
+/* 1. التنسيقات الأساسية (للكمبيوتر/الشاشات الكبيرة) */
+body { font-size: 18px; }
+.container { width: 80%; }
+
+/* ------------------------------------------- */
+
+/* 2. تنسيقات الايباد (Tablet) - أقل من 1024px */
+@media (max-width: 1024px) {
+  .container { width: 95%; }
+  .sidebar { width: 200px; }
+}
+
+/* ------------------------------------------- */
+
+/* 3. تنسيقات الجوال (Mobile) - أقل من 600px */
+@media (max-width: 600px) {
+  .container { width: 100%; }
+  .sidebar { display: none; } /* إخفاء القائمة في الجوال */
+  body { font-size: 16px; }
 }

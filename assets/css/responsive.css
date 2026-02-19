@@ -1,44 +1,82 @@
 /* =========================================
-   📱 ملف التجاوب المستقل (للآيباد والجوال فقط)
-   هذا الملف لا يغير الألوان أو الخطوط، فقط يرتب العناصر
+   📱 ملف التجاوب المستقل (شامل لجميع الصفحات)
 ========================================= */
+
+/* منع الشاشة من التحرك يميناً ويساراً (يمنع القطع) */
+body, html {
+    overflow-x: hidden !important;
+    width: 100% !important;
+}
 
 /* 💻 شاشات الآيباد والجوال (أصغر من 992px) */
 @media (max-width: 992px) {
-    /* 1. ترتيب القائمة الجانبية لتصبح منزلقة */
-    .dashboard-container { flex-direction: column; }
-    .sidebar { position: fixed; right: -300px; top: 0; height: 100vh; z-index: 9999; transition: right 0.3s ease; }
-    .sidebar.active { right: 0; }
-    .main-content-dashboard { width: 100%; margin-right: 0 !important; }
+    /* 1. إصلاح الحاوية الرئيسية */
+    .dashboard-container { 
+        flex-direction: column !important; 
+        width: 100% !important;
+        overflow-x: hidden !important;
+    }
     
-    /* 2. إظهار زر القائمة وترتيب الترويسة */
+    /* 2. القائمة الجانبية (منزلقة) */
+    .sidebar { 
+        position: fixed !important; 
+        right: -300px !important; 
+        top: 0 !important; 
+        height: 100vh !important; 
+        z-index: 9999 !important; 
+        transition: right 0.3s ease !important; 
+    }
+    .sidebar.active { right: 0 !important; }
+    
+    /* 3. استهداف جميع مسميات المحتوى الرئيسي لمنع القص */
+    .main-content-dashboard, 
+    .main-content, 
+    .content,
+    main { 
+        width: 100% !important; 
+        margin-right: 0 !important; 
+        margin-left: 0 !important;
+        max-width: 100vw !important;
+        box-sizing: border-box !important;
+    }
+    
+    /* 4. ترتيب الترويسة */
     .mobile-menu-btn { display: block !important; }
-    .dashboard-header { position: sticky; top: 0; z-index: 999; justify-content: flex-start; gap: 15px; }
-    .user-info { margin-right: auto; }
+    .dashboard-header { 
+        position: sticky !important; 
+        top: 0 !important; 
+        z-index: 999 !important; 
+        justify-content: flex-start !important; 
+        gap: 15px !important; 
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .user-info { margin-right: auto !important; }
     
-    /* 3. ترتيب الإحصائيات (عمودين في الآيباد) */
-    .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
-    
-    /* 4. ترتيب شريط البحث والأزرار */
-    .actions-bar { flex-direction: column; align-items: stretch; gap: 15px; }
+    /* 5. ترتيب شريط البحث والأزرار */
+    .actions-bar { 
+        flex-direction: column !important; 
+        align-items: stretch !important; 
+        gap: 15px !important; 
+    }
 }
 
 /* 📱 شاشات الجوال الصغيرة (أصغر من 576px) */
 @media (max-width: 576px) {
-    /* 1. الإحصائيات (عمود واحد في الجوال) */
-    .stats-grid { grid-template-columns: 1fr !important; }
-    .user-welcome .welcome-text { display: none; }
+    .user-welcome .welcome-text { display: none !important; }
     
-    /* 2. حماية الجداول من التشويه (تفعيل السحب بالإصبع) */
-    .table-container { 
-        overflow-x: auto; 
-        -webkit-overflow-scrolling: touch; 
-        display: block;
-        width: 100%;
+    /* حماية الجداول من التشويه وتفعيل التمرير بالإصبع */
+    .table-container, 
+    .table-responsive { 
+        overflow-x: auto !important; 
+        -webkit-overflow-scrolling: touch !important; 
+        display: block !important;
+        width: 100% !important;
+        border: 1px solid #e2e8f0; /* إضافة إطار خفيف ليوضح للمستخدم أن الجدول يسحب */
     }
-    .custom-table { min-width: 800px; } /* يمنع انضغاط أعمدة الجدول */
+    .custom-table, table { min-width: 800px !important; } 
     
-    /* 3. ترتيب أزرار الإجراءات داخل الجدول بشكل عمودي */
-    .student-actions { flex-direction: column !important; gap: 5px; }
-    .student-actions button { width: 100%; }
+    /* ترتيب أزرار الإجراءات داخل الجدول بشكل عمودي */
+    .student-actions { flex-direction: column !important; gap: 5px !important; }
+    .student-actions button { width: 100% !important; }
 }

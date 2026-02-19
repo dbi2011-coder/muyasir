@@ -1,103 +1,57 @@
 /* =========================================
-   📱 ملف التجاوب المستقل (النسخة النهائية لإصلاح القطع)
+   📱 الحل النهائي لمشكلة التجاوب والقص
 ========================================= */
 
-/* 1. إصلاح أساسي لمنع الصفحة من تجاوز حجم الشاشة */
-body, html {
-    overflow-x: hidden !important;
-    width: 100% !important;
-    max-width: 100vw !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-/* 💻 شاشات الآيباد والجوال (أصغر من 992px) */
 @media (max-width: 992px) {
-    .dashboard-container { 
-        flex-direction: column !important; 
+    /* 1. منع تجاوز الشاشة الأساسي */
+    html, body {
+        overflow-x: hidden !important;
         width: 100% !important;
-        max-width: 100vw !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
-    
-    .sidebar { 
-        position: fixed !important; 
-        right: -300px !important; 
-        top: 0 !important; 
-        height: 100vh !important; 
-        z-index: 9999 !important; 
-        transition: right 0.3s ease !important; 
+
+    /* 2. إلغاء الفليكس (Flex) الذي يسبب دفع الصفحة لليسار */
+    .dashboard-container {
+        display: block !important; 
+        width: 100% !important;
     }
-    
+
+    /* 3. إخفاء القائمة الجانبية وتحويلها لمنزلقة */
+    .sidebar {
+        position: fixed !important;
+        right: -300px !important;
+        top: 0 !important;
+        height: 100vh !important;
+        z-index: 9999 !important;
+        transition: right 0.3s ease !important;
+    }
     .sidebar.active { right: 0 !important; }
-    
-    /* 🔥 الحل الجذري لمشكلة القطع من اليسار */
+
+    /* 4. إجبار المحتوى الرئيسي على الانكماش (هذا ما يحل القص) */
     .main-content-dashboard, 
-    .main-content, 
-    .content,
-    main,
-    .dashboard-header,
-    .dashboard-content { 
-        width: 100% !important; 
-        max-width: 100vw !important; /* إجبار المحتوى على عدم تخطي الشاشة */
-        margin-right: 0 !important; 
-        margin-left: 0 !important;
-        box-sizing: border-box !important; /* حساب المسافات الداخلية ضمن العرض */
+    .main-content {
+        width: 100% !important;
+        min-width: 0 !important; /* السر هنا */
+        margin: 0 !important;
+        box-sizing: border-box !important;
     }
 
-    .dashboard-content {
-        padding: 15px !important; /* تقليل المسافات الجانبية في الجوال لتوفير مساحة */
+    /* 5. ترويسة الصفحة وزر القائمة */
+    .dashboard-header {
+        display: flex !important;
+        justify-content: flex-start !important;
+        gap: 15px !important;
+        padding: 15px !important;
     }
-
     .mobile-menu-btn { display: block !important; }
-    
-    .dashboard-header { 
-        position: sticky !important; 
-        top: 0 !important; 
-        z-index: 999 !important; 
-        justify-content: flex-start !important; 
-        gap: 15px !important; 
-    }
-    
     .user-info { margin-right: auto !important; }
-    
-    /* جعل شريط الإجراءات والبحث مرناً ولا يسبب تمطط الصفحة */
-    .actions-bar { 
-        flex-direction: column !important; 
-        align-items: stretch !important; 
-        gap: 10px !important; 
-        width: 100% !important;
-        box-sizing: border-box !important;
-    }
-    
-    .search-box, .search-box input {
-        width: 100% !important;
-        max-width: 100% !important;
-        box-sizing: border-box !important;
-    }
-}
 
-/* 📱 شاشات الجوال الصغيرة (أصغر من 576px) */
-@media (max-width: 576px) {
-    .user-welcome .welcome-text { display: none !important; }
-    
-    /* 🔥 عزل الجدول داخل صندوق قابل للسحب لكي لا يقطع الصفحة */
-    .table-container, 
-    .table-responsive { 
+    /* 6. عزل الجداول داخل صندوق قابل للسحب */
+    .table-container {
         width: 100% !important;
-        max-width: 100vw !important;
-        overflow-x: auto !important; 
-        -webkit-overflow-scrolling: touch !important; 
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
         display: block !important;
-        box-sizing: border-box !important;
     }
-    
-    /* السماح للجدول بالتمدد داخل صندوقه فقط دون التأثير على الصفحة */
-    .custom-table, table { 
-        min-width: 800px !important; 
-        max-width: none !important;
-    } 
-    
-    /* ترتيب أزرار الإجراءات داخل الجدول بشكل عمودي */
-    .student-actions { flex-direction: column !important; gap: 5px !important; }
-    .student-actions button { width: 100% !important; }
 }

@@ -1,0 +1,44 @@
+/* =========================================
+   📱 ملف التجاوب المستقل (للآيباد والجوال فقط)
+   هذا الملف لا يغير الألوان أو الخطوط، فقط يرتب العناصر
+========================================= */
+
+/* 💻 شاشات الآيباد والجوال (أصغر من 992px) */
+@media (max-width: 992px) {
+    /* 1. ترتيب القائمة الجانبية لتصبح منزلقة */
+    .dashboard-container { flex-direction: column; }
+    .sidebar { position: fixed; right: -300px; top: 0; height: 100vh; z-index: 9999; transition: right 0.3s ease; }
+    .sidebar.active { right: 0; }
+    .main-content-dashboard { width: 100%; margin-right: 0 !important; }
+    
+    /* 2. إظهار زر القائمة وترتيب الترويسة */
+    .mobile-menu-btn { display: block !important; }
+    .dashboard-header { position: sticky; top: 0; z-index: 999; justify-content: flex-start; gap: 15px; }
+    .user-info { margin-right: auto; }
+    
+    /* 3. ترتيب الإحصائيات (عمودين في الآيباد) */
+    .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    
+    /* 4. ترتيب شريط البحث والأزرار */
+    .actions-bar { flex-direction: column; align-items: stretch; gap: 15px; }
+}
+
+/* 📱 شاشات الجوال الصغيرة (أصغر من 576px) */
+@media (max-width: 576px) {
+    /* 1. الإحصائيات (عمود واحد في الجوال) */
+    .stats-grid { grid-template-columns: 1fr !important; }
+    .user-welcome .welcome-text { display: none; }
+    
+    /* 2. حماية الجداول من التشويه (تفعيل السحب بالإصبع) */
+    .table-container { 
+        overflow-x: auto; 
+        -webkit-overflow-scrolling: touch; 
+        display: block;
+        width: 100%;
+    }
+    .custom-table { min-width: 800px; } /* يمنع انضغاط أعمدة الجدول */
+    
+    /* 3. ترتيب أزرار الإجراءات داخل الجدول بشكل عمودي */
+    .student-actions { flex-direction: column !important; gap: 5px; }
+    .student-actions button { width: 100%; }
+}

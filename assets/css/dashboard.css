@@ -1,5 +1,5 @@
-/* =========================================
-   1. إعدادات الخطوط والأساسيات
+/* ========================================= 
+   ملف: assets/css/dashboard.css (نسخة التجاوب الكامل)
    ========================================= */
 :root {
     --primary-font: 'Tajawal', sans-serif;
@@ -7,21 +7,12 @@
     --transition-speed: 0.3s;
 }
 
-body {
-    font-family: var(--primary-font);
-    background-color: #f8f9fa;
-    margin: 0;
-    padding: 0;
-}
-
 .dashboard-container {
     display: flex;
     min-height: 100vh;
 }
 
-/* =========================================
-   2. الشريط الجانبي (Sidebar)
-   ========================================= */
+/* الشريط الجانبي - Sidebar */
 .sidebar {
     width: 280px;
     background: var(--secondary-color);
@@ -35,516 +26,41 @@ body {
     z-index: 1000;
 }
 
-.sidebar-header {
-    padding: 25px 20px;
-    background: rgba(0,0,0,0.1);
-    border-bottom: 1px solid rgba(255,255,255,0.1);
-    text-align: center;
-}
-
-.sidebar-header .logo {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-}
-
-.sidebar-header .logo img {
-    height: 40px;
-}
-
-.sidebar-header .logo h2 {
-    font-size: 1.3rem;
-    margin: 0;
-    color: white;
-}
-
-.sidebar-menu {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.sidebar-menu li {
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-}
-
-.sidebar-menu a {
-    display: flex;
-    align-items: center;
-    padding: 15px 20px;
-    color: rgba(255,255,255,0.8);
-    text-decoration: none;
-    transition: all var(--transition-speed) ease;
-    gap: 12px;
-}
-
-.sidebar-menu a:hover,
-.sidebar-menu a.active {
-    background: rgba(255,255,255,0.1);
-    color: white;
-    border-right: 4px solid var(--primary-color);
-}
-
-.sidebar-menu .menu-icon {
-    font-size: 1.2rem;
-    width: 20px;
-    text-align: center;
-}
-
-/* =========================================
-   3. المحتوى الرئيسي (Main Content & Header)
-   ========================================= */
+/* المحتوى الرئيسي */
 .main-content-dashboard {
     flex: 1;
     margin-right: 280px;
     transition: all var(--transition-speed) ease;
     display: flex;
     flex-direction: column;
+    width: calc(100% - 280px);
 }
 
-.dashboard-header {
-    background: white;
-    padding: 15px 30px;
-    box-shadow: 0 2px 15px rgba(0,0,0,0.03);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    position: sticky;
-    top: 0;
-    z-index: 900;
-}
-
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-}
-
-.user-welcome {
-    text-align: right;
-}
-
-.user-welcome .welcome-text {
-    font-size: 0.85rem;
-    color: #718096;
-}
-
-.user-welcome .user-name {
-    font-size: 1rem;
-    font-weight: 700;
-    color: var(--secondary-color);
-}
-
-.user-avatar {
-    width: 42px;
-    height: 42px;
-    background: var(--primary-color);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 700;
-    font-size: 1.1rem;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-}
-
-.header-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-.dashboard-content {
-    padding: 30px;
-}
-
-.content-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 25px;
-}
-
-.content-header h1 {
-    color: var(--secondary-color);
-    font-size: 1.6rem;
-    margin: 0;
-    font-weight: 700;
-}
-
-/* =========================================
-   4. البطاقات الإحصائية (Stats Grid & Cards)
-   ========================================= */
-.stats-grid {
-    display: grid;
-    /* إجبار البطاقات أن تكون في صف واحد (4 أعمدة) */
-    grid-template-columns: repeat(4, 1fr); 
-    gap: 20px;
-    margin-bottom: 30px;
-}
-
-/* التصميم الأساسي للبطاقة */
-.stat-card {
-    background: #fff;
-    border-radius: var(--card-radius);
-    padding: 20px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-    transition: transform var(--transition-speed) ease, box-shadow var(--transition-speed) ease;
-    border: 1px solid rgba(0,0,0,0.02);
-    position: relative;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 130px;
-}
-
-.stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-}
-
-/* عنصر زخرفي في الخلفية */
-.stat-card::after {
-    content: '';
-    position: absolute;
-    top: -20px;
-    right: -20px;
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    opacity: 0.1;
-    z-index: 0;
-}
-
-/* --- الألوان (Gradients) حسب النوع --- */
-
-/* 1. الافتراضي (أزرق) - معلم مسجل */
-.stat-card:not(.success):not(.warning):not(.danger) {
-    background: linear-gradient(135deg, #ffffff 0%, #f0f7ff 100%);
-    border-bottom: 3px solid #3498db;
-}
-.stat-card:not(.success):not(.warning):not(.danger) .stat-icon,
-.stat-card:not(.success):not(.warning):not(.danger) .stat-icon-wrapper {
-    background: rgba(52, 152, 219, 0.15);
-    color: #3498db;
-}
-.stat-card:not(.success):not(.warning):not(.danger) .stat-number { color: #2c3e50; }
-.stat-card:not(.success):not(.warning):not(.danger)::after { background: #3498db; }
-
-/* 2. النجاح (أخضر) - معلم نشط */
-.stat-card.success {
-    background: linear-gradient(135deg, #ffffff 0%, #f0fff4 100%);
-    border-bottom: 3px solid #2ecc71;
-}
-.stat-card.success .stat-icon,
-.stat-card.success .stat-icon-wrapper {
-    background: rgba(46, 204, 113, 0.15);
-    color: #2ecc71;
-}
-.stat-card.success .stat-number { color: #27ae60; }
-.stat-card.success::after { background: #2ecc71; }
-
-/* 3. التحذير (برتقالي) - معلم غير نشط */
-.stat-card.warning {
-    background: linear-gradient(135deg, #ffffff 0%, #fffaf0 100%);
-    border-bottom: 3px solid #f1c40f;
-}
-.stat-card.warning .stat-icon,
-.stat-card.warning .stat-icon-wrapper {
-    background: rgba(241, 196, 15, 0.15);
-    color: #f1c40f;
-}
-.stat-card.warning .stat-number { color: #d35400; }
-.stat-card.warning::after { background: #f1c40f; }
-
-/* 4. الخطر (أحمر) - معلم موقوف */
-.stat-card.danger {
-    background: linear-gradient(135deg, #ffffff 0%, #fff5f5 100%);
-    border-bottom: 3px solid #e74c3c;
-}
-.stat-card.danger .stat-icon,
-.stat-card.danger .stat-icon-wrapper {
-    background: rgba(231, 76, 60, 0.15);
-    color: #e74c3c;
-}
-.stat-card.danger .stat-number { color: #c0392b; }
-.stat-card.danger::after { background: #e74c3c; }
-
-/* --- محتوى البطاقة الداخلي --- */
-.stat-header, .stat-main {
-    display: flex;
-    justify-content: space-between;
-    align-items: center; 
-    width: 100%;
-    position: relative;
-    z-index: 1;
-}
-
-/* الأيقونات */
-.stat-icon, .stat-icon-wrapper {
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    flex-shrink: 0;
-}
-
-/* النصوص والأرقام */
-.stat-numbers, .stat-info {
-    display: flex;
-    flex-direction: column;
-}
-
-.stat-label {
-    color: #7f8c8d;
-    font-size: 0.85rem;
-    font-weight: 600;
-    margin-top: 5px;
-}
-
-.stat-number {
-    font-size: 1.8rem;
-    font-weight: 700;
-    line-height: 1.2;
-}
-
-/* تذييل البطاقة (لوحة التحكم) */
-.stat-footer {
-    border-top: 1px solid rgba(0,0,0,0.05);
-    padding-top: 10px;
-    margin-top: 10px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    z-index: 1;
-}
-
-.trend {
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 12px;
-}
-.trend.positive { color: #27ae60; background: rgba(39, 174, 96, 0.1); }
-.trend.negative { color: #c0392b; background: rgba(192, 57, 43, 0.1); }
-.trend.neutral { color: #2980b9; background: rgba(41, 128, 185, 0.1); }
-.footer-text { color: #95a5a6; font-size: 0.75rem; }
-
-/* =========================================
-   5. النوافذ المنبثقة (Modals) المحسنة
-   ========================================= */
-.modal {
-    background-color: rgba(0, 0, 0, 0.6); /* تعتيم الخلفية */
-    backdrop-filter: blur(5px); /* تأثير الضباب */
-    z-index: 2000;
-    transition: opacity 0.3s ease;
-}
-
-/* تحديث مهم: صندوق المحتوى المرن */
-.modal-content {
-    background-color: #fff;
-    margin: 2% auto; /* هوامش متوازنة */
-    width: 95%;
-    max-width: 550px;
-    border-radius: 20px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    display: flex;          /* لجعل العناصر تتوزع بمرونة */
-    flex-direction: column; /* ترتيب عمودي */
-    max-height: 90vh;       /* أقصى ارتفاع لا يتجاوز الشاشة */
-    position: relative;
-    animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-@keyframes slideDown {
-    from { opacity: 0; transform: translateY(-30px) scale(0.95); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-/* الرأس ثابت */
-.modal-header {
-    background: #f8fafc;
-    padding: 20px 30px;
-    border-bottom: 1px solid #edf2f7;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-shrink: 0; /* منع التقلص */
-}
-
-.modal-header h3 {
-    margin: 0;
-    color: var(--secondary-color);
-    font-size: 1.25rem;
-    font-weight: 700;
-}
-
-.modal-close {
-    background: transparent;
-    border: none;
-    font-size: 1.5rem;
-    color: #a0aec0;
-    cursor: pointer;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: 0.2s;
-}
-
-.modal-close:hover {
-    color: #e53e3e;
-    background-color: #fff5f5;
-}
-
-/* الجسم قابل للتمرير (Scrolling) */
-.modal-body {
-    padding: 25px 30px;
-    overflow-y: auto; /* هذا السطر يحل مشكلة اختفاء الأزرار */
-    flex: 1;          /* يملأ المساحة المتاحة */
-}
-
-/* تحسين النماذج (Forms) */
-.form-group {
-    margin-bottom: 20px;
-}
-
-.form-label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: #4a5568;
-    font-size: 0.95rem;
-}
-
-.form-control {
-    width: 100%;
-    padding: 12px 15px;
-    border: 2px solid #e2e8f0;
-    border-radius: 10px;
-    font-size: 1rem;
-    color: #2d3748;
-    transition: all 0.3s ease;
-    background-color: #fcfcfc;
-}
-
-.form-control:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    background-color: #fff;
-    box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.15);
-}
-
-.form-text {
-    font-size: 0.8rem;
-    color: #718096;
-    margin-top: 6px;
-}
-
-/* التذييل ثابت */
-.modal-footer {
-    padding: 20px 30px;
-    background-color: #f8fafc;
-    border-top: 1px solid #edf2f7;
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    flex-shrink: 0; /* منع التقلص */
-}
-
-.modal-footer .btn {
-    padding: 10px 24px;
-    border-radius: 8px;
-    font-weight: 600;
-}
-
-.modal-footer .btn-secondary {
-    background-color: #fff;
-    color: #4a5568;
-    border: 1px solid #cbd5e0;
-}
-.modal-footer .btn-secondary:hover {
-    background-color: #f7fafc;
-    border-color: #a0aec0;
-}
-
-/* =========================================
-   6. التجاوب (Responsive Design)
-   ========================================= */
-
+/* التجاوب مع الأجهزة */
 @media (max-width: 1024px) {
     .sidebar { width: 240px; }
-    .main-content-dashboard { margin-right: 240px; }
-    
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
+    .main-content-dashboard { 
+        margin-right: 240px; 
+        width: calc(100% - 240px);
     }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 768px) {
     .sidebar {
-        transform: translateX(100%);
+        transform: translateX(100%); /* إخفاء القائمة في الجوال */
         width: 260px;
     }
     .sidebar.active {
-        transform: translateX(0);
+        transform: translateX(0); /* إظهارها عند التفعيل */
     }
-    
-    .main-content-dashboard { margin-right: 0; }
+    .main-content-dashboard { 
+        margin-right: 0; 
+        width: 100%;
+    }
     .dashboard-header { padding: 15px 20px; }
-    .dashboard-content { padding: 20px; }
+    .mobile-menu-btn { display: block !important; } /* تفعيل زر القائمة */
     
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .modal-content {
-        width: 95%;
-        margin: 5% auto;
-    }
+    .stats-grid { grid-template-columns: 1fr; } /* البطاقات في صف واحد */
+    .modal-content { width: 95%; margin: 5% auto; }
 }
-
-.mobile-menu-btn {
-    display: none;
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    color: var(--secondary-color);
-    cursor: pointer;
-    padding: 5px;
-}
-
-@media (max-width: 768px) {
-    .mobile-menu-btn {
-        display: block;
-    }
-}
-
-/* 1. التنسيقات الأساسية (للكمبيوتر/الشاشات الكبيرة) */
-body { font-size: 18px; }
-.container { width: 80%; }
-
-/* ------------------------------------------- */
-
-/* 2. تنسيقات الايباد (Tablet) - أقل من 1024px */
-@media (max-width: 1024px) {
-  .container { width: 95%; }
-  .sidebar { width: 200px; }
-}
-
-/* ------------------------------------------- */
-
-/* 3. تنسيقات الجوال (Mobile) - أقل من 600px */
-@media (max-width: 600px) {
-  .container { width: 100%; }
-  .sidebar { display: none; } /* إخفاء القائمة في الجوال */
-  body { font-size: 16px; }
-}
-

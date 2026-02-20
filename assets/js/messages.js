@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (النسخة النهائية: MP3 - بدون زر تنزيل - أيقونات غامقة - PDF - نافذة حذف احترافية)
+// الوصف: شات المعلم (النسخة النهائية مع دعم كامل لتجاوب الجوال)
 // ============================================
 
 let activeChatStudentId = null;
@@ -31,7 +31,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!e.target.closest('.msg-options-btn')) {
                     document.querySelectorAll('.msg-dropdown').forEach(menu => menu.style.display = 'none');
                 }
-                // إغلاق نافذة الحذف عند النقر خارجها
                 const deleteModal = document.getElementById('deleteConfirmModal');
                 if (deleteModal && e.target === deleteModal) {
                     closeDeleteModal();
@@ -143,37 +142,23 @@ function injectChatStyles() {
         .emoji-item:hover { background: #f1f5f9; transform: scale(1.2); }
         .empty-chat { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; }
 
-        /* --- أنماط نافذة الحذف الجديدة --- */
-        .custom-modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.5); z-index: 2000;
-            display: none; align-items: center; justify-content: center;
-            backdrop-filter: blur(3px); animation: fadeIn 0.2s;
-        }
-        .custom-modal-box {
-            background: #fff; padding: 25px; border-radius: 16px;
-            width: 90%; max-width: 400px; text-align: center;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            animation: popIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-        }
-        .modal-icon-danger {
-            width: 60px; height: 60px; background: #fee2e2; color: #dc2626;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-size: 1.8rem; margin: 0 auto 15px;
-        }
+        /* نافذة الحذف */
+        .custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(3px); animation: fadeIn 0.2s; }
+        .custom-modal-box { background: #fff; padding: 25px; border-radius: 16px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: popIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
+        .modal-icon-danger { width: 60px; height: 60px; background: #fee2e2; color: #dc2626; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto 15px; }
         .modal-title { font-size: 1.2rem; font-weight: bold; color: #1f2937; margin-bottom: 8px; }
         .modal-desc { color: #6b7280; font-size: 0.95rem; margin-bottom: 20px; line-height: 1.5; }
         .modal-actions { display: flex; gap: 10px; justify-content: center; }
-        .btn-modal {
-            flex: 1; padding: 12px; border-radius: 10px; font-weight: bold;
-            cursor: pointer; border: none; transition: 0.2s; font-size: 0.95rem;
-        }
+        .btn-modal { flex: 1; padding: 12px; border-radius: 10px; font-weight: bold; cursor: pointer; border: none; transition: 0.2s; font-size: 0.95rem; }
         .btn-modal-cancel { background: #f3f4f6; color: #374151; }
         .btn-modal-cancel:hover { background: #e5e7eb; }
         .btn-modal-delete { background: #dc2626; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-modal-delete:hover { background: #b91c1c; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); }
         @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* إخفاء أزرار الموبايل في الشاشات الكبيرة */
+        @media (min-width: 769px) { .mobile-contacts-toggle { display: none !important; } }
     `;
     document.head.appendChild(style);
 }
@@ -182,15 +167,18 @@ function renderChatLayout() {
     const container = document.getElementById('messagesList');
     container.innerHTML = '';
     container.className = '';
-    const emojis = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','👻','💀','☠️','👽','👾','🤖','🎃','😺','😺','😹','😻','😼','😽','🙀','😿','😾','👋','🤚','✋','🖖','👌','🤏','✌️','🤞','🤟','🤘','🤙','👈','👉','👆','👇','☝️','👍','👎','✊','👊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✍️','💅','🤳','💪','🦵','🦶','👂','🦻','👃','🧠','🦷','🦴','👀','👁','👅','👄','💋','🩸','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❣️','💕','💞','💓','💗','💖','💘','💝','💟','🅰️','🅱️','🆎','🆑','🅾️','🆘','❌','⭕️','🛑','⛔️','📛','🚫','💯','💢','♨️','❗️','❕','❓','❔','‼️','⁉️','⚠️','✅','❎','🌐','💠','Ⓜ️','🌀','💤','🆗','🆙','🆒','🆕','🆓','0️⃣','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🔢','#️⃣','*️⃣','▶️','⏸','⏯','⏹','⏺','⏭','⏮','⏩','⏪','⏫','⏬','◀️','🔼','🔽','➡️','⬅️','⬆️','⬇️','↗️','↘️','↙️','↖️','↕️','↔️','↪️','↩️','⤴️','⤵️','🔀','🔁','🔂','🔄','🔃','🎵','🎶','➕','➖','➗','✖️','♾','💲','💱','™️','©️','®️','👁‍🗨','🔚','🔙','🔛','🔝','🔜','✔️','☑️','🔘','🔴','🟠','🟡','🟢','🔵','🟣','⚫️','⚪️','🟤','🔺','🔻','🔸','🔹','🔶','🔷','🔳','🔲','▪️','▫️','◾️','◽️','◼️','◻️','🟥','🟧','🟨','🟩','🟦','🟪','⬛️','⬜️','🟫','🔈','🔇','🔉','🔊','🔔','🔕','📣','📢','💬','💭','🗯','🕐','🕑','🕒','🕓','🕔','🕕','🕖','🕗','🕘','🕙','🕚','🕛'];
+    const emojis = ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕','🤑','🤠','😈','👿','👹','👺','🤡','👻','💀','☠️'];
     const emojiHtml = emojis.map(e => `<div class="emoji-item" onclick="addEmoji('${e}')">${e}</div>`).join('');
 
     container.innerHTML = `
         <div class="chat-container">
             <div class="chat-sidebar">
-                <div class="chat-list-header">
+                <div class="chat-list-header" style="display:flex; justify-content:space-between; align-items:center;">
                     <button class="btn btn-primary w-100" onclick="showNewMessageModal()" style="font-weight:bold; border-radius:25px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
                         <i class="fas fa-plus"></i> محادثة جديدة
+                    </button>
+                    <button class="mobile-contacts-toggle" style="background:transparent; color:#333; margin-right:10px; font-size:1.2rem; padding:0;" onclick="document.querySelector('.chat-sidebar').classList.remove('show-contacts')">
+                        <i class="fas fa-times"></i>
                     </button>
                 </div>
                 <div class="chat-list" id="chatContactsList"></div>
@@ -199,6 +187,9 @@ function renderChatLayout() {
             <div class="chat-main">
                 <div class="chat-header" id="chatHeader" style="display:none;">
                     <div style="display:flex; align-items:center;">
+                        <button class="mobile-contacts-toggle" style="margin: 0 0 0 10px; padding: 5px 10px; border-radius:5px;" onclick="document.querySelector('.chat-sidebar').classList.add('show-contacts')">
+                            <i class="fas fa-users"></i>
+                        </button>
                         <div class="avatar" id="chatHeaderAvatar"></div>
                         <div style="display:flex; flex-direction:column; margin-right:10px;">
                             <span id="chatHeaderName" style="line-height:1.2;">اسم الطالب</span>
@@ -220,6 +211,9 @@ function renderChatLayout() {
                     <div class="empty-chat">
                         <i class="far fa-comments fa-4x mb-4" style="color:#cbd5e1;"></i>
                         <p style="font-size:1.1rem;">اختر طالباً للبدء بالمراسلة</p>
+                        <button class="mobile-contacts-toggle" style="margin-top:20px; border-radius:25px; padding:10px 20px; font-weight:bold;" onclick="document.querySelector('.chat-sidebar').classList.add('show-contacts')">
+                            👥 إظهار قائمة الطلاب
+                        </button>
                     </div>
                 </div>
                 
@@ -242,15 +236,10 @@ function renderChatLayout() {
                             <span id="recordTimer">00:00</span>
                         </div>
                         <div style="display:flex; gap:10px;">
-                            <button class="btn-tool" style="background:#dc3545; color:white;" onclick="cancelRecording()" title="إلغاء">
-                                <i class="fas fa-times"></i>
-                            </button>
-                            <button class="btn-tool" style="background:#28a745; color:white;" onclick="stopRecording()" title="إرسال">
-                                <i class="fas fa-check"></i>
-                            </button>
+                            <button class="btn-tool" style="background:#dc3545; color:white;" onclick="cancelRecording()" title="إلغاء"><i class="fas fa-times"></i></button>
+                            <button class="btn-tool" style="background:#28a745; color:white;" onclick="stopRecording()" title="إرسال"><i class="fas fa-check"></i></button>
                         </div>
                     </div>
-
                     <button id="emojiBtn" class="btn-tool btn-emoji" onclick="toggleEmojiPopup()" title="رموز"><i class="far fa-smile"></i></button>
                     <label class="btn-tool btn-attach" title="ملف"><i class="fas fa-paperclip"></i><input type="file" id="chatFileInput" style="display:none" onchange="handleChatAttachment(this)"></label>
                     <label class="btn-tool btn-cam" title="كاميرا"><i class="fas fa-camera"></i><input type="file" id="chatCamInput" accept="image/*" capture="environment" style="display:none" onchange="handleChatAttachment(this)"></label>
@@ -264,19 +253,12 @@ function renderChatLayout() {
 
         <div id="deleteConfirmModal" class="custom-modal-overlay">
             <div class="custom-modal-box">
-                <div class="modal-icon-danger">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
+                <div class="modal-icon-danger"><i class="fas fa-exclamation-triangle"></i></div>
                 <div class="modal-title">حذف المحادثة؟</div>
-                <div class="modal-desc">
-                    هل أنت متأكد من رغبتك في حذف سجل المحادثة بالكامل؟<br>
-                    <span style="color:#dc2626; font-size:0.85rem;">⚠️ لا يمكن التراجع عن هذا الإجراء</span>
-                </div>
+                <div class="modal-desc">هل أنت متأكد من رغبتك في حذف سجل المحادثة بالكامل؟<br><span style="color:#dc2626; font-size:0.85rem;">⚠️ لا يمكن التراجع عن هذا الإجراء</span></div>
                 <div class="modal-actions">
                     <button class="btn-modal btn-modal-cancel" onclick="closeDeleteModal()">إلغاء</button>
-                    <button class="btn-modal btn-modal-delete" onclick="confirmDeleteAction()">
-                        <i class="fas fa-trash-alt"></i> نعم، حذف
-                    </button>
+                    <button class="btn-modal btn-modal-delete" onclick="confirmDeleteAction()"><i class="fas fa-trash-alt"></i> نعم، حذف</button>
                 </div>
             </div>
         </div>
@@ -320,6 +302,11 @@ function renderSidebar(conversations) {
 function openChat(studentId) {
     activeChatStudentId = studentId;
     cancelEdit();
+    
+    // إخفاء القائمة الجانبية في الجوال تلقائياً عند اختيار طالب
+    const sidebar = document.querySelector('.chat-sidebar');
+    if(sidebar) sidebar.classList.remove('show-contacts');
+
     document.getElementById('chatHeader').style.display = 'flex';
     document.getElementById('chatInputArea').style.display = 'flex';
     const student = getStudentById(studentId);
@@ -341,15 +328,7 @@ function loadChatMessages(studentId) {
         const isMe = !msg.isFromStudent; 
         const bubbleClass = isMe ? 'msg-me' : 'msg-other';
         let contentHtml = msg.content;
-        
-        // 🔥 فقط مشغل الصوت (بدون زر تنزيل) 🔥
-        if (msg.isVoice) {
-            contentHtml = `
-            <div style="display:flex; align-items:center; gap:5px;">
-                <audio controls src="${msg.content}"></audio>
-            </div>`;
-        }
-
+        if (msg.isVoice) contentHtml = `<div style="display:flex; align-items:center; gap:5px;"><audio controls src="${msg.content}"></audio></div>`;
         let attachHtml = '';
         if (msg.attachment) { const isImg = msg.attachment.startsWith('data:image'); attachHtml = `<a href="${msg.attachment}" download="file" class="msg-attachment">${isImg ? `<img src="${msg.attachment}">` : ''} 📎 تحميل</a>`; }
         let menuHtml = '';
@@ -371,113 +350,60 @@ function loadChatMessages(studentId) {
 function exportChatToPDF() {
     if (!activeChatStudentId) return;
     const student = getStudentById(activeChatStudentId);
-    const studentName = student ? student.name : 'طالب';
     const element = document.getElementById('chatMessagesArea');
-    const opt = {
-        margin: [0.5, 0.5, 0.5, 0.5],
-        filename: `محادثة_${studentName}_${new Date().toLocaleDateString()}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
-    };
-
+    const opt = { margin: 0.5, filename: `محادثة_${student ? student.name : 'طالب'}.pdf`, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' } };
     if (window.html2pdf) {
         const clone = element.cloneNode(true);
-        clone.style.background = 'white';
-        clone.style.height = 'auto';
-        clone.style.overflow = 'visible';
-        clone.style.padding = '20px';
-        
+        clone.style.background = 'white'; clone.style.height = 'auto'; clone.style.overflow = 'visible'; clone.style.padding = '20px';
         clone.querySelectorAll('.msg-options-btn, .msg-dropdown').forEach(el => el.remove());
-
-        clone.querySelectorAll('audio').forEach(audio => {
-            const placeholder = document.createElement('div');
-            placeholder.innerHTML = '<span style="color:#555; font-size:0.9rem; border:1px solid #ccc; padding:2px 8px; border-radius:10px; background:#f9f9f9;">🎤 رسالة صوتية (ملف مرفق)</span>';
-            if(audio.parentNode) audio.parentNode.replaceChild(placeholder, audio);
-        });
-
+        clone.querySelectorAll('audio').forEach(audio => { const ph = document.createElement('div'); ph.innerHTML = '<span style="color:#555; font-size:0.9rem; border:1px solid #ccc; padding:2px 8px; border-radius:10px; background:#f9f9f9;">🎤 رسالة صوتية</span>'; if(audio.parentNode) audio.parentNode.replaceChild(ph, audio); });
         html2pdf().set(opt).from(clone).save();
-    } else {
-        alert("جاري تحميل أداة التصدير...");
-    }
+    } else alert("جاري تحميل أداة التصدير...");
 }
 
-// دالة عرض النافذة المنبثقة بدلاً من confirm
-function deleteEntireConversation() {
-    if (!activeChatStudentId) return;
-    document.getElementById('deleteConfirmModal').style.display = 'flex';
-}
-
-// دالة إغلاق النافذة
-function closeDeleteModal() {
-    document.getElementById('deleteConfirmModal').style.display = 'none';
-}
-
-// دالة تنفيذ الحذف الفعلي (تُستدعى عند الضغط على "نعم، حذف")
+function deleteEntireConversation() { if (!activeChatStudentId) return; document.getElementById('deleteConfirmModal').style.display = 'flex'; }
+function closeDeleteModal() { document.getElementById('deleteConfirmModal').style.display = 'none'; }
 function confirmDeleteAction() {
     if (!activeChatStudentId) return;
-    
     const currentUser = getCurrentUser();
-    
-    // 1. حذف رسائل المعلم
     let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
     teacherMsgs = teacherMsgs.filter(m => !(m.teacherId === currentUser.id && m.studentId === activeChatStudentId));
     localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
-    
-    // 2. حذف رسائل الطالب (محاكاة)
     let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
     studentMsgs = studentMsgs.filter(m => !(m.teacherId === currentUser.id && m.studentId === activeChatStudentId));
     localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
-    
-    // 3. تحديث الواجهة
     document.getElementById('chatMessagesArea').innerHTML = '';
-    loadConversations(); // تحديث القائمة الجانبية
-    loadChatMessages(activeChatStudentId); // تحديث منطقة الشات (ستظهر فارغة)
-    
-    // 4. إغلاق النافذة
-    closeDeleteModal();
+    loadConversations(); loadChatMessages(activeChatStudentId); closeDeleteModal();
+    // إظهار رسالة "اختر طالباً" وزر القائمة
+    document.getElementById('chatHeader').style.display = 'none';
+    document.getElementById('chatInputArea').style.display = 'none';
+    document.getElementById('chatMessagesArea').innerHTML = `<div class="empty-chat"><i class="far fa-comments fa-4x mb-4" style="color:#cbd5e1;"></i><p style="font-size:1.1rem;">اختر طالباً للبدء بالمراسلة</p><button class="mobile-contacts-toggle" style="margin-top:20px; border-radius:25px; padding:10px 20px; font-weight:bold;" onclick="document.querySelector('.chat-sidebar').classList.add('show-contacts')">👥 إظهار قائمة الطلاب</button></div>`;
 }
 
 function startRecording() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { alert('المتصفح لا يدعم التسجيل'); return; }
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
+        mediaRecorder = new MediaRecorder(stream); audioChunks = [];
         mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
         mediaRecorder.onstop = () => {
-            // 🔥 تغيير النوع إلى mp3 🔥
             const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
             const reader = new FileReader();
             reader.onload = function(e) { sendVoiceMessage(e.target.result); };
             reader.readAsDataURL(audioBlob);
             stream.getTracks().forEach(track => track.stop());
         };
-        mediaRecorder.start();
-        document.getElementById('recordingArea').style.display = 'flex';
-        recordingStartTime = Date.now();
-        recordingInterval = setInterval(updateRecordTimer, 1000);
-        updateRecordTimer();
+        mediaRecorder.start(); document.getElementById('recordingArea').style.display = 'flex';
+        recordingStartTime = Date.now(); recordingInterval = setInterval(updateRecordTimer, 1000); updateRecordTimer();
     }).catch(() => alert('تعذر الوصول للمايكروفون'));
 }
-function updateRecordTimer() {
-    const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000);
-    const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
-    const secs = (elapsed % 60).toString().padStart(2, '0');
-    document.getElementById('recordTimer').textContent = `${mins}:${secs}`;
-}
+function updateRecordTimer() { const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000); const mins = Math.floor(elapsed / 60).toString().padStart(2, '0'); const secs = (elapsed % 60).toString().padStart(2, '0'); document.getElementById('recordTimer').textContent = `${mins}:${secs}`; }
 function stopRecording() { if (mediaRecorder && mediaRecorder.state === 'recording') { mediaRecorder.stop(); clearInterval(recordingInterval); document.getElementById('recordingArea').style.display = 'none'; } }
 function cancelRecording() { if (mediaRecorder && mediaRecorder.state === 'recording') { mediaRecorder.onstop = null; mediaRecorder.stop(); clearInterval(recordingInterval); document.getElementById('recordingArea').style.display = 'none'; } }
 function sendVoiceMessage(base64Audio) {
-    if (!activeChatStudentId) return;
-    const currentUser = getCurrentUser();
-    const teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
-    teacherMsgs.push({ id: Date.now(), teacherId: currentUser.id, studentId: activeChatStudentId, content: base64Audio, attachment: null, isVoice: true, sentAt: new Date().toISOString(), isRead: true, isFromStudent: false });
-    localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
-    const studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
-    studentMsgs.push({ id: Date.now() + 1, studentId: activeChatStudentId, teacherId: currentUser.id, content: base64Audio, attachment: null, isVoice: true, sentAt: new Date().toISOString(), isRead: false, isFromTeacher: true });
-    localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
-    loadChatMessages(activeChatStudentId);
-    loadConversations();
+    if (!activeChatStudentId) return; const currentUser = getCurrentUser();
+    const teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); teacherMsgs.push({ id: Date.now(), teacherId: currentUser.id, studentId: activeChatStudentId, content: base64Audio, attachment: null, isVoice: true, sentAt: new Date().toISOString(), isRead: true, isFromStudent: false }); localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
+    const studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); studentMsgs.push({ id: Date.now() + 1, studentId: activeChatStudentId, teacherId: currentUser.id, content: base64Audio, attachment: null, isVoice: true, sentAt: new Date().toISOString(), isRead: false, isFromTeacher: true }); localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
+    loadChatMessages(activeChatStudentId); loadConversations();
 }
 function toggleMessageMenu(e, msgId) { e.stopPropagation(); document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none'); const menu = document.getElementById(`msgMenu_${msgId}`); if (menu) menu.style.display = 'block'; }
 function deleteChatMessage(messageId) { if (!confirm('حذف هذه الرسالة؟')) return; let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); teacherMsgs = teacherMsgs.filter(m => m.id !== messageId); localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs)); let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); studentMsgs = studentMsgs.filter(m => m.id !== (messageId + 1)); localStorage.setItem('studentMessages', JSON.stringify(studentMsgs)); loadChatMessages(activeChatStudentId); loadConversations(); }
@@ -504,7 +430,10 @@ function handleEnter(e) { if (e.key === 'Enter') sendChatMessage(); }
 function getStudentById(id) { let students = JSON.parse(localStorage.getItem('students') || '[]'); let s = students.find(s => s.id == id); if(!s) { const users = JSON.parse(localStorage.getItem('users') || '[]'); s = users.find(u => u.id == id && u.role === 'student'); } return s; }
 function showNewMessageModal() { const currentUser = getCurrentUser(); const recipientSelect = document.getElementById('messageRecipient'); if(recipientSelect) { loadStudentsForMessaging(); document.getElementById('newMessageModal').classList.add('show'); } else { alert("يرجى اختيار الطالب من القائمة."); } }
 function loadStudentsForMessaging() { const recipientSelect = document.getElementById('messageRecipient'); if(!recipientSelect) return; const currentTeacher = getCurrentUser(); let allStudents = JSON.parse(localStorage.getItem('students') || '[]'); const allUsers = JSON.parse(localStorage.getItem('users') || '[]'); const studentUsers = allUsers.filter(u => u.role === 'student'); const merged = [...allStudents]; studentUsers.forEach(u => { if(!merged.find(s => s.id == u.id)) merged.push(u); }); const myStudents = merged.filter(s => s.teacherId == currentTeacher.id); recipientSelect.innerHTML = '<option value="">اختر الطالب</option>'; myStudents.forEach(s => { recipientSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`; }); }
-window.showNewMessageModal = showNewMessageModal; window.sendNewMessage = function() { const sId = document.getElementById('messageRecipient').value; if(sId) { document.getElementById('newMessageModal').classList.remove('show'); openChat(parseInt(sId)); } }; window.closeNewMessageModal = function() { document.getElementById('newMessageModal').classList.remove('show'); };
+
+window.showNewMessageModal = showNewMessageModal; 
+window.sendNewMessage = function() { const sId = document.getElementById('messageRecipient').value; if(sId) { document.getElementById('newMessageModal').classList.remove('show'); openChat(parseInt(sId)); } }; 
+window.closeNewMessageModal = function() { document.getElementById('newMessageModal').classList.remove('show'); };
 window.deleteEntireConversation = deleteEntireConversation;
 window.exportChatToPDF = exportChatToPDF;
 window.closeDeleteModal = closeDeleteModal;

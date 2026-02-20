@@ -1,5 +1,5 @@
 /* =========================================
-   📱 الحل النهائي والشامل (للقضاء على القص تماماً)
+   📱 الحل النهائي والشامل للتجاوب (Responsive)
 ========================================= */
 
 /* 1. تصفير وإجبار الصفحة على عدم التمدد */
@@ -42,19 +42,23 @@ html, body {
         padding: 0 !important;
     }
     
+    /* تعديل رأس الصفحة ليكون النص بجانب الزر على اليمين */
     .dashboard-header { 
         display: flex !important; 
         justify-content: flex-start !important; 
+        align-items: center !important; 
         gap: 15px !important; 
         padding: 15px !important; 
         width: 100% !important; 
     }
     .mobile-menu-btn { display: block !important; }
-    .user-info { margin-right: auto !important; }
+    
+    /* إلغاء الدفع لليسار وجعل معلومات المستخدم بجانب الزر */
+    .user-info { margin: 0 !important; } 
 }
 
 @media (max-width: 768px) {
-    /* 5. ترتيب الأزرار (إضافة طالب) لتكون فوق بعضها */
+    /* 5. ترتيب الأزرار لتكون فوق بعضها */
     .content-header {
         display: flex !important;
         flex-direction: column !important;
@@ -67,10 +71,10 @@ html, body {
         flex-direction: column !important;
         gap: 10px !important;
     }
-    .header-actions button {
+    .header-actions button, .header-actions .btn-group {
         width: 100% !important;
     }
-
+    
     /* ترتيب شريط البحث والفلترة */
     .filters-section {
         display: flex !important;
@@ -165,16 +169,15 @@ html, body {
     }
 
     .schedule-table thead {
-        display: none !important; /* إخفاء رأس الجدول */
+        display: none !important; 
     }
 
     .schedule-table, .schedule-table tbody, .schedule-table tr, .schedule-table td {
         display: block !important;
         width: 100% !important;
-        min-width: 0 !important; /* إلغاء العرض الأدنى القديم */
+        min-width: 0 !important; 
     }
 
-    /* تصميم بطاقة اليوم */
     .schedule-table tr {
         background-color: #fff !important;
         border: 1px solid #e0e0e0 !important;
@@ -184,7 +187,6 @@ html, body {
         box-shadow: 0 4px 8px rgba(0,0,0,0.06) !important;
     }
 
-    /* ترويسة البطاقة (اسم اليوم: الأحد، الإثنين...) */
     .schedule-table td:first-child {
         background-color: #e8f5e9 !important; 
         color: #1b5e20 !important;
@@ -192,26 +194,24 @@ html, body {
         text-align: center !important;
         padding: 15px !important;
         border-bottom: 2px solid #c8e6c9 !important;
-        width: 100% !important; /* لملء العرض */
+        width: 100% !important; 
     }
 
-    /* خلايا الحصص داخل البطاقة */
     .schedule-table td:not(:first-child) {
         border: none !important;
         border-bottom: 1px solid #f0f0f0 !important;
         padding: 15px !important;
         text-align: right !important;
         display: flex !important;
-        flex-direction: column !important; /* جعل الأسماء تحت اسم الحصة */
+        flex-direction: column !important; 
         align-items: flex-start !important;
-        min-height: 80px !important; /* مساحة مريحة للضغط */
+        min-height: 80px !important; 
     }
 
     .schedule-table td:last-child {
         border-bottom: none !important;
     }
 
-    /* إضافة أسماء الحصص كعناوين داخل الخلية */
     .schedule-table td:nth-child(2)::before { content: "الحصة الأولى"; font-weight: bold !important; color: #555 !important; margin-bottom: 8px !important; font-size: 0.95rem !important; }
     .schedule-table td:nth-child(3)::before { content: "الحصة الثانية"; font-weight: bold !important; color: #555 !important; margin-bottom: 8px !important; font-size: 0.95rem !important; }
     .schedule-table td:nth-child(4)::before { content: "الحصة الثالثة"; font-weight: bold !important; color: #555 !important; margin-bottom: 8px !important; font-size: 0.95rem !important; }
@@ -220,7 +220,6 @@ html, body {
     .schedule-table td:nth-child(7)::before { content: "الحصة السادسة"; font-weight: bold !important; color: #555 !important; margin-bottom: 8px !important; font-size: 0.95rem !important; }
     .schedule-table td:nth-child(8)::before { content: "الحصة السابعة"; font-weight: bold !important; color: #555 !important; margin-bottom: 8px !important; font-size: 0.95rem !important; }
 
-    /* تكبير أسماء الطلاب (الشرائح) لتسهيل قراءتها */
     .student-chip {
         font-size: 13px !important;
         padding: 6px 12px !important;
@@ -231,7 +230,7 @@ html, body {
     }
 
     /* ---------------------------------------------------
-       8. تحسين نافذة (تسكين الطلاب) لتناسب الجوال
+       8. تحسين النوافذ المنبثقة (Modals) لتناسب الجوال
     --------------------------------------------------- */
     .modal-content {
         width: 95% !important;
@@ -239,23 +238,33 @@ html, body {
         max-height: 90vh !important;
         display: flex !important;
         flex-direction: column !important;
+        min-width: 0 !important; /* لإلغاء أي عرض أدنى مسبق */
     }
 
-    /* جعل قائمة اختيار الطلاب عمودية وسهلة اللمس */
     .students-selection-list {
-        grid-template-columns: 1fr !important; /* صف واحد لكل طالب */
+        grid-template-columns: 1fr !important; 
         gap: 12px !important;
         padding: 5px !important;
-        max-height: 50vh !important; /* السماح بالتمرير داخل النافذة */
+        max-height: 50vh !important; 
     }
 
     .student-checkbox-item {
-        padding: 12px !important; /* تكبير مساحة الضغط */
+        padding: 12px !important; 
         font-size: 1.1rem !important;
     }
     
     .student-checkbox-item input {
-        transform: scale(1.5) !important; /* تكبير مربع الاختيار */
+        transform: scale(1.5) !important; 
         margin-left: 15px !important;
+    }
+    
+    /* جعل أزرار الإجراءات داخل النوافذ المنبثقة تتمدد وتأخذ العرض كامل */
+    .modal-footer {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+    .modal-footer button {
+        width: 100% !important;
+        margin: 0 !important;
     }
 }

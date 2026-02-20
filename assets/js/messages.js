@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (النسخة الاحترافية للجوال - بدون هوامش سفلية وأزرار مرتبة)
+// الوصف: شات المعلم (النسخة الاحترافية للجوال - أزرار مربعة صغيرة لتوسعة مساحة الاسم)
 // ============================================
 
 let activeChatStudentId = null;
@@ -172,7 +172,7 @@ function injectChatStyles() {
             /* امتداد المحادثة لأسفل الصفحة بالكامل وإلغاء الهامش الأبيض */
             .messages-container {
                 height: calc(100vh - 130px) !important; 
-                margin-bottom: -20px !important; /* سحب الحاوية للأسفل لتغطية الهامش الأبيض */
+                margin-bottom: -20px !important; 
             }
             .chat-container {
                 height: 100% !important;
@@ -181,47 +181,63 @@ function injectChatStyles() {
                 box-shadow: none !important;
             }
 
-            /* 1. رأس المحادثة (سطر واحد - الاسم يمين والأزرار يسار) */
+            /* 1. رأس المحادثة (تصغير العناصر لزيادة مساحة الاسم) */
             .chat-header {
                 flex-direction: row !important; 
                 align-items: center !important;
-                height: 65px !important;
+                height: 60px !important;
                 padding: 5px 10px !important;
             }
+            
+            /* تصغير أيقونة الطالب (Avatar) لتوفير مساحة */
+            .chat-header .avatar {
+                width: 35px !important;
+                height: 35px !important;
+                font-size: 0.9rem !important;
+                margin-left: 8px !important;
+            }
+
             .header-info { 
                 width: auto; 
                 flex: 1; 
-                min-width: 0; /* ضروري للسماح بقص الاسم الطويل */
+                min-width: 0; 
                 display: flex;
                 align-items: center;
             }
             .header-info > div {
                 min-width: 0; 
             }
+            
             #chatHeaderName {
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 display: block;
-                max-width: 140px; /* تحديد عرض أقصى لاسم الطالب لضمان مساحة للأزرار */
+                max-width: 100%; /* السماح للاسم بأخذ كل المساحة الممكنة */
+                font-size: 0.9rem !important; /* تصغير الخط قليلاً لتتسع الحروف */
             }
+
+            /* تجميع الأزرار مع تقليل المسافات */
             .header-actions { 
                 width: auto; 
                 justify-content: flex-end; 
                 padding: 0;
                 border: none;
                 display: flex !important;
-                flex-direction: row !important; /* إجبار الأزرار لتكون بجانب بعضها */
-                gap: 8px !important;
-                flex-shrink: 0; /* منع انكماش الأزرار */
+                flex-direction: row !important; 
+                gap: 5px !important; /* تقليل المسافة بين الأزرار */
+                flex-shrink: 0; 
             }
+            
+            /* تحويل الأزرار إلى مربعات صغيرة جداً */
             .btn-header-action {
-                border-radius: 8px !important; /* مربعات صغيرة */
-                width: 35px !important;
-                height: 35px !important;
-                font-size: 1rem !important;
+                border-radius: 6px !important; /* مربعات بحواف ناعمة */
+                width: 30px !important; /* تصغير العرض */
+                height: 30px !important; /* تصغير الارتفاع */
+                font-size: 0.85rem !important; /* تصغير الأيقونة داخل الزر */
                 box-shadow: none !important;
                 margin: 0 !important;
+                padding: 0 !important;
             }
 
             /* 2. منطقة الإدخال */
@@ -261,7 +277,6 @@ function injectChatStyles() {
             }
         }
         
-        /* إخفاء أزرار الإظهار في الديسكتوب */
         @media (min-width: 769px) { .mobile-contacts-toggle { display: none !important; } }
     `;
     document.head.appendChild(style);

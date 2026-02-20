@@ -154,7 +154,7 @@ function injectChatStyles() {
             .chat-sidebar.show-contacts { right: 0 !important; }
 
             /* 1. رأس المحادثة: سطر واحد */
-            .chat-header { display: flex !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: space-between !important; padding: 5px 10px !important; height: 60px !important; background: #fff !important; border-bottom: 1px solid #e5e7eb !important; width: 100% !important; box-sizing: border-box !important; overflow: hidden !important; }
+            .chat-header { display: flex !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: space-between !important; padding: 5px 10px !important; height: 60px !important; width: 100% !important; box-sizing: border-box !important; overflow: hidden !important; }
             .header-info { display: flex !important; align-items: center !important; flex: 1 1 auto !important; min-width: 0 !important; }
             .chat-header .avatar { width: 35px !important; height: 35px !important; font-size: 0.9rem !important; margin-left: 8px !important; flex-shrink: 0 !important; }
             
@@ -166,7 +166,8 @@ function injectChatStyles() {
             .btn-header-action { display: inline-flex !important; align-items: center !important; justify-content: center !important; background: transparent !important; width: auto !important; height: auto !important; font-size: 1.35rem !important; box-shadow: none !important; margin: 0 !important; padding: 5px 8px !important; flex-shrink: 0 !important; }
             
             .btn-delete-chat { color: #dc2626 !important; }
-            /* إخفاء زر الـ PDF في الجوال تماماً كما طلبت */
+            
+            /* 🔴 التعديل هنا: إخفاء زر الـ PDF في الجوال فقط */
             .btn-pdf-chat { display: none !important; }
 
             /* 2. منطقة الإدخال: ترتيب ذكي */

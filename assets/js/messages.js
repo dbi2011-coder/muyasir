@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (النسخة النهائية مع دعم كامل لتجاوب الجوال)
+// الوصف: شات المعلم (نسخة احترافية - ترتيب مخصص للجوال يحاكي الواتساب)
 // ============================================
 
 let activeChatStudentId = null;
@@ -91,19 +91,23 @@ function injectChatStyles() {
         .chat-item.active .chat-name { color: #fff !important; }
         .chat-item.active .chat-preview { color: #e0e0e0 !important; }
         .chat-item.active .avatar { background: #fff; color: #007bff; border: 2px solid #007bff; }
-        .avatar { width: 45px; height: 45px; background: #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #475569; margin-left: 12px; border: 2px solid #fff; }
+        .avatar { width: 45px; height: 45px; background: #e2e8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #475569; margin-left: 12px; border: 2px solid #fff; flex-shrink: 0; }
         .chat-info { flex: 1; min-width: 0; }
         .chat-name { font-weight: bold; color: #334155; font-size: 0.95rem; display:flex; justify-content:space-between; margin-bottom: 4px; }
         .chat-preview { font-size: 0.85rem; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .unread-badge { background: #ef4444; color: white; font-size: 0.7rem; padding: 2px 8px; border-radius: 10px; }
         .chat-main { flex: 1; display: flex; flex-direction: column; background: #fff; position: relative; }
+        
+        /* تصميم الرأس (الافتراضي للديسكتوب) */
         .chat-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; background: #fff; font-weight: bold; font-size: 1.1rem; color:#334155; height: 70px; }
+        .header-info { display: flex; align-items: center; }
         .header-actions { display: flex; gap: 10px; }
         .btn-header-action { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s; font-size: 1.1rem; border: none; color: white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .btn-delete-chat { background: #c62828; }
         .btn-delete-chat:hover { background: #b71c1c; transform: scale(1.1); }
         .btn-pdf-chat { background: #1565c0; }
         .btn-pdf-chat:hover { background: #0d47a1; transform: scale(1.1); }
+        
         .messages-area { flex: 1; padding: 20px; overflow-y: auto; background: #fcfcfc; display: flex; flex-direction: column; gap: 15px; }
         .msg-bubble { max-width: 70%; padding: 12px 18px; border-radius: 15px; position: relative; font-size: 0.95rem; line-height: 1.6; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .msg-me { align-self: flex-start; background: #007bff; color: white; border-bottom-right-radius: 2px; } 
@@ -119,19 +123,24 @@ function injectChatStyles() {
         .msg-dropdown-item { padding: 10px 15px; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.1s; }
         .msg-dropdown-item:hover { background: #f8f9fa; color: #007bff; }
         .msg-dropdown-item.delete:hover { color: #dc3545; background: #fff5f5; }
-        .chat-input-area { padding: 15px 20px; border-top: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; gap: 10px; position: relative; min-height: 80px; }
-        .chat-input { flex: 1; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 25px; outline: none; transition: 0.2s; font-size: 1rem; background: #f8fafc; margin: 0 5px; }
+        
+        /* تصميم منطقة الكتابة (الافتراضي للديسكتوب) */
+        .chat-input-area { padding: 15px 20px; border-top: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; gap: 10px; position: relative; min-height: 80px; flex-wrap: wrap; }
+        .input-tools-wrapper { display: flex; align-items: center; gap: 8px; }
+        .input-main-wrapper { display: flex; align-items: center; gap: 8px; flex: 1; }
+        
+        .chat-input { flex: 1; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 25px; outline: none; transition: 0.2s; font-size: 1rem; background: #f8fafc; margin: 0; }
         .chat-input:focus { border-color: #007bff; background: #fff; }
         .chat-input.editing { border-color: #f59e0b; background: #fffbeb; }
-        .btn-tool { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; transition: 0.2s; border: none; color: white !important; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .btn-tool { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; transition: 0.2s; border: none; color: white !important; box-shadow: 0 2px 5px rgba(0,0,0,0.2); flex-shrink: 0; }
         .btn-tool:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.3); filter: brightness(1.1); }
         .btn-emoji { background: #f57f17; }
         .btn-attach { background: #37474f; }
         .btn-cam { background: #0d47a1; }
         .btn-mic { background: #b71c1c; }
-        .btn-send-pill { background-color: #007bff; color: white; border: none; padding: 10px 25px; border-radius: 50px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0, 123, 255, 0.2); }
+        .btn-send-pill { background-color: #007bff; color: white; border: none; padding: 10px 25px; border-radius: 50px; font-size: 1rem; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0, 123, 255, 0.2); flex-shrink: 0; margin: 0; }
         .btn-send-pill:hover { background-color: #0069d9; transform: translateY(-1px); }
-        .btn-send-pill.update-mode { background-color: #f59e0b; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2); }
+        
         .recording-area { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #fff; display: none; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 50; border-radius: 12px; }
         .recording-timer { font-weight: bold; color: #b71c1c; font-size: 1.1rem; display:flex; align-items:center; gap:10px; }
         .recording-wave { width: 12px; height: 12px; background: #b71c1c; border-radius: 50%; animation: pulse 1s infinite; }
@@ -142,7 +151,6 @@ function injectChatStyles() {
         .emoji-item:hover { background: #f1f5f9; transform: scale(1.2); }
         .empty-chat { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; }
 
-        /* نافذة الحذف */
         .custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(3px); animation: fadeIn 0.2s; }
         .custom-modal-box { background: #fff; padding: 25px; border-radius: 16px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: popIn 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
         .modal-icon-danger { width: 60px; height: 60px; background: #fee2e2; color: #dc2626; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto 15px; }
@@ -157,7 +165,48 @@ function injectChatStyles() {
         @keyframes popIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-        /* إخفاء أزرار الموبايل في الشاشات الكبيرة */
+        /* =========================================
+           📱 تخصيص تصميم الجوال حصراً (أقل من 768px)
+        ========================================= */
+        @media (max-width: 768px) { 
+            /* 1. رأس المحادثة (الأسماء بالأسفل والتحكم بالأعلى) */
+            .chat-header {
+                flex-direction: column-reverse !important;
+                align-items: flex-start !important;
+                height: auto !important;
+                padding: 10px 15px !important;
+                gap: 10px;
+            }
+            .header-info { width: 100%; }
+            .header-actions { 
+                width: 100%; 
+                justify-content: flex-end; /* وضع أزرار الحذف والـ PDF يساراً */
+                border-bottom: 1px solid #f1f5f9; 
+                padding-bottom: 8px;
+            }
+
+            /* 2. منطقة الإدخال (مربع الكتابة ممتد والأدوات تحته) */
+            .chat-input-area {
+                flex-direction: column;
+                align-items: stretch;
+                padding: 10px !important;
+                gap: 8px;
+            }
+            .input-main-wrapper { 
+                order: 1; /* الترتيب الأول: صندوق الكتابة والإرسال */
+                width: 100%; 
+            }
+            .input-tools-wrapper { 
+                order: 2; /* الترتيب الثاني: الأدوات الإضافية (الكاميرا والرموز) */
+                width: 100%; 
+                justify-content: flex-start;
+                background: #f8fafc;
+                padding: 5px 10px;
+                border-radius: 20px;
+            }
+        }
+        
+        /* إخفاء أزرار الإظهار في الديسكتوب */
         @media (min-width: 769px) { .mobile-contacts-toggle { display: none !important; } }
     `;
     document.head.appendChild(style);
@@ -186,7 +235,7 @@ function renderChatLayout() {
             
             <div class="chat-main">
                 <div class="chat-header" id="chatHeader" style="display:none;">
-                    <div style="display:flex; align-items:center;">
+                    <div class="header-info">
                         <button class="mobile-contacts-toggle" style="margin: 0 0 0 10px; padding: 5px 10px; border-radius:5px;" onclick="document.querySelector('.chat-sidebar').classList.add('show-contacts')">
                             <i class="fas fa-users"></i>
                         </button>
@@ -240,13 +289,19 @@ function renderChatLayout() {
                             <button class="btn-tool" style="background:#28a745; color:white;" onclick="stopRecording()" title="إرسال"><i class="fas fa-check"></i></button>
                         </div>
                     </div>
-                    <button id="emojiBtn" class="btn-tool btn-emoji" onclick="toggleEmojiPopup()" title="رموز"><i class="far fa-smile"></i></button>
-                    <label class="btn-tool btn-attach" title="ملف"><i class="fas fa-paperclip"></i><input type="file" id="chatFileInput" style="display:none" onchange="handleChatAttachment(this)"></label>
-                    <label class="btn-tool btn-cam" title="كاميرا"><i class="fas fa-camera"></i><input type="file" id="chatCamInput" accept="image/*" capture="environment" style="display:none" onchange="handleChatAttachment(this)"></label>
-                    <input type="text" class="chat-input" id="chatInput" placeholder="اكتب رسالتك..." onkeypress="handleEnter(event)">
-                    <button class="btn-tool btn-mic" onclick="startRecording()" title="تسجيل صوتي"><i class="fas fa-microphone"></i></button>
-                    <button class="btn-tool" onclick="cancelEdit()" id="cancelEditBtn" style="display:none; background:#ffebee; color:red;" title="إلغاء التعديل"><i class="fas fa-times"></i></button>
-                    <button class="btn-send-pill" id="sendBtn" onclick="sendChatMessage()">أرسل <i class="fas fa-paper-plane"></i></button>
+                    
+                    <div class="input-tools-wrapper">
+                        <button id="emojiBtn" class="btn-tool btn-emoji" onclick="toggleEmojiPopup()" title="رموز"><i class="far fa-smile"></i></button>
+                        <label class="btn-tool btn-attach" title="ملف"><i class="fas fa-paperclip"></i><input type="file" id="chatFileInput" style="display:none" onchange="handleChatAttachment(this)"></label>
+                        <label class="btn-tool btn-cam" title="كاميرا"><i class="fas fa-camera"></i><input type="file" id="chatCamInput" accept="image/*" capture="environment" style="display:none" onchange="handleChatAttachment(this)"></label>
+                    </div>
+
+                    <div class="input-main-wrapper">
+                        <input type="text" class="chat-input" id="chatInput" placeholder="اكتب رسالتك..." onkeypress="handleEnter(event)">
+                        <button class="btn-tool btn-mic" onclick="startRecording()" title="تسجيل صوتي"><i class="fas fa-microphone"></i></button>
+                        <button class="btn-tool" onclick="cancelEdit()" id="cancelEditBtn" style="display:none; background:#ffebee; color:red;" title="إلغاء التعديل"><i class="fas fa-times"></i></button>
+                        <button class="btn-send-pill" id="sendBtn" onclick="sendChatMessage()">أرسل <i class="fas fa-paper-plane"></i></button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -303,7 +358,6 @@ function openChat(studentId) {
     activeChatStudentId = studentId;
     cancelEdit();
     
-    // إخفاء القائمة الجانبية في الجوال تلقائياً عند اختيار طالب
     const sidebar = document.querySelector('.chat-sidebar');
     if(sidebar) sidebar.classList.remove('show-contacts');
 
@@ -374,7 +428,6 @@ function confirmDeleteAction() {
     localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
     document.getElementById('chatMessagesArea').innerHTML = '';
     loadConversations(); loadChatMessages(activeChatStudentId); closeDeleteModal();
-    // إظهار رسالة "اختر طالباً" وزر القائمة
     document.getElementById('chatHeader').style.display = 'none';
     document.getElementById('chatInputArea').style.display = 'none';
     document.getElementById('chatMessagesArea').innerHTML = `<div class="empty-chat"><i class="far fa-comments fa-4x mb-4" style="color:#cbd5e1;"></i><p style="font-size:1.1rem;">اختر طالباً للبدء بالمراسلة</p><button class="mobile-contacts-toggle" style="margin-top:20px; border-radius:25px; padding:10px 20px; font-weight:bold;" onclick="document.querySelector('.chat-sidebar').classList.add('show-contacts')">👥 إظهار قائمة الطلاب</button></div>`;

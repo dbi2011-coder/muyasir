@@ -12,7 +12,10 @@ html, body {
 
 * { box-sizing: border-box !important; }
 
-@media (max-width: 992px) {
+/* تعديل هام: إضافة "screen and" 
+  هذا يعني: طبق هذه التنسيقات فقط إذا كان العرض على شاشة، وتجاهلها تماماً عند الطباعة!
+*/
+@media screen and (max-width: 992px) {
     .dashboard-container { display: block !important; width: 100% !important; }
     .sidebar { position: fixed !important; right: -300px !important; top: 0 !important; height: 100vh !important; z-index: 9999 !important; transition: right 0.3s ease !important; }
     .sidebar.active { right: 0 !important; }
@@ -22,7 +25,9 @@ html, body {
     .user-info { margin: 0 !important; } 
 }
 
-@media (max-width: 768px) {
+/* تعديل هام: إضافة "screen and" هنا أيضاً
+*/
+@media screen and (max-width: 768px) {
     .content-header { display: flex !important; flex-direction: column !important; align-items: flex-start !important; gap: 10px !important; }
     .header-actions { width: 100% !important; display: flex !important; flex-direction: column !important; gap: 10px !important; }
     .header-actions button, .header-actions .btn-group { width: 100% !important; }
@@ -83,7 +88,6 @@ html, body {
         flex-direction: column !important;
     }
 
-    /* الحاوية الداخلية للمحادثة (صندوق الدردشة) */
     .chat-container {
         display: flex !important;
         height: 100% !important;
@@ -94,10 +98,9 @@ html, body {
         border-radius: 0 !important;
     }
 
-    /* استهداف قائمة الطلاب بالـ Class الخاص بها بدلاً من ترتيبها */
     .chat-sidebar {
         position: absolute !important;
-        right: -100% !important; /* مخفية بالكامل خارج الشاشة */
+        right: -100% !important;
         top: 0 !important;
         height: 100% !important;
         width: 280px !important;
@@ -109,12 +112,10 @@ html, body {
         border-radius: 10px 0 0 10px !important;
     }
 
-    /* فئة الإظهار للقائمة الجانبية للمحادثات */
     .chat-sidebar.show-contacts {
         right: 0 !important;
     }
 
-    /* استهداف منطقة الدردشة الرئيسية بالـ Class */
     .chat-main {
         width: 100% !important;
         flex: 1 !important;
@@ -122,7 +123,6 @@ html, body {
         flex-direction: column !important;
     }
 
-    /* زر إظهار القائمة على الجوال */
     .mobile-contacts-toggle {
         display: block !important;
         background: var(--primary-color, #2196f3);
@@ -136,7 +136,6 @@ html, body {
         font-family: 'Tajawal', sans-serif;
     }
 
-    /* تعديل شريط الإدخال ليتناسب مع الجوال */
     .chat-input-area {
         padding: 10px !important;
         gap: 5px !important;
@@ -144,7 +143,66 @@ html, body {
     }
     .chat-input {
         width: 100% !important;
-        order: -1 !important; /* رفع حقل النص للأعلى ليأخذ سطر كامل */
+        order: -1 !important;
         margin-bottom: 10px !important;
     }
+}
+
+/* =========================================
+   🖨️ إعدادات الطباعة (إجبار نسخة الكمبيوتر دائماً)
+========================================= */
+@media print {
+    /* تحديد حجم الصفحة للطباعة بالعرض لضمان استيعاب الجداول */
+    @page { size: A4 landscape; margin: 1cm; }
+    
+    html, body {
+        /* إجبار المتصفح على اعتبار عرض الشاشة 1024 بكسل ليعرض نسخة الكمبيوتر */
+        min-width: 1024px !important; 
+        overflow: visible !important;
+        background: #fff !important;
+    }
+
+    /* إخفاء القائمة الجانبية في الطباعة للحصول على مساحة نظيفة (يمكنك إزالتها إذا أردت طباعة القائمة) */
+    .sidebar { display: none !important; }
+    .main-content-dashboard, .main-content {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* إخفاء الأزرار التي لا فائدة منها في الورق المطبوع */
+    .mobile-menu-btn, .mobile-contacts-toggle, .header-actions button, .btn, .chat-input-area {
+        display: none !important;
+    }
+
+    /* إجبار الجداول على العودة لتنسيقها الأصلي كأعمدة وصفوف */
+    table, #studentsTable, .schedule-table { 
+        display: table !important; 
+        width: 100% !important; 
+        border-collapse: collapse !important;
+    }
+    thead, #studentsTable thead, .schedule-table thead { 
+        display: table-header-group !important; /* ضمان طباعة الهيدر في كل صفحة */
+    }
+    tbody, #studentsTable tbody, .schedule-table tbody { 
+        display: table-row-group !important; 
+    }
+    tr, #studentsTable tr, .schedule-table tr { 
+        display: table-row !important; 
+        page-break-inside: avoid !important; /* منع انقسام الصف بين صفحتين */
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+    }
+    th, td, #studentsTable td, .schedule-table td { 
+        display: table-cell !important; 
+        border: 1px solid #000 !important; 
+        padding: 8px !important; 
+        text-align: right !important;
+    }
+
+    /* إخفاء العناوين الوهمية التي وضعناها لنسخة الجوال */
+    td::before { content: none !important; }
+    
+    /* منع الروابط من إظهار مسار الـ URL بجانبها في الطباعة */
+    a[href]::after { content: "" !important; }
 }

@@ -173,11 +173,13 @@ function injectChatStyles() {
         @media (max-width: 768px) { 
             .mobile-only-btn { display: inline-block !important; background: transparent !important; border: none !important; font-size: 1.2rem !important; color: #333 !important; margin: 0 10px !important; cursor: pointer !important; padding: 0 !important; }
             
-            /* 1. إصلاح اختفاء الجزء السفلي: استخدام dvh لضمان التوافق مع أشرطة المتصفح */
-            .chat-container { height: calc(100dvh - 80px) !important; margin-bottom: 0 !important; border-radius: 0 !important; border: none !important; box-shadow: none !important; }
+            /* 1. تقليل الارتفاع لرفع الجزء السفلي وعدم اختفاء الأزرار */
+            /* يمكنك تغيير 140px لزيادة أو تقليل الارتفاع حسب مساحة الهيدر في موقعك */
+            .chat-container { height: calc(100vh - 140px) !important; max-height: 85vh !important; margin-bottom: 0 !important; border-radius: 0 !important; border: none !important; box-shadow: none !important; }
             .chat-main { display: flex !important; flex-direction: column !important; height: 100% !important; overflow: hidden !important; }
             
-            .messages-area { flex: 1 1 auto !important; overflow-y: auto !important; padding: 15px !important; }
+            /* 2. إجبار منطقة الرسائل على عدم دفع حقل الإدخال لأسفل */
+            .messages-area { flex: 1 1 0% !important; overflow-y: auto !important; padding: 15px !important; }
 
             .chat-sidebar { position: fixed !important; right: -100% !important; top: 0 !important; height: 100% !important; width: 280px !important; z-index: 9999 !important; transition: right 0.3s ease !important; box-shadow: -4px 0 15px rgba(0,0,0,0.1) !important; }
             .chat-sidebar.show-contacts { right: 0 !important; }
@@ -191,7 +193,7 @@ function injectChatStyles() {
             .btn-pdf-chat { display: none !important; }
             .btn-delete-chat { background: transparent !important; color: #dc2626 !important; box-shadow: none !important; width: auto !important; height: auto !important; font-size: 1.4rem !important; padding: 5px !important; }
 
-            /* 2. إصلاح منطقة الإدخال السفلية والأزرار المختفية */
+            /* 3. ترتيب ذكي وثابت لمنطقة الإدخال */
             .chat-input-area { 
                 flex-shrink: 0 !important; 
                 display: flex !important; 
@@ -200,16 +202,14 @@ function injectChatStyles() {
                 padding: 10px !important; 
                 gap: 8px !important; 
                 background: #f0f2f5 !important; 
-                padding-bottom: max(10px, env(safe-area-inset-bottom)) !important; /* لدعم أجهزة الآيفون */
+                padding-bottom: max(10px, env(safe-area-inset-bottom)) !important;
                 box-sizing: border-box !important;
             }
             
-            /* السطر الأول */
             .chat-input { order: 1 !important; flex: 1 1 0% !important; margin: 0 !important; min-width: 100px !important; border-radius: 20px !important; }
             .btn-mic { order: 2 !important; margin: 0 !important; flex-shrink: 0 !important; }
             #sendBtn, #cancelEditBtn { order: 3 !important; margin: 0 !important; flex-shrink: 0 !important; }
             
-            /* كسر السطر بشكل سليم لضمان ظهور الأزرار الثلاثة */
             .chat-input-area::after {
                 content: "" !important;
                 width: 100% !important;
@@ -218,7 +218,6 @@ function injectChatStyles() {
                 height: 0 !important;
             }
             
-            /* السطر الثاني: الرموز والكاميرا والمرفقات */
             #emojiBtn { order: 5 !important; margin-right: auto !important; }
             .btn-attach { order: 6 !important; }
             .btn-cam { order: 7 !important; }
@@ -476,7 +475,7 @@ function confirmDeleteAction() {
     loadConversations(); loadChatMessages(activeChatStudentId); closeDeleteModal();
     document.getElementById('chatHeader').style.display = 'none';
     document.getElementById('chatInputArea').style.display = 'none';
-    document.getElementById('chatMessagesArea').innerHTML = `<div class="empty-chat"><i class="far fa-comments fa-4x mb-4" style="color:#cbd5e1;"></i><p style="font-size:1.1rem;">اختر طالباً للبدء بالمراسلة</p><button class="mobile-only-element" style="margin-top:20px; border-radius:25px; padding:10px 20px; font-weight:bold; background:var(--primary-color, #007bff); color:white; border:none; align-items:center; gap:8px;" onclick="document.querySelector('.chat-sidebar').classList.add('show-contacts')"><i class="fas fa-users"></i> إظهار قائمة الطلاب</button></div>`;
+    document.getElementById('chatMessagesArea').innerHTML = `<div class="empty-chat"><i class="far fa-comments fa-4x mb-4" style="color:#cbd5e1;"></i><p style="font-size:1.1rem;">اختر طالباً للبدء بالمراسلة</p><button class="mobile-only-btn" style="margin-top:20px; border-radius:25px; padding:10px 20px; font-weight:bold; background:var(--primary-color, #007bff); color:white; border:none; display:flex; align-items:center; gap:8px;" onclick="document.querySelector('.chat-sidebar').classList.add('show-contacts')"><i class="fas fa-users"></i> إظهار قائمة الطلاب</button></div>`;
 }
 
 function startRecording() {

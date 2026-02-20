@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: نسخة الكمبيوتر الآمنة + أزرار شفافة ومضبوطة للجوال بأقصى اليسار
+// الوصف: الإصلاح الشامل - نسخة الكمبيوتر آمنة + تصحيح أخطاء الأزرار ونافذة الحذف للجوال
 // ============================================
 
 let activeChatStudentId = null;
@@ -83,7 +83,7 @@ function injectChatStyles() {
     style.id = 'chatStyles';
     style.innerHTML = `
         /* =========================================
-           💻 تنسيقات الكمبيوتر (الأصلية والمستقرة تماماً)
+           💻 تنسيقات الكمبيوتر (الأصلية والمستقرة)
         ========================================= */
         .chat-container { display: flex !important; height: 80vh !important; background: #fff !important; border-radius: 12px !important; box-shadow: 0 5px 25px rgba(0,0,0,0.1) !important; overflow: hidden !important; border: 1px solid #d1d5db !important; margin-top: 0px !important; font-family: 'Tajawal', sans-serif !important; }
         
@@ -125,19 +125,33 @@ function injectChatStyles() {
         
         .chat-input { flex: 1 !important; padding: 12px 15px !important; border: 2px solid #e2e8f0 !important; border-radius: 25px !important; outline: none !important; transition: 0.2s !important; font-size: 1rem !important; background: #f8fafc !important; margin: 0 5px !important; }
         .chat-input:focus { border-color: #007bff !important; background: #fff !important; }
-        .btn-tool { width: 45px !important; height: 45px !important; border-radius: 50% !important; display: flex !important; align-items: center !important; justify-content: center !important; font-size: 1.2rem !important; cursor: pointer !important; transition: 0.2s !important; border: none !important; color: white !important; box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important; flex-shrink: 0 !important; }
+        
+        /* 🚨 تم إزالة !important من display هنا لتعمل أوامر الإخفاء 🚨 */
+        .btn-tool { width: 45px !important; height: 45px !important; border-radius: 50% !important; display: flex; align-items: center !important; justify-content: center !important; font-size: 1.2rem !important; cursor: pointer !important; transition: 0.2s !important; border: none !important; color: white !important; box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important; flex-shrink: 0 !important; }
         .btn-tool:hover { transform: translateY(-2px) !important; box-shadow: 0 5px 10px rgba(0,0,0,0.3) !important; filter: brightness(1.1) !important; }
         .btn-emoji { background: #f57f17 !important; }
         .btn-attach { background: #37474f !important; }
         .btn-cam { background: #0d47a1 !important; }
         .btn-mic { background: #b71c1c !important; }
+        
         .btn-send-pill { background-color: #007bff !important; color: white !important; border: none !important; padding: 10px 25px !important; border-radius: 50px !important; font-size: 1rem !important; font-weight: bold !important; cursor: pointer !important; display: flex !important; align-items: center !important; gap: 8px !important; transition: 0.2s !important; box-shadow: 0 4px 10px rgba(0, 123, 255, 0.2) !important; flex-shrink: 0 !important; }
         .btn-send-pill:hover { background-color: #0069d9 !important; transform: translateY(-1px) !important; }
         
         .empty-chat { flex: 1 !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; color: #94a3b8 !important; }
         
-        /* إخفاء أزرار تنقل الجوال في الكمبيوتر */
         .mobile-only-element { display: none !important; }
+
+        /* =========================================
+           🛠️ الكلاسات الديناميكية (Dynamic Classes) للتحكم بالإخفاء والظهور
+        ========================================= */
+        .hide-element { display: none !important; }
+        .show-flex { display: flex !important; }
+        
+        .recording-area { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; background: #f0f2f5 !important; align-items: center !important; justify-content: space-between !important; padding: 0 15px !important; z-index: 50 !important; border-radius: 12px !important; }
+        
+        .custom-modal-overlay { position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100vw !important; height: 100vh !important; background: rgba(0,0,0,0.5) !important; z-index: 9999 !important; align-items: center !important; justify-content: center !important; backdrop-filter: blur(3px) !important; }
+        .custom-modal-box { background: #fff !important; padding: 25px !important; border-radius: 16px !important; width: 90% !important; max-width: 400px !important; text-align: center !important; box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important; }
+
 
         /* =========================================
            📱 تخصيص الجوال حصراً (أقل من 768px)
@@ -145,78 +159,23 @@ function injectChatStyles() {
         @media (max-width: 768px) { 
             .mobile-only-element { display: flex !important; }
             
-            /* إزالة الفراغ السفلي وتوسيع المحادثة */
             .messages-container { height: calc(100vh - 130px) !important; margin-bottom: -20px !important; }
             .chat-container { height: 100% !important; border-radius: 0 !important; border: none !important; box-shadow: none !important; margin: 0 !important; }
             
-            /* إخفاء القائمة الجانبية كدرج منزلق */
             .chat-sidebar { position: absolute !important; right: -100% !important; top: 0 !important; height: 100% !important; width: 280px !important; min-width: 280px !important; z-index: 1000 !important; transition: right 0.3s ease !important; box-shadow: -4px 0 15px rgba(0,0,0,0.1) !important; }
             .chat-sidebar.show-contacts { right: 0 !important; }
 
-            /* =======================================
-               إعداد الرأس (Header) للجوال لتجنب الخروج
-            ======================================= */
-            .chat-header { 
-                display: flex !important; 
-                flex-wrap: nowrap !important; 
-                align-items: center !important; 
-                justify-content: space-between !important; 
-                padding: 5px 10px !important; 
-                height: 60px !important; 
-                background: #fff !important; 
-                border-bottom: 1px solid #e5e7eb !important; 
-                width: 100% !important; 
-                box-sizing: border-box !important;
-                overflow: hidden !important; /* ضمان عدم تجاوز الشاشة */
-            }
-            .header-info { 
-                display: flex !important; 
-                align-items: center !important; 
-                flex: 1 1 auto !important; /* مرونة للتكيف مع المساحة */
-                min-width: 0 !important; /* منع تجاوز النصوص للخارج */
-            }
-            .chat-header .avatar { 
-                width: 35px !important; 
-                height: 35px !important; 
-                font-size: 0.9rem !important; 
-                margin-left: 8px !important; 
-                flex-shrink: 0 !important; /* منع الأفاتار من التقلص */
-            }
-            #chatHeaderName { 
-                white-space: nowrap !important; 
-                overflow: hidden !important; 
-                text-overflow: ellipsis !important; /* قص الاسم الطويل وتظليله بنقاط */
-                display: block !important; 
-                font-size: 0.95rem !important; 
-                color: #1f2937 !important; 
-            }
+            /* رأس المحادثة: إجبار العناصر على عدم الخروج من الشاشة */
+            .chat-header { display: flex !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: space-between !important; padding: 5px 10px !important; height: 60px !important; background: #fff !important; border-bottom: 1px solid #e5e7eb !important; width: 100% !important; box-sizing: border-box !important; overflow: hidden !important; }
+            
+            .header-info { display: flex !important; align-items: center !important; flex: 1 1 auto !important; min-width: 0 !important; }
+            .chat-header .avatar { width: 35px !important; height: 35px !important; font-size: 0.9rem !important; margin-left: 8px !important; flex-shrink: 0 !important; }
+            #chatHeaderName { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; display: block !important; font-size: 0.95rem !important; color: #1f2937 !important; }
 
-            /* الأزرار الشفافة على أقصى اليسار */
-            .header-actions { 
-                display: flex !important; 
-                flex-direction: row !important; 
-                align-items: center !important; 
-                justify-content: flex-end !important; 
-                flex-wrap: nowrap !important; 
-                gap: 10px !important; 
-                padding: 0 !important; 
-                border: none !important; 
-                flex-shrink: 0 !important; /* الأزرار لا تتقلص أبداً */
-                margin-right: 5px !important;
-            }
-            .btn-header-action { 
-                display: inline-flex !important; 
-                align-items: center !important; 
-                justify-content: center !important; 
-                background: transparent !important; 
-                width: auto !important; 
-                height: auto !important; 
-                font-size: 1.3rem !important; /* حجم واضح للضغط */
-                box-shadow: none !important; 
-                margin: 0 !important; 
-                padding: 5px !important; 
-                flex-shrink: 0 !important; 
-            }
+            /* الأزرار الشفافة على أقصى اليسار بجانب بعض وبدون تداخل */
+            .header-actions { display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-end !important; flex-wrap: nowrap !important; gap: 8px !important; padding: 0 !important; border: none !important; flex-shrink: 0 !important; }
+            .btn-header-action { display: inline-flex !important; align-items: center !important; justify-content: center !important; background: transparent !important; width: auto !important; height: auto !important; font-size: 1.35rem !important; box-shadow: none !important; margin: 0 !important; padding: 5px 8px !important; flex-shrink: 0 !important; }
+            
             .btn-delete-chat { color: #dc2626 !important; }
             .btn-pdf-chat { color: #2563eb !important; }
 
@@ -228,6 +187,9 @@ function injectChatStyles() {
             .chat-input { padding: 10px 15px !important; margin: 0 !important; border-radius: 20px !important; }
             .btn-send-pill { padding: 8px 15px !important; }
             .input-tools-wrapper .btn-tool { border-radius: 8px !important; width: 35px !important; height: 35px !important; font-size: 1.1rem !important; background: #fff !important; color: #555 !important; border: 1px solid #ddd !important; box-shadow: none !important; }
+            
+            /* أزرار منطقة التسجيل */
+            .recording-area .btn-tool { width: 35px !important; height: 35px !important; border-radius: 50% !important; color: white !important; display: flex; border: none !important; }
         }
     `;
     document.head.appendChild(style);
@@ -299,17 +261,17 @@ function renderChatLayout() {
                     ${emojiHtml}
                 </div>
 
-                <div class="chat-input-area" id="chatInputArea" style="display:none;">
-                    <div class="recording-area" id="recordingArea">
+                <div class="chat-input-area hide-element" id="chatInputArea">
+                    <div class="recording-area hide-element" id="recordingArea">
                         <div class="recording-timer">
                             <div class="recording-wave"></div>
                             <span id="recordTimer">00:00</span>
                         </div>
                         <div style="display:flex; gap:10px;">
-                            <button class="btn-tool" style="background:#dc3545; color:white;" onclick="cancelRecording()" title="إلغاء">
+                            <button class="btn-tool" style="background:#dc3545 !important; color:white !important;" onclick="cancelRecording()" title="إلغاء">
                                 <i class="fas fa-times"></i>
                             </button>
-                            <button class="btn-tool" style="background:#28a745; color:white;" onclick="stopRecording()" title="إرسال">
+                            <button class="btn-tool" style="background:#28a745 !important; color:white !important;" onclick="stopRecording()" title="إرسال">
                                 <i class="fas fa-check"></i>
                             </button>
                         </div>
@@ -324,14 +286,14 @@ function renderChatLayout() {
                     <div class="input-main-wrapper">
                         <input type="text" class="chat-input" id="chatInput" placeholder="اكتب رسالتك..." onkeypress="handleEnter(event)">
                         <button class="btn-tool btn-mic" onclick="startRecording()" title="تسجيل صوتي"><i class="fas fa-microphone"></i></button>
-                        <button class="btn-tool" onclick="cancelEdit()" id="cancelEditBtn" style="display:none; background:#ffebee; color:red;" title="إلغاء التعديل"><i class="fas fa-times"></i></button>
+                        <button class="btn-tool hide-element" onclick="cancelEdit()" id="cancelEditBtn" style="background:#ffebee !important; color:red !important;" title="إلغاء التعديل"><i class="fas fa-times"></i></button>
                         <button class="btn-send-pill" id="sendBtn" onclick="sendChatMessage()">أرسل <i class="fas fa-paper-plane"></i></button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div id="deleteConfirmModal" class="custom-modal-overlay">
+        <div id="deleteConfirmModal" class="custom-modal-overlay hide-element">
             <div class="custom-modal-box">
                 <div class="modal-icon-danger">
                     <i class="fas fa-exclamation-triangle"></i>
@@ -395,7 +357,9 @@ function openChat(studentId) {
     if(sidebar) sidebar.classList.remove('show-contacts');
 
     document.getElementById('chatHeader').style.display = 'flex';
-    document.getElementById('chatInputArea').style.display = 'flex';
+    document.getElementById('chatInputArea').classList.remove('hide-element');
+    document.getElementById('chatInputArea').classList.add('show-flex');
+    
     const student = getStudentById(studentId);
     document.getElementById('chatHeaderName').textContent = student ? student.name : 'طالب';
     document.getElementById('chatHeaderAvatar').textContent = student ? student.name.charAt(0) : '?';
@@ -452,8 +416,17 @@ function exportChatToPDF() {
     } else alert("جاري تحميل أداة التصدير...");
 }
 
-function deleteEntireConversation() { if (!activeChatStudentId) return; document.getElementById('deleteConfirmModal').style.display = 'flex'; }
-function closeDeleteModal() { document.getElementById('deleteConfirmModal').style.display = 'none'; }
+// استخدام Classes لفتح وإغلاق النافذة المنبثقة بأمان
+function deleteEntireConversation() { 
+    if (!activeChatStudentId) return; 
+    document.getElementById('deleteConfirmModal').classList.remove('hide-element');
+    document.getElementById('deleteConfirmModal').classList.add('show-flex');
+}
+function closeDeleteModal() { 
+    document.getElementById('deleteConfirmModal').classList.remove('show-flex');
+    document.getElementById('deleteConfirmModal').classList.add('hide-element');
+}
+
 function confirmDeleteAction() {
     if (!activeChatStudentId) return;
     const currentUser = getCurrentUser();
@@ -466,7 +439,8 @@ function confirmDeleteAction() {
     document.getElementById('chatMessagesArea').innerHTML = '';
     loadConversations(); loadChatMessages(activeChatStudentId); closeDeleteModal();
     document.getElementById('chatHeader').style.display = 'none';
-    document.getElementById('chatInputArea').style.display = 'none';
+    document.getElementById('chatInputArea').classList.remove('show-flex');
+    document.getElementById('chatInputArea').classList.add('hide-element');
     document.getElementById('chatMessagesArea').innerHTML = `<div class="empty-chat"><i class="far fa-comments fa-4x mb-4" style="color:#cbd5e1;"></i><p style="font-size:1.1rem;">اختر طالباً للبدء بالمراسلة</p><button class="mobile-only-element" style="margin-top:20px; border-radius:25px; padding:10px 20px; font-weight:bold; background:var(--primary-color, #007bff); color:white; border:none; align-items:center; gap:8px;" onclick="document.getElementById('chatSidebar').classList.add('show-contacts')"><i class="fas fa-users"></i> إظهار قائمة الطلاب</button></div>`;
 }
 
@@ -482,13 +456,27 @@ function startRecording() {
             reader.readAsDataURL(audioBlob);
             stream.getTracks().forEach(track => track.stop());
         };
-        mediaRecorder.start(); document.getElementById('recordingArea').style.display = 'flex';
+        mediaRecorder.start(); 
+        document.getElementById('recordingArea').classList.remove('hide-element');
+        document.getElementById('recordingArea').classList.add('show-flex');
         recordingStartTime = Date.now(); recordingInterval = setInterval(updateRecordTimer, 1000); updateRecordTimer();
     }).catch(() => alert('تعذر الوصول للمايكروفون'));
 }
 function updateRecordTimer() { const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000); const mins = Math.floor(elapsed / 60).toString().padStart(2, '0'); const secs = (elapsed % 60).toString().padStart(2, '0'); document.getElementById('recordTimer').textContent = `${mins}:${secs}`; }
-function stopRecording() { if (mediaRecorder && mediaRecorder.state === 'recording') { mediaRecorder.stop(); clearInterval(recordingInterval); document.getElementById('recordingArea').style.display = 'none'; } }
-function cancelRecording() { if (mediaRecorder && mediaRecorder.state === 'recording') { mediaRecorder.onstop = null; mediaRecorder.stop(); clearInterval(recordingInterval); document.getElementById('recordingArea').style.display = 'none'; } }
+function stopRecording() { 
+    if (mediaRecorder && mediaRecorder.state === 'recording') { 
+        mediaRecorder.stop(); clearInterval(recordingInterval); 
+        document.getElementById('recordingArea').classList.remove('show-flex');
+        document.getElementById('recordingArea').classList.add('hide-element');
+    } 
+}
+function cancelRecording() { 
+    if (mediaRecorder && mediaRecorder.state === 'recording') { 
+        mediaRecorder.onstop = null; mediaRecorder.stop(); clearInterval(recordingInterval); 
+        document.getElementById('recordingArea').classList.remove('show-flex');
+        document.getElementById('recordingArea').classList.add('hide-element');
+    } 
+}
 function sendVoiceMessage(base64Audio) {
     if (!activeChatStudentId) return; const currentUser = getCurrentUser();
     const teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); teacherMsgs.push({ id: Date.now(), teacherId: currentUser.id, studentId: activeChatStudentId, content: base64Audio, attachment: null, isVoice: true, sentAt: new Date().toISOString(), isRead: true, isFromStudent: false }); localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
@@ -497,8 +485,19 @@ function sendVoiceMessage(base64Audio) {
 }
 function toggleMessageMenu(e, msgId) { e.stopPropagation(); document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none'); const menu = document.getElementById(`msgMenu_${msgId}`); if (menu) menu.style.display = 'block'; }
 function deleteChatMessage(messageId) { if (!confirm('حذف هذه الرسالة؟')) return; let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); teacherMsgs = teacherMsgs.filter(m => m.id !== messageId); localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs)); let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); studentMsgs = studentMsgs.filter(m => m.id !== (messageId + 1)); localStorage.setItem('studentMessages', JSON.stringify(studentMsgs)); loadChatMessages(activeChatStudentId); loadConversations(); }
-function startEditMessage(messageId) { const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); const msg = messages.find(m => m.id === messageId); if (!msg || msg.isVoice) return; const input = document.getElementById('chatInput'); input.value = msg.content; input.focus(); input.classList.add('editing'); editingMessageId = messageId; const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'تحديث <i class="fas fa-check"></i>'; sendBtn.classList.add('update-mode'); document.getElementById('cancelEditBtn').style.display = 'block'; }
-function cancelEdit() { editingMessageId = null; const input = document.getElementById('chatInput'); input.value = ''; input.classList.remove('editing'); const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'أرسل <i class="fas fa-paper-plane"></i>'; sendBtn.classList.remove('update-mode'); document.getElementById('cancelEditBtn').style.display = 'none'; }
+function startEditMessage(messageId) { 
+    const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); const msg = messages.find(m => m.id === messageId); if (!msg || msg.isVoice) return; 
+    const input = document.getElementById('chatInput'); input.value = msg.content; input.focus(); input.classList.add('editing'); editingMessageId = messageId; 
+    const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'تحديث <i class="fas fa-check"></i>'; sendBtn.classList.add('update-mode'); 
+    document.getElementById('cancelEditBtn').classList.remove('hide-element');
+    document.getElementById('cancelEditBtn').classList.add('show-flex');
+}
+function cancelEdit() { 
+    editingMessageId = null; const input = document.getElementById('chatInput'); input.value = ''; input.classList.remove('editing'); 
+    const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'أرسل <i class="fas fa-paper-plane"></i>'; sendBtn.classList.remove('update-mode'); 
+    document.getElementById('cancelEditBtn').classList.remove('show-flex');
+    document.getElementById('cancelEditBtn').classList.add('hide-element');
+}
 function handleChatAttachment(input) { if (input.files && input.files[0]) { const file = input.files[0]; const reader = new FileReader(); reader.onload = function(e) { attachmentData = e.target.result; document.getElementById('attachName').textContent = file.name; document.getElementById('attachmentPreviewBox').style.display = 'block'; }; reader.readAsDataURL(file); } }
 function toggleEmojiPopup() { const popup = document.getElementById('emojiPopup'); if (popup.style.display === 'none') popup.style.display = 'grid'; else popup.style.display = 'none'; }
 function addEmoji(char) { const input = document.getElementById('chatInput'); input.value += char; input.focus(); }

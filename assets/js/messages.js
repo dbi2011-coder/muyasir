@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (نسخة احترافية - ترتيب مخصص للجوال يحاكي التطبيقات الأصلية)
+// الوصف: شات المعلم (النسخة الاحترافية للجوال - بدون هوامش سفلية وأزرار مرتبة)
 // ============================================
 
 let activeChatStudentId = null;
@@ -169,9 +169,10 @@ function injectChatStyles() {
            📱 تخصيص تصميم الجوال حصراً (أقل من 768px)
         ========================================= */
         @media (max-width: 768px) { 
-            /* امتداد المحادثة لأسفل الصفحة بالكامل */
+            /* امتداد المحادثة لأسفل الصفحة بالكامل وإلغاء الهامش الأبيض */
             .messages-container {
-                height: calc(100vh - 120px) !important; /* مساحة أطول للقراءة */
+                height: calc(100vh - 130px) !important; 
+                margin-bottom: -20px !important; /* سحب الحاوية للأسفل لتغطية الهامش الأبيض */
             }
             .chat-container {
                 height: 100% !important;
@@ -180,9 +181,9 @@ function injectChatStyles() {
                 box-shadow: none !important;
             }
 
-            /* 1. رأس المحادثة (سطر واحد - أزرار مربعة على اليسار) */
+            /* 1. رأس المحادثة (سطر واحد - الاسم يمين والأزرار يسار) */
             .chat-header {
-                flex-direction: row !important; /* سطر واحد */
+                flex-direction: row !important; 
                 align-items: center !important;
                 height: 65px !important;
                 padding: 5px 10px !important;
@@ -190,32 +191,49 @@ function injectChatStyles() {
             .header-info { 
                 width: auto; 
                 flex: 1; 
-                overflow: hidden; 
+                min-width: 0; /* ضروري للسماح بقص الاسم الطويل */
+                display: flex;
+                align-items: center;
+            }
+            .header-info > div {
+                min-width: 0; 
+            }
+            #chatHeaderName {
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                display: block;
+                max-width: 140px; /* تحديد عرض أقصى لاسم الطالب لضمان مساحة للأزرار */
             }
             .header-actions { 
                 width: auto; 
                 justify-content: flex-end; 
                 padding: 0;
                 border: none;
+                display: flex !important;
+                flex-direction: row !important; /* إجبار الأزرار لتكون بجانب بعضها */
+                gap: 8px !important;
+                flex-shrink: 0; /* منع انكماش الأزرار */
             }
             .btn-header-action {
-                border-radius: 8px !important; /* مربعات صغيرة بحواف دائرية */
+                border-radius: 8px !important; /* مربعات صغيرة */
                 width: 35px !important;
                 height: 35px !important;
                 font-size: 1rem !important;
                 box-shadow: none !important;
+                margin: 0 !important;
             }
 
-            /* 2. منطقة الإدخال (مربع الكتابة ممتد والأدوات تحته في المنتصف) */
+            /* 2. منطقة الإدخال */
             .chat-input-area {
                 flex-direction: column;
                 align-items: stretch;
-                padding: 8px !important;
+                padding: 8px 8px 10px 8px !important; 
                 gap: 5px;
-                background: #f0f2f5; /* لون خلفية خفيف يريح العين كالتطبيقات */
+                background: #f0f2f5; 
             }
             .input-main-wrapper { 
-                order: 1; /* الترتيب الأول: صندوق الكتابة والإرسال */
+                order: 1; 
                 width: 100%; 
             }
             .chat-input {
@@ -223,19 +241,19 @@ function injectChatStyles() {
                 margin: 0 !important;
             }
             .btn-send-pill {
-                padding: 8px 15px !important; /* تصغير طفيف ليناسب الجوال */
+                padding: 8px 15px !important; 
             }
             
-            /* أدوات المرفقات (تتوسط الشاشة كمربعات صغيرة) */
+            /* أدوات المرفقات (في المنتصف) */
             .input-tools-wrapper { 
-                order: 2; /* الترتيب الثاني: بالأسفل */
+                order: 2; 
                 width: 100%; 
-                justify-content: center !important; /* توسيط في المنتصف */
+                justify-content: center !important; 
                 padding: 5px 0 0 0 !important;
                 gap: 15px !important;
             }
             .input-tools-wrapper .btn-tool {
-                border-radius: 8px !important; /* مربعات صغيرة بحواف دائرية */
+                border-radius: 8px !important; 
                 width: 35px !important;
                 height: 35px !important;
                 font-size: 1.1rem !important;
@@ -277,7 +295,7 @@ function renderChatLayout() {
                             <i class="fas fa-users"></i>
                         </button>
                         <div class="avatar" id="chatHeaderAvatar"></div>
-                        <div style="display:flex; flex-direction:column; margin-right:10px;">
+                        <div style="display:flex; flex-direction:column; margin-right:10px; min-width: 0;">
                             <span id="chatHeaderName" style="line-height:1.2;">اسم الطالب</span>
                             <span style="font-size:0.75rem; color:#10b981; font-weight:normal;">● متصل</span>
                         </div>

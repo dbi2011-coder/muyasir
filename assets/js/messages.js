@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (نسخة احترافية - ترتيب مخصص للجوال يحاكي الواتساب)
+// الوصف: شات المعلم (نسخة احترافية - ترتيب مخصص للجوال يحاكي التطبيقات الأصلية)
 // ============================================
 
 let activeChatStudentId = null;
@@ -169,40 +169,77 @@ function injectChatStyles() {
            📱 تخصيص تصميم الجوال حصراً (أقل من 768px)
         ========================================= */
         @media (max-width: 768px) { 
-            /* 1. رأس المحادثة (الأسماء بالأسفل والتحكم بالأعلى) */
-            .chat-header {
-                flex-direction: column-reverse !important;
-                align-items: flex-start !important;
-                height: auto !important;
-                padding: 10px 15px !important;
-                gap: 10px;
+            /* امتداد المحادثة لأسفل الصفحة بالكامل */
+            .messages-container {
+                height: calc(100vh - 120px) !important; /* مساحة أطول للقراءة */
             }
-            .header-info { width: 100%; }
-            .header-actions { 
-                width: 100%; 
-                justify-content: flex-end; /* وضع أزرار الحذف والـ PDF يساراً */
-                border-bottom: 1px solid #f1f5f9; 
-                padding-bottom: 8px;
+            .chat-container {
+                height: 100% !important;
+                border-radius: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
             }
 
-            /* 2. منطقة الإدخال (مربع الكتابة ممتد والأدوات تحته) */
+            /* 1. رأس المحادثة (سطر واحد - أزرار مربعة على اليسار) */
+            .chat-header {
+                flex-direction: row !important; /* سطر واحد */
+                align-items: center !important;
+                height: 65px !important;
+                padding: 5px 10px !important;
+            }
+            .header-info { 
+                width: auto; 
+                flex: 1; 
+                overflow: hidden; 
+            }
+            .header-actions { 
+                width: auto; 
+                justify-content: flex-end; 
+                padding: 0;
+                border: none;
+            }
+            .btn-header-action {
+                border-radius: 8px !important; /* مربعات صغيرة بحواف دائرية */
+                width: 35px !important;
+                height: 35px !important;
+                font-size: 1rem !important;
+                box-shadow: none !important;
+            }
+
+            /* 2. منطقة الإدخال (مربع الكتابة ممتد والأدوات تحته في المنتصف) */
             .chat-input-area {
                 flex-direction: column;
                 align-items: stretch;
-                padding: 10px !important;
-                gap: 8px;
+                padding: 8px !important;
+                gap: 5px;
+                background: #f0f2f5; /* لون خلفية خفيف يريح العين كالتطبيقات */
             }
             .input-main-wrapper { 
                 order: 1; /* الترتيب الأول: صندوق الكتابة والإرسال */
                 width: 100%; 
             }
+            .chat-input {
+                padding: 10px 15px !important;
+                margin: 0 !important;
+            }
+            .btn-send-pill {
+                padding: 8px 15px !important; /* تصغير طفيف ليناسب الجوال */
+            }
+            
+            /* أدوات المرفقات (تتوسط الشاشة كمربعات صغيرة) */
             .input-tools-wrapper { 
-                order: 2; /* الترتيب الثاني: الأدوات الإضافية (الكاميرا والرموز) */
+                order: 2; /* الترتيب الثاني: بالأسفل */
                 width: 100%; 
-                justify-content: flex-start;
-                background: #f8fafc;
-                padding: 5px 10px;
-                border-radius: 20px;
+                justify-content: center !important; /* توسيط في المنتصف */
+                padding: 5px 0 0 0 !important;
+                gap: 15px !important;
+            }
+            .input-tools-wrapper .btn-tool {
+                border-radius: 8px !important; /* مربعات صغيرة بحواف دائرية */
+                width: 35px !important;
+                height: 35px !important;
+                font-size: 1.1rem !important;
+                box-shadow: none !important;
             }
         }
         

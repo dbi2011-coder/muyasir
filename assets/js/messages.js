@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: نسخة الكمبيوتر الأصلية الآمنة 100% + تطبيق تحسينات الجوال بشكل معزول تماماً
+// الوصف: نسخة الكمبيوتر الآمنة + أزرار شفافة ومضبوطة للجوال بأقصى اليسار
 // ============================================
 
 let activeChatStudentId = null;
@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!e.target.closest('.msg-options-btn')) {
                     document.querySelectorAll('.msg-dropdown').forEach(menu => menu.style.display = 'none');
                 }
+                // إغلاق نافذة الحذف عند النقر خارجها
                 const deleteModal = document.getElementById('deleteConfirmModal');
                 if (deleteModal && e.target === deleteModal) {
                     closeDeleteModal();
@@ -86,9 +87,7 @@ function injectChatStyles() {
         ========================================= */
         .chat-container { display: flex !important; height: 80vh !important; background: #fff !important; border-radius: 12px !important; box-shadow: 0 5px 25px rgba(0,0,0,0.1) !important; overflow: hidden !important; border: 1px solid #d1d5db !important; margin-top: 0px !important; font-family: 'Tajawal', sans-serif !important; }
         
-        /* العمود الأول - ثابت لا يختفي أبداً في الكمبيوتر */
         .chat-sidebar { width: 320px !important; min-width: 320px !important; background-color: #f8f9fa !important; border-left: 1px solid #e5e7eb !important; display: flex !important; flex-direction: column !important; z-index: 2 !important; position: relative !important; right: 0 !important; flex-shrink: 0 !important; }
-        
         .chat-list-header { padding: 20px !important; background: #f8f9fa !important; border-bottom: 1px solid #e2e8f0 !important; }
         .chat-list { flex: 1 !important; overflow-y: auto !important; }
         .chat-item { display: flex !important; align-items: center !important; padding: 15px 20px !important; cursor: pointer !important; border-bottom: 1px solid #e2e8f0 !important; transition: 0.2s !important; background: #fff !important; }
@@ -154,15 +153,70 @@ function injectChatStyles() {
             .chat-sidebar { position: absolute !important; right: -100% !important; top: 0 !important; height: 100% !important; width: 280px !important; min-width: 280px !important; z-index: 1000 !important; transition: right 0.3s ease !important; box-shadow: -4px 0 15px rgba(0,0,0,0.1) !important; }
             .chat-sidebar.show-contacts { right: 0 !important; }
 
-            /* الرأس في الجوال - سطر واحد وأيقونات شفافة */
-            .chat-header { display: flex !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: space-between !important; padding: 5px 10px !important; height: 60px !important; background: #fff !important; border-bottom: 1px solid #e5e7eb !important; }
-            .header-info { display: flex !important; align-items: center !important; flex: 1 !important; min-width: 0 !important; }
-            .chat-header .avatar { width: 35px !important; height: 35px !important; font-size: 0.9rem !important; margin-left: 8px !important; }
-            #chatHeaderName { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; display: block !important; max-width: 140px !important; font-size: 0.95rem !important; color: #1f2937 !important; }
+            /* =======================================
+               إعداد الرأس (Header) للجوال لتجنب الخروج
+            ======================================= */
+            .chat-header { 
+                display: flex !important; 
+                flex-wrap: nowrap !important; 
+                align-items: center !important; 
+                justify-content: space-between !important; 
+                padding: 5px 10px !important; 
+                height: 60px !important; 
+                background: #fff !important; 
+                border-bottom: 1px solid #e5e7eb !important; 
+                width: 100% !important; 
+                box-sizing: border-box !important;
+                overflow: hidden !important; /* ضمان عدم تجاوز الشاشة */
+            }
+            .header-info { 
+                display: flex !important; 
+                align-items: center !important; 
+                flex: 1 1 auto !important; /* مرونة للتكيف مع المساحة */
+                min-width: 0 !important; /* منع تجاوز النصوص للخارج */
+            }
+            .chat-header .avatar { 
+                width: 35px !important; 
+                height: 35px !important; 
+                font-size: 0.9rem !important; 
+                margin-left: 8px !important; 
+                flex-shrink: 0 !important; /* منع الأفاتار من التقلص */
+            }
+            #chatHeaderName { 
+                white-space: nowrap !important; 
+                overflow: hidden !important; 
+                text-overflow: ellipsis !important; /* قص الاسم الطويل وتظليله بنقاط */
+                display: block !important; 
+                font-size: 0.95rem !important; 
+                color: #1f2937 !important; 
+            }
 
             /* الأزرار الشفافة على أقصى اليسار */
-            .header-actions { display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-end !important; flex-wrap: nowrap !important; gap: 12px !important; padding: 0 !important; border: none !important; flex-shrink: 0 !important; }
-            .btn-header-action { display: inline-flex !important; align-items: center !important; justify-content: center !important; background: transparent !important; width: auto !important; height: auto !important; font-size: 1.25rem !important; box-shadow: none !important; margin: 0 !important; padding: 5px !important; flex-shrink: 0 !important; }
+            .header-actions { 
+                display: flex !important; 
+                flex-direction: row !important; 
+                align-items: center !important; 
+                justify-content: flex-end !important; 
+                flex-wrap: nowrap !important; 
+                gap: 10px !important; 
+                padding: 0 !important; 
+                border: none !important; 
+                flex-shrink: 0 !important; /* الأزرار لا تتقلص أبداً */
+                margin-right: 5px !important;
+            }
+            .btn-header-action { 
+                display: inline-flex !important; 
+                align-items: center !important; 
+                justify-content: center !important; 
+                background: transparent !important; 
+                width: auto !important; 
+                height: auto !important; 
+                font-size: 1.3rem !important; /* حجم واضح للضغط */
+                box-shadow: none !important; 
+                margin: 0 !important; 
+                padding: 5px !important; 
+                flex-shrink: 0 !important; 
+            }
             .btn-delete-chat { color: #dc2626 !important; }
             .btn-pdf-chat { color: #2563eb !important; }
 
@@ -207,7 +261,7 @@ function renderChatLayout() {
                             <i class="fas fa-users"></i>
                         </button>
                         <div class="avatar" id="chatHeaderAvatar"></div>
-                        <div style="display:flex; flex-direction:column; margin-right:10px; min-width: 0;">
+                        <div style="display:flex; flex-direction:column; margin-right:10px; min-width: 0; flex: 1;">
                             <span id="chatHeaderName" style="line-height:1.2;">اسم الطالب</span>
                             <span style="font-size:0.75rem; color:#10b981; font-weight:normal;">● متصل</span>
                         </div>
@@ -273,6 +327,25 @@ function renderChatLayout() {
                         <button class="btn-tool" onclick="cancelEdit()" id="cancelEditBtn" style="display:none; background:#ffebee; color:red;" title="إلغاء التعديل"><i class="fas fa-times"></i></button>
                         <button class="btn-send-pill" id="sendBtn" onclick="sendChatMessage()">أرسل <i class="fas fa-paper-plane"></i></button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="deleteConfirmModal" class="custom-modal-overlay">
+            <div class="custom-modal-box">
+                <div class="modal-icon-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="modal-title">حذف المحادثة؟</div>
+                <div class="modal-desc">
+                    هل أنت متأكد من رغبتك في حذف سجل المحادثة بالكامل؟<br>
+                    <span style="color:#dc2626; font-size:0.85rem;">⚠️ لا يمكن التراجع عن هذا الإجراء</span>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-modal btn-modal-cancel" onclick="closeDeleteModal()">إلغاء</button>
+                    <button class="btn-modal btn-modal-delete" onclick="confirmDeleteAction()">
+                        <i class="fas fa-trash-alt"></i> نعم، حذف
+                    </button>
                 </div>
             </div>
         </div>
@@ -445,7 +518,6 @@ function sendChatMessage() {
 }
 function handleEnter(e) { if (e.key === 'Enter') sendChatMessage(); }
 
-// تم وضع كود الدالة المطابق للنسخة التي تفضلت بإرسالها بالضبط
 function getStudentById(id) { 
     let students = JSON.parse(localStorage.getItem('students') || '[]'); 
     let s = students.find(s => s.id == id); 

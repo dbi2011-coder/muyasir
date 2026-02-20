@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (النسخة الاحترافية للجوال - أزرار مربعة صغيرة لتوسعة مساحة الاسم)
+// الوصف: شات المعلم (النسخة الاحترافية للجوال - أيقونات بدون خلفية في الرأس)
 // ============================================
 
 let activeChatStudentId = null;
@@ -181,12 +181,14 @@ function injectChatStyles() {
                 box-shadow: none !important;
             }
 
-            /* 1. رأس المحادثة (تصغير العناصر لزيادة مساحة الاسم) */
+            /* 1. رأس المحادثة (سطر واحد - الاسم يمين والأزرار يسار) */
             .chat-header {
                 flex-direction: row !important; 
                 align-items: center !important;
                 height: 60px !important;
                 padding: 5px 10px !important;
+                background: #fff !important;
+                border-bottom: 1px solid #e5e7eb !important;
             }
             
             /* تصغير أيقونة الطالب (Avatar) لتوفير مساحة */
@@ -204,20 +206,18 @@ function injectChatStyles() {
                 display: flex;
                 align-items: center;
             }
-            .header-info > div {
-                min-width: 0; 
-            }
             
             #chatHeaderName {
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
                 display: block;
-                max-width: 100%; /* السماح للاسم بأخذ كل المساحة الممكنة */
-                font-size: 0.9rem !important; /* تصغير الخط قليلاً لتتسع الحروف */
+                max-width: 100%; 
+                font-size: 0.95rem !important;
+                color: #1f2937 !important;
             }
 
-            /* تجميع الأزرار مع تقليل المسافات */
+            /* تجميع الأزرار مع إزالة الخلفية لتصبح أيقونات فقط */
             .header-actions { 
                 width: auto; 
                 justify-content: flex-end; 
@@ -225,20 +225,24 @@ function injectChatStyles() {
                 border: none;
                 display: flex !important;
                 flex-direction: row !important; 
-                gap: 5px !important; /* تقليل المسافة بين الأزرار */
+                gap: 12px !important; /* مسافة مريحة بين الأيقونتين */
                 flex-shrink: 0; 
             }
             
-            /* تحويل الأزرار إلى مربعات صغيرة جداً */
+            /* إزالة خلفية الأزرار لتصبح أيقونات شفافة ومرتبة */
             .btn-header-action {
-                border-radius: 6px !important; /* مربعات بحواف ناعمة */
-                width: 30px !important; /* تصغير العرض */
-                height: 30px !important; /* تصغير الارتفاع */
-                font-size: 0.85rem !important; /* تصغير الأيقونة داخل الزر */
+                background: transparent !important; /* إزالة الخلفية تماماً */
+                width: auto !important; 
+                height: auto !important; 
+                font-size: 1.2rem !important; /* تكبير الأيقونة لتكون واضحة للضغط */
                 box-shadow: none !important;
                 margin: 0 !important;
-                padding: 0 !important;
+                padding: 5px !important; /* مساحة لمس مريحة بدون خلفية ظاهرة */
             }
+            
+            /* تلوين الأيقونات لتعويض غياب الخلفية الملونة */
+            .btn-delete-chat { color: #dc2626 !important; /* لون أحمر للحذف */ }
+            .btn-pdf-chat { color: #2563eb !important; /* لون أزرق للطباعة */ }
 
             /* 2. منطقة الإدخال */
             .chat-input-area {

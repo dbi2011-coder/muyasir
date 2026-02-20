@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: نسخة الكمبيوتر الأصلية الآمنة + ضبط أزرار الرأس للجوال (شفافة وملاصقة لبعضها أقصى اليسار)
+// الوصف: شات المعلم (نسخة الكمبيوتر الأصلية الآمنة + إخفاء زر PDF في الجوال لتخفيف الازدحام)
 // ============================================
 
 let activeChatStudentId = null;
@@ -140,88 +140,36 @@ function injectChatStyles() {
         .mobile-only-element { display: none !important; }
 
         /* =========================================
-           📱 تخصيص الجوال حصراً (أقل من 768px)
+           📱 تخصيص الجوال حصراً (أقل من 768px) معزول تماماً
         ========================================= */
         @media (max-width: 768px) { 
-            .mobile-only-element { display: flex !important; }
+            .mobile-only-element { display: inline-flex !important; align-items: center; justify-content: center; }
             
-            /* إزالة الفراغ السفلي وتوسيع المحادثة */
+            /* إزالة الفراغ السفلي للمحادثة */
             .messages-container { height: calc(100vh - 130px) !important; margin-bottom: -20px !important; }
             .chat-container { height: 100% !important; border-radius: 0 !important; border: none !important; box-shadow: none !important; margin: 0 !important; }
             
-            /* إخفاء القائمة الجانبية كدرج منزلق */
+            /* إخفاء القائمة الجانبية كدرج */
             .chat-sidebar { position: absolute !important; right: -100% !important; top: 0 !important; height: 100% !important; width: 280px !important; min-width: 280px !important; z-index: 1000 !important; transition: right 0.3s ease !important; box-shadow: -4px 0 15px rgba(0,0,0,0.1) !important; }
             .chat-sidebar.show-contacts { right: 0 !important; }
 
-            /* =======================================
-               إعداد الرأس (Header) للجوال لتجنب الخروج
-            ======================================= */
-            .chat-header { 
-                display: flex !important; 
-                flex-wrap: nowrap !important; 
-                align-items: center !important; 
-                justify-content: space-between !important; 
-                padding: 5px 10px !important; 
-                height: 60px !important; 
-                background: #fff !important; 
-                border-bottom: 1px solid #e5e7eb !important; 
-                width: 100% !important; 
-                box-sizing: border-box !important;
-                overflow: hidden !important; 
-            }
-            .header-info { 
-                display: flex !important; 
-                align-items: center !important; 
-                flex: 1 1 auto !important; 
-                min-width: 0 !important; 
-            }
-            .chat-header .avatar { 
-                width: 35px !important; 
-                height: 35px !important; 
-                font-size: 0.9rem !important; 
-                margin-left: 8px !important; 
-                flex-shrink: 0 !important; 
-            }
-            #chatHeaderName { 
-                white-space: nowrap !important; 
-                overflow: hidden !important; 
-                text-overflow: ellipsis !important; 
-                display: block !important; 
-                font-size: 0.95rem !important; 
-                color: #1f2937 !important; 
-            }
+            /* 1. رأس المحادثة: سطر واحد */
+            .chat-header { display: flex !important; flex-wrap: nowrap !important; align-items: center !important; justify-content: space-between !important; padding: 5px 10px !important; height: 60px !important; background: #fff !important; border-bottom: 1px solid #e5e7eb !important; width: 100% !important; box-sizing: border-box !important; overflow: hidden !important; }
+            .header-info { display: flex !important; align-items: center !important; flex: 1 1 auto !important; min-width: 0 !important; }
+            .chat-header .avatar { width: 35px !important; height: 35px !important; font-size: 0.9rem !important; margin-left: 8px !important; flex-shrink: 0 !important; }
+            
+            /* قص الاسم الطويل */
+            #chatHeaderName { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; display: block !important; font-size: 0.95rem !important; max-width: 140px !important; color: #1f2937 !important; }
 
-            /* 🎯 الأزرار الشفافة على أقصى اليسار بجانب بعض وبدون تداخل 🎯 */
-            .header-actions { 
-                display: flex !important; 
-                flex-direction: row !important; 
-                align-items: center !important; 
-                justify-content: flex-end !important; 
-                flex-wrap: nowrap !important; 
-                gap: 10px !important; /* مسافة بسيطة ومناسبة بين الزرين */
-                padding: 0 !important; 
-                border: none !important; 
-                flex-shrink: 0 !important; 
-                margin-right: auto !important; /* لدفع الأزرار لأقصى اليسار بعيداً عن الاسم */
-                margin-left: 5px !important;
-            }
-            .btn-header-action { 
-                display: inline-flex !important; 
-                align-items: center !important; 
-                justify-content: center !important; 
-                background: transparent !important; 
-                width: auto !important; 
-                height: auto !important; 
-                font-size: 1.35rem !important; 
-                box-shadow: none !important; 
-                margin: 0 !important; 
-                padding: 5px !important; 
-                flex-shrink: 0 !important; 
-            }
+            /* الأزرار في الجوال */
+            .header-actions { display: flex !important; flex-direction: row !important; align-items: center !important; justify-content: flex-end !important; flex-wrap: nowrap !important; padding: 0 !important; border: none !important; flex-shrink: 0 !important; margin-right: 5px !important; }
+            .btn-header-action { display: inline-flex !important; align-items: center !important; justify-content: center !important; background: transparent !important; width: auto !important; height: auto !important; font-size: 1.35rem !important; box-shadow: none !important; margin: 0 !important; padding: 5px 8px !important; flex-shrink: 0 !important; }
+            
             .btn-delete-chat { color: #dc2626 !important; }
-            .btn-pdf-chat { color: #2563eb !important; }
+            /* إخفاء زر الـ PDF في الجوال تماماً كما طلبت */
+            .btn-pdf-chat { display: none !important; }
 
-            /* منطقة الكتابة - الأدوات تتوسط الأسفل */
+            /* 2. منطقة الإدخال: ترتيب ذكي */
             .chat-input-area { flex-direction: column !important; align-items: stretch !important; padding: 8px 8px 10px 8px !important; gap: 5px !important; background: #f0f2f5 !important; }
             .input-main-wrapper { order: 1 !important; width: 100% !important; display: flex !important; align-items: center !important; gap: 8px !important; }
             .input-tools-wrapper { order: 2 !important; width: 100% !important; display: flex !important; justify-content: center !important; padding: 5px 0 0 0 !important; gap: 15px !important; }

@@ -2,7 +2,6 @@
    📱 الحل النهائي والشامل للتجاوب (Responsive)
 ========================================= */
 
-/* 1. تصفير وإجبار الصفحة على عدم التمدد */
 html, body {
     overflow-x: hidden !important;
     width: 100% !important;
@@ -11,78 +10,25 @@ html, body {
     padding: 0 !important;
 }
 
-/* حساب المسافات داخل العرض لتجنب خروج العناصر */
 * { box-sizing: border-box !important; }
 
 @media (max-width: 992px) {
-    /* 2. إلغاء نظام الفليكس الذي يسبب القص */
-    .dashboard-container { 
-        display: block !important; 
-        width: 100% !important; 
-    }
-    
-    /* 3. إخفاء القائمة الجانبية بالكامل */
-    .sidebar { 
-        position: fixed !important; 
-        right: -300px !important; 
-        top: 0 !important; 
-        height: 100vh !important; 
-        z-index: 9999 !important; 
-        transition: right 0.3s ease !important; 
-    }
+    .dashboard-container { display: block !important; width: 100% !important; }
+    .sidebar { position: fixed !important; right: -300px !important; top: 0 !important; height: 100vh !important; z-index: 9999 !important; transition: right 0.3s ease !important; }
     .sidebar.active { right: 0 !important; }
-    
-    /* 4. إجبار المحتوى على أخذ عرض الشاشة 100% فقط */
-    .main-content-dashboard, 
-    .main-content { 
-        width: 100% !important; 
-        max-width: 100vw !important; 
-        margin-right: 0 !important; 
-        margin-left: 0 !important;
-        padding: 0 !important;
-    }
-    
-    .dashboard-header { 
-        display: flex !important; 
-        justify-content: flex-start !important; 
-        align-items: center !important; 
-        gap: 15px !important; 
-        padding: 15px !important; 
-        width: 100% !important; 
-    }
+    .main-content-dashboard, .main-content { width: 100% !important; max-width: 100vw !important; margin-right: 0 !important; margin-left: 0 !important; padding: 0 !important; }
+    .dashboard-header { display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 15px !important; padding: 15px !important; width: 100% !important; }
     .mobile-menu-btn { display: block !important; }
     .user-info { margin: 0 !important; } 
 }
 
 @media (max-width: 768px) {
-    /* 5. ترتيب الأزرار لتكون فوق بعضها */
-    .content-header {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 10px !important;
-    }
-    .header-actions {
-        width: 100% !important;
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 10px !important;
-    }
-    .header-actions button, .header-actions .btn-group {
-        width: 100% !important;
-    }
-    
-    .filters-section {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: 10px !important;
-    }
-    .search-box, .filter-options, .filter-options select {
-        width: 100% !important;
-    }
-
+    .content-header { display: flex !important; flex-direction: column !important; align-items: flex-start !important; gap: 10px !important; }
+    .header-actions { width: 100% !important; display: flex !important; flex-direction: column !important; gap: 10px !important; }
+    .header-actions button, .header-actions .btn-group { width: 100% !important; }
+    .filters-section { display: flex !important; flex-direction: column !important; gap: 10px !important; }
+    .search-box, .filter-options, .filter-options select { width: 100% !important; }
     .stats-grid { grid-template-columns: 1fr !important; gap: 15px !important; }
-    
     .dashboard-content { padding: 10px !important; overflow-x: hidden !important; }
 
     /* =======================================================
@@ -125,7 +71,7 @@ html, body {
     /* =======================================================
        8. تحسين النوافذ المنبثقة (Modals)
     ======================================================= */
-    .modal-content { width: 95% !important; margin: 10px auto !important; max-height: 90vh !important; display: flex !important; flex-direction: column !important; min-width: 0 !important; }
+    .modal-content { width: 95% !important; margin: 10px auto !important; max-height: 90vh !important; display: flex; flex-direction: column !important; min-width: 0 !important; }
     .students-selection-list { grid-template-columns: 1fr !important; gap: 12px !important; padding: 5px !important; max-height: 50vh !important; }
     .student-checkbox-item { padding: 12px !important; font-size: 1.1rem !important; }
     .student-checkbox-item input { transform: scale(1.5) !important; margin-left: 15px !important; }
@@ -133,11 +79,11 @@ html, body {
     .modal-footer button { width: 100% !important; margin: 0 !important; }
 
     /* =======================================================
-       9. تحسين صفحة المراسلة (messages.html)
+       9. تحسين صفحة المراسلة (messages.html) - تم إصلاح مشكلة النافذة المخفية
     ======================================================= */
     .messages-container {
         position: relative !important;
-        height: calc(100vh - 180px) !important; /* تحديد ارتفاع ثابت لمنع تشوه الشاشة */
+        height: calc(100vh - 180px) !important; 
         overflow: hidden !important;
         display: flex !important;
         flex-direction: column !important;
@@ -150,10 +96,10 @@ html, body {
         position: relative !important;
     }
 
-    /* العمود الأول: قائمة الطلاب مخفية كدرج جانبي */
-    #messagesList > div:first-child {
+    /* العمود الأول (قائمة الطلاب): استهدافه كأول عنصر تحديداً */
+    #messagesList > div:nth-child(1) {
         position: absolute !important;
-        right: -100% !important; /* مخفية بالكامل */
+        right: -100% !important; 
         top: 0 !important;
         height: 100% !important;
         width: 280px !important;
@@ -166,19 +112,19 @@ html, body {
     }
 
     /* فئة الإظهار (عند تفعيلها برمجياً تظهر القائمة) */
-    #messagesList > div:first-child.show-contacts {
+    #messagesList > div:nth-child(1).show-contacts {
         right: 0 !important;
     }
 
-    /* العمود الثاني: نافذة المحادثة تأخذ 100% من الشاشة */
-    #messagesList > div:last-child {
+    /* العمود الثاني (نافذة المحادثة الفعلية): استهدافه كعنصر ثاني وتجاهل أي نوافذ مخفية بعده */
+    #messagesList > div:nth-child(2) {
         width: 100% !important;
         flex: 1 !important;
         display: flex !important;
         flex-direction: column !important;
     }
 
-    /* زر إظهار القائمة على الجوال (نضيفه برمجياً أو بالـ HTML) */
+    /* زر إظهار القائمة على الجوال */
     .mobile-contacts-toggle {
         display: block !important;
         background: var(--primary-color, #2196f3);

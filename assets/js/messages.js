@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (النسخة الاحترافية للجوال - أيقونات بدون خلفية في الرأس)
+// الوصف: شات المعلم (نسخة الجوال الاحترافية - تثبيت الأزرار الشفافة بأقصى اليسار في سطر واحد)
 // ============================================
 
 let activeChatStudentId = null;
@@ -181,10 +181,13 @@ function injectChatStyles() {
                 box-shadow: none !important;
             }
 
-            /* 1. رأس المحادثة (سطر واحد - الاسم يمين والأزرار يسار) */
+            /* 1. رأس المحادثة (إجبار العناصر على سطر واحد فقط والتوزيع الصحيح) */
             .chat-header {
+                display: flex !important;
                 flex-direction: row !important; 
                 align-items: center !important;
+                justify-content: space-between !important; /* إبعاد الاسم عن الأزرار */
+                flex-wrap: nowrap !important; /* قفل الالتفاف تماماً */
                 height: 60px !important;
                 padding: 5px 10px !important;
                 background: #fff !important;
@@ -197,52 +200,57 @@ function injectChatStyles() {
                 height: 35px !important;
                 font-size: 0.9rem !important;
                 margin-left: 8px !important;
+                flex-shrink: 0 !important;
             }
 
             .header-info { 
-                width: auto; 
-                flex: 1; 
-                min-width: 0; 
-                display: flex;
-                align-items: center;
+                display: flex !important;
+                align-items: center !important;
+                flex: 1 !important; 
+                min-width: 0 !important; 
+                flex-shrink: 1 !important;
             }
             
             #chatHeaderName {
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                display: block;
-                max-width: 100%; 
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                display: block !important;
                 font-size: 0.95rem !important;
                 color: #1f2937 !important;
             }
 
-            /* تجميع الأزرار مع إزالة الخلفية لتصبح أيقونات فقط */
+            /* تثبيت الأزرار في أقصى اليسار وعدم التفافها أبداً */
             .header-actions { 
-                width: auto; 
-                justify-content: flex-end; 
-                padding: 0;
-                border: none;
                 display: flex !important;
                 flex-direction: row !important; 
-                gap: 12px !important; /* مسافة مريحة بين الأيقونتين */
-                flex-shrink: 0; 
+                align-items: center !important;
+                justify-content: flex-end !important; /* أقصى اليسار */
+                flex-wrap: nowrap !important; /* لا تنزل لسطر جديد أبداً */
+                gap: 12px !important; 
+                padding: 0 !important;
+                border: none !important;
+                flex-shrink: 0 !important; 
             }
             
-            /* إزالة خلفية الأزرار لتصبح أيقونات شفافة ومرتبة */
+            /* أزرار شفافة ومحاذية لليسار */
             .btn-header-action {
-                background: transparent !important; /* إزالة الخلفية تماماً */
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                background: transparent !important; 
                 width: auto !important; 
                 height: auto !important; 
-                font-size: 1.2rem !important; /* تكبير الأيقونة لتكون واضحة للضغط */
+                font-size: 1.25rem !important; 
                 box-shadow: none !important;
                 margin: 0 !important;
-                padding: 5px !important; /* مساحة لمس مريحة بدون خلفية ظاهرة */
+                padding: 5px !important; 
+                flex-shrink: 0 !important;
             }
             
-            /* تلوين الأيقونات لتعويض غياب الخلفية الملونة */
-            .btn-delete-chat { color: #dc2626 !important; /* لون أحمر للحذف */ }
-            .btn-pdf-chat { color: #2563eb !important; /* لون أزرق للطباعة */ }
+            /* ألوان الأيقونات */
+            .btn-delete-chat { color: #dc2626 !important; }
+            .btn-pdf-chat { color: #2563eb !important; }
 
             /* 2. منطقة الإدخال */
             .chat-input-area {

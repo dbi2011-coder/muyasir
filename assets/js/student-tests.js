@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-tests.js
-// الوصف: إدارة الاختبارات (إصلاح مشكلة ظهور الاختبارات)
+// الوصف: إدارة الاختبارات (إغلاق التعديل بعد التسليم وعرض تقييم المعلم)
 // ============================================
 
 let currentTest = null;
@@ -17,16 +17,15 @@ document.addEventListener('DOMContentLoaded', function() {
     loadMyTests();
 });
 
-// 1. عرض قائمة الاختبارات (الدالة المصححة)
+// 1. عرض قائمة الاختبارات 
 function loadMyTests() {
     const container = document.getElementById('allTestsList');
     if(!container) return;
 
-    // 🔥 الإصلاح الأول: جلب المستخدم بطريقة آمنة تدعم كل الصيغ
     let currentUser = null;
     try {
         const sessionData = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
-        currentUser = sessionData.user || sessionData; // يدعم {user: {...}} أو {...} مباشرة
+        currentUser = sessionData.user || sessionData; 
     } catch (e) {
         console.error("Error reading user session", e);
     }
@@ -39,7 +38,6 @@ function loadMyTests() {
     const allAssignments = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTestsLib = JSON.parse(localStorage.getItem('tests') || '[]');
     
-    // 🔥 الإصلاح الثاني: استخدام == بدلاً من === لتجاهل الفرق بين النص والرقم
     const myTests = allAssignments.filter(t => t.studentId == currentUser.id);
 
     if (myTests.length === 0) {
@@ -50,10 +48,7 @@ function loadMyTests() {
     }
 
     container.innerHTML = myTests.map(assignment => {
-        // البحث عن تفاصيل الاختبار الأصلي
         const originalTest = allTestsLib.find(t => t.id == assignment.testId);
-        
-        // حماية ضد الاختبارات المحذوفة من المكتبة
         if (!originalTest) return '';
 
         let statusText = 'جديد', statusClass = 'status-new', btnText = 'بدء الاختبار', btnClass = 'btn-primary';
@@ -61,7 +56,8 @@ function loadMyTests() {
         if (assignment.status === 'in-progress') { 
             statusText = 'جاري الحل'; statusClass = 'status-progress'; btnText = 'متابعة الحل'; btnClass = 'btn-warning'; 
         } else if (assignment.status === 'completed') { 
-            statusText = 'تم التسليم'; statusClass = 'status-completed'; btnText = 'مراجعة الإجابات'; btnClass = 'btn-secondary'; 
+            // 🔥 تغيير الزر إذا كان منجزا
+            statusText = 'تم التسليم'; statusClass = 'status-completed'; btnText = '🔍 عرض النتيجة والمراجعة'; btnClass = 'btn-success'; 
         } else if (assignment.status === 'returned') { 
             statusText = 'معاد للتعديل'; statusClass = 'status-returned'; btnText = 'تعديل الإجابة'; btnClass = 'btn-danger'; 
         }
@@ -81,7 +77,7 @@ function loadMyTests() {
     }).join('');
 }
 
-// 2. فتح وضع الاختبار
+// 2. فتح وضع الاختبار (التبديل بين وضع الحل ووضع القراءة)
 function openTestMode(assignmentId) {
     const allAssignments = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTestsLib = JSON.parse(localStorage.getItem('tests') || '[]');
@@ -92,19 +88,19 @@ function openTestMode(assignmentId) {
     currentTest = allTestsLib.find(t => t.id == currentAssignment.testId);
     if (!currentTest) return alert('نموذج الاختبار الأصلي غير موجود');
 
-    // إذا كان مكتمل، نعرض تنبيه فقط (أو يمكن تحويله لوضع العرض)
+    // 🔥 تنبيهات مخصصة بناءً على الحالة
     if (currentAssignment.status === 'completed') {
-        if(!confirm('هذا الاختبار تم تسليمه. هل تريد مراجعة إجاباتك؟ (لن يتم حفظ التعديلات)')) return;
+        alert('أنت الآن في وضع المراجعة.\nلا يمكنك التعديل، يمكنك فقط الاطلاع على إجاباتك وملاحظات المعلم.');
+    } else if (currentAssignment.status === 'returned') {
+        alert('أعاد المعلم هذا الاختبار إليك.\nيمكنك الآن تعديل إجاباتك وتسليمها مرة أخرى.');
     }
 
-    // تحميل الإجابات السابقة
     userAnswers = currentAssignment.answers || [];
     
     document.getElementById('focusTestTitle').textContent = currentTest.title;
     document.getElementById('testFocusMode').style.display = 'flex';
     document.body.style.overflow = 'hidden';
 
-    // إعادة تعيين الواجهة
     document.getElementById('testStartScreen').style.display = 'block';
     document.getElementById('testQuestionsContainer').style.display = 'none';
     document.getElementById('testFooterControls').style.display = 'none';
@@ -124,10 +120,20 @@ function startActualTest() {
     }
 }
 
-// 3. محرك عرض الأسئلة
+// إغلاق النافذة
+function closeTestMode() {
+    document.getElementById('testFocusMode').style.display = 'none';
+    document.body.style.overflow = 'auto';
+    loadMyTests();
+}
+
+// 3. محرك عرض الأسئلة (يدعم وضع القراءة فقط)
 function renderAllQuestions() {
     const container = document.getElementById('testQuestionsContainer');
     container.innerHTML = '';
+    
+    // 🔥 تحديد ما إذا كان الاختبار للقراءة فقط بناءً على الحالة
+    const isReadOnly = (currentAssignment.status === 'completed');
 
     currentTest.questions.forEach((q, index) => {
         const savedAns = userAnswers.find(a => a.questionId == q.id); 
@@ -143,13 +149,30 @@ function renderAllQuestions() {
             qHtml += `<div class="text-center mb-3"><img src="${q.attachment}" style="max-height:200px; border-radius:8px; border:1px solid #ddd;"></div>`;
         }
 
+        // 🔥 إضافة صندوق ملاحظات المعلم والدرجة إذا كان الاختبار منجزاً
+        if (isReadOnly) {
+            let sc = savedAns && savedAns.score !== undefined ? savedAns.score : '-';
+            let maxSc = q.passingScore || q.points || q.score || 1;
+            let note = savedAns && savedAns.teacherNote ? `<div style="margin-top:10px; color:#664d03; background:#fff3cd; padding:10px; border-radius:5px; font-size:0.95rem; border-right:4px solid #ffc107;"><i class="fas fa-comment-dots"></i> <strong>ملاحظة المعلم:</strong> ${savedAns.teacherNote}</div>` : '';
+            
+            qHtml += `
+            <div style="background: #f0fff4; border: 1px solid #c3e6cb; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <div style="font-weight:bold; color: #155724; font-size: 1.1rem; display:flex; justify-content:space-between; align-items:center;">
+                    <span>التقييم:</span>
+                    <span style="background:#28a745; color:white; padding:4px 12px; border-radius:20px;">${sc} / ${maxSc}</span>
+                </div>
+                ${note}
+            </div>`;
+        }
+
         // أ) اختيار من متعدد
         if (q.type.includes('mcq')) {
-            qHtml += `<div class="options-list">`;
+            qHtml += `<div class="options-list" style="${isReadOnly ? 'pointer-events: none; opacity:0.8;' : ''}">`;
             (q.choices || []).forEach((choice, i) => {
                 const isSel = (ansValue == i) ? 'selected' : '';
-                qHtml += `<label class="answer-option ${isSel}" onclick="selectOption(this, ${index}, ${i})">
-                            <input type="radio" name="q_${q.id}" value="${i}" ${ansValue == i ? 'checked' : ''}> ${choice}
+                const clickEvt = isReadOnly ? '' : `onclick="selectOption(this, ${index}, ${i})"`;
+                qHtml += `<label class="answer-option ${isSel}" ${clickEvt}>
+                            <input type="radio" name="q_${q.id}" value="${i}" ${ansValue == i ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''}> ${choice}
                           </label>`;
             });
             qHtml += `</div>`;
@@ -159,20 +182,22 @@ function renderAllQuestions() {
         else if (q.type === 'missing-char') {
             qHtml += `<div class="paragraphs-container">`;
             (q.paragraphs || []).forEach((p, pIdx) => {
-                qHtml += `
-                    <div class="mb-5 p-3 text-center" style="background:#f9f9f9; border-radius:10px;">
-                        <div class="handwriting-area">
-                            <p class="text-muted small mb-2">أكمل الحرف الناقص:</p>
-                            <canvas id="canvas-${q.id}-${pIdx}" 
-                                    class="drawing-canvas missing-char-canvas" 
-                                    width="300" height="150" 
-                                    data-text="${p.missing || p.text}"
-                                    style="border:2px solid #333; background:#fff; cursor:crosshair; border-radius:10px; touch-action: none;">
-                            </canvas>
-                            <br>
-                            <button class="btn btn-sm btn-outline-danger mt-2" onclick="clearCanvas('${q.id}-${pIdx}')">مسح</button>
-                        </div>
-                    </div>`;
+                if (isReadOnly) {
+                    // عرض كصورة ثابتة
+                    let savedImg = (ansValue && typeof ansValue === 'object' && ansValue[`p_${pIdx}`]) 
+                        ? `<img src="${ansValue[`p_${pIdx}`]}" style="max-width:100%; max-height:150px; border:2px solid #ccc; border-radius:10px; background:#fff;">` 
+                        : `<p class="text-muted">لم يتم رسم إجابة</p>`;
+                    qHtml += `<div class="mb-4 text-center p-3" style="background:#f9f9f9; border-radius:10px;"><p class="text-muted small mb-2">أكمل الحرف الناقص:</p>${savedImg}</div>`;
+                } else {
+                    qHtml += `
+                        <div class="mb-5 p-3 text-center" style="background:#f9f9f9; border-radius:10px;">
+                            <div class="handwriting-area">
+                                <p class="text-muted small mb-2">أكمل الحرف الناقص:</p>
+                                <canvas id="canvas-${q.id}-${pIdx}" class="drawing-canvas missing-char-canvas" width="300" height="150" data-text="${p.missing || p.text}" style="border:2px solid #333; background:#fff; cursor:crosshair; border-radius:10px; touch-action: none;"></canvas><br>
+                                <button class="btn btn-sm btn-outline-danger mt-2" onclick="clearCanvas('${q.id}-${pIdx}')">مسح</button>
+                            </div>
+                        </div>`;
+                }
             });
             qHtml += `</div>`;
         }
@@ -181,25 +206,19 @@ function renderAllQuestions() {
         else if (q.type.includes('reading')) {
             qHtml += `<div class="paragraphs-container">`;
             (q.paragraphs || []).forEach((p, pIdx) => {
-                let audioSrc = '';
-                if(ansValue && typeof ansValue === 'object' && ansValue[`p_${pIdx}`]) {
-                    audioSrc = ansValue[`p_${pIdx}`];
-                }
-
-                qHtml += `
-                    <div class="reading-box p-4 mb-3" style="background:#fff3e0; border-right:5px solid #ff9800; border-radius:5px;">
-                        <p style="font-size:1.8rem; text-align:center;">${p.text}</p>
-                    </div>
-                    <div class="recording-area text-center mb-4 p-3" style="background:#f8f9fa; border-radius:10px;">
+                let audioSrc = (ansValue && typeof ansValue === 'object' && ansValue[`p_${pIdx}`]) ? ansValue[`p_${pIdx}`] : '';
+                
+                qHtml += `<div class="reading-box p-4 mb-3" style="background:#fff3e0; border-right:5px solid #ff9800; border-radius:5px;"><p style="font-size:1.8rem; text-align:center;">${p.text}</p></div>`;
+                
+                if (isReadOnly) {
+                    qHtml += `<div class="text-center p-3" style="background:#f8f9fa; border-radius:10px;">${audioSrc ? `<audio controls src="${audioSrc}" class="w-100"></audio>` : `<span class="text-muted">لا يوجد تسجيل</span>`}</div>`;
+                } else {
+                    qHtml += `<div class="recording-area text-center mb-4 p-3" style="background:#f8f9fa; border-radius:10px;">
                         <div id="recorder-controls-${q.id}-${pIdx}">
-                            ${audioSrc ? 
-                                `<audio controls src="${audioSrc}" class="mb-2 w-100"></audio>
-                                 <button class="btn btn-warning btn-sm" onclick="resetRecording('${q.id}', '${pIdx}')">إعادة التسجيل</button>` 
-                                : 
-                                `<button class="btn btn-danger btn-lg" onclick="toggleRecording(this, '${q.id}', '${pIdx}')">🎙️ تسجيل</button>`
-                            }
+                            ${audioSrc ? `<audio controls src="${audioSrc}" class="mb-2 w-100"></audio><button class="btn btn-warning btn-sm" onclick="resetRecording('${q.id}', '${pIdx}')">إعادة التسجيل</button>` : `<button class="btn btn-danger btn-lg" onclick="toggleRecording(this, '${q.id}', '${pIdx}')">🎙️ تسجيل</button>`}
                         </div>
                     </div>`;
+                }
             });
             qHtml += `</div>`;
         }
@@ -208,14 +227,16 @@ function renderAllQuestions() {
         else if (q.type.includes('spelling')) {
             qHtml += `<div class="paragraphs-container">`;
             (q.paragraphs || []).forEach((p, pIdx) => {
-                qHtml += `
-                    <div class="mb-4 text-center">
-                        <button class="btn btn-info btn-lg mb-3" onclick="playAudio('${p.text}')">🔊 استماع</button>
-                        <div style="background:#fff; padding:10px; border-radius:10px; border:1px solid #ddd;">
-                            <canvas id="canvas-${q.id}-${pIdx}" class="drawing-canvas" width="600" height="250" style="border:2px dashed #ccc; background:#fff; cursor:crosshair; width:100%; touch-action: none;"></canvas>
-                        </div>
-                        <button class="btn btn-sm btn-secondary mt-2" onclick="clearCanvas('${q.id}-${pIdx}')">مسح</button>
-                    </div>`;
+                qHtml += `<div class="mb-4 text-center"><button class="btn btn-info btn-lg mb-3" onclick="playAudio('${p.text}')">🔊 استماع للكلمة</button>`;
+                if (isReadOnly) {
+                    let savedImg = (ansValue && typeof ansValue === 'object' && ansValue[`p_${pIdx}`]) ? `<img src="${ansValue[`p_${pIdx}`]}" style="max-width:100%; border:2px dashed #ccc; border-radius:10px; background:#fff;">` : `<p class="text-muted border p-4 bg-light rounded">لم يتم كتابة إجابة</p>`;
+                    qHtml += `<div>${savedImg}</div></div>`;
+                } else {
+                    qHtml += `<div style="background:#fff; padding:10px; border-radius:10px; border:1px solid #ddd;">
+                                <canvas id="canvas-${q.id}-${pIdx}" class="drawing-canvas" width="600" height="250" style="border:2px dashed #ccc; background:#fff; cursor:crosshair; width:100%; touch-action: none;"></canvas>
+                              </div>
+                              <button class="btn btn-sm btn-secondary mt-2" onclick="clearCanvas('${q.id}-${pIdx}')">مسح</button></div>`;
+                }
             });
             qHtml += `</div>`;
         }
@@ -227,26 +248,25 @@ function renderAllQuestions() {
                 let draggables = [];
                 if (p.gaps) {
                     p.gaps.forEach((g, gIdx) => {
-                        let saved = '';
-                        if(ansValue && typeof ansValue === 'object' && ansValue[`p_${pIdx}_g_${gIdx}`]) {
-                            saved = ansValue[`p_${pIdx}_g_${gIdx}`];
-                        }
+                        let saved = (ansValue && typeof ansValue === 'object' && ansValue[`p_${pIdx}_g_${gIdx}`]) ? ansValue[`p_${pIdx}_g_${gIdx}`] : '';
                         const dropId = `drop-${q.id}-${pIdx}-${gIdx}`;
-                        processedText = processedText.replace(g.dragItem, `<span class="drop-zone" id="${dropId}" ondrop="drop(event)" ondragover="allowDrop(event)" data-qid="${index}" data-pid="${pIdx}" data-gid="${gIdx}">${saved}</span>`);
+                        const dropEvts = isReadOnly ? '' : `ondrop="drop(event)" ondragover="allowDrop(event)"`;
+                        processedText = processedText.replace(g.dragItem, `<span class="drop-zone" id="${dropId}" ${dropEvts} data-qid="${index}" data-pid="${pIdx}" data-gid="${gIdx}" style="${isReadOnly ? 'background:#e2e8f0; pointer-events:none;' : ''}">${saved}</span>`);
                         draggables.push(g.dragItem);
                     });
                 }
-                qHtml += `
-                    <div class="word-bank">
-                        ${draggables.sort(()=>Math.random()-0.5).map(w => `<div class="draggable-word" draggable="true" ondragstart="drag(event)" id="w-${Math.random()}">${w}</div>`).join('')}
-                    </div>
-                    <div class="sentence-area">${processedText}</div>
-                `;
+                
+                if (!isReadOnly) {
+                    qHtml += `<div class="word-bank">${draggables.sort(()=>Math.random()-0.5).map(w => `<div class="draggable-word" draggable="true" ondragstart="drag(event)" id="w-${Math.random()}">${w}</div>`).join('')}</div>`;
+                }
+                qHtml += `<div class="sentence-area" style="font-size:1.3rem; line-height:2.5;">${processedText}</div>`;
             });
         }
         
+        // و) نصي
         else if (q.type === 'open-ended') {
-            qHtml += `<textarea class="form-control" rows="4" placeholder="اكتب إجابتك هنا..." onchange="saveSimpleAnswer(${index}, this.value)">${ansValue || ''}</textarea>`;
+            const roAttr = isReadOnly ? 'readonly style="background:#f1f5f9;"' : '';
+            qHtml += `<textarea class="form-control" rows="4" placeholder="اكتب إجابتك هنا..." onchange="saveSimpleAnswer(${index}, this.value)" ${roAttr}>${ansValue || ''}</textarea>`;
         }
 
         qHtml += `</div>`;
@@ -266,32 +286,45 @@ function showQuestion(index) {
         document.getElementById('questionCounter').textContent = `سؤال ${index + 1} من ${currentTest.questions.length}`;
         updateNavigationButtons();
         
-        // تهيئة الكانفاس
-        const q = currentTest.questions[index];
-        if (q.type.includes('spelling') || q.type === 'missing-char') {
-            setTimeout(() => {
-                (q.paragraphs || []).forEach((p, pIdx) => initCanvas(`${q.id}-${pIdx}`));
-            }, 50);
+        // تهيئة الكانفاس فقط إذا كان الاختبار قابل للتعديل
+        if(currentAssignment.status !== 'completed') {
+            const q = currentTest.questions[index];
+            if (q.type.includes('spelling') || q.type === 'missing-char') {
+                setTimeout(() => { (q.paragraphs || []).forEach((p, pIdx) => initCanvas(`${q.id}-${pIdx}`)); }, 50);
+            }
         }
     }
 }
 
 function nextQuestion() {
-    saveCurrentCanvas(); 
+    if(currentAssignment.status !== 'completed') saveCurrentCanvas(); 
     if (currentQuestionIndex < currentTest.questions.length - 1) showQuestion(currentQuestionIndex + 1);
 }
+
 function prevQuestion() {
-    saveCurrentCanvas();
+    if(currentAssignment.status !== 'completed') saveCurrentCanvas();
     if (currentQuestionIndex > 0) showQuestion(currentQuestionIndex - 1);
 }
 
 function updateNavigationButtons() {
     const isLast = currentQuestionIndex === currentTest.questions.length - 1;
+    const isReadOnly = (currentAssignment.status === 'completed');
+
+    let actionButtons = '';
+    if (isReadOnly) {
+        actionButtons = `<button class="btn-nav" style="background:#6c757d; color:white;" onclick="closeTestMode()">إغلاق المراجعة</button>`;
+    } else {
+        actionButtons = `
+            <button class="btn-nav btn-save" onclick="saveTestProgress(false)">حفظ مؤقت</button>
+            ${isLast ? '<button class="btn-nav btn-submit" onclick="finishTest()">تسليم الاختبار</button>' : ''}
+        `;
+    }
+
     document.getElementById('testFooterControls').innerHTML = `
         <button class="btn-nav btn-prev" onclick="prevQuestion()" ${currentQuestionIndex === 0 ? 'disabled' : ''}>السابق</button>
-        <div>
-            <button class="btn-nav btn-save" onclick="saveTestProgress(false)">حفظ مؤقت</button>
-            ${isLast ? '<button class="btn-nav btn-submit" onclick="finishTest()">تسليم الاختبار</button>' : '<button class="btn-nav btn-next" onclick="nextQuestion()">التالي</button>'}
+        <div style="display:flex; gap:10px;">
+            ${actionButtons}
+            ${(!isLast) ? '<button class="btn-nav btn-next" onclick="nextQuestion()">التالي</button>' : ''}
         </div>`;
 }
 
@@ -323,7 +356,6 @@ function initCanvas(id) {
     canvas.addEventListener('mouseup', () => isDrawing = false);
     canvas.addEventListener('touchend', () => isDrawing = false);
 
-    // استرجاع الرسم القديم
     try {
         const qId = id.split('-')[0];
         const pIdx = id.split('-')[1];
@@ -413,6 +445,7 @@ function resetRecording(qId, pIdx) {
 // 7. الحفظ
 // ==========================================
 function selectOption(el, qIdx, choiceIdx) {
+    if(currentAssignment.status === 'completed') return;
     const card = document.getElementById(`q-card-${qIdx}`);
     card.querySelectorAll('.answer-option').forEach(e => e.classList.remove('selected'));
     el.classList.add('selected');
@@ -421,10 +454,12 @@ function selectOption(el, qIdx, choiceIdx) {
 }
 
 function saveSimpleAnswer(qIdx, val) {
+    if(currentAssignment.status === 'completed') return;
     updateUserAnswer(currentTest.questions[qIdx].id, val);
 }
 
 function saveInputAnswerByQId(qId, key, val) {
+    if(currentAssignment.status === 'completed') return;
     let entry = userAnswers.find(a => a.questionId == qId);
     if (!entry) { entry = { questionId: qId, answer: {} }; userAnswers.push(entry); }
     if (typeof entry.answer !== 'object' || entry.answer === null) entry.answer = {}; 
@@ -432,6 +467,7 @@ function saveInputAnswerByQId(qId, key, val) {
 }
 
 function saveCurrentCanvas() {
+    if(currentAssignment.status === 'completed') return;
     const q = currentTest.questions[currentQuestionIndex];
     if (q.type.includes('spelling') || q.type === 'missing-char') {
         let canvasAnswers = {};
@@ -451,12 +487,14 @@ function saveCurrentCanvas() {
 }
 
 function updateUserAnswer(qId, val) {
+    if(currentAssignment.status === 'completed') return;
     const idx = userAnswers.findIndex(a => a.questionId == qId);
     if(idx !== -1) userAnswers[idx].answer = val;
     else userAnswers.push({ questionId: qId, answer: val });
 }
 
 function saveTestProgress(submit = false) {
+    if(currentAssignment.status === 'completed') return;
     saveCurrentCanvas(); 
     const allAssignments = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const idx = allAssignments.findIndex(a => a.id == currentAssignment.id);
@@ -482,7 +520,9 @@ function saveTestProgress(submit = false) {
 }
 
 function finishTest() {
-    if(confirm('هل أنت متأكد من التسليم النهائي؟')) saveTestProgress(true);
+    if(confirm('هل أنت متأكد من التسليم النهائي؟\nلن تتمكن من تعديل الإجابات بعد ذلك.')) {
+        saveTestProgress(true);
+    }
 }
 
 function playAudio(text) {
@@ -493,6 +533,7 @@ function playAudio(text) {
 function allowDrop(ev) { ev.preventDefault(); }
 function drag(ev) { ev.dataTransfer.setData("text", ev.target.innerText); ev.dataTransfer.setData("id", ev.target.id); }
 function drop(ev) {
+    if(currentAssignment.status === 'completed') return;
     ev.preventDefault();
     const data = ev.dataTransfer.getData("text");
     const elId = ev.dataTransfer.getData("id");

@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-messages.js
-// الوصف: شات الطالب (تم الترقية بالكامل إلى IndexedDB)
+// الوصف: شات الطالب (IndexedDB + معاينة وعرض الصور المباشر مثل الواتساب)
 // ============================================
 
 const CHAT_DB_NAME = 'MuyasirChatDB';
@@ -78,7 +78,7 @@ let pendingDeleteMessageId = null;
 document.addEventListener('DOMContentLoaded', async function() {
     if (window.location.pathname.includes('messages.html')) {
         try {
-            await migrateChatData(); // 🔥 نقل البيانات بأمان
+            await migrateChatData(); 
             injectFontAwesome();
             cleanInterfaceAggressive(); 
             injectChatStyles();
@@ -146,8 +146,12 @@ function injectChatStyles() {
         audio { height: 35px; width: 220px; margin-top: 5px; border-radius: 20px; outline: none; }
         .msg-me audio { filter: invert(1) grayscale(1) brightness(2); }
         .msg-time { font-size: 0.7rem; margin-top: 5px; opacity: 0.8; display:block; text-align:left; }
-        .msg-attachment { margin-top: 8px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 8px; display: flex; align-items: center; gap: 5px; text-decoration: none; color: inherit; }
-        .msg-attachment img { max-width: 100%; border-radius: 5px; }
+
+        /* 🔥 تنسيقات عرض الصور والمرفقات الجديدة 🔥 */
+        .msg-image-wrapper { margin-bottom: 5px; }
+        .msg-image-wrapper img { width: 100%; max-width: 300px; border-radius: 8px; display: block; border: 1px solid rgba(0,0,0,0.1); }
+        .msg-attachment { margin-top: 8px; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 8px; display: block; text-decoration: none; color: inherit; border: 1px solid rgba(0,0,0,0.05); transition: 0.2s; }
+        .msg-attachment:hover { background: rgba(0,0,0,0.1); }
 
         .msg-options-btn { position: absolute; top: 5px; left: 8px; color: inherit; opacity: 0.6; cursor: pointer; padding: 2px 5px; font-size: 1.1rem; }
         .msg-options-btn:hover { opacity: 1; }
@@ -180,7 +184,8 @@ function injectChatStyles() {
         .recording-wave { width: 12px; height: 12px; background: #b71c1c; border-radius: 50%; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
 
-        .attachment-preview { position: absolute; bottom: 85px; right: 20px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; display: none; z-index: 10; }
+        /* 🔥 تنسيقات نافذة المعاينة قبل الإرسال 🔥 */
+        .attachment-preview { position: absolute; bottom: 85px; left: 20px; right: 20px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 -5px 25px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; display: none; z-index: 100; text-align: center; }
         
         .emoji-popup { position: absolute; bottom: 85px; right: 60px; width: 320px; height: 250px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: none; padding: 10px; grid-template-columns: repeat(7, 1fr); gap: 5px; overflow-y: auto; z-index: 9999; }
         .emoji-item { font-size: 1.4rem; cursor: pointer; text-align: center; padding: 5px; border-radius: 5px; transition: 0.2s; }
@@ -208,6 +213,11 @@ function injectChatStyles() {
             .btn-send-pill { padding: 10px 15px; font-size: 0.95rem; white-space: nowrap; margin: 0; }
             .btn-tool { width: 40px; height: 40px; font-size: 1.1rem; flex-shrink: 0; }
             .chat-tools-bottom { width: 100%; justify-content: center; gap: 25px !important; padding-bottom: 5px; }
+            
+            /* تعديل نافذة المعاينة للجوال */
+            .attachment-preview { bottom: 130px; left: 10px; right: 10px; padding: 10px; }
+            .msg-image-wrapper img { max-width: 100%; }
+
             .emoji-popup { bottom: 125px; right: 50%; transform: translateX(50%); width: 95%; max-width: 350px; }
             .recording-area { padding: 0 10px; }
         }
@@ -239,11 +249,15 @@ function renderStudentChatLayout() {
                 </div>
 
                 <div id="attachmentPreviewBox" class="attachment-preview">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                        <strong style="font-size:0.8rem;">معاينة</strong>
-                        <i class="fas fa-times" style="color:red; cursor:pointer;" onclick="clearAttachment()"></i>
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px;">
+                        <strong style="font-size:0.9rem; color:#007bff;"><i class="fas fa-paperclip"></i> المرفق المحدد</strong>
+                        <i class="fas fa-times-circle" style="color:#dc3545; cursor:pointer; font-size: 1.2rem;" onclick="clearAttachment()"></i>
                     </div>
-                    <span id="attachName" style="font-size:0.85rem; color:#555;"></span>
+                    <div id="attachPreviewContent">
+                        <img id="attachPreviewImg" src="" style="display:none; max-width: 100%; max-height: 150px; border-radius: 8px; margin: 0 auto;">
+                        <div id="attachName" style="font-size:0.85rem; color:#555; margin-top: 5px; word-break: break-all;"></div>
+                    </div>
+                    <div style="margin-top: 10px; font-size: 0.8rem; color: #888;">اكتب تعليقاً في الأسفل ثم اضغط إرسال</div>
                 </div>
 
                 <div id="emojiPopup" class="emoji-popup">
@@ -267,16 +281,31 @@ function renderStudentChatLayout() {
                     </div>
 
                     <div class="chat-input-wrapper">
-                        <input type="text" class="chat-input" id="chatInput" placeholder="اكتب رسالة للمعلم..." onkeypress="handleEnter(event)">
-                        <button class="btn-tool btn-mic" onclick="startRecording()" title="تسجيل صوتي"><i class="fas fa-microphone"></i></button>
+                        <input type="text" class="chat-input" id="chatInput" placeholder="اكتب رسالة للمعلم أو تعليقاً للمرفق..." onkeypress="handleEnter(event)">
+                        
+                        <button class="btn-tool btn-mic" onclick="startRecording()" title="تسجيل صوتي">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                        
                         <button class="btn-tool" onclick="cancelEdit()" id="cancelEditBtn" style="display:none; background:#ffebee; color:red;" title="إلغاء"><i class="fas fa-times"></i></button>
-                        <button class="btn-send-pill" id="sendBtn" onclick="sendToTeacher()">أرسل <i class="fas fa-paper-plane"></i></button>
+
+                        <button class="btn-send-pill" id="sendBtn" onclick="sendToTeacher()">
+                            أرسل <i class="fas fa-paper-plane"></i>
+                        </button>
                     </div>
 
                     <div class="chat-tools-bottom">
-                        <button id="emojiBtn" class="btn-tool btn-emoji" onclick="toggleEmojiPopup()" title="رموز"><i class="far fa-smile"></i></button>
-                        <label class="btn-tool btn-attach" title="ملف"><i class="fas fa-paperclip"></i><input type="file" id="chatFileInput" style="display:none" onchange="handleChatAttachment(this)"></label>
-                        <label class="btn-tool btn-cam" title="كاميرا"><i class="fas fa-camera"></i><input type="file" id="chatCamInput" accept="image/*" capture="environment" style="display:none" onchange="handleChatAttachment(this)"></label>
+                        <button id="emojiBtn" class="btn-tool btn-emoji" onclick="toggleEmojiPopup()" title="رموز">
+                            <i class="far fa-smile"></i>
+                        </button>
+                        <label class="btn-tool btn-attach" title="ملف">
+                            <i class="fas fa-paperclip"></i>
+                            <input type="file" id="chatFileInput" style="display:none" onchange="handleChatAttachment(this)">
+                        </label>
+                        <label class="btn-tool btn-cam" title="كاميرا">
+                            <i class="fas fa-camera"></i>
+                            <input type="file" id="chatCamInput" accept="image/*" capture="environment" style="display:none" onchange="handleChatAttachment(this)">
+                        </label>
                     </div>
                 </div>
             </div>
@@ -322,14 +351,28 @@ async function loadChatWithTeacher() {
     myMsgs.forEach(msg => {
         const isMe = !msg.isFromTeacher;
         const bubbleClass = isMe ? 'msg-me' : 'msg-other';
-        let contentHtml = msg.content;
         
+        let contentHtml = msg.content;
+        let attachHtml = '';
+        
+        // 🔥 عرض الرسالة كصوت أو كصورة مباشرة 🔥
         if (msg.isVoice) {
             contentHtml = `<div style="display:flex; align-items:center; gap:5px;"><audio controls src="${msg.content}"></audio></div>`;
+        } else if (msg.attachment) {
+            const isImg = msg.attachment.startsWith('data:image');
+            if (isImg) {
+                // إظهار الصورة بشكل كامل وإظهار التعليق تحتها إن وجد
+                let caption = (contentHtml && contentHtml !== 'مرفق' && contentHtml !== '📎 مرفق') ? `<div style="margin-top:8px; font-size:0.95rem;">${contentHtml}</div>` : '';
+                contentHtml = `<div class="msg-image-wrapper"><img src="${msg.attachment}" onclick="window.open('${msg.attachment}', '_blank')" style="cursor:pointer;" alt="صورة مرسلة"></div>${caption}`;
+            } else {
+                // عرض الملف كزر تحميل
+                attachHtml = `<a href="${msg.attachment}" download="file" class="msg-attachment"><i class="fas fa-file-download"></i> تحميل المرفق</a>`;
+                if (contentHtml === 'مرفق' || contentHtml === '📎 مرفق') contentHtml = '';
+                else if (contentHtml) contentHtml = `<div style="margin-top:5px;">${contentHtml}</div>`;
+                contentHtml = attachHtml + contentHtml;
+            }
         }
 
-        let attachHtml = '';
-        if (msg.attachment) { const isImg = msg.attachment.startsWith('data:image'); attachHtml = `<a href="${msg.attachment}" download="file" class="msg-attachment">${isImg ? `<img src="${msg.attachment}">` : ''} 📎 فتح</a>`; }
         let menuHtml = '';
         if (isMe) {
             menuHtml = `<div class="msg-options-btn" onclick="toggleMessageMenu(event, ${msg.id})">⋮</div>
@@ -338,7 +381,8 @@ async function loadChatWithTeacher() {
                 <div class="msg-dropdown-item delete" onclick="deleteMessage(${msg.id})"><i class="fas fa-trash"></i> حذف</div>
             </div>`;
         }
-        const html = `<div class="msg-bubble ${bubbleClass}">${menuHtml} ${contentHtml} ${attachHtml} <span class="msg-time">${new Date(msg.sentAt).toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'})}</span></div>`;
+        
+        const html = `<div class="msg-bubble ${bubbleClass}">${menuHtml} ${contentHtml} <span class="msg-time">${new Date(msg.sentAt).toLocaleTimeString('ar-SA', {hour:'2-digit', minute:'2-digit'})}</span></div>`;
         area.innerHTML += html;
         if (msg.isFromTeacher && !msg.isRead) { msg.isRead = true; needsUpdate = true; }
     });
@@ -433,10 +477,44 @@ async function startEditMessage(messageId) {
 }
 
 function cancelEdit() { editingMessageId = null; const input = document.getElementById('chatInput'); input.value = ''; input.classList.remove('editing'); const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'أرسل <i class="fas fa-paper-plane"></i>'; sendBtn.classList.remove('update-mode'); document.getElementById('cancelEditBtn').style.display = 'none'; }
-function handleChatAttachment(input) { if (input.files && input.files[0]) { const file = input.files[0]; const reader = new FileReader(); reader.onload = function(e) { attachmentData = e.target.result; document.getElementById('attachName').textContent = file.name; document.getElementById('attachmentPreviewBox').style.display = 'block'; }; reader.readAsDataURL(file); } }
+
+// 🔥 تعديل دالة الإرفاق لعرض معاينة الصورة وكتابة تعليق 🔥
+function handleChatAttachment(input) { 
+    if (input.files && input.files[0]) { 
+        const file = input.files[0]; 
+        const reader = new FileReader(); 
+        reader.onload = function(e) { 
+            attachmentData = e.target.result; 
+            document.getElementById('attachName').textContent = file.name; 
+            
+            const previewImg = document.getElementById('attachPreviewImg');
+            if (file.type.startsWith('image/')) {
+                previewImg.src = e.target.result;
+                previewImg.style.display = 'block';
+            } else {
+                previewImg.style.display = 'none';
+            }
+            
+            document.getElementById('attachmentPreviewBox').style.display = 'block'; 
+            document.getElementById('chatInput').focus(); // إجبار التركيز على مربع النص لكتابة تعليق
+            input.value = ''; 
+        }; 
+        reader.readAsDataURL(file); 
+    } 
+}
+
 function toggleEmojiPopup() { const popup = document.getElementById('emojiPopup'); if (popup.style.display === 'none') popup.style.display = 'grid'; else popup.style.display = 'none'; }
 function addEmoji(char) { const input = document.getElementById('chatInput'); input.value += char; input.focus(); }
-function clearAttachment() { attachmentData = null; document.getElementById('attachmentPreviewBox').style.display = 'none'; document.getElementById('chatFileInput').value = ''; document.getElementById('chatCamInput').value = ''; }
+
+function clearAttachment() { 
+    attachmentData = null; 
+    document.getElementById('attachmentPreviewBox').style.display = 'none'; 
+    document.getElementById('chatFileInput').value = ''; 
+    document.getElementById('chatCamInput').value = ''; 
+    const previewImg = document.getElementById('attachPreviewImg');
+    if(previewImg) { previewImg.src = ''; previewImg.style.display = 'none'; }
+    document.getElementById('attachName').textContent = '';
+}
 
 async function sendToTeacher() {
     const teacherId = getMyTeacherId(); if (!teacherId) { alert('خطأ: لا يوجد معلم'); return; }
@@ -461,12 +539,12 @@ async function sendToTeacher() {
     
     let sStr = await getChatData('studentMessages');
     const studentMsgs = JSON.parse(sStr || '[]'); 
-    studentMsgs.push({ id: Date.now(), studentId: currentUser.id, teacherId: teacherId, content: content || (attachmentData ? 'مرفق' : ''), attachment: attachmentData, isVoice: false, sentAt: new Date().toISOString(), isRead: true, isFromTeacher: false }); 
+    studentMsgs.push({ id: Date.now(), studentId: currentUser.id, teacherId: teacherId, content: content || (attachmentData ? '📎 مرفق' : ''), attachment: attachmentData, isVoice: false, sentAt: new Date().toISOString(), isRead: true, isFromTeacher: false }); 
     await setChatData('studentMessages', JSON.stringify(studentMsgs));
     
     let tStr = await getChatData('teacherMessages');
     const teacherMsgs = JSON.parse(tStr || '[]'); 
-    teacherMsgs.push({ id: Date.now() + 1, teacherId: teacherId, studentId: currentUser.id, content: content || (attachmentData ? 'مرفق' : ''), attachment: attachmentData, isVoice: false, sentAt: new Date().toISOString(), isRead: false, isFromStudent: true }); 
+    teacherMsgs.push({ id: Date.now() + 1, teacherId: teacherId, studentId: currentUser.id, content: content || (attachmentData ? '📎 مرفق' : ''), attachment: attachmentData, isVoice: false, sentAt: new Date().toISOString(), isRead: false, isFromStudent: true }); 
     await setChatData('teacherMessages', JSON.stringify(teacherMsgs));
     
     input.value = ''; clearAttachment(); document.getElementById('emojiPopup').style.display = 'none'; await loadChatWithTeacher();

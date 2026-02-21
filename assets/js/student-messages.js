@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-messages.js
-// الوصف: شات الطالب (واجهة نظيفة + إصلاح الفيسات + MP3 + ألوان غامقة)
+// الوصف: شات الطالب (واجهة نظيفة + ترتيب ذكي للجوال + تثبيت الإدخال)
 // ============================================
 
 let attachmentData = null;
@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('messages.html')) {
         try {
             injectFontAwesome();
-            cleanInterfaceAggressive(); // 🔥 دالة تنظيف الواجهة من الإحصائيات والفلاتر 🔥
+            cleanInterfaceAggressive(); 
             injectChatStyles();
             renderStudentChatLayout();
             loadChatWithTeacher();
@@ -77,9 +77,10 @@ function injectChatStyles() {
     const style = document.createElement('style');
     style.id = 'chatStyles';
     style.innerHTML = `
+        /* تنسيقات الكمبيوتر الأساسية (لم يتم المساس بها، تم فقط إضافة حواضن للحفاظ على الشكل) */
         .chat-container { display: flex; height: 80vh; background: #fff; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #d1d5db; margin-top: 0px; font-family: 'Tajawal', sans-serif; }
-        .chat-main { flex: 1; display: flex; flex-direction: column; background: #fff; }
-        .messages-area { flex: 1; padding: 20px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 15px; }
+        .chat-main { flex: 1; display: flex; flex-direction: column; background: #fff; height: 100%; overflow: hidden; }
+        .messages-area { flex: 1 1 auto; padding: 20px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 15px; }
         
         .msg-bubble { max-width: 75%; padding: 12px 18px; border-radius: 15px; position: relative; font-size: 0.95rem; line-height: 1.6; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .msg-me { align-self: flex-start; background: #007bff; color: white; border-bottom-right-radius: 2px; } 
@@ -99,8 +100,14 @@ function injectChatStyles() {
         .msg-dropdown-item:hover { background: #f8f9fa; color: #007bff; }
         .msg-dropdown-item.delete:hover { color: #dc3545; background: #fff5f5; }
 
-        .chat-input-area { padding: 15px 20px; border-top: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; gap: 10px; position: relative; min-height: 80px; }
-        .chat-input { flex: 1; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 25px; outline: none; font-size: 1rem; background: #f8fafc; margin: 0 5px; }
+        /* منطقة الإدخال بالكمبيوتر (ثابتة) */
+        .chat-input-area { padding: 15px 20px; border-top: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; gap: 10px; position: relative; flex: 0 0 auto; min-height: 80px; }
+        
+        /* حواضن جديدة للحفاظ على شكل الكمبيوتر والتحكم السهل بالجوال */
+        .chat-tools-left { display: flex; align-items: center; gap: 10px; }
+        .chat-input-wrapper { display: flex; align-items: center; gap: 10px; flex: 1; }
+
+        .chat-input { flex: 1; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 25px; outline: none; font-size: 1rem; background: #f8fafc; margin: 0; }
         .chat-input:focus { border-color: #007bff; background: #fff; }
         .chat-input.editing { border-color: #f59e0b; background: #fffbeb; }
 
@@ -134,11 +141,10 @@ function injectChatStyles() {
 
         .attachment-preview { position: absolute; bottom: 85px; right: 20px; background: white; padding: 10px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; display: none; z-index: 10; }
         
-        /* 🔥 تعديل مكان الفيسات لتظهر فوق القائمة الجانبية 🔥 */
         .emoji-popup { 
             position: absolute; 
             bottom: 85px; 
-            right: 60px; /* تم التعديل من 20px إلى 60px */
+            right: 60px; 
             width: 320px; 
             height: 250px; 
             background: white; 
@@ -150,13 +156,68 @@ function injectChatStyles() {
             grid-template-columns: repeat(7, 1fr); 
             gap: 5px; 
             overflow-y: auto; 
-            z-index: 9999; /* طبقة عالية جداً للظهور فوق كل شيء */
+            z-index: 9999;
         }
 
         .emoji-item { font-size: 1.4rem; cursor: pointer; text-align: center; padding: 5px; border-radius: 5px; transition: 0.2s; }
         .emoji-item:hover { background: #f1f5f9; transform: scale(1.2); }
         
-        @media (max-width: 768px) { .chat-container { height: 85vh; margin-top: 0; } }
+        /* 🔥 ==============================================
+           📱 تعديلات خاصة بنسخة الجوال فقط (بدون المساس بالكمبيوتر)
+           ============================================== 🔥 */
+        @media (max-width: 768px) { 
+            .chat-container { 
+                /* تثبيت الحاوية لتكون بحجم الشاشة وتمنع الاندفاع للخارج */
+                height: calc(100vh - 130px) !important; 
+                margin-top: 0; 
+                border-radius: 0;
+                border: none;
+                box-shadow: none;
+                display: flex;
+                flex-direction: column;
+            }
+            .chat-main { height: 100%; display: flex; flex-direction: column; }
+            .messages-area { flex: 1 1 auto; overflow-y: auto; padding: 15px 10px; }
+            
+            /* منطقة الإدخال ثابتة لا تتأثر بزيادة الرسائل */
+            .chat-input-area { 
+                flex: 0 0 auto; 
+                flex-direction: column; 
+                padding: 10px 10px 15px 10px; 
+                gap: 10px; 
+                box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+            }
+            
+            /* الصف الأول (أعلى): حقل المحادثة والتسجيل الصوتي والإرسال بجوار بعض */
+            .chat-input-wrapper { 
+                order: 1; 
+                width: 100%; 
+                gap: 8px; 
+            }
+            .chat-input { width: 100%; padding: 10px 15px; margin: 0; }
+            .btn-send-pill { padding: 10px 15px; font-size: 0.95rem; white-space: nowrap; }
+            .btn-tool { width: 40px; height: 40px; font-size: 1.1rem; }
+            
+            /* الصف الثاني (أسفل): الرموز التعبيرية والإرفاق والكاميرا في المنتصف ملاصقة للأسفل */
+            .chat-tools-left { 
+                order: 2; 
+                width: 100%; 
+                justify-content: center; 
+                gap: 25px; 
+                margin-top: 5px;
+            }
+
+            /* ضبط نافذة الرموز لتناسب التصميم الجديد في الجوال (تظهر فوق الأزرار) */
+            .emoji-popup { 
+                bottom: 120px; 
+                right: 50%; 
+                transform: translateX(50%); 
+                width: 95%; 
+                max-width: 350px; 
+            }
+            
+            .recording-area { padding: 0 10px; }
+        }
     `;
     document.head.appendChild(style);
 }
@@ -213,31 +274,33 @@ function renderStudentChatLayout() {
                         </div>
                     </div>
 
-                    <button id="emojiBtn" class="btn-tool btn-emoji" onclick="toggleEmojiPopup()" title="رموز">
-                        <i class="far fa-smile"></i>
-                    </button>
-                    
-                    <label class="btn-tool btn-attach" title="ملف">
-                        <i class="fas fa-paperclip"></i>
-                        <input type="file" id="chatFileInput" style="display:none" onchange="handleChatAttachment(this)">
-                    </label>
-                    
-                    <label class="btn-tool btn-cam" title="كاميرا">
-                        <i class="fas fa-camera"></i>
-                        <input type="file" id="chatCamInput" accept="image/*" capture="environment" style="display:none" onchange="handleChatAttachment(this)">
-                    </label>
+                    <div class="chat-tools-left">
+                        <button id="emojiBtn" class="btn-tool btn-emoji" onclick="toggleEmojiPopup()" title="رموز">
+                            <i class="far fa-smile"></i>
+                        </button>
+                        <label class="btn-tool btn-attach" title="ملف">
+                            <i class="fas fa-paperclip"></i>
+                            <input type="file" id="chatFileInput" style="display:none" onchange="handleChatAttachment(this)">
+                        </label>
+                        <label class="btn-tool btn-cam" title="كاميرا">
+                            <i class="fas fa-camera"></i>
+                            <input type="file" id="chatCamInput" accept="image/*" capture="environment" style="display:none" onchange="handleChatAttachment(this)">
+                        </label>
+                    </div>
 
-                    <input type="text" class="chat-input" id="chatInput" placeholder="اكتب رسالة للمعلم..." onkeypress="handleEnter(event)">
-                    
-                    <button class="btn-tool btn-mic" onclick="startRecording()" title="تسجيل صوتي">
-                        <i class="fas fa-microphone"></i>
-                    </button>
-                    
-                    <button class="btn-tool" onclick="cancelEdit()" id="cancelEditBtn" style="display:none; background:#ffebee; color:red;" title="إلغاء"><i class="fas fa-times"></i></button>
+                    <div class="chat-input-wrapper">
+                        <input type="text" class="chat-input" id="chatInput" placeholder="اكتب رسالة للمعلم..." onkeypress="handleEnter(event)">
+                        
+                        <button class="btn-tool btn-mic" onclick="startRecording()" title="تسجيل صوتي">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                        
+                        <button class="btn-tool" onclick="cancelEdit()" id="cancelEditBtn" style="display:none; background:#ffebee; color:red;" title="إلغاء"><i class="fas fa-times"></i></button>
 
-                    <button class="btn-send-pill" id="sendBtn" onclick="sendToTeacher()">
-                        أرسل <i class="fas fa-paper-plane"></i>
-                    </button>
+                        <button class="btn-send-pill" id="sendBtn" onclick="sendToTeacher()">
+                            أرسل <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

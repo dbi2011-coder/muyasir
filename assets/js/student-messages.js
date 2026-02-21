@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-messages.js
-// الوصف: شات الطالب (واجهة نظيفة + ترتيب ذكي للجوال + حل مشكلة قص الأزرار السفلية)
+// الوصف: شات الطالب (واجهة نظيفة + ترتيب ذكي للجوال + الوزنية الدقيقة للارتفاع)
 // ============================================
 
 let attachmentData = null;
@@ -34,12 +34,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// 🔥 دالة لإخفاء الإحصائيات والفلاتر القديمة 🔥
 function cleanInterfaceAggressive() {
     const targetContainer = document.getElementById('messagesList');
     if (!targetContainer) return;
     
-    // إخفاء جميع العناصر المجاورة (إحصائيات، فلاتر)
     const parent = targetContainer.parentElement;
     if (parent) {
         Array.from(parent.children).forEach(child => {
@@ -49,9 +47,7 @@ function cleanInterfaceAggressive() {
         });
     }
     
-    // إخفاء أي عناصر تحمل كلاسات الإحصائيات المعروفة
     document.querySelectorAll('.stat-card, .filter-group, .row.mb-4, .card-body h5, .d-flex.justify-content-between').forEach(el => {
-        // التأكد من عدم إخفاء الشات نفسه
         if (!el.contains(targetContainer) && el.id !== 'chatHeader') {
             el.style.display = 'none';
         }
@@ -82,7 +78,6 @@ function injectChatStyles() {
         .chat-main { flex: 1; display: flex; flex-direction: column; background: #fff; height: 100%; overflow: hidden; }
         .messages-area { flex: 1 1 auto; padding: 20px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 15px; }
         
-        /* رسائل */
         .msg-bubble { max-width: 75%; padding: 12px 18px; border-radius: 15px; position: relative; font-size: 0.95rem; line-height: 1.6; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
         .msg-me { align-self: flex-start; background: #007bff; color: white; border-bottom-right-radius: 2px; } 
         .msg-other { align-self: flex-end; background: #fff; color: #334155; border: 1px solid #e2e8f0; border-bottom-left-radius: 2px; }
@@ -99,7 +94,6 @@ function injectChatStyles() {
         .msg-dropdown-item:hover { background: #f8f9fa; color: #007bff; }
         .msg-dropdown-item.delete:hover { color: #dc3545; background: #fff5f5; }
 
-        /* منطقة الإدخال بالكمبيوتر (ثابتة في الأسفل ولا تتأثر بالرسائل) */
         .chat-input-area { padding: 15px 20px; border-top: 1px solid #e2e8f0; background: #fff; display: flex; align-items: center; gap: 10px; position: relative; flex: 0 0 auto; min-height: 80px; }
         .chat-input-wrapper { display: flex; align-items: center; gap: 10px; flex: 1; }
         .chat-tools-bottom { display: flex; align-items: center; gap: 10px; }
@@ -108,7 +102,6 @@ function injectChatStyles() {
         .chat-input:focus { border-color: #007bff; background: #fff; }
         .chat-input.editing { border-color: #f59e0b; background: #fffbeb; }
 
-        /* الأزرار الملونة الغامقة */
         .btn-tool { width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; cursor: pointer; transition: 0.2s; border: none; color: white !important; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         .btn-tool:hover { transform: translateY(-2px); box-shadow: 0 5px 10px rgba(0,0,0,0.3); filter: brightness(1.1); }
         .btn-emoji { background: #f57f17; }
@@ -120,7 +113,6 @@ function injectChatStyles() {
         .btn-send-pill:hover { background-color: #218838; transform: translateY(-1px); }
         .btn-send-pill.update-mode { background-color: #f59e0b; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2); }
 
-        /* التسجيل */
         .recording-area { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #fff; display: none; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 50; border-radius: 12px; }
         .recording-timer { font-weight: bold; color: #b71c1c; font-size: 1.1rem; display:flex; align-items:center; gap:10px; }
         .recording-wave { width: 12px; height: 12px; background: #b71c1c; border-radius: 50%; animation: pulse 1s infinite; }
@@ -133,19 +125,18 @@ function injectChatStyles() {
         .emoji-item:hover { background: #f1f5f9; transform: scale(1.2); }
         
         /* 🔥 ==============================================
-           📱 تعديلات خاصة بنسخة الجوال فقط (ترتيب الأزرار وحل مشكلة القص)
+           📱 تعديلات خاصة بنسخة الجوال فقط (الوزنية الذهبية)
            ============================================== 🔥 */
         @media (max-width: 992px) { 
             .chat-container { 
-                /* ⬅️ تقليل الارتفاع بشكل كبير لرفع الصندوق بالكامل عن الحافة السفلية */
-                height: calc(100vh - 260px) !important; 
+                /* ⬅️ الوزنية المثالية: 185px. تجعل الصندوق يستقر تماماً فوق حافة المتصفح دون أن يرتفع كثيراً */
+                height: calc(100vh - 185px) !important; 
                 margin-top: 0; border-radius: 0; border: none; box-shadow: none; 
                 display: flex; flex-direction: column; 
             }
             .chat-main { height: 100%; display: flex; flex-direction: column; }
             .messages-area { flex: 1 1 auto; overflow-y: auto; padding: 15px 10px; min-height: 0; }
             
-            /* منطقة الإدخال */
             .chat-input-area { 
                 flex: 0 0 auto; 
                 flex-direction: column !important; 
@@ -154,21 +145,19 @@ function injectChatStyles() {
                 box-shadow: 0 -2px 10px rgba(0,0,0,0.05); 
             }
             
-            /* الصف الأول (العلوي): حقل الإدخال والتسجيل وأرسل */
             .chat-input-wrapper { width: 100%; gap: 8px !important; justify-content: space-between; }
             .chat-input { padding: 10px 12px; margin: 0; font-size: 0.95rem; }
             .btn-send-pill { padding: 10px 15px; font-size: 0.95rem; white-space: nowrap; margin: 0; }
             .btn-tool { width: 40px; height: 40px; font-size: 1.1rem; flex-shrink: 0; }
             
-            /* الصف الثاني (السفلي): الرموز والمرفقات والكاميرا */
             .chat-tools-bottom { 
                 width: 100%; 
                 justify-content: center; 
                 gap: 25px !important; 
-                padding-bottom: 5px; /* رفع الأزرار قليلاً عن الحافة للضمان */
+                padding-bottom: 5px; 
             }
 
-            .emoji-popup { bottom: 140px; right: 50%; transform: translateX(50%); width: 95%; max-width: 350px; }
+            .emoji-popup { bottom: 125px; right: 50%; transform: translateX(50%); width: 95%; max-width: 350px; }
             .recording-area { padding: 0 10px; }
         }
     `;
@@ -285,7 +274,6 @@ function loadChatWithTeacher() {
         const bubbleClass = isMe ? 'msg-me' : 'msg-other';
         let contentHtml = msg.content;
         
-        // مشغل الصوت فقط (MP3)
         if (msg.isVoice) {
             contentHtml = `
             <div style="display:flex; align-items:center; gap:5px;">

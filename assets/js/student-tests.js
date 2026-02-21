@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-tests.js
-// الوصف: إدارة الاختبارات (إغلاق التعديل بعد التسليم وعرض تقييم المعلم)
+// الوصف: إدارة الاختبارات (إغلاق التعديل بعد التسليم، عرض تقييم المعلم، وإصلاح دقة الرسم)
 // ============================================
 
 let currentTest = null;
@@ -56,7 +56,6 @@ function loadMyTests() {
         if (assignment.status === 'in-progress') { 
             statusText = 'جاري الحل'; statusClass = 'status-progress'; btnText = 'متابعة الحل'; btnClass = 'btn-warning'; 
         } else if (assignment.status === 'completed') { 
-            // 🔥 تغيير الزر إذا كان منجزا
             statusText = 'تم التسليم'; statusClass = 'status-completed'; btnText = '🔍 عرض النتيجة والمراجعة'; btnClass = 'btn-success'; 
         } else if (assignment.status === 'returned') { 
             statusText = 'معاد للتعديل'; statusClass = 'status-returned'; btnText = 'تعديل الإجابة'; btnClass = 'btn-danger'; 
@@ -88,7 +87,6 @@ function openTestMode(assignmentId) {
     currentTest = allTestsLib.find(t => t.id == currentAssignment.testId);
     if (!currentTest) return alert('نموذج الاختبار الأصلي غير موجود');
 
-    // 🔥 تنبيهات مخصصة بناءً على الحالة
     if (currentAssignment.status === 'completed') {
         alert('أنت الآن في وضع المراجعة.\nلا يمكنك التعديل، يمكنك فقط الاطلاع على إجاباتك وملاحظات المعلم.');
     } else if (currentAssignment.status === 'returned') {
@@ -132,7 +130,6 @@ function renderAllQuestions() {
     const container = document.getElementById('testQuestionsContainer');
     container.innerHTML = '';
     
-    // 🔥 تحديد ما إذا كان الاختبار للقراءة فقط بناءً على الحالة
     const isReadOnly = (currentAssignment.status === 'completed');
 
     currentTest.questions.forEach((q, index) => {
@@ -149,7 +146,6 @@ function renderAllQuestions() {
             qHtml += `<div class="text-center mb-3"><img src="${q.attachment}" style="max-height:200px; border-radius:8px; border:1px solid #ddd;"></div>`;
         }
 
-        // 🔥 إضافة صندوق ملاحظات المعلم والدرجة إذا كان الاختبار منجزاً
         if (isReadOnly) {
             let sc = savedAns && savedAns.score !== undefined ? savedAns.score : '-';
             let maxSc = q.passingScore || q.points || q.score || 1;
@@ -183,7 +179,6 @@ function renderAllQuestions() {
             qHtml += `<div class="paragraphs-container">`;
             (q.paragraphs || []).forEach((p, pIdx) => {
                 if (isReadOnly) {
-                    // عرض كصورة ثابتة
                     let savedImg = (ansValue && typeof ansValue === 'object' && ansValue[`p_${pIdx}`]) 
                         ? `<img src="${ansValue[`p_${pIdx}`]}" style="max-width:100%; max-height:150px; border:2px solid #ccc; border-radius:10px; background:#fff;">` 
                         : `<p class="text-muted">لم يتم رسم إجابة</p>`;
@@ -286,7 +281,6 @@ function showQuestion(index) {
         document.getElementById('questionCounter').textContent = `سؤال ${index + 1} من ${currentTest.questions.length}`;
         updateNavigationButtons();
         
-        // تهيئة الكانفاس فقط إذا كان الاختبار قابل للتعديل
         if(currentAssignment.status !== 'completed') {
             const q = currentTest.questions[index];
             if (q.type.includes('spelling') || q.type === 'missing-char') {
@@ -329,7 +323,7 @@ function updateNavigationButtons() {
 }
 
 // ==========================================
-// 5. أدوات الرسم
+// 5. أدوات الرسم (معادلة القياس الدقيقة)
 // ==========================================
 let isDrawing = false;
 let ctx = null;
@@ -350,9 +344,9 @@ function initCanvas(id) {
     const moveDraw = (e) => { if(!isDrawing) return; e.preventDefault(); const pos = getPos(canvas, e); ctx.lineTo(pos.x, pos.y); ctx.stroke(); };
 
     canvas.addEventListener('mousedown', startDraw);
-    canvas.addEventListener('touchstart', startDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
     canvas.addEventListener('mousemove', moveDraw);
-    canvas.addEventListener('touchmove', moveDraw);
+    canvas.addEventListener('touchmove', moveDraw, { passive: false });
     canvas.addEventListener('mouseup', () => isDrawing = false);
     canvas.addEventListener('touchend', () => isDrawing = false);
 
@@ -379,11 +373,20 @@ function drawTextBackground(canvas, text) {
     context.fillText(displayText, canvas.width / 2, canvas.height / 2);
 }
 
+// 🔥 الإصلاح الرياضي الجذري لمعادلة الماوس واللمس 🔥
 function getPos(canvas, e) {
     const rect = canvas.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    return { x: clientX - rect.left, y: clientY - rect.top };
+    
+    // حساب معامل التكبير/التصغير بناءً على الحجم الظاهر للشاشة
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    
+    return { 
+        x: (clientX - rect.left) * scaleX, 
+        y: (clientY - rect.top) * scaleY 
+    };
 }
 
 function clearCanvas(id) {

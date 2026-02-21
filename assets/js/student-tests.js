@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-tests.js
-// الوصف: إدارة الاختبارات + النوافذ الاحترافية + الحفظ الصامت + إزالة الزر القديم
+// الوصف: إدارة الاختبارات + النوافذ الاحترافية + إصلاح تداخل حالة التسليم مع الحفظ الصامت
 // ============================================
 
 // =========================================================
@@ -86,7 +86,7 @@ if (!window.showInfoModal) {
                         <div id="globalInfoTitle" style="font-size:1.3rem; font-weight:bold; margin-bottom:10px; color:#333;"></div>
                         <div id="globalInfoMessage" style="color:#666; margin-bottom:25px; font-size:0.95rem; line-height:1.6;"></div>
                         <div style="display:flex; justify-content:center;">
-                            <button id="globalInfoOk" style="background:#007bff; color:white; border:none; padding:12px 30px; border-radius:8px; cursor:pointer; font-weight:bold; transition:0.2s; font-family:'Tajawal'; w-100">حسناً، فهمت</button>
+                            <button id="globalInfoOk" style="background:#007bff; color:white; border:none; padding:12px 30px; border-radius:8px; cursor:pointer; font-weight:bold; transition:0.2s; font-family:'Tajawal'; width:100%;">حسناً، فهمت</button>
                         </div>
                     </div>
                 </div>
@@ -118,15 +118,13 @@ let activeRecordingId = null;
 document.addEventListener('DOMContentLoaded', function() {
     loadMyTests();
 
-    // 🔥 كود التنظيف الذكي: إزالة أي زر خروج كلاسيكي قديم في أعلى الشاشة 🔥
     const focusMode = document.getElementById('testFocusMode');
     if (focusMode) {
-        // نبحث عن أي عنصر يقوم بتشغيل دالة الخروج (وليس موجوداً في شريط التنقل السفلي) ونقوم بحذفه
         const allButtons = focusMode.querySelectorAll('button, a, i, span, div');
         allButtons.forEach(el => {
             const onclickAttr = el.getAttribute('onclick');
             if (onclickAttr && onclickAttr.includes('closeTestMode') && !el.classList.contains('btn-nav')) {
-                el.remove(); // حذف العنصر نهائياً من الواجهة
+                el.remove();
             }
         });
     }
@@ -191,7 +189,7 @@ function loadMyTests() {
     }).join('');
 }
 
-// 2. فتح وضع الاختبار (التبديل بين وضع الحل ووضع القراءة)
+// 2. فتح وضع الاختبار
 function openTestMode(assignmentId) {
     const allAssignments = JSON.parse(localStorage.getItem('studentTests') || '[]');
     const allTestsLib = JSON.parse(localStorage.getItem('tests') || '[]');
@@ -233,7 +231,7 @@ function startActualTest() {
     }
 }
 
-// إغلاق النافذة مع الحفظ الصامت التلقائي
+// إغلاق النافذة
 function closeTestMode() {
     if (currentAssignment && currentAssignment.status !== 'completed') {
         saveCurrentCanvas();
@@ -570,7 +568,7 @@ function resetRecording(qId, pIdx) {
 }
 
 // ==========================================
-// 7. الحفظ والتسليم
+// 7. الحفظ والتسليم (تم إصلاح تداخل التسليم مع دالة الإغلاق)
 // ==========================================
 function selectOption(el, qIdx, choiceIdx) {
     if(currentAssignment.status === 'completed') return;
@@ -621,6 +619,7 @@ function updateUserAnswer(qId, val) {
     else userAnswers.push({ questionId: qId, answer: val });
 }
 
+// 🔥 دالة الحفظ المعدلة لضمان عدم إعادة فتح الاختبار بعد التسليم 🔥
 function saveTestProgress(submit = false, isExiting = false) {
     if(currentAssignment.status === 'completed') return;
     saveCurrentCanvas(); 
@@ -632,8 +631,10 @@ function saveTestProgress(submit = false, isExiting = false) {
         if(submit) {
             allAssignments[idx].status = 'completed'; 
             allAssignments[idx].completedDate = new Date().toISOString();
+            currentAssignment.status = 'completed'; // 🔥 هذا السطر يمنع دالة closeTestMode من تخريب التسليم
         } else {
             allAssignments[idx].status = 'in-progress';
+            currentAssignment.status = 'in-progress';
         }
         localStorage.setItem('studentTests', JSON.stringify(allAssignments));
     }

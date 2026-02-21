@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-messages.js
-// الوصف: شات الطالب (IndexedDB + معاينة وعرض الصور المباشر مثل الواتساب)
+// الوصف: شات الطالب (تحميل الصور بالضغط المباشر + تأثيرات بصرية + IndexedDB)
 // ============================================
 
 const CHAT_DB_NAME = 'MuyasirChatDB';
@@ -147,9 +147,12 @@ function injectChatStyles() {
         .msg-me audio { filter: invert(1) grayscale(1) brightness(2); }
         .msg-time { font-size: 0.7rem; margin-top: 5px; opacity: 0.8; display:block; text-align:left; }
 
-        /* 🔥 تنسيقات عرض الصور والمرفقات الجديدة 🔥 */
-        .msg-image-wrapper { margin-bottom: 5px; }
-        .msg-image-wrapper img { width: 100%; max-width: 300px; border-radius: 8px; display: block; border: 1px solid rgba(0,0,0,0.1); }
+        /* 🔥 تنسيقات عرض الصور والمرفقات الجديدة مع تأثير التحميل 🔥 */
+        .msg-image-wrapper { margin-bottom: 5px; position: relative; display: inline-block; }
+        .msg-image-wrapper img { width: 100%; max-width: 300px; border-radius: 8px; display: block; border: 1px solid rgba(0,0,0,0.1); transition: filter 0.2s; }
+        .msg-image-wrapper:hover img { filter: brightness(0.8); }
+        .img-download-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.7); color: white; width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; opacity: 0; transition: 0.2s; pointer-events: none; }
+        .msg-image-wrapper:hover .img-download-overlay { opacity: 1; }
         .msg-attachment { margin-top: 8px; background: rgba(0,0,0,0.05); padding: 10px; border-radius: 8px; display: block; text-decoration: none; color: inherit; border: 1px solid rgba(0,0,0,0.05); transition: 0.2s; }
         .msg-attachment:hover { background: rgba(0,0,0,0.1); }
 
@@ -184,7 +187,6 @@ function injectChatStyles() {
         .recording-wave { width: 12px; height: 12px; background: #b71c1c; border-radius: 50%; animation: pulse 1s infinite; }
         @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
 
-        /* 🔥 تنسيقات نافذة المعاينة قبل الإرسال 🔥 */
         .attachment-preview { position: absolute; bottom: 85px; left: 20px; right: 20px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 -5px 25px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; display: none; z-index: 100; text-align: center; }
         
         .emoji-popup { position: absolute; bottom: 85px; right: 60px; width: 320px; height: 250px; background: white; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); display: none; padding: 10px; grid-template-columns: repeat(7, 1fr); gap: 5px; overflow-y: auto; z-index: 9999; }
@@ -214,7 +216,6 @@ function injectChatStyles() {
             .btn-tool { width: 40px; height: 40px; font-size: 1.1rem; flex-shrink: 0; }
             .chat-tools-bottom { width: 100%; justify-content: center; gap: 25px !important; padding-bottom: 5px; }
             
-            /* تعديل نافذة المعاينة للجوال */
             .attachment-preview { bottom: 130px; left: 10px; right: 10px; padding: 10px; }
             .msg-image-wrapper img { max-width: 100%; }
 
@@ -355,17 +356,20 @@ async function loadChatWithTeacher() {
         let contentHtml = msg.content;
         let attachHtml = '';
         
-        // 🔥 عرض الرسالة كصوت أو كصورة مباشرة 🔥
+        // 🔥 عرض الرسالة كصوت أو كصورة مباشرة مع خيار التحميل بالنقر 🔥
         if (msg.isVoice) {
             contentHtml = `<div style="display:flex; align-items:center; gap:5px;"><audio controls src="${msg.content}"></audio></div>`;
         } else if (msg.attachment) {
             const isImg = msg.attachment.startsWith('data:image');
             if (isImg) {
-                // إظهار الصورة بشكل كامل وإظهار التعليق تحتها إن وجد
                 let caption = (contentHtml && contentHtml !== 'مرفق' && contentHtml !== '📎 مرفق') ? `<div style="margin-top:8px; font-size:0.95rem;">${contentHtml}</div>` : '';
-                contentHtml = `<div class="msg-image-wrapper"><img src="${msg.attachment}" onclick="window.open('${msg.attachment}', '_blank')" style="cursor:pointer;" alt="صورة مرسلة"></div>${caption}`;
+                // تم التعديل هنا: عند الضغط على الصورة يتم تحميلها مباشرة لجهاز الطالب
+                contentHtml = `
+                <div class="msg-image-wrapper" onclick="downloadChatImage(${msg.id})" style="cursor:pointer;" title="اضغط لتحميل الصورة">
+                    <img src="${msg.attachment}" alt="صورة مرسلة">
+                    <div class="img-download-overlay"><i class="fas fa-download"></i></div>
+                </div>${caption}`;
             } else {
-                // عرض الملف كزر تحميل
                 attachHtml = `<a href="${msg.attachment}" download="file" class="msg-attachment"><i class="fas fa-file-download"></i> تحميل المرفق</a>`;
                 if (contentHtml === 'مرفق' || contentHtml === '📎 مرفق') contentHtml = '';
                 else if (contentHtml) contentHtml = `<div style="margin-top:5px;">${contentHtml}</div>`;
@@ -390,6 +394,21 @@ async function loadChatWithTeacher() {
     if (needsUpdate) await setChatData('studentMessages', JSON.stringify(messages));
     area.scrollTop = area.scrollHeight;
 }
+
+// 🔥 دالة تحميل الصورة المباشر إلى الجهاز 🔥
+window.downloadChatImage = async function(messageId) {
+    let sStr = await getChatData('studentMessages');
+    let messages = JSON.parse(sStr || '[]');
+    let msg = messages.find(m => m.id === messageId);
+    if (msg && msg.attachment) {
+        const a = document.createElement('a');
+        a.href = msg.attachment;
+        a.download = 'صورة_مرفقة_' + messageId + '.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+};
 
 function startRecording() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { alert('المتصفح لا يدعم التسجيل'); return; }
@@ -478,7 +497,6 @@ async function startEditMessage(messageId) {
 
 function cancelEdit() { editingMessageId = null; const input = document.getElementById('chatInput'); input.value = ''; input.classList.remove('editing'); const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'أرسل <i class="fas fa-paper-plane"></i>'; sendBtn.classList.remove('update-mode'); document.getElementById('cancelEditBtn').style.display = 'none'; }
 
-// 🔥 تعديل دالة الإرفاق لعرض معاينة الصورة وكتابة تعليق 🔥
 function handleChatAttachment(input) { 
     if (input.files && input.files[0]) { 
         const file = input.files[0]; 
@@ -496,7 +514,7 @@ function handleChatAttachment(input) {
             }
             
             document.getElementById('attachmentPreviewBox').style.display = 'block'; 
-            document.getElementById('chatInput').focus(); // إجبار التركيز على مربع النص لكتابة تعليق
+            document.getElementById('chatInput').focus();
             input.value = ''; 
         }; 
         reader.readAsDataURL(file); 

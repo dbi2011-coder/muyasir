@@ -27,14 +27,39 @@
             }
         }
 
-        /* تحسين العرض للجوال (1 في الصف) */
+        /* 🔥 تحسين العرض والتنسيق لشاشات الجوال 🔥 */
         @media (max-width: 768px) {
             .features-grid {
                 grid-template-columns: 1fr;
             }
+            
+            /* ترتيب الهيدر في الجوال ليكون الشعار فوق والأزرار تحته */
+            .header-content {
+                flex-direction: column !important;
+                justify-content: center !important;
+                gap: 15px;
+                padding: 10px 0;
+            }
+            
+            /* تنسيق الأزرار في الجوال لتأخذ مساحة متساوية بجوار بعضها */
+            .main-nav {
+                width: 100%;
+                justify-content: center !important;
+                gap: 10px !important;
+            }
+            
+            .main-nav .btn {
+                flex: 1; /* جعل الزرين متساويين في العرض تماماً */
+                padding: 10px 5px !important;
+                font-size: 0.95rem !important;
+                white-space: nowrap; /* منع نزول الكلمة لسطر جديد */
+                text-align: center;
+                display: flex;
+                justify-content: center;
+            }
         }
 
-        /* 🔥 تنسيقات نافذة (عن النظام) الاحترافية 🔥 */
+        /* تنسيقات نافذة (عن النظام) الاحترافية */
         .custom-about-modal {
             display: none; 
             position: fixed; 
@@ -98,14 +123,6 @@
             transform: translateY(-2px);
             color: white;
         }
-
-        /* تصغير الأزرار قليلاً في شاشات الجوال لتناسب المساحة في الأعلى */
-        @media (max-width: 480px) {
-            .main-nav .btn {
-                padding: 6px 12px;
-                font-size: 0.85rem;
-            }
-        }
     </style>
 </head>
 <body>
@@ -116,6 +133,7 @@
                     <img src="assets/images/logo.png" alt="شعار ميسر التعلم">
                     <h1>ميسر التعلم</h1>
                 </div>
+                
                 <nav class="main-nav" style="display: flex; gap: 10px; align-items: center;">
                     <button class="btn btn-secondary" onclick="window.open('https://wa.me/966558211988', '_blank')">
                         اشترك معنا

@@ -1,29 +1,93 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (تنسيقات متقدمة + قائمة خيارات محسنة + نافذة حذف رسالة احترافية)
+// الوصف: شات المعلم (تم الترقية بالكامل إلى IndexedDB لحل مشكلة الذاكرة)
 // ============================================
+
+// 🔥 إعدادات قاعدة البيانات IndexedDB للمراسلة 🔥
+const CHAT_DB_NAME = 'MuyasirChatDB';
+const CHAT_STORE_NAME = 'chat_data';
+
+function initChatDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(CHAT_DB_NAME, 1);
+        request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(CHAT_STORE_NAME)) {
+                db.createObjectStore(CHAT_STORE_NAME);
+            }
+        };
+        request.onsuccess = (e) => resolve(e.target.result);
+        request.onerror = (e) => reject(e.target.error);
+    });
+}
+
+async function getChatData(key) {
+    try {
+        const db = await initChatDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(CHAT_STORE_NAME, 'readonly');
+            const store = tx.objectStore(CHAT_STORE_NAME);
+            const req = store.get(key);
+            req.onsuccess = () => resolve(req.result || '[]');
+            req.onerror = () => reject(req.error);
+        });
+    } catch(e) { return '[]'; }
+}
+
+async function setChatData(key, value) {
+    try {
+        const db = await initChatDB();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction(CHAT_STORE_NAME, 'readwrite');
+            const store = tx.objectStore(CHAT_STORE_NAME);
+            const req = store.put(value, key);
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+        });
+    } catch(e) { console.error(e); }
+}
+
+// دالة ذكية لنقل البيانات القديمة للقاعدة الجديدة دون فقدانها وتفريغ الذاكرة
+async function migrateChatData() {
+    const tMsgs = localStorage.getItem('teacherMessages');
+    if (tMsgs) {
+        let existing = await getChatData('teacherMessages');
+        let merged = JSON.parse(existing || '[]');
+        let local = JSON.parse(tMsgs || '[]');
+        local.forEach(m => { if(!merged.find(x => x.id === m.id)) merged.push(m); });
+        await setChatData('teacherMessages', JSON.stringify(merged));
+        localStorage.removeItem('teacherMessages');
+    }
+    const sMsgs = localStorage.getItem('studentMessages');
+    if (sMsgs) {
+        let existing = await getChatData('studentMessages');
+        let merged = JSON.parse(existing || '[]');
+        let local = JSON.parse(sMsgs || '[]');
+        local.forEach(m => { if(!merged.find(x => x.id === m.id)) merged.push(m); });
+        await setChatData('studentMessages', JSON.stringify(merged));
+        localStorage.removeItem('studentMessages');
+    }
+}
 
 let activeChatStudentId = null;
 let attachmentData = null;
 let editingMessageId = null;
-
 let mediaRecorder = null;
 let audioChunks = [];
 let recordingInterval = null;
 let recordingStartTime = null;
-
-// 🔥 متغير لحفظ رقم الرسالة المراد حذفها
 let pendingDeleteMsgId = null;
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     if (window.location.pathname.includes('messages.html')) {
         try {
+            await migrateChatData(); // 🔥 دمج ونقل البيانات
             injectFontAwesome();
             injectHtml2Pdf();
             cleanInterfaceAggressive(); 
             injectChatStyles();
             renderChatLayout();
-            loadConversations();
+            await loadConversations();
             
             document.addEventListener('click', function(e) {
                 const popup = document.getElementById('emojiPopup');
@@ -84,9 +148,7 @@ function injectChatStyles() {
     const style = document.createElement('style');
     style.id = 'chatStyles';
     style.innerHTML = `
-        /* =========================================
-           💻 تنسيقات الكمبيوتر 
-        ========================================= */
+        /* تنسيقات الكمبيوتر */
         .chat-container { display: flex; height: 80vh; background: #fff; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.1); overflow: hidden; border: 1px solid #d1d5db; margin-top: 0px; font-family: 'Tajawal', sans-serif; }
         .chat-sidebar { width: 320px; background-color: #f8f9fa; border-left: 1px solid #e5e7eb; display: flex; flex-direction: column; z-index: 2; }
         .chat-list-header { padding: 20px; background: #f8f9fa; border-bottom: 1px solid #e2e8f0; }
@@ -122,34 +184,10 @@ function injectChatStyles() {
         .msg-attachment { margin-top: 8px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 8px; display: flex; align-items: center; gap: 5px; text-decoration: none; color: inherit; }
         .msg-attachment img { max-width: 200px; border-radius: 5px; }
         
-        /* 🔥 الحل النهائي للقائمة المنسدلة لخيارات الرسالة (نفس الطالب) 🔥 */
         .msg-options-btn { position: absolute; top: 5px; left: 8px; color: inherit; opacity: 0.6; cursor: pointer; padding: 2px 5px; font-size: 1.1rem; transition: 0.2s; }
         .msg-options-btn:hover { opacity: 1; background: rgba(0,0,0,0.1); border-radius: 50%; }
-        .msg-dropdown { 
-            position: absolute; 
-            top: 30px; 
-            right: calc(100% - 35px) !important; 
-            left: auto !important; 
-            background: #fff; 
-            color: #333; 
-            border-radius: 8px; 
-            box-shadow: 0 5px 20px rgba(0,0,0,0.15); 
-            min-width: 140px; 
-            z-index: 100; 
-            display: none; 
-            overflow: hidden; 
-            border: 1px solid #eee; 
-        }
-        .msg-dropdown-item { 
-            padding: 12px 25px 12px 15px !important; 
-            font-size: 0.95rem; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            transition: 0.2s; 
-            white-space: nowrap; 
-        }
+        .msg-dropdown { position: absolute; top: 30px; right: calc(100% - 35px) !important; left: auto !important; background: #fff; color: #333; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); min-width: 140px; z-index: 100; display: none; overflow: hidden; border: 1px solid #eee; }
+        .msg-dropdown-item { padding: 12px 25px 12px 15px !important; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: 0.2s; white-space: nowrap; }
         .msg-dropdown-item:hover { background: #f8f9fa; color: #007bff; }
         .msg-dropdown-item.delete:hover { color: #dc3545; background: #fff5f5; }
         
@@ -177,7 +215,6 @@ function injectChatStyles() {
         .emoji-item:hover { background: #f1f5f9; transform: scale(1.2); }
         .empty-chat { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; }
         
-        /* نافذة حذف المحادثة بالكامل (القديمة) */
         .custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 20000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
         .custom-modal-box { background: #fff; padding: 25px; border-radius: 16px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .modal-icon-danger { width: 60px; height: 60px; background: #fee2e2; color: #dc2626; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto 15px; }
@@ -190,16 +227,8 @@ function injectChatStyles() {
         .btn-modal-delete { background: #dc2626; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-modal-delete:hover { background: #b91c1c; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); }
 
-        /* 🔥 تنسيقات نافذة تأكيد حذف رسالة مفردة (مثل الطالب) 🔥 */
-        .custom-confirm-modal {
-            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.6); z-index: 999999; justify-content: center; align-items: center;
-            backdrop-filter: blur(4px);
-        }
-        .custom-confirm-content {
-            background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 350px;
-            text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: popIn 0.3s ease;
-        }
+        .custom-confirm-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 999999; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+        .custom-confirm-content { background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: popIn 0.3s ease; }
         @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
         .custom-confirm-icon { font-size: 3.5rem; color: #dc3545; margin-bottom: 15px; }
         .custom-confirm-title { font-size: 1.3rem; font-weight: bold; margin-bottom: 10px; color: #333; }
@@ -213,73 +242,29 @@ function injectChatStyles() {
         .mobile-only-btn { display: none; }
         #newMessageModal, .modal-backdrop, .modal { z-index: 10500 !important; }
 
-        /* =========================================
-           📱 تخصيص الجوال حصراً (أقل من 768px)
-        ========================================= */
         @media (max-width: 768px) { 
             .mobile-only-btn { display: inline-block !important; background: transparent !important; border: none !important; font-size: 1.2rem !important; color: #333 !important; margin: 0 10px !important; cursor: pointer !important; padding: 0 !important; }
-            
             .chat-container { height: calc(100dvh - 160px) !important; max-height: 85dvh !important; margin-bottom: 0 !important; border-radius: 0 !important; border: none !important; box-shadow: none !important; }
             .chat-main { display: flex !important; flex-direction: column !important; height: 100% !important; overflow: hidden !important; }
-            
             .messages-area { flex: 1 1 0% !important; overflow-y: auto !important; padding: 15px !important; }
-
             .chat-sidebar { position: fixed !important; right: -100% !important; top: 0 !important; height: 100% !important; width: 280px !important; z-index: 9999 !important; transition: right 0.3s ease !important; box-shadow: -4px 0 15px rgba(0,0,0,0.1) !important; }
             .chat-sidebar.show-contacts { right: 0 !important; }
-
             .chat-header { flex-shrink: 0 !important; padding: 5px 10px !important; height: 60px !important; flex-wrap: nowrap !important; }
             .chat-header .header-info { min-width: 0 !important; flex: 1 !important; display: flex !important; align-items: center !important; }
             .chat-header .avatar { width: 35px !important; height: 35px !important; font-size: 0.9rem !important; margin-left: 8px !important; flex-shrink: 0 !important; }
             #chatHeaderName { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; display: block !important; max-width: 140px !important; }
-            
             .header-actions { flex-shrink: 0 !important; margin-right: 5px !important; }
             .btn-pdf-chat { display: none !important; }
             .btn-delete-chat { background: transparent !important; color: #dc2626 !important; box-shadow: none !important; width: auto !important; height: auto !important; font-size: 1.4rem !important; padding: 5px !important; }
-
-            .chat-input-area { 
-                flex-shrink: 0 !important; 
-                display: flex !important; 
-                flex-wrap: wrap !important; 
-                justify-content: flex-start !important; 
-                padding: 10px !important; 
-                padding-bottom: 20px !important; 
-                gap: 8px !important; 
-                background: #f0f2f5 !important; 
-                box-sizing: border-box !important;
-            }
-            
+            .chat-input-area { flex-shrink: 0 !important; display: flex !important; flex-wrap: wrap !important; justify-content: flex-start !important; padding: 10px !important; padding-bottom: 20px !important; gap: 8px !important; background: #f0f2f5 !important; box-sizing: border-box !important; }
             .chat-input { order: 1 !important; flex: 1 1 0% !important; margin: 0 !important; min-width: 100px !important; border-radius: 20px !important; }
             .btn-mic { order: 2 !important; margin: 0 !important; flex-shrink: 0 !important; }
             #sendBtn, #cancelEditBtn { order: 3 !important; margin: 0 !important; flex-shrink: 0 !important; }
-            
-            .chat-input-area::after {
-                content: "" !important;
-                width: 100% !important;
-                order: 4 !important;
-                display: block !important;
-                height: 0 !important;
-            }
-            
+            .chat-input-area::after { content: "" !important; width: 100% !important; order: 4 !important; display: block !important; height: 0 !important; }
             #emojiBtn { order: 5 !important; margin-right: auto !important; }
             .btn-attach { order: 6 !important; }
             .btn-cam { order: 7 !important; }
-            
-            #emojiBtn, .btn-attach, .btn-cam {
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                border-radius: 8px !important;
-                width: 40px !important;
-                height: 40px !important;
-                font-size: 1.2rem !important;
-                background: #fff !important;
-                color: #555 !important;
-                border: 1px solid #ddd !important;
-                box-shadow: none !important;
-                margin: 0 !important;
-                cursor: pointer !important;
-            }
-            
+            #emojiBtn, .btn-attach, .btn-cam { display: flex !important; align-items: center !important; justify-content: center !important; border-radius: 8px !important; width: 40px !important; height: 40px !important; font-size: 1.2rem !important; background: #fff !important; color: #555 !important; border: 1px solid #ddd !important; box-shadow: none !important; margin: 0 !important; cursor: pointer !important; }
             .emoji-popup { width: 90vw !important; right: 5vw !important; grid-template-columns: repeat(6, 1fr) !important; bottom: 130px !important; }
         }
     `;
@@ -306,7 +291,6 @@ function renderChatLayout() {
                 </div>
                 <div class="chat-list" id="chatContactsList"></div>
             </div>
-            
             <div class="chat-main">
                 <div class="chat-header" id="chatHeader" style="display:none;">
                     <div style="display:flex; align-items:center;">
@@ -319,17 +303,11 @@ function renderChatLayout() {
                             <span style="font-size:0.75rem; color:#10b981; font-weight:normal;">● متصل</span>
                         </div>
                     </div>
-                    
                     <div class="header-actions">
-                        <button class="btn-header-action btn-pdf-chat" onclick="exportChatToPDF()" title="حفظ المحادثة PDF">
-                            <i class="fas fa-file-pdf"></i>
-                        </button>
-                        <button class="btn-header-action btn-delete-chat" onclick="deleteEntireConversation()" title="حذف المحادثة بالكامل">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
+                        <button class="btn-header-action btn-pdf-chat" onclick="exportChatToPDF()" title="حفظ المحادثة PDF"><i class="fas fa-file-pdf"></i></button>
+                        <button class="btn-header-action btn-delete-chat" onclick="deleteEntireConversation()" title="حذف المحادثة بالكامل"><i class="fas fa-trash-alt"></i></button>
                     </div>
                 </div>
-                
                 <div class="messages-area" id="chatMessagesArea">
                     <div class="empty-chat">
                         <i class="far fa-comments fa-4x mb-4" style="color:#cbd5e1;"></i>
@@ -339,7 +317,6 @@ function renderChatLayout() {
                         </button>
                     </div>
                 </div>
-                
                 <div id="attachmentPreviewBox" class="attachment-preview">
                     <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
                         <strong style="font-size:0.8rem;">مرفق جاهز للإرسال</strong>
@@ -347,11 +324,7 @@ function renderChatLayout() {
                     </div>
                     <span id="attachName" style="font-size:0.85rem; color:#555;"></span>
                 </div>
-
-                <div id="emojiPopup" class="emoji-popup">
-                    ${emojiHtml}
-                </div>
-
+                <div id="emojiPopup" class="emoji-popup">${emojiHtml}</div>
                 <div class="chat-input-area" id="chatInputArea" style="display:none;">
                     <div class="recording-area" id="recordingArea">
                         <div class="recording-timer">
@@ -359,21 +332,14 @@ function renderChatLayout() {
                             <span id="recordTimer">00:00</span>
                         </div>
                         <div style="display:flex; gap:10px;">
-                            <button class="btn-tool" style="background:#dc3545; color:white;" onclick="cancelRecording()" title="إلغاء">
-                                <i class="fas fa-times"></i>
-                            </button>
-                            <button class="btn-tool" style="background:#28a745; color:white;" onclick="stopRecording()" title="إرسال">
-                                <i class="fas fa-check"></i>
-                            </button>
+                            <button class="btn-tool" style="background:#dc3545; color:white;" onclick="cancelRecording()" title="إلغاء"><i class="fas fa-times"></i></button>
+                            <button class="btn-tool" style="background:#28a745; color:white;" onclick="stopRecording()" title="إرسال"><i class="fas fa-check"></i></button>
                         </div>
                     </div>
-
                     <button id="emojiBtn" class="btn-tool btn-emoji" onclick="toggleEmojiPopup()" title="رموز"><i class="far fa-smile"></i></button>
                     <label class="btn-tool btn-attach" title="ملف"><i class="fas fa-paperclip"></i><input type="file" id="chatFileInput" style="display:none" onchange="handleChatAttachment(this)"></label>
                     <label class="btn-tool btn-cam" title="كاميرا"><i class="fas fa-camera"></i><input type="file" id="chatCamInput" accept="image/*" capture="environment" style="display:none" onchange="handleChatAttachment(this)"></label>
-                    
                     <input type="text" class="chat-input" id="chatInput" placeholder="اكتب رسالتك..." onkeypress="handleEnter(event)">
-                    
                     <button class="btn-tool btn-mic" onclick="startRecording()" title="تسجيل صوتي"><i class="fas fa-microphone"></i></button>
                     <button class="btn-tool" onclick="cancelEdit()" id="cancelEditBtn" style="display:none; background:#ffebee; color:red;" title="إلغاء التعديل"><i class="fas fa-times"></i></button>
                     <button class="btn-send-pill" id="sendBtn" onclick="sendChatMessage()">أرسل <i class="fas fa-paper-plane"></i></button>
@@ -383,19 +349,12 @@ function renderChatLayout() {
 
         <div id="deleteConfirmModal" class="custom-modal-overlay">
             <div class="custom-modal-box">
-                <div class="modal-icon-danger">
-                    <i class="fas fa-exclamation-triangle"></i>
-                </div>
+                <div class="modal-icon-danger"><i class="fas fa-exclamation-triangle"></i></div>
                 <div class="modal-title">حذف المحادثة؟</div>
-                <div class="modal-desc">
-                    هل أنت متأكد من رغبتك في حذف سجل المحادثة بالكامل؟<br>
-                    <span style="color:#dc2626; font-size:0.85rem;">⚠️ لا يمكن التراجع عن هذا الإجراء</span>
-                </div>
+                <div class="modal-desc">هل أنت متأكد من رغبتك في حذف سجل المحادثة بالكامل؟<br><span style="color:#dc2626; font-size:0.85rem;">⚠️ لا يمكن التراجع عن هذا الإجراء</span></div>
                 <div class="modal-actions">
                     <button class="btn-modal btn-modal-cancel" onclick="closeDeleteModal()">إلغاء</button>
-                    <button class="btn-modal btn-modal-delete" onclick="confirmDeleteAction()">
-                        <i class="fas fa-trash-alt"></i> نعم، حذف
-                    </button>
+                    <button class="btn-modal btn-modal-delete" onclick="confirmDeleteAction()"><i class="fas fa-trash-alt"></i> نعم، حذف</button>
                 </div>
             </div>
         </div>
@@ -414,8 +373,9 @@ function renderChatLayout() {
     `;
 }
 
-function loadConversations() {
-    const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
+async function loadConversations() {
+    const msgStr = await getChatData('teacherMessages');
+    const messages = JSON.parse(msgStr || '[]');
     const currentUser = getCurrentUser();
     const conversations = {};
     messages.forEach(msg => {
@@ -448,10 +408,9 @@ function renderSidebar(conversations) {
     });
 }
 
-function openChat(studentId) {
+async function openChat(studentId) {
     activeChatStudentId = studentId;
     cancelEdit();
-    
     const sidebar = document.querySelector('.chat-sidebar');
     if(sidebar) sidebar.classList.remove('show-contacts');
 
@@ -460,12 +419,13 @@ function openChat(studentId) {
     const student = getStudentById(studentId);
     document.getElementById('chatHeaderName').textContent = student ? student.name : 'طالب';
     document.getElementById('chatHeaderAvatar').textContent = student ? student.name.charAt(0) : '?';
-    loadChatMessages(studentId);
-    loadConversations();
+    await loadChatMessages(studentId);
+    await loadConversations();
 }
 
-function loadChatMessages(studentId) {
-    const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
+async function loadChatMessages(studentId) {
+    const msgStr = await getChatData('teacherMessages');
+    const messages = JSON.parse(msgStr || '[]');
     const currentUser = getCurrentUser();
     const chatMsgs = messages.filter(m => m.teacherId === currentUser.id && m.studentId === studentId);
     chatMsgs.sort((a, b) => new Date(a.sentAt) - new Date(b.sentAt));
@@ -495,7 +455,7 @@ function loadChatMessages(studentId) {
         area.innerHTML += html;
         if (msg.isFromStudent && !msg.isRead) { msg.isRead = true; needsUpdate = true; }
     });
-    if (needsUpdate) localStorage.setItem('teacherMessages', JSON.stringify(messages));
+    if (needsUpdate) await setChatData('teacherMessages', JSON.stringify(messages));
     area.scrollTop = area.scrollHeight;
 }
 
@@ -515,17 +475,24 @@ function exportChatToPDF() {
 
 function deleteEntireConversation() { if (!activeChatStudentId) return; document.getElementById('deleteConfirmModal').style.display = 'flex'; }
 function closeDeleteModal() { document.getElementById('deleteConfirmModal').style.display = 'none'; }
-function confirmDeleteAction() {
+async function confirmDeleteAction() {
     if (!activeChatStudentId) return;
     const currentUser = getCurrentUser();
-    let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]');
+    
+    let tStr = await getChatData('teacherMessages');
+    let teacherMsgs = JSON.parse(tStr || '[]');
     teacherMsgs = teacherMsgs.filter(m => !(m.teacherId === currentUser.id && m.studentId === activeChatStudentId));
-    localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
-    let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]');
+    await setChatData('teacherMessages', JSON.stringify(teacherMsgs));
+    
+    let sStr = await getChatData('studentMessages');
+    let studentMsgs = JSON.parse(sStr || '[]');
     studentMsgs = studentMsgs.filter(m => !(m.teacherId === currentUser.id && m.studentId === activeChatStudentId));
-    localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
+    await setChatData('studentMessages', JSON.stringify(studentMsgs));
+    
     document.getElementById('chatMessagesArea').innerHTML = '';
-    loadConversations(); loadChatMessages(activeChatStudentId); closeDeleteModal();
+    await loadConversations(); 
+    await loadChatMessages(activeChatStudentId); 
+    closeDeleteModal();
     document.getElementById('chatHeader').style.display = 'none';
     document.getElementById('chatInputArea').style.display = 'none';
     document.getElementById('chatMessagesArea').innerHTML = `<div class="empty-chat"><i class="far fa-comments fa-4x mb-4" style="color:#cbd5e1;"></i><p style="font-size:1.1rem;">اختر طالباً للبدء بالمراسلة</p><button class="mobile-only-btn" style="margin-top:20px; border-radius:25px; padding:10px 20px; font-weight:bold; background:var(--primary-color, #007bff); color:white; border:none; display:flex; align-items:center; gap:8px;" onclick="document.querySelector('.chat-sidebar').classList.add('show-contacts')"><i class="fas fa-users"></i> إظهار قائمة الطلاب</button></div>`;
@@ -550,63 +517,101 @@ function startRecording() {
 function updateRecordTimer() { const elapsed = Math.floor((Date.now() - recordingStartTime) / 1000); const mins = Math.floor(elapsed / 60).toString().padStart(2, '0'); const secs = (elapsed % 60).toString().padStart(2, '0'); document.getElementById('recordTimer').textContent = `${mins}:${secs}`; }
 function stopRecording() { if (mediaRecorder && mediaRecorder.state === 'recording') { mediaRecorder.stop(); clearInterval(recordingInterval); document.getElementById('recordingArea').style.display = 'none'; } }
 function cancelRecording() { if (mediaRecorder && mediaRecorder.state === 'recording') { mediaRecorder.onstop = null; mediaRecorder.stop(); clearInterval(recordingInterval); document.getElementById('recordingArea').style.display = 'none'; } }
-function sendVoiceMessage(base64Audio) {
+
+async function sendVoiceMessage(base64Audio) {
     if (!activeChatStudentId) return; const currentUser = getCurrentUser();
-    const teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); teacherMsgs.push({ id: Date.now(), teacherId: currentUser.id, studentId: activeChatStudentId, content: base64Audio, attachment: null, isVoice: true, sentAt: new Date().toISOString(), isRead: true, isFromStudent: false }); localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
-    const studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); studentMsgs.push({ id: Date.now() + 1, studentId: activeChatStudentId, teacherId: currentUser.id, content: base64Audio, attachment: null, isVoice: true, sentAt: new Date().toISOString(), isRead: false, isFromTeacher: true }); localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
-    loadChatMessages(activeChatStudentId); loadConversations();
+    
+    let tStr = await getChatData('teacherMessages');
+    const teacherMsgs = JSON.parse(tStr || '[]'); 
+    teacherMsgs.push({ id: Date.now(), teacherId: currentUser.id, studentId: activeChatStudentId, content: base64Audio, attachment: null, isVoice: true, sentAt: new Date().toISOString(), isRead: true, isFromStudent: false }); 
+    await setChatData('teacherMessages', JSON.stringify(teacherMsgs));
+    
+    let sStr = await getChatData('studentMessages');
+    const studentMsgs = JSON.parse(sStr || '[]'); 
+    studentMsgs.push({ id: Date.now() + 1, studentId: activeChatStudentId, teacherId: currentUser.id, content: base64Audio, attachment: null, isVoice: true, sentAt: new Date().toISOString(), isRead: false, isFromTeacher: true }); 
+    await setChatData('studentMessages', JSON.stringify(studentMsgs));
+    
+    await loadChatMessages(activeChatStudentId); 
+    await loadConversations();
 }
+
 function toggleMessageMenu(e, msgId) { e.stopPropagation(); document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none'); const menu = document.getElementById(`msgMenu_${msgId}`); if (menu) menu.style.display = 'block'; }
 
-// 🔥 تعديل دالة حذف الرسالة المفردة لتستخدم النافذة الاحترافية 🔥
 function deleteChatMessage(messageId) { 
     pendingDeleteMsgId = messageId;
     document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none');
     document.getElementById('deleteSingleMsgModal').style.display = 'flex';
 }
 
-// 🔥 دالة لإغلاق نافذة حذف الرسالة المفردة
 function closeSingleDeleteModal() {
     pendingDeleteMsgId = null;
     document.getElementById('deleteSingleMsgModal').style.display = 'none';
 }
 
-// 🔥 تنفيذ الحذف الفعلي بعد التأكيد
-function executeSingleMessageDelete() {
+async function executeSingleMessageDelete() {
     if (!pendingDeleteMsgId || !activeChatStudentId) return;
     const messageId = pendingDeleteMsgId;
     
-    let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); 
+    let tStr = await getChatData('teacherMessages');
+    let teacherMsgs = JSON.parse(tStr || '[]'); 
     teacherMsgs = teacherMsgs.filter(m => m.id !== messageId); 
-    localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs)); 
+    await setChatData('teacherMessages', JSON.stringify(teacherMsgs)); 
     
-    let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); 
+    let sStr = await getChatData('studentMessages');
+    let studentMsgs = JSON.parse(sStr || '[]'); 
     studentMsgs = studentMsgs.filter(m => m.id !== (messageId + 1)); 
-    localStorage.setItem('studentMessages', JSON.stringify(studentMsgs)); 
+    await setChatData('studentMessages', JSON.stringify(studentMsgs)); 
     
-    loadChatMessages(activeChatStudentId); 
-    loadConversations();
-    closeSingleDeleteModal(); // إغلاق النافذة
+    await loadChatMessages(activeChatStudentId); 
+    await loadConversations();
+    closeSingleDeleteModal(); 
 }
 
-function startEditMessage(messageId) { const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); const msg = messages.find(m => m.id === messageId); if (!msg || msg.isVoice) return; const input = document.getElementById('chatInput'); input.value = msg.content; input.focus(); input.classList.add('editing'); editingMessageId = messageId; const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'تحديث <i class="fas fa-check"></i>'; sendBtn.classList.add('update-mode'); document.getElementById('cancelEditBtn').style.display = 'block'; }
+async function startEditMessage(messageId) { 
+    let tStr = await getChatData('teacherMessages');
+    const messages = JSON.parse(tStr || '[]'); 
+    const msg = messages.find(m => m.id === messageId); 
+    if (!msg || msg.isVoice) return; 
+    const input = document.getElementById('chatInput'); input.value = msg.content; input.focus(); input.classList.add('editing'); editingMessageId = messageId; const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'تحديث <i class="fas fa-check"></i>'; sendBtn.classList.add('update-mode'); document.getElementById('cancelEditBtn').style.display = 'block'; 
+}
+
 function cancelEdit() { editingMessageId = null; const input = document.getElementById('chatInput'); input.value = ''; input.classList.remove('editing'); const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'أرسل <i class="fas fa-paper-plane"></i>'; sendBtn.classList.remove('update-mode'); document.getElementById('cancelEditBtn').style.display = 'none'; }
 function handleChatAttachment(input) { if (input.files && input.files[0]) { const file = input.files[0]; const reader = new FileReader(); reader.onload = function(e) { attachmentData = e.target.result; document.getElementById('attachName').textContent = file.name; document.getElementById('attachmentPreviewBox').style.display = 'block'; }; reader.readAsDataURL(file); } }
 function toggleEmojiPopup() { const popup = document.getElementById('emojiPopup'); if (popup.style.display === 'none') popup.style.display = 'grid'; else popup.style.display = 'none'; }
 function addEmoji(char) { const input = document.getElementById('chatInput'); input.value += char; input.focus(); }
 function clearAttachment() { attachmentData = null; document.getElementById('attachmentPreviewBox').style.display = 'none'; document.getElementById('chatFileInput').value = ''; document.getElementById('chatCamInput').value = ''; }
-function sendChatMessage() {
+
+async function sendChatMessage() {
     const input = document.getElementById('chatInput'); const content = input.value.trim();
     if ((!content && !attachmentData) || !activeChatStudentId) return;
-    if (editingMessageId) {
-        let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); const tIndex = teacherMsgs.findIndex(m => m.id === editingMessageId); if (tIndex !== -1) { teacherMsgs[tIndex].content = content; if (attachmentData) teacherMsgs[tIndex].attachment = attachmentData; localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs)); }
-        let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); const sIndex = studentMsgs.findIndex(m => m.id === (editingMessageId + 1)); if (sIndex !== -1) { studentMsgs[sIndex].content = content; if (attachmentData) studentMsgs[sIndex].attachment = attachmentData; localStorage.setItem('studentMessages', JSON.stringify(studentMsgs)); }
-        cancelEdit(); loadChatMessages(activeChatStudentId); loadConversations(); return;
-    }
+    
     const currentUser = getCurrentUser();
-    const teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); teacherMsgs.push({ id: Date.now(), teacherId: currentUser.id, studentId: activeChatStudentId, content: content || (attachmentData ? '📎 مرفق' : ''), attachment: attachmentData, isVoice: false, sentAt: new Date().toISOString(), isRead: true, isFromStudent: false }); localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs));
-    const studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); studentMsgs.push({ id: Date.now() + 1, studentId: activeChatStudentId, teacherId: currentUser.id, content: content || (attachmentData ? '📎 مرفق' : ''), attachment: attachmentData, isVoice: false, sentAt: new Date().toISOString(), isRead: false, isFromTeacher: true }); localStorage.setItem('studentMessages', JSON.stringify(studentMsgs));
-    input.value = ''; clearAttachment(); document.getElementById('emojiPopup').style.display = 'none'; loadChatMessages(activeChatStudentId); loadConversations();
+
+    if (editingMessageId) {
+        let tStr = await getChatData('teacherMessages');
+        let teacherMsgs = JSON.parse(tStr || '[]'); 
+        const tIndex = teacherMsgs.findIndex(m => m.id === editingMessageId); 
+        if (tIndex !== -1) { teacherMsgs[tIndex].content = content; if (attachmentData) teacherMsgs[tIndex].attachment = attachmentData; await setChatData('teacherMessages', JSON.stringify(teacherMsgs)); }
+        
+        let sStr = await getChatData('studentMessages');
+        let studentMsgs = JSON.parse(sStr || '[]'); 
+        const sIndex = studentMsgs.findIndex(m => m.id === (editingMessageId + 1)); 
+        if (sIndex !== -1) { studentMsgs[sIndex].content = content; if (attachmentData) studentMsgs[sIndex].attachment = attachmentData; await setChatData('studentMessages', JSON.stringify(studentMsgs)); }
+        
+        cancelEdit(); await loadChatMessages(activeChatStudentId); await loadConversations(); return;
+    }
+    
+    let tStr = await getChatData('teacherMessages');
+    const teacherMsgs = JSON.parse(tStr || '[]'); 
+    teacherMsgs.push({ id: Date.now(), teacherId: currentUser.id, studentId: activeChatStudentId, content: content || (attachmentData ? '📎 مرفق' : ''), attachment: attachmentData, isVoice: false, sentAt: new Date().toISOString(), isRead: true, isFromStudent: false }); 
+    await setChatData('teacherMessages', JSON.stringify(teacherMsgs));
+    
+    let sStr = await getChatData('studentMessages');
+    const studentMsgs = JSON.parse(sStr || '[]'); 
+    studentMsgs.push({ id: Date.now() + 1, studentId: activeChatStudentId, teacherId: currentUser.id, content: content || (attachmentData ? '📎 مرفق' : ''), attachment: attachmentData, isVoice: false, sentAt: new Date().toISOString(), isRead: false, isFromTeacher: true }); 
+    await setChatData('studentMessages', JSON.stringify(studentMsgs));
+    
+    input.value = ''; clearAttachment(); document.getElementById('emojiPopup').style.display = 'none'; await loadChatMessages(activeChatStudentId); await loadConversations();
 }
 function handleEnter(e) { if (e.key === 'Enter') sendChatMessage(); }
 
@@ -624,15 +629,12 @@ function showNewMessageModal() { const currentUser = getCurrentUser(); const rec
 function loadStudentsForMessaging() { const recipientSelect = document.getElementById('messageRecipient'); if(!recipientSelect) return; const currentTeacher = getCurrentUser(); let allStudents = JSON.parse(localStorage.getItem('students') || '[]'); const allUsers = JSON.parse(localStorage.getItem('users') || '[]'); const studentUsers = allUsers.filter(u => u.role === 'student'); const merged = [...allStudents]; studentUsers.forEach(u => { if(!merged.find(s => s.id == u.id)) merged.push(u); }); const myStudents = merged.filter(s => s.teacherId == currentTeacher.id); recipientSelect.innerHTML = '<option value="">اختر الطالب</option>'; myStudents.forEach(s => { recipientSelect.innerHTML += `<option value="${s.id}">${s.name}</option>`; }); }
 
 window.showNewMessageModal = showNewMessageModal; 
-window.sendNewMessage = function() { const sId = document.getElementById('messageRecipient').value; if(sId) { document.getElementById('newMessageModal').classList.remove('show'); openChat(parseInt(sId)); } }; 
+window.sendNewMessage = async function() { const sId = document.getElementById('messageRecipient').value; if(sId) { document.getElementById('newMessageModal').classList.remove('show'); await openChat(parseInt(sId)); } }; 
 window.closeNewMessageModal = function() { document.getElementById('newMessageModal').classList.remove('show'); };
 window.deleteEntireConversation = deleteEntireConversation;
 window.exportChatToPDF = exportChatToPDF;
 window.closeDeleteModal = closeDeleteModal;
 window.confirmDeleteAction = confirmDeleteAction;
 
-// كشف الدوال الجديدة للويندو ليتم التعرف عليها من الأزرار
 window.closeSingleDeleteModal = closeSingleDeleteModal;
 window.executeSingleMessageDelete = executeSingleMessageDelete;
-
-console.log("تم تحميل ملف الرسائل بنجاح وبدون أخطاء!");

@@ -16,15 +16,19 @@
     <style>
         .features-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr); /* 3 أعمدة متساوية */
-            gap: 25px; /* مسافة بين الكروت */
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
         }
 
-        /* تحسين العرض للأجهزة اللوحية (2 في الصف) */
         @media (max-width: 992px) {
             .features-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
+        }
+
+        /* إخفاء فواصل الأسطر في الكمبيوتر (يظهر العنوان متصلاً) */
+        .mobile-break {
+            display: none;
         }
 
         /* 🔥 تحسين العرض والتنسيق لشاشات الجوال 🔥 */
@@ -49,13 +53,25 @@
             }
             
             .main-nav .btn {
-                flex: 1; /* جعل الزرين متساويين في العرض تماماً */
+                flex: 1;
                 padding: 10px 5px !important;
                 font-size: 0.95rem !important;
-                white-space: nowrap; /* منع نزول الكلمة لسطر جديد */
+                white-space: nowrap;
                 text-align: center;
                 display: flex;
                 justify-content: center;
+            }
+
+            /* 🔥 إظهار فواصل الأسطر وتوسيط العنوان في الجوال 🔥 */
+            .mobile-break {
+                display: block;
+            }
+            .hero-content h2 {
+                text-align: center;
+                line-height: 1.6;
+            }
+            .hero-content p {
+                text-align: center;
             }
         }
 
@@ -123,6 +139,24 @@
             transform: translateY(-2px);
             color: white;
         }
+
+        .btn-subscribe {
+            background-color: #25D366 !important;
+            color: white !important;
+            border: none;
+            box-shadow: 0 4px 10px rgba(37, 211, 102, 0.2);
+        }
+        .btn-subscribe:hover {
+            background-color: #128C7E !important;
+            color: white !important;
+        }
+
+        @media (max-width: 480px) {
+            .main-nav .btn {
+                padding: 6px 12px;
+                font-size: 0.85rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -135,7 +169,7 @@
                 </div>
                 
                 <nav class="main-nav" style="display: flex; gap: 10px; align-items: center;">
-                    <button class="btn btn-secondary" onclick="window.open('https://wa.me/966558211988', '_blank')">
+                    <button class="btn btn-subscribe" onclick="window.open('https://wa.me/966558211988', '_blank')">
                         اشترك معنا
                     </button>
                     <button class="btn btn-primary" onclick="window.location.href='pages/auth/login.html'">
@@ -150,7 +184,7 @@
         <section class="hero-section">
             <div class="container">
                 <div class="hero-content">
-                    <h2>مرحباً بكم في نظام ميسر التعلم</h2>
+                    <h2>مرحباً بكم<br class="mobile-break"> في<br class="mobile-break"> نظام ميسر التعلم</h2>
                     <p>نظام متكامل لدعم ذوي صعوبات التعلم وتسهيل العملية التعليمية</p>
                     <div class="hero-buttons">
                         <button class="btn btn-primary" onclick="window.location.href='pages/auth/login.html'">

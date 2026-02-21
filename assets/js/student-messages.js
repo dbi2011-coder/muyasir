@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-messages.js
-// الوصف: شات الطالب (واجهة نظيفة + ترتيب ذكي للجوال + نافذة تأكيد حذف احترافية)
+// الوصف: شات الطالب (واجهة نظيفة + ترتيب ذكي للجوال + نافذة حذف احترافية + تحسين القائمة المنسدلة)
 // ============================================
 
 let attachmentData = null;
@@ -9,7 +9,7 @@ let mediaRecorder = null;
 let audioChunks = [];
 let recordingInterval = null;
 let recordingStartTime = null;
-let pendingDeleteMessageId = null; // متغير جديد لحفظ رقم الرسالة المراد حذفها
+let pendingDeleteMessageId = null; 
 
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('messages.html')) {
@@ -88,10 +88,11 @@ function injectChatStyles() {
         .msg-attachment { margin-top: 8px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 8px; display: flex; align-items: center; gap: 5px; text-decoration: none; color: inherit; }
         .msg-attachment img { max-width: 100%; border-radius: 5px; }
 
+        /* 🔥 تحسين القائمة المنسدلة (تعديل المسافة البادئة والاتجاه) 🔥 */
         .msg-options-btn { position: absolute; top: 5px; left: 8px; color: inherit; opacity: 0.6; cursor: pointer; padding: 2px 5px; font-size: 1.1rem; }
         .msg-options-btn:hover { opacity: 1; }
-        .msg-dropdown { position: absolute; top: 25px; left: 5px; background: #fff; color: #333; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); width: 120px; z-index: 100; display: none; overflow: hidden; border: 1px solid #eee; }
-        .msg-dropdown-item { padding: 10px 15px; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.1s; }
+        .msg-dropdown { position: absolute; top: 30px; left: 0; background: #fff; color: #333; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); min-width: 140px; z-index: 100; display: none; overflow: hidden; border: 1px solid #eee; }
+        .msg-dropdown-item { padding: 12px 20px 12px 15px; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.2s; white-space: nowrap; }
         .msg-dropdown-item:hover { background: #f8f9fa; color: #007bff; }
         .msg-dropdown-item.delete:hover { color: #dc3545; background: #fff5f5; }
 
@@ -372,20 +373,17 @@ function sendVoiceMessage(base64Audio) {
 }
 function toggleMessageMenu(e, msgId) { e.stopPropagation(); document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none'); const menu = document.getElementById(`msgMenu_${msgId}`); if (menu) menu.style.display = 'block'; }
 
-// 🔥 تعديل دالة الحذف لعرض النافذة الاحترافية بدلاً من رسالة المتصفح
 function deleteMessage(messageId) { 
     pendingDeleteMessageId = messageId;
-    document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none'); // إغلاق القائمة المنسدلة أولاً
-    document.getElementById('deleteConfirmModal').style.display = 'flex'; // إظهار النافذة
+    document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none'); 
+    document.getElementById('deleteConfirmModal').style.display = 'flex'; 
 }
 
-// 🔥 دالة إغلاق نافذة التأكيد
 function closeDeleteModal() {
     pendingDeleteMessageId = null;
     document.getElementById('deleteConfirmModal').style.display = 'none';
 }
 
-// 🔥 دالة تنفيذ الحذف الفعلي بعد التأكيد
 function executeMessageDelete() {
     if (!pendingDeleteMessageId) return;
     const messageId = pendingDeleteMessageId;
@@ -399,7 +397,7 @@ function executeMessageDelete() {
     localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs)); 
     
     loadChatWithTeacher(); 
-    closeDeleteModal(); // إغلاق النافذة بعد الانتهاء
+    closeDeleteModal(); 
 }
 
 function startEditMessage(messageId) { const messages = JSON.parse(localStorage.getItem('studentMessages') || '[]'); const msg = messages.find(m => m.id === messageId); if (!msg || msg.isVoice) return; const input = document.getElementById('chatInput'); input.value = msg.content; input.focus(); input.classList.add('editing'); editingMessageId = messageId; const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'تحديث <i class="fas fa-check"></i>'; sendBtn.classList.add('update-mode'); document.getElementById('cancelEditBtn').style.display = 'block'; }

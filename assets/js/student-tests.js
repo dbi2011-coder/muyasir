@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-tests.js
-// الوصف: إدارة الاختبارات + النوافذ المنبثقة الاحترافية (بدلاً من رسائل المتصفح الكلاسيكية)
+// الوصف: إدارة الاختبارات + النوافذ الاحترافية + إصلاح زر خروج وحفظ مؤقت والحفظ الصامت
 // ============================================
 
 // =========================================================
@@ -189,7 +189,6 @@ function openTestMode(assignmentId) {
     currentTest = allTestsLib.find(t => t.id == currentAssignment.testId);
     if (!currentTest) return showError('نموذج الاختبار الأصلي غير موجود');
 
-    // استخدام النوافذ الاحترافية بدلاً من alert
     if (currentAssignment.status === 'completed') {
         showInfoModal('وضع المراجعة', 'أنت الآن في وضع المراجعة.<br>لا يمكنك تعديل الإجابات، يمكنك فقط الاطلاع على الحلول وملاحظات المعلم وتقييمه.');
     } else if (currentAssignment.status === 'returned') {
@@ -221,12 +220,25 @@ function startActualTest() {
     }
 }
 
-// إغلاق النافذة
+// 🔥 إغلاق النافذة مع الحفظ الصامت التلقائي 🔥
 function closeTestMode() {
+    // حفظ الإجابات الحالية والرسومات بصمت لضمان عدم ضياع التعب
+    if (currentAssignment && currentAssignment.status !== 'completed') {
+        saveCurrentCanvas();
+        const allAssignments = JSON.parse(localStorage.getItem('studentTests') || '[]');
+        const idx = allAssignments.findIndex(a => a.id == currentAssignment.id);
+        if(idx !== -1) {
+            allAssignments[idx].answers = userAnswers;
+            allAssignments[idx].status = 'in-progress';
+            localStorage.setItem('studentTests', JSON.stringify(allAssignments));
+        }
+    }
+    
     document.getElementById('testFocusMode').style.display = 'none';
     document.body.style.overflow = 'auto';
     loadMyTests();
 }
+window.closeTestMode = closeTestMode; // للتأكد من ربطها بالـ HTML
 
 // 3. محرك عرض الأسئلة
 function renderAllQuestions() {
@@ -411,8 +423,9 @@ function updateNavigationButtons() {
     if (isReadOnly) {
         actionButtons = `<button class="btn-nav" style="background:#6c757d; color:white;" onclick="closeTestMode()">إغلاق المراجعة</button>`;
     } else {
+        // 🔥 تحديث الزر ليصبح "خروج وحفظ مؤقت" 🔥
         actionButtons = `
-            <button class="btn-nav btn-save" onclick="saveTestProgress(false)">حفظ مؤقت</button>
+            <button class="btn-nav btn-save" onclick="exitAndSaveTest()">خروج وحفظ مؤقت</button>
             ${isLast ? '<button class="btn-nav btn-submit" onclick="finishTest()">تسليم الاختبار</button>' : ''}
         `;
     }
@@ -426,7 +439,7 @@ function updateNavigationButtons() {
 }
 
 // ==========================================
-// 5. أدوات الرسم 
+// 5. أدوات الرسم (معادلة القياس الدقيقة)
 // ==========================================
 let isDrawing = false;
 let ctx = null;
@@ -597,7 +610,8 @@ function updateUserAnswer(qId, val) {
     else userAnswers.push({ questionId: qId, answer: val });
 }
 
-function saveTestProgress(submit = false) {
+// 🔥 دالة الحفظ المخصصة لدعم زر خروج وحفظ مؤقت 🔥
+function saveTestProgress(submit = false, isExiting = false) {
     if(currentAssignment.status === 'completed') return;
     saveCurrentCanvas(); 
     const allAssignments = JSON.parse(localStorage.getItem('studentTests') || '[]');
@@ -615,18 +629,30 @@ function saveTestProgress(submit = false) {
     }
     
     if(!submit) {
-        showSuccess('تم حفظ إجاباتك مؤقتاً بنجاح ✅');
+        showSuccess('تم حفظ إجاباتك بنجاح ✅');
+        if (isExiting) {
+            setTimeout(() => {
+                closeTestMode();
+            }, 1000); // تأخير بسيط ليرى الطالب رسالة النجاح ثم يخرج
+        }
     } else {
         showInfoModal('تم التسليم بنجاح! 🎉', 'لقد قمت بتسليم الاختبار بنجاح، وهو الآن بانتظار المراجعة والتصحيح من قبل المعلم.', function() {
-            document.getElementById('testFocusMode').style.display = 'none';
-            document.body.style.overflow = 'auto';
-            loadMyTests();
+            closeTestMode();
         });
     }
 }
 
+// الدالة المربوطة بزر الخروج
+function exitAndSaveTest() {
+    if (currentAssignment && currentAssignment.status !== 'completed') {
+        saveTestProgress(false, true);
+    } else {
+        closeTestMode();
+    }
+}
+window.exitAndSaveTest = exitAndSaveTest;
+
 function finishTest() {
-    // استبدال confirm الكلاسيكية بالنافذة الاحترافية
     showConfirmModal(
         'هل أنت متأكد من رغبتك في تسليم الاختبار نهائياً؟<br><span style="color:#dc3545; font-size:0.9rem; margin-top:5px; display:block;">⚠️ تذكر: لن تتمكن من تعديل إجاباتك بعد التسليم.</span>', 
         function() {

@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب + نظام تصحيح ذكي ومستقر + عرض الإجابات بالكامل
+// الوصف: إدارة ملف الطالب + نظام تصحيح ذكي ومستقر + عرض الإجابات والوسائط بالكامل بدون تشفير
 // ============================================
 
 let currentStudentId = null;
@@ -20,12 +20,12 @@ document.addEventListener('DOMContentLoaded', function() {
     injectAdminEventModal();
     injectHomeworkModal(); 
     injectWordTableStyles();
-    injectReviewStyles(); // حقن التنسيقات الجديدة لعرض الإجابات بالكامل
+    injectReviewStyles(); 
     
     loadStudentData();
 });
 
-// 🔥 إضافة تنسيقات نافذة التصحيح الذكية لتمدد الإجابات 🔥
+// 🔥 تنسيقات نافذة التصحيح الذكية لتمدد الإجابات وعرض الصور 🔥
 function injectReviewStyles() {
     if (document.getElementById('customReviewStyles')) return;
     const style = document.createElement('style');
@@ -37,10 +37,11 @@ function injectReviewStyles() {
             border-radius: 8px; 
             margin-bottom: 10px; 
             border-right: 4px solid #007bff;
-            white-space: pre-wrap; /* يحافظ على الأسطر الجديدة بالكامل */
-            word-break: break-word; /* يمنع قص النصوص الطويلة */
+            white-space: pre-wrap; 
+            word-break: break-word; 
             font-size: 1.05rem;
             line-height: 1.6;
+            overflow-x: hidden;
         }
         .review-question-item {
             border: 1px solid #e2e8f0;
@@ -98,10 +99,6 @@ function switchSection(sectionId) {
     if (sectionId === 'assignments') loadAssignmentsTab();
     if (sectionId === 'progress') loadProgressTab();
 }
-
-// ============================================
-// 🔥 1. سجل التقدم والطباعة
-// ============================================
 
 function loadProgressTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
@@ -358,8 +355,98 @@ function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDa
 
 
 // ============================================
-// 🔥 2. بقية الأقسام (الدروس، الواجبات، التشخيصي، IEP)
+// 🔥 2. استخراج وعرض الإجابات الذكي (الفلتر السحري لمنع الرموز) 🔥
 // ============================================
+
+// دالة مخصصة فقط للتصحيح التلقائي والمطابقة النصية (تتجاهل الرموز الطويلة والصور)
+function extractAnswerText(ans) {
+    if (ans === null || ans === undefined) return '';
+    if (typeof ans === 'string') {
+        // إذا كان النص تشفيراً لبيانات (Base64) أو نص عشوائي ضخم، نتجاهله في المطابقة
+        if (ans.startsWith('data:') || (ans.length > 200 && !ans.includes(' '))) return '';
+        return ans;
+    }
+    if (Array.isArray(ans)) return ans.join(' ، ');
+    if (typeof ans === 'object') {
+        if (ans.text) return ans.text;
+        if (ans.value) return ans.value;
+        if (ans.answer) return ans.answer;
+        if (ans.selected) return Array.isArray(ans.selected) ? ans.selected.join(' ، ') : String(ans.selected);
+        return ''; 
+    }
+    return String(ans);
+}
+
+// الدالة الذكية التي تعالج النصوص والصور وتعرضها بشكل جمالي وتحمي الشاشة من التمدد
+function formatAnswerDisplay(rawAnswer) {
+    if (rawAnswer === null || rawAnswer === undefined || rawAnswer === '') {
+        return '<span class="text-muted" style="font-style:italic;">(لم يُجب الطالب على هذا السؤال)</span>';
+    }
+
+    if (Array.isArray(rawAnswer)) {
+        let html = rawAnswer.map(item => formatSingleItem(item)).join('<div style="margin-top:8px; border-bottom:1px dashed #eee; padding-bottom:5px;"></div>');
+        return html || '<span class="text-muted">(إجابة فارغة)</span>';
+    }
+
+    if (typeof rawAnswer === 'object') {
+        let val = rawAnswer.image || rawAnswer.audio || rawAnswer.file || rawAnswer.text || rawAnswer.value || rawAnswer.answer;
+        if (!val && rawAnswer.selected) {
+            val = Array.isArray(rawAnswer.selected) ? rawAnswer.selected.join(' ، ') : rawAnswer.selected;
+        }
+        if (!val) {
+            for (let k in rawAnswer) {
+                if (typeof rawAnswer[k] === 'string' && rawAnswer[k].startsWith('data:')) {
+                    val = rawAnswer[k]; break;
+                }
+            }
+        }
+        if (!val) val = JSON.stringify(rawAnswer); 
+        return formatSingleItem(val);
+    }
+
+    return formatSingleItem(rawAnswer);
+}
+
+// دالة فك التشفير ورسم المحتوى (صور، صوت، أو نص)
+function formatSingleItem(text) {
+    if (!text) return '';
+    let str = String(text).trim();
+    
+    // 1. هل النص عبارة عن كائن JSON مخفي؟ (فك التشفير العكسي)
+    if (str.startsWith('{') && str.endsWith('}')) {
+        try {
+            let parsed = JSON.parse(str);
+            return formatAnswerDisplay(parsed); 
+        } catch(e) {}
+    }
+    
+    // 2. هل المرفق صورة؟ (تحويله لبطاقة صورة)
+    if (str.startsWith('data:image')) {
+        return `<img src="${str}" style="max-width:100%; max-height:400px; border:1px solid #ccc; border-radius:8px; margin-top:5px; display:block; object-fit:contain; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">`;
+    }
+    
+    // 3. هل المرفق صوت؟ (تحويله لمشغل صوت)
+    if (str.startsWith('data:audio')) {
+        return `<audio controls src="${str}" style="margin-top:5px; width:100%; max-width:300px; height:45px;"></audio>`;
+    }
+    
+    // 4. هل هو ملف آخر PDF؟
+    if (str.startsWith('data:')) {
+        return `<a href="${str}" download="مرفق_إجابة" class="btn btn-sm btn-outline-primary mt-2" style="display:inline-block;"><i class="fas fa-file-download"></i> تحميل المرفق المحفوظ</a>`;
+    }
+    
+    // 5. حماية الشاشة من الرموز الطويلة المزعجة (إذا كان التشفير لم يلتقط بشكل صحيح)
+    if (str.length > 500 && !str.includes(' ')) {
+        return `
+            <div style="overflow-wrap: anywhere; font-size: 0.85rem; color: #dc3545; background:#fff5f5; padding:10px; border-radius:5px; max-height: 100px; overflow-y: auto; border:1px solid #ffcdd2;">
+                <i class="fas fa-exclamation-triangle"></i> ملف أو بيانات غير مدعومة العرض المباشر.<br>
+                <span style="opacity:0.6; font-size:0.7rem;">${str}</span>
+            </div>`;
+    }
+
+    // 6. عرض النص العادي مع حماية المسافات والأسطر
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
 
 function loadAssignmentsTab() {
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId == currentStudentId);
@@ -437,30 +524,6 @@ function loadLessonsTab() {
 }
 
 
-// 🔥 استخراج الإجابات مهما كان نوعها (نص، مصفوفة، كائن) وعرضها بوضوح 🔥
-function extractAnswerText(ans) {
-    if (ans === null || ans === undefined) return '';
-    if (typeof ans === 'string') return ans;
-    if (Array.isArray(ans)) return ans.join(' ، ');
-    if (typeof ans === 'object') {
-        if (ans.text) return ans.text;
-        if (ans.value) return ans.value;
-        if (ans.selected) return Array.isArray(ans.selected) ? ans.selected.join(' ، ') : String(ans.selected);
-        return JSON.stringify(ans);
-    }
-    return String(ans);
-}
-
-function formatAnswerDisplay(rawAnswer) {
-    let text = extractAnswerText(rawAnswer);
-    if (!text || text.trim() === '') return '<span class="text-muted" style="font-style:italic;">(لم يُجب الطالب على هذا السؤال)</span>';
-    if (typeof text === 'string' && text.startsWith('data:image')) return `<img src="${text}" style="max-width:100%; border:1px solid #ccc; border-radius:8px; margin-top:10px; display:block;">`;
-    // تحويل النصوص للظهور بشكل آمن مع الحفاظ على الفواصل والأسطر
-    return String(text).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-
-// 🔥 حساب النسبة وتصحيح ذكي بدون حذف تعديلات المعلم 🔥
 function loadDiagnosticTab() {
     let studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     let assignedTestIndex = studentTests.findIndex(t => t.studentId == currentStudentId && t.type === 'diagnostic');
@@ -476,7 +539,6 @@ function loadDiagnosticTab() {
         
         let finalPercentage = assignedTest.score || 0;
         
-        // خوارزمية التصحيح התلقائي الآمنة (تعمل فقط إذا لم يتم رصد درجة للسؤال من قبل)
         if (assignedTest.status === 'completed' && originalTest && originalTest.questions) {
             let totalScore = 0;
             let maxTotalScore = 0;
@@ -490,16 +552,15 @@ function loadDiagnosticTab() {
                 if (assignedTest.answers) {
                     let ansObj = assignedTest.answers.find(a => a.questionId == q.id);
                     if (ansObj) {
-                        // التصحيح التلقائي يتدخل فقط إذا كانت الدرجة غير مسجلة نهائياً (لم يصححها المعلم)
                         if (ansObj.score === undefined || ansObj.score === null) {
                             let textAns = extractAnswerText(ansObj.answer || ansObj.value);
                             let studentAns = String(textAns).trim().toLowerCase();
                             let correctAns = String(q.correctAnswer || '').trim().toLowerCase();
                             
                             if (studentAns === correctAns && studentAns !== '') {
-                                ansObj.score = maxQScore; // منح الدرجة الكاملة عند التطابق
+                                ansObj.score = maxQScore; 
                             } else {
-                                ansObj.score = 0; // منح صفر مبدئياً عند الخطأ
+                                ansObj.score = 0; 
                             }
                             needsSave = true;
                         }
@@ -647,10 +708,6 @@ function loadIEPTab() {
     const topPrintBtn = document.querySelector('#section-iep .content-header button');
     if(topPrintBtn) topPrintBtn.setAttribute('onclick', 'window.print()');
 }
-
-// ============================================
-// 🔥 3. الدوال المساعدة والنوافذ 
-// ============================================
 
 function injectWordTableStyles() {
     if (document.getElementById('wordTableStyles')) return;
@@ -1004,7 +1061,7 @@ function deleteAssignment(id) {
 }
 
 
-// 🔥 نافذة مراجعة الواجبات
+// 🔥 نافذة المراجعة مع دعم استخراج الوسائط وعرضها بدون تشفير
 function openReviewModal(assignmentId) {
     const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
     const assignment = studentAssignments.find(a => a.id == assignmentId);
@@ -1045,7 +1102,6 @@ function openReviewModal(assignmentId) {
             let maxScore = parseFloat(q.passingScore || q.points || q.score || 1);
             if(isNaN(maxScore) || maxScore <= 0) maxScore = 1;
             
-            // التصحيح التلقائي للواجهة فقط إذا لم تحفظ درجة مسبقاً
             let currentScore = studentAnsObj ? studentAnsObj.score : undefined;
             if (currentScore === undefined || currentScore === null) {
                 if (q.correctAnswer) {
@@ -1088,7 +1144,6 @@ function openReviewModal(assignmentId) {
     document.getElementById('reviewTestModal').classList.add('show');
 }
 
-// 🔥 نافذة مراجعة الاختبار التشخيصي
 function openTestReviewModal(test) {
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const originalTest = allTests.find(t => t.id == test.testId);
@@ -1105,7 +1160,6 @@ function openTestReviewModal(test) {
             let maxScore = parseFloat(q.passingScore || q.points || q.score || 1);
             if(isNaN(maxScore) || maxScore <= 0) maxScore = 1;
             
-            // التصحيح التلقائي للعرض
             let currentScore = studentAnsObj ? studentAnsObj.score : undefined;
             if (currentScore === undefined || currentScore === null) {
                 if (q.correctAnswer) {
@@ -1145,7 +1199,7 @@ function openTestReviewModal(test) {
     document.getElementById('reviewTestModal').classList.add('show');
 }
 
-// 🔥 حفظ التصحيح والتعديلات بدقة شديدة ومنع تصفير الأرقام
+// 🔥 حفظ التصحيح بدقة متناهية لمنع التصفير واعتماد درجات المعلم 🔥
 function saveTestReview() {
     const id = parseInt(document.getElementById('reviewAssignmentId').value);
     
@@ -1153,7 +1207,6 @@ function saveTestReview() {
     let idx = studentAssignments.findIndex(a => a.id == id);
     let isAssignment = true;
 
-    // توجيه المتغير للمصفوفة الصحيحة (الواجبات أو الاختبارات)
     if (idx === -1) {
         const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
         idx = studentTests.findIndex(t => t.id == id);
@@ -1185,7 +1238,7 @@ function saveTestReview() {
             
             let ansIdx = studentAssignments[idx].answers.findIndex(a => a.questionId == q.id);
             
-            // قراءة الدرجة كأرقام كسرية (Float) للحفاظ على النصف درجة
+            // 🔥 قراءة الدرجة التي كتبها المعلم بشكل دقيق كعدد عشري 🔥
             let newScore = 0;
             if (scoreInp && scoreInp.value !== '') {
                 newScore = parseFloat(scoreInp.value);
@@ -1206,19 +1259,17 @@ function saveTestReview() {
             
             totalScore += newScore; 
             
-            // حساب الدرجة النهائية العظمى
             let maxQScore = parseFloat(q.passingScore || q.points || q.score || 1);
             if (isNaN(maxQScore) || maxQScore <= 0) maxQScore = 1;
             maxTotalScore += maxQScore;
         });
         
-        // حساب النسبة المئوية الدقيقة وتحديثها
+        // حساب النسبة المئوية بدقة بعد التعديل اليدوي
         studentAssignments[idx].score = maxTotalScore > 0 ? Math.round((totalScore / maxTotalScore) * 100) : 0;
     }
     
     studentAssignments[idx].status = 'completed';
 
-    // حفظ في الذاكرة الصحيحة
     if (isAssignment) {
         localStorage.setItem('studentAssignments', JSON.stringify(studentAssignments));
         closeModal('reviewTestModal');
@@ -1226,7 +1277,7 @@ function saveTestReview() {
     } else {
         localStorage.setItem('studentTests', JSON.stringify(studentAssignments));
         closeModal('reviewTestModal');
-        loadDiagnosticTab(); // إعادة التحميل لإظهار النسبة الحقيقية الجديدة!
+        loadDiagnosticTab(); 
     }
     
     alert('تم حفظ التصحيح واعتماد الدرجة بنجاح ✅');

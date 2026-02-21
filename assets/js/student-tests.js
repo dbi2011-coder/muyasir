@@ -1,7 +1,109 @@
 // ============================================
 // 📁 المسار: assets/js/student-tests.js
-// الوصف: إدارة الاختبارات (إغلاق التعديل بعد التسليم، عرض تقييم المعلم، وإصلاح دقة الرسم)
+// الوصف: إدارة الاختبارات + النوافذ المنبثقة الاحترافية (بدلاً من رسائل المتصفح الكلاسيكية)
 // ============================================
+
+// =========================================================
+// 🔥 نظام النوافذ المنبثقة الاحترافية (Toasts & Modals) 🔥
+// =========================================================
+if (!window.showConfirmModal) {
+    window.showConfirmModal = function(message, onConfirm) {
+        let modal = document.getElementById('globalConfirmModal');
+        if (!modal) {
+            const modalHtml = `
+                <div id="globalConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999999; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+                    <div style="background:white; padding:25px; border-radius:15px; width:90%; max-width:350px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.2); animation:popIn 0.3s ease;">
+                        <div style="font-size:3.5rem; color:#dc3545; margin-bottom:15px;"><i class="fas fa-exclamation-circle"></i></div>
+                        <div style="font-size:1.3rem; font-weight:bold; margin-bottom:10px; color:#333;">تأكيد الإجراء</div>
+                        <div id="globalConfirmMessage" style="color:#666; margin-bottom:25px; font-size:0.95rem; line-height:1.6;"></div>
+                        <div style="display:flex; gap:15px; justify-content:center;">
+                            <button id="globalConfirmCancel" style="background:#e2e8f0; color:#333; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; transition:0.2s; font-family:'Tajawal';">إلغاء</button>
+                            <button id="globalConfirmOk" style="background:#dc3545; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; transition:0.2s; font-family:'Tajawal';">نعم، متأكد</button>
+                        </div>
+                    </div>
+                </div>
+                <style>@keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }</style>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            modal = document.getElementById('globalConfirmModal');
+        }
+        document.getElementById('globalConfirmMessage').innerHTML = message;
+        modal.style.display = 'flex';
+        document.getElementById('globalConfirmOk').onclick = function() {
+            modal.style.display = 'none';
+            if (typeof onConfirm === 'function') onConfirm();
+        };
+        document.getElementById('globalConfirmCancel').onclick = function() {
+            modal.style.display = 'none';
+        };
+    };
+}
+
+if (!window.showSuccess) {
+    window.showSuccess = function(message) {
+        let toast = document.getElementById('globalSuccessToast');
+        if (!toast) {
+            const toastHtml = `
+                <div id="globalSuccessToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#10b981; color:white; padding:12px 25px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.2); z-index:999999; font-weight:bold; font-family:'Tajawal'; align-items:center; gap:10px;">
+                    <i class="fas fa-check-circle"></i> <span id="globalSuccessMessage"></span>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', toastHtml);
+            toast = document.getElementById('globalSuccessToast');
+        }
+        document.getElementById('globalSuccessMessage').textContent = message;
+        toast.style.display = 'flex';
+        setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    };
+}
+
+if (!window.showError) {
+    window.showError = function(message) {
+        let toast = document.getElementById('globalErrorToast');
+        if (!toast) {
+            const toastHtml = `
+                <div id="globalErrorToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#dc3545; color:white; padding:12px 25px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.2); z-index:999999; font-weight:bold; font-family:'Tajawal'; align-items:center; gap:10px;">
+                    <i class="fas fa-exclamation-triangle"></i> <span id="globalErrorMessage"></span>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', toastHtml);
+            toast = document.getElementById('globalErrorToast');
+        }
+        document.getElementById('globalErrorMessage').innerHTML = message;
+        toast.style.display = 'flex';
+        setTimeout(() => { toast.style.display = 'none'; }, 4000);
+    };
+}
+
+if (!window.showInfoModal) {
+    window.showInfoModal = function(title, message, onClose) {
+        let modal = document.getElementById('globalInfoModal');
+        if (!modal) {
+            const modalHtml = `
+                <div id="globalInfoModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999999; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+                    <div style="background:white; padding:25px; border-radius:15px; width:90%; max-width:350px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.2); animation:popIn 0.3s ease;">
+                        <div style="font-size:3.5rem; color:#007bff; margin-bottom:15px;"><i class="fas fa-info-circle"></i></div>
+                        <div id="globalInfoTitle" style="font-size:1.3rem; font-weight:bold; margin-bottom:10px; color:#333;"></div>
+                        <div id="globalInfoMessage" style="color:#666; margin-bottom:25px; font-size:0.95rem; line-height:1.6;"></div>
+                        <div style="display:flex; justify-content:center;">
+                            <button id="globalInfoOk" style="background:#007bff; color:white; border:none; padding:12px 30px; border-radius:8px; cursor:pointer; font-weight:bold; transition:0.2s; font-family:'Tajawal'; w-100">حسناً، فهمت</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            modal = document.getElementById('globalInfoModal');
+        }
+        document.getElementById('globalInfoTitle').innerHTML = title;
+        document.getElementById('globalInfoMessage').innerHTML = message;
+        modal.style.display = 'flex';
+        document.getElementById('globalInfoOk').onclick = function() {
+            modal.style.display = 'none';
+            if (typeof onClose === 'function') onClose();
+        };
+    };
+}
+// =========================================================
 
 let currentTest = null;
 let currentAssignment = null;
@@ -82,15 +184,16 @@ function openTestMode(assignmentId) {
     const allTestsLib = JSON.parse(localStorage.getItem('tests') || '[]');
     
     currentAssignment = allAssignments.find(a => a.id == assignmentId);
-    if (!currentAssignment) return alert('لم يتم العثور على بيانات الاختبار');
+    if (!currentAssignment) return showError('لم يتم العثور على بيانات الاختبار');
     
     currentTest = allTestsLib.find(t => t.id == currentAssignment.testId);
-    if (!currentTest) return alert('نموذج الاختبار الأصلي غير موجود');
+    if (!currentTest) return showError('نموذج الاختبار الأصلي غير موجود');
 
+    // استخدام النوافذ الاحترافية بدلاً من alert
     if (currentAssignment.status === 'completed') {
-        alert('أنت الآن في وضع المراجعة.\nلا يمكنك التعديل، يمكنك فقط الاطلاع على إجاباتك وملاحظات المعلم.');
+        showInfoModal('وضع المراجعة', 'أنت الآن في وضع المراجعة.<br>لا يمكنك تعديل الإجابات، يمكنك فقط الاطلاع على الحلول وملاحظات المعلم وتقييمه.');
     } else if (currentAssignment.status === 'returned') {
-        alert('أعاد المعلم هذا الاختبار إليك.\nيمكنك الآن تعديل إجاباتك وتسليمها مرة أخرى.');
+        showInfoModal('تعديل الإجابات', 'أعاد المعلم هذا الاختبار إليك.<br>يمكنك الآن مراجعة الأخطاء، تعديل إجاباتك، وتسليمها مرة أخرى.');
     }
 
     userAnswers = currentAssignment.answers || [];
@@ -114,7 +217,7 @@ function startActualTest() {
         showQuestion(0);
     } catch (e) {
         console.error("Error starting test:", e);
-        alert("حدث خطأ أثناء تحميل الأسئلة.");
+        showError("حدث خطأ أثناء تحميل الأسئلة، يرجى المحاولة لاحقاً.");
     }
 }
 
@@ -125,7 +228,7 @@ function closeTestMode() {
     loadMyTests();
 }
 
-// 3. محرك عرض الأسئلة (يدعم وضع القراءة فقط)
+// 3. محرك عرض الأسئلة
 function renderAllQuestions() {
     const container = document.getElementById('testQuestionsContainer');
     container.innerHTML = '';
@@ -323,7 +426,7 @@ function updateNavigationButtons() {
 }
 
 // ==========================================
-// 5. أدوات الرسم (معادلة القياس الدقيقة)
+// 5. أدوات الرسم 
 // ==========================================
 let isDrawing = false;
 let ctx = null;
@@ -373,13 +476,11 @@ function drawTextBackground(canvas, text) {
     context.fillText(displayText, canvas.width / 2, canvas.height / 2);
 }
 
-// 🔥 الإصلاح الرياضي الجذري لمعادلة الماوس واللمس 🔥
 function getPos(canvas, e) {
     const rect = canvas.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     
-    // حساب معامل التكبير/التصغير بناءً على الحجم الظاهر للشاشة
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     
@@ -431,7 +532,7 @@ async function toggleRecording(btn, qId, pIdx) {
             btn.classList.add('btn-dark');
         } catch (err) {
             console.error(err);
-            alert('تعذر الوصول للميكروفون.');
+            showError('عذراً، لم نتمكن من الوصول للميكروفون. يرجى التأكد من صلاحيات المتصفح.');
         }
     } else {
         if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
@@ -445,7 +546,7 @@ function resetRecording(qId, pIdx) {
 }
 
 // ==========================================
-// 7. الحفظ
+// 7. الحفظ والتسليم
 // ==========================================
 function selectOption(el, qIdx, choiceIdx) {
     if(currentAssignment.status === 'completed') return;
@@ -513,19 +614,25 @@ function saveTestProgress(submit = false) {
         localStorage.setItem('studentTests', JSON.stringify(allAssignments));
     }
     
-    if(!submit) alert('تم الحفظ مؤقتاً');
-    else {
-        alert('تم تسليم الاختبار! بانتظار تصحيح المعلم.');
-        document.getElementById('testFocusMode').style.display = 'none';
-        document.body.style.overflow = 'auto';
-        loadMyTests();
+    if(!submit) {
+        showSuccess('تم حفظ إجاباتك مؤقتاً بنجاح ✅');
+    } else {
+        showInfoModal('تم التسليم بنجاح! 🎉', 'لقد قمت بتسليم الاختبار بنجاح، وهو الآن بانتظار المراجعة والتصحيح من قبل المعلم.', function() {
+            document.getElementById('testFocusMode').style.display = 'none';
+            document.body.style.overflow = 'auto';
+            loadMyTests();
+        });
     }
 }
 
 function finishTest() {
-    if(confirm('هل أنت متأكد من التسليم النهائي؟\nلن تتمكن من تعديل الإجابات بعد ذلك.')) {
-        saveTestProgress(true);
-    }
+    // استبدال confirm الكلاسيكية بالنافذة الاحترافية
+    showConfirmModal(
+        'هل أنت متأكد من رغبتك في تسليم الاختبار نهائياً؟<br><span style="color:#dc3545; font-size:0.9rem; margin-top:5px; display:block;">⚠️ تذكر: لن تتمكن من تعديل إجاباتك بعد التسليم.</span>', 
+        function() {
+            saveTestProgress(true);
+        }
+    );
 }
 
 function playAudio(text) {
@@ -533,8 +640,10 @@ function playAudio(text) {
     speech.lang = 'ar-SA';
     window.speechSynthesis.speak(speech);
 }
+
 function allowDrop(ev) { ev.preventDefault(); }
 function drag(ev) { ev.dataTransfer.setData("text", ev.target.innerText); ev.dataTransfer.setData("id", ev.target.id); }
+
 function drop(ev) {
     if(currentAssignment.status === 'completed') return;
     ev.preventDefault();

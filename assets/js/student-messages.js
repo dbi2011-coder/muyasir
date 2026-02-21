@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-messages.js
-// الوصف: شات الطالب (واجهة نظيفة + ترتيب ذكي للجوال + نافذة حذف احترافية + تحسين القائمة المنسدلة)
+// الوصف: شات الطالب (ترتيب ذكي + نافذة حذف احترافية + حل نهائي لمشكلة انزياح القائمة المنسدلة)
 // ============================================
 
 let attachmentData = null;
@@ -88,11 +88,34 @@ function injectChatStyles() {
         .msg-attachment { margin-top: 8px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 8px; display: flex; align-items: center; gap: 5px; text-decoration: none; color: inherit; }
         .msg-attachment img { max-width: 100%; border-radius: 5px; }
 
-        /* 🔥 تحسين القائمة المنسدلة (تعديل المسافة البادئة والاتجاه) 🔥 */
+        /* 🔥 الحل النهائي والجذري للقائمة المنسدلة لخيارات الرسالة 🔥 */
         .msg-options-btn { position: absolute; top: 5px; left: 8px; color: inherit; opacity: 0.6; cursor: pointer; padding: 2px 5px; font-size: 1.1rem; }
         .msg-options-btn:hover { opacity: 1; }
-        .msg-dropdown { position: absolute; top: 30px; left: 0; background: #fff; color: #333; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.15); min-width: 140px; z-index: 100; display: none; overflow: hidden; border: 1px solid #eee; }
-        .msg-dropdown-item { padding: 12px 20px 12px 15px; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; gap: 10px; transition: 0.2s; white-space: nowrap; }
+        .msg-dropdown { 
+            position: absolute; 
+            top: 30px; 
+            right: calc(100% - 35px) !important; /* إجبار القائمة على الفتح للداخل (اليسار) انطلاقاً من زر الخيارات */
+            left: auto !important; /* إلغاء التموضع القديم المسبب للقص */
+            background: #fff; 
+            color: #333; 
+            border-radius: 8px; 
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15); 
+            min-width: 140px; 
+            z-index: 100; 
+            display: none; 
+            overflow: hidden; 
+            border: 1px solid #eee; 
+        }
+        .msg-dropdown-item { 
+            padding: 12px 25px 12px 15px !important; /* مسافة بادئة مريحة لتظهر الكلمات كاملة */
+            font-size: 0.95rem; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            transition: 0.2s; 
+            white-space: nowrap; 
+        }
         .msg-dropdown-item:hover { background: #f8f9fa; color: #007bff; }
         .msg-dropdown-item.delete:hover { color: #dc3545; background: #fff5f5; }
 

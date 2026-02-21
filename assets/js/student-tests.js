@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-tests.js
-// الوصف: إدارة الاختبارات + النوافذ الاحترافية + إصلاح زر خروج وحفظ مؤقت والحفظ الصامت
+// الوصف: إدارة الاختبارات + النوافذ الاحترافية + الحفظ الصامت + إزالة الزر القديم
 // ============================================
 
 // =========================================================
@@ -117,6 +117,19 @@ let activeRecordingId = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     loadMyTests();
+
+    // 🔥 كود التنظيف الذكي: إزالة أي زر خروج كلاسيكي قديم في أعلى الشاشة 🔥
+    const focusMode = document.getElementById('testFocusMode');
+    if (focusMode) {
+        // نبحث عن أي عنصر يقوم بتشغيل دالة الخروج (وليس موجوداً في شريط التنقل السفلي) ونقوم بحذفه
+        const allButtons = focusMode.querySelectorAll('button, a, i, span, div');
+        allButtons.forEach(el => {
+            const onclickAttr = el.getAttribute('onclick');
+            if (onclickAttr && onclickAttr.includes('closeTestMode') && !el.classList.contains('btn-nav')) {
+                el.remove(); // حذف العنصر نهائياً من الواجهة
+            }
+        });
+    }
 });
 
 // 1. عرض قائمة الاختبارات 
@@ -220,9 +233,8 @@ function startActualTest() {
     }
 }
 
-// 🔥 إغلاق النافذة مع الحفظ الصامت التلقائي 🔥
+// إغلاق النافذة مع الحفظ الصامت التلقائي
 function closeTestMode() {
-    // حفظ الإجابات الحالية والرسومات بصمت لضمان عدم ضياع التعب
     if (currentAssignment && currentAssignment.status !== 'completed') {
         saveCurrentCanvas();
         const allAssignments = JSON.parse(localStorage.getItem('studentTests') || '[]');
@@ -238,7 +250,7 @@ function closeTestMode() {
     document.body.style.overflow = 'auto';
     loadMyTests();
 }
-window.closeTestMode = closeTestMode; // للتأكد من ربطها بالـ HTML
+window.closeTestMode = closeTestMode; 
 
 // 3. محرك عرض الأسئلة
 function renderAllQuestions() {
@@ -423,7 +435,6 @@ function updateNavigationButtons() {
     if (isReadOnly) {
         actionButtons = `<button class="btn-nav" style="background:#6c757d; color:white;" onclick="closeTestMode()">إغلاق المراجعة</button>`;
     } else {
-        // 🔥 تحديث الزر ليصبح "خروج وحفظ مؤقت" 🔥
         actionButtons = `
             <button class="btn-nav btn-save" onclick="exitAndSaveTest()">خروج وحفظ مؤقت</button>
             ${isLast ? '<button class="btn-nav btn-submit" onclick="finishTest()">تسليم الاختبار</button>' : ''}
@@ -610,7 +621,6 @@ function updateUserAnswer(qId, val) {
     else userAnswers.push({ questionId: qId, answer: val });
 }
 
-// 🔥 دالة الحفظ المخصصة لدعم زر خروج وحفظ مؤقت 🔥
 function saveTestProgress(submit = false, isExiting = false) {
     if(currentAssignment.status === 'completed') return;
     saveCurrentCanvas(); 
@@ -633,7 +643,7 @@ function saveTestProgress(submit = false, isExiting = false) {
         if (isExiting) {
             setTimeout(() => {
                 closeTestMode();
-            }, 1000); // تأخير بسيط ليرى الطالب رسالة النجاح ثم يخرج
+            }, 1000); 
         }
     } else {
         showInfoModal('تم التسليم بنجاح! 🎉', 'لقد قمت بتسليم الاختبار بنجاح، وهو الآن بانتظار المراجعة والتصحيح من قبل المعلم.', function() {
@@ -642,7 +652,6 @@ function saveTestProgress(submit = false, isExiting = false) {
     }
 }
 
-// الدالة المربوطة بزر الخروج
 function exitAndSaveTest() {
     if (currentAssignment && currentAssignment.status !== 'completed') {
         saveTestProgress(false, true);

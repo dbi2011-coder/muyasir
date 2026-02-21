@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب + نظام تصحيح ذكي ومستقر + عرض الإجابات والوسائط بالكامل بدون تشفير
+// الوصف: إدارة ملف الطالب + نظام تصحيح ذكي + عرض كامل لجميع الفقرات وإجابات ترتيب الكلمات
 // ============================================
 
 let currentStudentId = null;
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadStudentData();
 });
 
-// 🔥 تنسيقات نافذة التصحيح الذكية لتمدد الإجابات وعرض الصور 🔥
+// 🔥 تنسيقات نافذة التصحيح الذكية لتمدد الإجابات وعرض الصور والكلمات المرتبة 🔥
 function injectReviewStyles() {
     if (document.getElementById('customReviewStyles')) return;
     const style = document.createElement('style');
@@ -355,14 +355,13 @@ function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDa
 
 
 // ============================================
-// 🔥 2. استخراج وعرض الإجابات الذكي (الفلتر السحري لمنع الرموز) 🔥
+// 🔥 2. استخراج وعرض الإجابات الذكي (المطور لجمع كافة الفقرات) 🔥
 // ============================================
 
-// دالة مخصصة فقط للتصحيح التلقائي والمطابقة النصية (تتجاهل الرموز الطويلة والصور)
+// دالة مخصصة فقط للتصحيح التلقائي وتدعم ترتيب الكلمات (السحب والإفلات)
 function extractAnswerText(ans) {
     if (ans === null || ans === undefined) return '';
     if (typeof ans === 'string') {
-        // إذا كان النص تشفيراً لبيانات (Base64) أو نص عشوائي ضخم، نتجاهله في المطابقة
         if (ans.startsWith('data:') || (ans.length > 200 && !ans.includes(' '))) return '';
         return ans;
     }
@@ -372,12 +371,23 @@ function extractAnswerText(ans) {
         if (ans.value) return ans.value;
         if (ans.answer) return ans.answer;
         if (ans.selected) return Array.isArray(ans.selected) ? ans.selected.join(' ، ') : String(ans.selected);
+        
+        // 🔥 الحل الجذري לסؤال ترتيب الكلمات والسحب والإفلات للتقييم التلقائي 🔥
+        let keys = Object.keys(ans).sort(); // ترتيب p_0_g_0, p_0_g_1 ... 
+        let textParts = [];
+        for (let k of keys) {
+            if (typeof ans[k] === 'string' && !ans[k].startsWith('data:')) {
+                textParts.push(ans[k].trim());
+            }
+        }
+        if (textParts.length > 0) return textParts.join(' ');
+        
         return ''; 
     }
     return String(ans);
 }
 
-// الدالة الذكية التي تعالج النصوص والصور وتعرضها بشكل جمالي وتحمي الشاشة من التمدد
+// الدالة الذكية التي تعالج النصوص والصور وتعرض كل الفقرات بشكل جمالي
 function formatAnswerDisplay(rawAnswer) {
     if (rawAnswer === null || rawAnswer === undefined || rawAnswer === '') {
         return '<span class="text-muted" style="font-style:italic;">(لم يُجب الطالب على هذا السؤال)</span>';
@@ -389,53 +399,65 @@ function formatAnswerDisplay(rawAnswer) {
     }
 
     if (typeof rawAnswer === 'object') {
-        let val = rawAnswer.image || rawAnswer.audio || rawAnswer.file || rawAnswer.text || rawAnswer.value || rawAnswer.answer;
-        if (!val && rawAnswer.selected) {
-            val = Array.isArray(rawAnswer.selected) ? rawAnswer.selected.join(' ، ') : rawAnswer.selected;
+        if (rawAnswer.selected) {
+            let val = Array.isArray(rawAnswer.selected) ? rawAnswer.selected.join(' ، ') : rawAnswer.selected;
+            return formatSingleItem(val);
         }
-        if (!val) {
-            for (let k in rawAnswer) {
-                if (typeof rawAnswer[k] === 'string' && rawAnswer[k].startsWith('data:')) {
-                    val = rawAnswer[k]; break;
+
+        // 🔥 الحل الجذري: استخراج جميع عناصر الكائن وعرضها (يدعم أكثر من فقرة رسم أو صوت) 🔥
+        let itemsHtml = [];
+        let keys = Object.keys(rawAnswer).sort(); // لضمان ترتيب الفقرات الأول فالثاني
+        
+        for (let k of keys) {
+            let itemVal = rawAnswer[k];
+            if (itemVal !== null && itemVal !== undefined && itemVal !== '') {
+                if (typeof itemVal !== 'object') {
+                    let formatted = formatSingleItem(itemVal);
+                    if (formatted) itemsHtml.push(formatted);
                 }
             }
         }
-        if (!val) val = JSON.stringify(rawAnswer); 
-        return formatSingleItem(val);
+
+        if (itemsHtml.length > 0) {
+            // التحقق مما إذا كانت الفقرات تحتوي وسائط (صور/صوت) أو مجرد كلمات (كالسحب والإفلات)
+            let isMedia = itemsHtml.some(html => html.includes('<img') || html.includes('<audio') || html.includes('<a '));
+            
+            if (isMedia) {
+                // عرض الوسائط تحت بعضها مع فاصل خطي أنيق
+                return itemsHtml.join('<div style="margin:15px 0; border-bottom:2px dashed #cbd5e1;"></div>');
+            } else {
+                // عرض الكلمات المرتبة بجانب بعضها مع سهم واضح ومميز
+                return itemsHtml.join(' <span style="color:#007bff; font-weight:bold; margin:0 5px;">&larr;</span> ');
+            }
+        } else {
+            return '<span class="text-muted">(إجابة فارغة)</span>';
+        }
     }
 
     return formatSingleItem(rawAnswer);
 }
 
-// دالة فك التشفير ورسم المحتوى (صور، صوت، أو نص)
+// دالة فك التشفير ورسم المحتوى
 function formatSingleItem(text) {
     if (!text) return '';
     let str = String(text).trim();
     
-    // 1. هل النص عبارة عن كائن JSON مخفي؟ (فك التشفير العكسي)
     if (str.startsWith('{') && str.endsWith('}')) {
-        try {
-            let parsed = JSON.parse(str);
-            return formatAnswerDisplay(parsed); 
-        } catch(e) {}
+        try { return formatAnswerDisplay(JSON.parse(str)); } catch(e) {}
     }
     
-    // 2. هل المرفق صورة؟ (تحويله لبطاقة صورة)
     if (str.startsWith('data:image')) {
-        return `<img src="${str}" style="max-width:100%; max-height:400px; border:1px solid #ccc; border-radius:8px; margin-top:5px; display:block; object-fit:contain; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">`;
+        return `<img src="${str}" style="max-width:100%; max-height:300px; border:1px solid #ccc; border-radius:8px; margin-top:5px; display:block; object-fit:contain; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">`;
     }
     
-    // 3. هل المرفق صوت؟ (تحويله لمشغل صوت)
     if (str.startsWith('data:audio')) {
         return `<audio controls src="${str}" style="margin-top:5px; width:100%; max-width:300px; height:45px;"></audio>`;
     }
     
-    // 4. هل هو ملف آخر PDF؟
     if (str.startsWith('data:')) {
-        return `<a href="${str}" download="مرفق_إجابة" class="btn btn-sm btn-outline-primary mt-2" style="display:inline-block;"><i class="fas fa-file-download"></i> تحميل المرفق المحفوظ</a>`;
+        return `<a href="${str}" download="مرفق_إجابة" class="btn btn-sm btn-outline-primary mt-2" style="display:inline-block;"><i class="fas fa-file-download"></i> تحميل المرفق</a>`;
     }
     
-    // 5. حماية الشاشة من الرموز الطويلة المزعجة (إذا كان التشفير لم يلتقط بشكل صحيح)
     if (str.length > 500 && !str.includes(' ')) {
         return `
             <div style="overflow-wrap: anywhere; font-size: 0.85rem; color: #dc3545; background:#fff5f5; padding:10px; border-radius:5px; max-height: 100px; overflow-y: auto; border:1px solid #ffcdd2;">
@@ -444,7 +466,6 @@ function formatSingleItem(text) {
             </div>`;
     }
 
-    // 6. عرض النص العادي مع حماية المسافات والأسطر
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
@@ -557,6 +578,7 @@ function loadDiagnosticTab() {
                             let studentAns = String(textAns).trim().toLowerCase();
                             let correctAns = String(q.correctAnswer || '').trim().toLowerCase();
                             
+                            // المطابقة الدقيقة لدعم ترتيب الكلمات والنصوص
                             if (studentAns === correctAns && studentAns !== '') {
                                 ansObj.score = maxQScore; 
                             } else {
@@ -1061,7 +1083,7 @@ function deleteAssignment(id) {
 }
 
 
-// 🔥 نافذة المراجعة مع دعم استخراج الوسائط وعرضها بدون تشفير
+// 🔥 نافذة المراجعة مع دعم استخراج الوسائط وعرضها بوضوح (دعم جميع الفقرات وترتيب الكلمات) 🔥
 function openReviewModal(assignmentId) {
     const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
     const assignment = studentAssignments.find(a => a.id == assignmentId);
@@ -1199,7 +1221,6 @@ function openTestReviewModal(test) {
     document.getElementById('reviewTestModal').classList.add('show');
 }
 
-// 🔥 حفظ التصحيح بدقة متناهية لمنع التصفير واعتماد درجات المعلم 🔥
 function saveTestReview() {
     const id = parseInt(document.getElementById('reviewAssignmentId').value);
     
@@ -1238,7 +1259,6 @@ function saveTestReview() {
             
             let ansIdx = studentAssignments[idx].answers.findIndex(a => a.questionId == q.id);
             
-            // 🔥 قراءة الدرجة التي كتبها المعلم بشكل دقيق كعدد عشري 🔥
             let newScore = 0;
             if (scoreInp && scoreInp.value !== '') {
                 newScore = parseFloat(scoreInp.value);
@@ -1264,7 +1284,6 @@ function saveTestReview() {
             maxTotalScore += maxQScore;
         });
         
-        // حساب النسبة المئوية بدقة بعد التعديل اليدوي
         studentAssignments[idx].score = maxTotalScore > 0 ? Math.round((totalScore / maxTotalScore) * 100) : 0;
     }
     

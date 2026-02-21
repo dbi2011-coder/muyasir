@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب (كاملة) + إصلاح أخطاء الطباعة والتعريفات المفقودة
+// الوصف: إدارة ملف الطالب + نظام التصحيح التلقائي الذكي والقابل للتعديل
 // ============================================
 
 let currentStudentId = null;
@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    // حقن النوافذ والستايلات أولاً لضمان توفرها
     injectAdminEventModal();
     injectHomeworkModal(); 
     injectWordTableStyles();
@@ -35,14 +34,12 @@ function loadStudentData() {
         return;
     }
     
-    // تحديث واجهة المعلومات
     if(document.getElementById('sideName')) document.getElementById('sideName').textContent = currentStudent.name;
     if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = currentStudent.name;
     if(document.getElementById('sideGrade')) document.getElementById('sideGrade').textContent = currentStudent.grade + ' - ' + (currentStudent.subject || 'عام');
     if(document.getElementById('sideAvatar')) document.getElementById('sideAvatar').textContent = currentStudent.name.charAt(0);
     document.title = `ملف الطالب: ${currentStudent.name}`;
     
-    // فتح التبويب الافتراضي
     switchSection('diagnostic');
 }
 
@@ -64,7 +61,7 @@ function switchSection(sectionId) {
 }
 
 // ============================================
-// 🔥 1. سجل التقدم والطباعة (Updated)
+// 🔥 1. سجل التقدم والطباعة
 // ============================================
 
 function loadProgressTab() {
@@ -206,13 +203,11 @@ function loadProgressTab() {
     `;
 }
 
-// دالة الطباعة الاحترافية (مع إصلاح خطأ الـ Null)
 function printProgressLog() {
     if (!currentStudent) { alert('بيانات الطالب غير جاهزة'); return; }
 
     const studentName = currentStudent.name || 'الطالب';
     const studentGrade = currentStudent.grade || '-';
-    // إصلاح الخطأ: التحقق من وجود subject، وإلا وضع قيمة افتراضية
     const studentSubject = currentStudent.subject || 'صعوبات تعلم'; 
     const tableContent = document.getElementById('printableProgressArea').innerHTML;
     const today = new Date().toLocaleDateString('ar-SA');
@@ -268,7 +263,6 @@ function printProgressLog() {
 
             <div class="footer-signatures">
                 <div>توقيع معلم صعوبات التعلم</div>
-               
                 <div>توقيع مدير المدرسة</div>
             </div>
             <script>
@@ -322,6 +316,7 @@ function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDa
     }
     return myEvents;
 }
+
 
 // ============================================
 // 🔥 2. بقية الأقسام (الدروس، الواجبات، التشخيصي، IEP)
@@ -402,24 +397,75 @@ function loadLessonsTab() {
     }).join('');
 }
 
+
+// 🔥 أداة التصحيح التلقائي وتحديث الدرجات في الاختبار التشخيصي 🔥
 function loadDiagnosticTab() {
-    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    const assignedTest = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic');
+    let studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    let assignedTestIndex = studentTests.findIndex(t => t.studentId == currentStudentId && t.type === 'diagnostic');
     
-    if (assignedTest) {
+    if (assignedTestIndex !== -1) {
+        let assignedTest = studentTests[assignedTestIndex];
         document.getElementById('noDiagnosticTest').style.display = 'none';
         const detailsDiv = document.getElementById('diagnosticTestDetails');
         detailsDiv.style.display = 'block';
+        
         const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
         const originalTest = allTests.find(t => t.id == assignedTest.testId);
         
+        let finalPercentage = assignedTest.score || 0;
+        
+        // تطبيق خوارزمية التصحيح التلقائي إذا كان الاختبار مكتمل
+        if (assignedTest.status === 'completed' && originalTest && originalTest.questions) {
+            let totalScore = 0;
+            let maxTotalScore = 0;
+            let needsSave = false;
+            
+            originalTest.questions.forEach(q => {
+                const maxQScore = q.passingScore || 1;
+                maxTotalScore += maxQScore;
+                
+                if (assignedTest.answers) {
+                    let ansObj = assignedTest.answers.find(a => a.questionId == q.id);
+                    if (ansObj) {
+                        // إذا لم تصحح من قبل، أو كانت 0 مع وجود إجابة، حاول تصحيحها تلقائياً
+                        if (ansObj.score === undefined || (ansObj.score === 0 && ansObj.answer && q.correctAnswer)) {
+                            let studentAns = String(ansObj.answer || ansObj.value || '').trim().toLowerCase();
+                            let correctAns = String(q.correctAnswer || '').trim().toLowerCase();
+                            
+                            if (studentAns === correctAns && studentAns !== '') {
+                                ansObj.score = maxQScore; // منح الدرجة الكاملة للسؤال
+                                needsSave = true;
+                            } else if (ansObj.score === undefined) {
+                                ansObj.score = 0;
+                                needsSave = true;
+                            }
+                        }
+                        totalScore += (ansObj.score || 0);
+                    }
+                }
+            });
+            
+            if (maxTotalScore > 0) {
+                finalPercentage = Math.round((totalScore / maxTotalScore) * 100);
+                if (assignedTest.score !== finalPercentage) {
+                    assignedTest.score = finalPercentage;
+                    needsSave = true;
+                }
+            }
+            
+            if (needsSave) {
+                studentTests[assignedTestIndex] = assignedTest;
+                localStorage.setItem('studentTests', JSON.stringify(studentTests));
+            }
+        }
+
         let statusBadge = '';
         let actionContent = '';
         if(assignedTest.status === 'completed') {
             statusBadge = '<span class="badge badge-success">مكتمل</span>';
             actionContent = `
                 <div style="margin-top:15px; padding:15px; background:#f0fff4; border:1px solid #c3e6cb; border-radius:5px;">
-                    <strong>الدرجة الحالية: ${assignedTest.score || 0}%</strong>
+                    <strong>الدرجة الحالية: <span style="font-size:1.3rem; color:#28a745;">${finalPercentage}%</span></strong>
                     <div style="margin-top:10px;">
                         <button class="btn btn-warning btn-sm" onclick="openReviewModal(${assignedTest.id})">🔍 مراجعة وتصحيح</button>
                         <button class="btn btn-primary btn-sm" onclick="autoGenerateLessons()">⚡ توليد الخطة والدروس</button>
@@ -533,7 +579,7 @@ function loadIEPTab() {
 }
 
 // ============================================
-// 🔥 3. الدوال المساعدة والنوافذ (تمت استعادتها)
+// 🔥 3. الدوال المساعدة والنوافذ 
 // ============================================
 
 function injectWordTableStyles() {
@@ -892,6 +938,8 @@ function formatAnswerDisplay(answerData) {
     if (typeof answerData === 'string' && answerData.startsWith('data:image')) return `<img src="${answerData}" style="max-width:100px; border:1px solid #ccc; border-radius:5px; margin-top:5px;">`;
     return answerData;
 }
+
+// نافذة مراجعة الواجبات
 function openReviewModal(assignmentId) {
     const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
     const assignment = studentAssignments.find(a => a.id == assignmentId);
@@ -928,9 +976,17 @@ function openReviewModal(assignmentId) {
             const studentAnsObj = assignment.answers ? assignment.answers.find(a => a.questionId == q.id) : null;
             let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
             const formattedAnswer = formatAnswerDisplay(rawAnswer);
-            const currentScore = studentAnsObj ? (studentAnsObj.score || 0) : 0;
-            const teacherNote = studentAnsObj ? (studentAnsObj.teacherNote || '') : '';
             const maxScore = q.passingScore || 1;
+            
+            // 🔥 تصحيح تلقائي للإجابات المتطابقة 🔥
+            let currentScore = studentAnsObj ? (studentAnsObj.score !== undefined ? studentAnsObj.score : 0) : 0;
+            if (studentAnsObj && studentAnsObj.score === undefined && q.correctAnswer) {
+                let sAns = String(rawAnswer || '').trim().toLowerCase();
+                let cAns = String(q.correctAnswer || '').trim().toLowerCase();
+                if (sAns === cAns && sAns !== '') currentScore = maxScore;
+            }
+
+            const teacherNote = studentAnsObj ? (studentAnsObj.teacherNote || '') : '';
             
             const item = document.createElement('div');
             item.className = 'review-question-item';
@@ -947,6 +1003,7 @@ function openReviewModal(assignmentId) {
     document.getElementById('reviewTestModal').classList.add('show');
 }
 
+// نافذة مراجعة الاختبار التشخيصي
 function openTestReviewModal(test) {
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const originalTest = allTests.find(t => t.id == test.testId);
@@ -959,9 +1016,18 @@ function openTestReviewModal(test) {
             const studentAnsObj = test.answers ? test.answers.find(a => a.questionId == q.id) : null;
             let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
             const formattedAnswer = formatAnswerDisplay(rawAnswer);
-            const currentScore = studentAnsObj ? (studentAnsObj.score || 0) : 0;
-            const teacherNote = studentAnsObj ? (studentAnsObj.teacherNote || '') : '';
             const maxScore = q.passingScore || 1;
+            
+            // 🔥 تصحيح تلقائي داخل مربعات المراجعة 🔥
+            let currentScore = studentAnsObj ? (studentAnsObj.score !== undefined ? studentAnsObj.score : 0) : 0;
+            if (studentAnsObj && studentAnsObj.score === undefined && q.correctAnswer) {
+                let sAns = String(rawAnswer || '').trim().toLowerCase();
+                let cAns = String(q.correctAnswer || '').trim().toLowerCase();
+                if (sAns === cAns && sAns !== '') currentScore = maxScore;
+            }
+
+            const teacherNote = studentAnsObj ? (studentAnsObj.teacherNote || '') : '';
+            
             const item = document.createElement('div');
             item.className = 'review-question-item';
             item.innerHTML = `
@@ -974,6 +1040,7 @@ function openTestReviewModal(test) {
     document.getElementById('reviewTestModal').classList.add('show');
 }
 
+// حفظ التصحيح والتعديلات
 function saveTestReview() {
     const id = parseInt(document.getElementById('reviewAssignmentId').value);
     
@@ -1019,6 +1086,8 @@ function saveTestReview() {
             }
             totalScore += newScore; maxTotalScore += (q.passingScore || 1);
         });
+        
+        // حساب وتحديث النسبة المئوية بعد حفظ التعديلات
         studentAssignments[idx].score = maxTotalScore > 0 ? Math.round((totalScore / maxTotalScore) * 100) : 0;
     }
     
@@ -1029,9 +1098,9 @@ function saveTestReview() {
     
     closeModal('reviewTestModal');
     if (isAssignment) loadAssignmentsTab();
-    else loadDiagnosticTab();
+    else loadDiagnosticTab(); // إعادة تحميل الصفحة لإظهار الدرجة الجديدة
     
-    alert('تم حفظ التصحيح');
+    alert('تم حفظ التصحيح واعتماد الدرجة بنجاح ✅');
 }
 
 function returnTestForResubmission() {
@@ -1051,7 +1120,7 @@ function returnTestForResubmission() {
         } else return;
     }
 
-    studentAssignments[idx].status = 'returned'; // أو 'pending'
+    studentAssignments[idx].status = 'returned'; 
     
     if (isAssignment) {
         localStorage.setItem('studentAssignments', JSON.stringify(studentAssignments));
@@ -1130,4 +1199,3 @@ function assignLibraryLesson() {
 function regenerateLessons() {
     autoGenerateLessons(); 
 }
-

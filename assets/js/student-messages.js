@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-messages.js
-// الوصف: شات الطالب (واجهة نظيفة + ترتيب ذكي للجوال + تثبيت الإدخال)
+// الوصف: شات الطالب (واجهة نظيفة + ترتيب ذكي للجوال + حل مشكلة قص الأزرار السفلية)
 // ============================================
 
 let attachmentData = null;
@@ -133,24 +133,24 @@ function injectChatStyles() {
         .emoji-item:hover { background: #f1f5f9; transform: scale(1.2); }
         
         /* 🔥 ==============================================
-           📱 تعديلات خاصة بنسخة الجوال فقط (ترتيب الأزرار بشكل قطعي)
+           📱 تعديلات خاصة بنسخة الجوال فقط (ترتيب الأزرار وحل مشكلة القص)
            ============================================== 🔥 */
         @media (max-width: 992px) { 
             .chat-container { 
-                /* منع التمدد خارج الشاشة */
-                height: calc(100vh - 130px) !important; 
+                /* ⬅️ تقليل الارتفاع بشكل كبير لرفع الصندوق بالكامل عن الحافة السفلية */
+                height: calc(100vh - 260px) !important; 
                 margin-top: 0; border-radius: 0; border: none; box-shadow: none; 
                 display: flex; flex-direction: column; 
             }
             .chat-main { height: 100%; display: flex; flex-direction: column; }
-            .messages-area { flex: 1 1 auto; overflow-y: auto; padding: 15px 10px; }
+            .messages-area { flex: 1 1 auto; overflow-y: auto; padding: 15px 10px; min-height: 0; }
             
-            /* منطقة الإدخال بالكامل تتجه للأسفل وتصبح عمودية */
+            /* منطقة الإدخال */
             .chat-input-area { 
                 flex: 0 0 auto; 
                 flex-direction: column !important; 
                 padding: 10px 10px 15px 10px !important; 
-                gap: 10px !important; 
+                gap: 15px !important; 
                 box-shadow: 0 -2px 10px rgba(0,0,0,0.05); 
             }
             
@@ -160,16 +160,15 @@ function injectChatStyles() {
             .btn-send-pill { padding: 10px 15px; font-size: 0.95rem; white-space: nowrap; margin: 0; }
             .btn-tool { width: 40px; height: 40px; font-size: 1.1rem; flex-shrink: 0; }
             
-            /* الصف الثاني (السفلي): الرموز والمرفقات والكاميرا ملاصقة للأسفل */
+            /* الصف الثاني (السفلي): الرموز والمرفقات والكاميرا */
             .chat-tools-bottom { 
                 width: 100%; 
                 justify-content: center; 
                 gap: 25px !important; 
-                border-top: 1px dashed #eee; 
-                padding-top: 10px; 
+                padding-bottom: 5px; /* رفع الأزرار قليلاً عن الحافة للضمان */
             }
 
-            .emoji-popup { bottom: 120px; right: 50%; transform: translateX(50%); width: 95%; max-width: 350px; }
+            .emoji-popup { bottom: 140px; right: 50%; transform: translateX(50%); width: 95%; max-width: 350px; }
             .recording-area { padding: 0 10px; }
         }
     `;

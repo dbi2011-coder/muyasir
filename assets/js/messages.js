@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/messages.js
-// الوصف: شات المعلم (نسخة الكمبيوتر + تنسيقات جوال معزولة تماماً وملتصقة بالأسفل)
+// الوصف: شات المعلم (تنسيقات متقدمة + قائمة خيارات محسنة + نافذة حذف رسالة احترافية)
 // ============================================
 
 let activeChatStudentId = null;
@@ -11,6 +11,9 @@ let mediaRecorder = null;
 let audioChunks = [];
 let recordingInterval = null;
 let recordingStartTime = null;
+
+// 🔥 متغير لحفظ رقم الرسالة المراد حذفها
+let pendingDeleteMsgId = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('messages.html')) {
@@ -31,8 +34,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!e.target.closest('.msg-options-btn')) {
                     document.querySelectorAll('.msg-dropdown').forEach(menu => menu.style.display = 'none');
                 }
-                const deleteModal = document.getElementById('deleteConfirmModal');
-                if (deleteModal && e.target === deleteModal) {
+                const deleteConvoModal = document.getElementById('deleteConfirmModal');
+                if (deleteConvoModal && e.target === deleteConvoModal) {
                     closeDeleteModal();
                 }
             });
@@ -118,10 +121,35 @@ function injectChatStyles() {
         .msg-time { font-size: 0.7rem; margin-top: 5px; opacity: 0.8; display:block; text-align:left; }
         .msg-attachment { margin-top: 8px; background: rgba(0,0,0,0.05); padding: 8px; border-radius: 8px; display: flex; align-items: center; gap: 5px; text-decoration: none; color: inherit; }
         .msg-attachment img { max-width: 200px; border-radius: 5px; }
+        
+        /* 🔥 الحل النهائي للقائمة المنسدلة لخيارات الرسالة (نفس الطالب) 🔥 */
         .msg-options-btn { position: absolute; top: 5px; left: 8px; color: inherit; opacity: 0.6; cursor: pointer; padding: 2px 5px; font-size: 1.1rem; transition: 0.2s; }
         .msg-options-btn:hover { opacity: 1; background: rgba(0,0,0,0.1); border-radius: 50%; }
-        .msg-dropdown { position: absolute; top: 25px; left: 5px; background: #fff; color: #333; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); width: 120px; z-index: 100; display: none; overflow: hidden; border: 1px solid #eee; }
-        .msg-dropdown-item { padding: 10px 15px; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.1s; }
+        .msg-dropdown { 
+            position: absolute; 
+            top: 30px; 
+            right: calc(100% - 35px) !important; 
+            left: auto !important; 
+            background: #fff; 
+            color: #333; 
+            border-radius: 8px; 
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15); 
+            min-width: 140px; 
+            z-index: 100; 
+            display: none; 
+            overflow: hidden; 
+            border: 1px solid #eee; 
+        }
+        .msg-dropdown-item { 
+            padding: 12px 25px 12px 15px !important; 
+            font-size: 0.95rem; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            transition: 0.2s; 
+            white-space: nowrap; 
+        }
         .msg-dropdown-item:hover { background: #f8f9fa; color: #007bff; }
         .msg-dropdown-item.delete:hover { color: #dc3545; background: #fff5f5; }
         
@@ -149,6 +177,7 @@ function injectChatStyles() {
         .emoji-item:hover { background: #f1f5f9; transform: scale(1.2); }
         .empty-chat { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #94a3b8; }
         
+        /* نافذة حذف المحادثة بالكامل (القديمة) */
         .custom-modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 20000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
         .custom-modal-box { background: #fff; padding: 25px; border-radius: 16px; width: 90%; max-width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
         .modal-icon-danger { width: 60px; height: 60px; background: #fee2e2; color: #dc2626; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; margin: 0 auto 15px; }
@@ -160,6 +189,26 @@ function injectChatStyles() {
         .btn-modal-cancel:hover { background: #e5e7eb; }
         .btn-modal-delete { background: #dc2626; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-modal-delete:hover { background: #b91c1c; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); }
+
+        /* 🔥 تنسيقات نافذة تأكيد حذف رسالة مفردة (مثل الطالب) 🔥 */
+        .custom-confirm-modal {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 999999; justify-content: center; align-items: center;
+            backdrop-filter: blur(4px);
+        }
+        .custom-confirm-content {
+            background: white; padding: 25px; border-radius: 15px; width: 90%; max-width: 350px;
+            text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.2); animation: popIn 0.3s ease;
+        }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .custom-confirm-icon { font-size: 3.5rem; color: #dc3545; margin-bottom: 15px; }
+        .custom-confirm-title { font-size: 1.3rem; font-weight: bold; margin-bottom: 10px; color: #333; }
+        .custom-confirm-text { color: #666; margin-bottom: 25px; font-size: 0.95rem; line-height: 1.5; }
+        .custom-confirm-buttons { display: flex; gap: 15px; justify-content: center; }
+        .btn-confirm-del { background: #dc3545; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1; transition: 0.2s; font-family: 'Tajawal'; }
+        .btn-confirm-del:hover { background: #c82333; }
+        .btn-confirm-cancel { background: #e2e8f0; color: #333; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; flex: 1; transition: 0.2s; font-family: 'Tajawal'; }
+        .btn-confirm-cancel:hover { background: #cbd5e1; }
 
         .mobile-only-btn { display: none; }
         #newMessageModal, .modal-backdrop, .modal { z-index: 10500 !important; }
@@ -350,6 +399,18 @@ function renderChatLayout() {
                 </div>
             </div>
         </div>
+
+        <div id="deleteSingleMsgModal" class="custom-confirm-modal">
+            <div class="custom-confirm-content">
+                <div class="custom-confirm-icon"><i class="fas fa-trash-alt"></i></div>
+                <div class="custom-confirm-title">تأكيد الحذف</div>
+                <div class="custom-confirm-text">هل أنت متأكد من حذف هذه الرسالة نهائياً؟<br>لا يمكن التراجع عن هذا الإجراء.</div>
+                <div class="custom-confirm-buttons">
+                    <button class="btn-confirm-cancel" onclick="closeSingleDeleteModal()">إلغاء</button>
+                    <button class="btn-confirm-del" onclick="executeSingleMessageDelete()">نعم، احذفها</button>
+                </div>
+            </div>
+        </div>
     `;
 }
 
@@ -496,7 +557,38 @@ function sendVoiceMessage(base64Audio) {
     loadChatMessages(activeChatStudentId); loadConversations();
 }
 function toggleMessageMenu(e, msgId) { e.stopPropagation(); document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none'); const menu = document.getElementById(`msgMenu_${msgId}`); if (menu) menu.style.display = 'block'; }
-function deleteChatMessage(messageId) { if (!confirm('حذف هذه الرسالة؟')) return; let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); teacherMsgs = teacherMsgs.filter(m => m.id !== messageId); localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs)); let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); studentMsgs = studentMsgs.filter(m => m.id !== (messageId + 1)); localStorage.setItem('studentMessages', JSON.stringify(studentMsgs)); loadChatMessages(activeChatStudentId); loadConversations(); }
+
+// 🔥 تعديل دالة حذف الرسالة المفردة لتستخدم النافذة الاحترافية 🔥
+function deleteChatMessage(messageId) { 
+    pendingDeleteMsgId = messageId;
+    document.querySelectorAll('.msg-dropdown').forEach(m => m.style.display = 'none');
+    document.getElementById('deleteSingleMsgModal').style.display = 'flex';
+}
+
+// 🔥 دالة لإغلاق نافذة حذف الرسالة المفردة
+function closeSingleDeleteModal() {
+    pendingDeleteMsgId = null;
+    document.getElementById('deleteSingleMsgModal').style.display = 'none';
+}
+
+// 🔥 تنفيذ الحذف الفعلي بعد التأكيد
+function executeSingleMessageDelete() {
+    if (!pendingDeleteMsgId || !activeChatStudentId) return;
+    const messageId = pendingDeleteMsgId;
+    
+    let teacherMsgs = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); 
+    teacherMsgs = teacherMsgs.filter(m => m.id !== messageId); 
+    localStorage.setItem('teacherMessages', JSON.stringify(teacherMsgs)); 
+    
+    let studentMsgs = JSON.parse(localStorage.getItem('studentMessages') || '[]'); 
+    studentMsgs = studentMsgs.filter(m => m.id !== (messageId + 1)); 
+    localStorage.setItem('studentMessages', JSON.stringify(studentMsgs)); 
+    
+    loadChatMessages(activeChatStudentId); 
+    loadConversations();
+    closeSingleDeleteModal(); // إغلاق النافذة
+}
+
 function startEditMessage(messageId) { const messages = JSON.parse(localStorage.getItem('teacherMessages') || '[]'); const msg = messages.find(m => m.id === messageId); if (!msg || msg.isVoice) return; const input = document.getElementById('chatInput'); input.value = msg.content; input.focus(); input.classList.add('editing'); editingMessageId = messageId; const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'تحديث <i class="fas fa-check"></i>'; sendBtn.classList.add('update-mode'); document.getElementById('cancelEditBtn').style.display = 'block'; }
 function cancelEdit() { editingMessageId = null; const input = document.getElementById('chatInput'); input.value = ''; input.classList.remove('editing'); const sendBtn = document.getElementById('sendBtn'); sendBtn.innerHTML = 'أرسل <i class="fas fa-paper-plane"></i>'; sendBtn.classList.remove('update-mode'); document.getElementById('cancelEditBtn').style.display = 'none'; }
 function handleChatAttachment(input) { if (input.files && input.files[0]) { const file = input.files[0]; const reader = new FileReader(); reader.onload = function(e) { attachmentData = e.target.result; document.getElementById('attachName').textContent = file.name; document.getElementById('attachmentPreviewBox').style.display = 'block'; }; reader.readAsDataURL(file); } }
@@ -538,5 +630,9 @@ window.deleteEntireConversation = deleteEntireConversation;
 window.exportChatToPDF = exportChatToPDF;
 window.closeDeleteModal = closeDeleteModal;
 window.confirmDeleteAction = confirmDeleteAction;
+
+// كشف الدوال الجديدة للويندو ليتم التعرف عليها من الأزرار
+window.closeSingleDeleteModal = closeSingleDeleteModal;
+window.executeSingleMessageDelete = executeSingleMessageDelete;
 
 console.log("تم تحميل ملف الرسائل بنجاح وبدون أخطاء!");

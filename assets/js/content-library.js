@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/content-library.js
-// الوصف: مكتبة المحتوى + إخفاء المحك للدروس + الشرط التربوي
+// الوصف: مكتبة المحتوى + إخفاء المحك للدروس + إصلاح تداخل إجابات التمارين والتقييم
 // ============================================
 
 if (!window.showError) {
@@ -107,9 +107,9 @@ function addQuestion() { addQuestionToContainer(document.getElementById('questio
 function addLessonQuestion(id) { addQuestionToContainer(document.getElementById(id), 'سؤال'); }
 function addHomeworkQuestion() { addQuestionToContainer(document.getElementById('homeworkQuestionsContainer'), 'سؤال'); }
 
-// 🔥 إخفاء مربع المحك للدروس وعرضه للاختبارات فقط 🔥
+// 🔥 استخدام المعرفات الفريدة (Unique IDs) لمنع تداخل الأسئلة 🔥
 function addQuestionToContainer(container, lbl, data = null) {
-    const idx = container.children.length; 
+    const qUniqueId = 'q_' + Date.now() + '_' + Math.floor(Math.random() * 10000); 
     const type = data ? data.type : 'mcq';
     const maxScore = data ? (data.maxScore || data.passingScore || 1) : 1;
     const passCriterion = data ? (data.passingCriterion || 80) : 80;
@@ -129,12 +129,12 @@ function addQuestionToContainer(container, lbl, data = null) {
     ` : '';
 
     const cardHtml = `
-    <div class="question-card" id="q-card-${idx}">
+    <div class="question-card" id="${qUniqueId}">
         <div class="q-stripe ${stripeClass}"></div>
         <div class="q-header">
             <div class="q-title">
-                <span class="badge badge-secondary">${idx + 1}</span>
-                <select class="form-control form-control-sm" style="width:200px;" onchange="renderQuestionInputs(this, ${idx})">
+                <span class="badge badge-secondary">${container.children.length + 1}</span>
+                <select class="form-control form-control-sm" style="width:200px;" onchange="renderQuestionInputs(this, '${qUniqueId}')">
                     <optgroup label="أسئلة قياسية">
                         <option value="mcq" ${type==='mcq'?'selected':''}>اختيار من متعدد</option>
                         <option value="mcq-media" ${type==='mcq-media'?'selected':''}>اختيار من متعدد (مرفق)</option>
@@ -166,12 +166,12 @@ function addQuestionToContainer(container, lbl, data = null) {
 
     container.insertAdjacentHTML('beforeend', cardHtml);
     const selectElem = container.lastElementChild.querySelector('select');
-    renderQuestionInputs(selectElem, idx, data);
+    renderQuestionInputs(selectElem, qUniqueId, data);
 }
 
-function renderQuestionInputs(selectElem, idx, data = null) {
+function renderQuestionInputs(selectElem, qUniqueId, data = null) {
     const type = selectElem.value;
-    const card = selectElem.closest('.question-card');
+    const card = document.getElementById(qUniqueId);
     const area = card.querySelector('.question-inputs-area');
     
     const stripe = card.querySelector('.q-stripe');
@@ -187,16 +187,16 @@ function renderQuestionInputs(selectElem, idx, data = null) {
         let html = '';
         let placeholder = type === 'drag-drop' ? 'مثال: رتب الكلمات وضعها في الفراغات...' : 'مثال: أكمل الفراغات التالية...';
         html += `<div class="form-group mb-3"><label class="q-label">عنوان السؤال الرئيسي</label><input type="text" class="form-control q-text" value="${data?.text || ''}" placeholder="${placeholder}"></div>`;
-        html += `<div id="paragraphs-container-${idx}" class="paragraphs-list" style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:15px;"></div>`;
+        html += `<div id="paragraphs-container-${qUniqueId}" class="paragraphs-list" style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:15px;"></div>`;
         let btnText = type === 'drag-drop' ? '<i class="fas fa-plus"></i> إضافة جملة أخرى' : '<i class="fas fa-plus"></i> إضافة فقرة';
-        html += `<button type="button" class="btn btn-sm btn-primary mt-2 mb-3" onclick="addParagraphInput(${idx}, '${type}')" style="width: 100%; border: 2px dashed #007bff; background: transparent; color: #007bff; font-weight: bold; padding: 10px;">${btnText}</button>`;
+        html += `<button type="button" class="btn btn-sm btn-primary mt-2 mb-3" onclick="addParagraphInput('${qUniqueId}', '${type}')" style="width: 100%; border: 2px dashed #007bff; background: transparent; color: #007bff; font-weight: bold; padding: 10px;">${btnText}</button>`;
         area.innerHTML = html;
 
         const items = data?.paragraphs || [];
-        if (items.length > 0) items.forEach(item => addParagraphInput(idx, type, item));
+        if (items.length > 0) items.forEach(item => addParagraphInput(qUniqueId, type, item));
         else {
-            if (type === 'drag-drop') { addParagraphInput(idx, type); setTimeout(() => { addParagraphInput(idx, type); }, 50); } 
-            else { addParagraphInput(idx, type); }
+            if (type === 'drag-drop') { addParagraphInput(qUniqueId, type); setTimeout(() => { addParagraphInput(qUniqueId, type); }, 50); } 
+            else { addParagraphInput(qUniqueId, type); }
         }
     } else {
         let html = '';
@@ -206,11 +206,14 @@ function renderQuestionInputs(selectElem, idx, data = null) {
                 const existingFile = data?.attachment || '';
                 html += `<div class="form-group mb-3 p-2 bg-light border rounded"><label class="q-label"><i class="fas fa-paperclip"></i> مرفق (صورة/فيديو/صوت)</label><input type="file" class="form-control-file q-attachment"><input type="hidden" class="q-existing-attachment" value="${existingFile}">${existingFile ? `<div class="attachment-preview mt-2"><img src="${existingFile}" style="max-height:80px; border:1px solid #ddd;"> (صورة محفوظة)</div>` : ''}</div>`;
             }
-            html += `<label class="q-label">الخيارات (حدد الإجابة الصحيحة)</label><div class="choices-container" id="choices-${idx}">`;
+            html += `<label class="q-label">الخيارات (حدد الإجابة الصحيحة)</label><div class="choices-container" id="choices-${qUniqueId}">`;
             const choices = data?.choices || ['خيار 1', 'خيار 2'];
-            const correct = data?.correctAnswer || 0;
-            choices.forEach((c, i) => { html += `<div class="choice-row"><input type="radio" name="correct-${idx}" value="${i}" ${i == correct ? 'checked' : ''}><input type="text" class="form-control q-choice" value="${c}" placeholder="الخيار ${i+1}"><button type="button" class="btn-remove-choice" onclick="this.parentElement.remove()">×</button></div>`; });
-            html += `</div><button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addChoiceInput(${idx})">+ إضافة خيار</button>`;
+            const correct = (data && data.correctAnswer !== undefined && data.correctAnswer !== null) ? parseInt(data.correctAnswer) : 0; 
+            choices.forEach((c, i) => { 
+                // 🔥 استخدام qUniqueId لضمان عدم تداخل الأزرار 🔥
+                html += `<div class="choice-row"><input type="radio" name="correct-${qUniqueId}" value="${i}" ${i === correct ? 'checked' : ''}><input type="text" class="form-control q-choice" value="${c}" placeholder="الخيار ${i+1}"><button type="button" class="btn-remove-choice" onclick="this.parentElement.remove()">×</button></div>`; 
+            });
+            html += `</div><button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addChoiceInput('${qUniqueId}')">+ إضافة خيار</button>`;
         } else if (type === 'open-ended') {
             html += `<div class="form-group"><label class="q-label">السؤال</label><textarea class="form-control q-text" rows="2">${data?.text || ''}</textarea></div><div class="form-group mt-2"><label class="q-label">الإجابة النموذجية (اختياري)</label><textarea class="form-control q-model-answer" rows="2">${data?.modelAnswer || ''}</textarea></div>`;
         }
@@ -218,16 +221,24 @@ function renderQuestionInputs(selectElem, idx, data = null) {
     }
 }
 
-function addParagraphInput(qIdx, type, itemData = null) {
-    const container = document.getElementById(`paragraphs-container-${qIdx}`);
+function addChoiceInput(qUniqueId) { 
+    const container = document.getElementById(`choices-${qUniqueId}`); 
+    const count = container.children.length; 
+    const div = document.createElement('div'); div.className = 'choice-row'; 
+    div.innerHTML = `<input type="radio" name="correct-${qUniqueId}" value="${count}"><input type="text" class="form-control q-choice" placeholder="الخيار الجديد"><button type="button" class="btn-remove-choice" onclick="this.parentElement.remove()">×</button>`; 
+    container.appendChild(div); 
+}
+
+function addParagraphInput(qUniqueId, type, itemData = null) {
+    const container = document.getElementById(`paragraphs-container-${qUniqueId}`);
     if(!container) return;
     const pIdx = Date.now() + Math.floor(Math.random() * 1000); 
     let innerHtml = '';
 
     if (type === 'drag-drop') {
         const text = itemData?.text || '';
-        innerHtml = `<label class="q-label" style="color:#007bff;">الجملة أو الفقرة:</label><div class="input-group mb-2"><input type="text" class="form-control p-text" id="drag-source-${qIdx}-${pIdx}" value="${text}" placeholder="مثال: ذهب محمد إلى المدرسة"><div class="input-group-append"><button class="btn btn-warning" type="button" onclick="initDragHighlighter(${qIdx}, ${pIdx})">تجهيز الفراغات</button></div></div><div id="highlighter-area-${qIdx}-${pIdx}" class="highlight-area" style="display:none; background:#fff; padding:10px; border-radius:5px; border:1px solid #ddd; margin-bottom:10px;"></div><input type="hidden" class="p-gaps-data" id="gaps-data-${qIdx}-${pIdx}" value='${itemData?.gaps ? JSON.stringify(itemData.gaps) : ''}'>`;
-        if (text && itemData?.gaps) { setTimeout(() => initDragHighlighter(qIdx, pIdx, itemData.gaps), 100); }
+        innerHtml = `<label class="q-label" style="color:#007bff;">الجملة أو الفقرة:</label><div class="input-group mb-2"><input type="text" class="form-control p-text" id="drag-source-${qUniqueId}-${pIdx}" value="${text}" placeholder="مثال: ذهب محمد إلى المدرسة"><div class="input-group-append"><button class="btn btn-warning" type="button" onclick="initDragHighlighter('${qUniqueId}', '${pIdx}')">تجهيز الفراغات</button></div></div><div id="highlighter-area-${qUniqueId}-${pIdx}" class="highlight-area" style="display:none; background:#fff; padding:10px; border-radius:5px; border:1px solid #ddd; margin-bottom:10px;"></div><input type="hidden" class="p-gaps-data" id="gaps-data-${qUniqueId}-${pIdx}" value='${itemData?.gaps ? JSON.stringify(itemData.gaps) : ''}'>`;
+        if (text && itemData?.gaps) { setTimeout(() => initDragHighlighter(qUniqueId, pIdx, itemData.gaps), 100); }
     } else if (type === 'ai-reading' || type === 'manual-reading') {
         innerHtml = `<label class="q-label">فقرة القراءة</label><textarea class="form-control p-text" rows="2">${itemData?.text || ''}</textarea>`;
     } else if (type === 'ai-spelling' || type === 'manual-spelling') {
@@ -237,49 +248,48 @@ function addParagraphInput(qIdx, type, itemData = null) {
     }
 
     const div = document.createElement('div');
-    div.className = 'paragraph-item'; div.id = `p-item-${qIdx}-${pIdx}`;
+    div.className = 'paragraph-item'; div.id = `p-item-${qUniqueId}-${pIdx}`;
     div.style.cssText = "position:relative; background:#fff; border:1px solid #eee; padding:15px; border-radius:8px; margin-bottom:15px; box-shadow:0 2px 5px rgba(0,0,0,0.02);";
     div.innerHTML = innerHtml + `<button type="button" class="btn-remove-paragraph" onclick="this.parentElement.remove()" style="position:absolute; top:5px; left:5px; background:#ffebee; border:none; color:#dc3545; border-radius:50%; width:25px; height:25px; display:flex; align-items:center; justify-content:center; cursor:pointer;">×</button>`;
     container.appendChild(div);
 }
 
-function initDragHighlighter(qIdx, pIdx, savedGaps = null) {
-    const sourceInput = document.getElementById(`drag-source-${qIdx}-${pIdx}`);
-    const area = document.getElementById(`highlighter-area-${qIdx}-${pIdx}`);
+function initDragHighlighter(qUniqueId, pIdx, savedGaps = null) {
+    const sourceInput = document.getElementById(`drag-source-${qUniqueId}-${pIdx}`);
+    const area = document.getElementById(`highlighter-area-${qUniqueId}-${pIdx}`);
     const text = sourceInput.value.trim();
     if(!text) { alert('اكتب الجملة أولاً'); return; }
 
     area.style.display = 'block';
     area.innerHTML = `
-        <div style="margin-bottom:10px;"><p id="sel-text-${qIdx}-${pIdx}" style="font-size:1.3rem; letter-spacing:1px; line-height:1.8;">${text}</p></div>
-        <button type="button" class="btn btn-warning btn-sm" onclick="markGap(${qIdx}, ${pIdx})"><i class="fas fa-highlighter"></i> تحويل المحدد لفراغ</button>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="resetGap(${qIdx}, ${pIdx})">إعادة تعيين</button>
-        <div id="gap-prev-${qIdx}-${pIdx}" class="gap-preview mt-2"></div>
+        <div style="margin-bottom:10px;"><p id="sel-text-${qUniqueId}-${pIdx}" style="font-size:1.3rem; letter-spacing:1px; line-height:1.8;">${text}</p></div>
+        <button type="button" class="btn btn-warning btn-sm" onclick="markGap('${qUniqueId}', '${pIdx}')"><i class="fas fa-highlighter"></i> تحويل المحدد لفراغ</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="resetGap('${qUniqueId}', '${pIdx}')">إعادة تعيين</button>
+        <div id="gap-prev-${qUniqueId}-${pIdx}" class="gap-preview mt-2"></div>
     `;
 
     if(savedGaps) {
-        const preview = document.getElementById(`gap-prev-${qIdx}-${pIdx}`);
+        const preview = document.getElementById(`gap-prev-${qUniqueId}-${pIdx}`);
         preview.innerHTML = '<strong>الفراغات:</strong> ' + savedGaps.map(g => `<span class="badge badge-warning m-1" style="font-size:1rem;">${g.dragItem}</span>`).join(' ');
     }
 }
 
-function markGap(qIdx, pIdx) {
+function markGap(qUniqueId, pIdx) {
     const selection = window.getSelection(); const selectedText = selection.toString();
     if (!selectedText) { alert('حدد النص أولاً'); return; }
     let processed = selectedText;
     if (selectedText.length === 1 && /[جحخعغفقثصضشسيبلتنمكطظ]/.test(selectedText)) { processed = 'ـ' + selectedText + 'ـ'; }
-    const preview = document.getElementById(`gap-prev-${qIdx}-${pIdx}`);
+    const preview = document.getElementById(`gap-prev-${qUniqueId}-${pIdx}`);
     const span = document.createElement('span'); span.className = 'badge badge-warning m-1'; span.style.fontSize = '1rem'; span.innerText = processed;
     preview.appendChild(span);
-    const hiddenInput = document.getElementById(`gaps-data-${qIdx}-${pIdx}`);
+    const hiddenInput = document.getElementById(`gaps-data-${qUniqueId}-${pIdx}`);
     let data = hiddenInput.value ? JSON.parse(hiddenInput.value) : [];
     data.push({ original: selectedText, dragItem: processed });
     hiddenInput.value = JSON.stringify(data);
     selection.removeAllRanges();
 }
 
-function resetGap(qIdx, pIdx) { document.getElementById(`gap-prev-${qIdx}-${pIdx}`).innerHTML = ''; document.getElementById(`gaps-data-${qIdx}-${pIdx}`).value = ''; }
-function addChoiceInput(idx) { const container = document.getElementById(`choices-${idx}`); const count = container.children.length; const div = document.createElement('div'); div.className = 'choice-row'; div.innerHTML = `<input type="radio" name="correct-${idx}" value="${count}"><input type="text" class="form-control q-choice" placeholder="الخيار ${count+1}"><button type="button" class="btn-remove-choice" onclick="this.parentElement.remove()">×</button>`; container.appendChild(div); }
+function resetGap(qUniqueId, pIdx) { document.getElementById(`gap-prev-${qUniqueId}-${pIdx}`).innerHTML = ''; document.getElementById(`gaps-data-${qUniqueId}-${pIdx}`).value = ''; }
 function readFileAsBase64(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error); reader.readAsDataURL(file); }); }
 
 async function collectQuestionsFromContainer(id) {
@@ -290,7 +300,6 @@ async function collectQuestionsFromContainer(id) {
         const type = card.querySelector('select').value;
         const maxScoreVal = parseFloat(card.querySelector('.max-score').value) || 1;
         
-        // المحك يتم استخراجه فقط إذا كان موجوداً في الواجهة (للاختبارات)
         const criterionInput = card.querySelector('.passing-criterion');
         const criterionVal = criterionInput ? (parseFloat(criterionInput.value) || 80) : 80;
         
@@ -327,7 +336,7 @@ async function collectQuestionsFromContainer(id) {
 }
 
 // =========================================================
-// 🔥 دوال التنقل داخل الدرس والاستيراد والتصدير 🔥
+// 🔥 التنقل والحفظ 🔥
 // =========================================================
 
 function switchLessonStep(step) {

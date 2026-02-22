@@ -1,7 +1,84 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة الطالب + تعديل عبارة سجل المتابعة (لم يتحقق - يعاد الدرس)
+// الوصف: إدارة الطالب + حساب نسبة التقدم الفعلية بناءً على أهداف الخطة (IEP)
 // ============================================
+
+// 🔥 المحرك الجديد لحساب وتحديث نسبة تقدم الطالب آلياً 🔥
+function calculateAndSetStudentProgress() {
+    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    const completedDiagnostic = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic' && t.status === 'completed');
+    
+    let progressPct = 0;
+    let totalGoals = 0;
+    let achievedGoals = 0;
+
+    if (completedDiagnostic) {
+        const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+        const originalTest = allTests.find(t => t.id == completedDiagnostic.testId);
+        const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
+        const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+
+        let needsObjects = [];
+
+        // 1. تحديد نقاط الاحتياج (الأهداف المطلوبة)
+        if (originalTest && originalTest.questions) {
+            originalTest.questions.forEach(q => {
+                const ans = completedDiagnostic.answers ? completedDiagnostic.answers.find(a => a.questionId == q.id) : null;
+                const score = ans ? parseFloat(ans.score || 0) : 0;
+                const maxScore = parseFloat(q.maxScore || q.passingScore || q.points || q.score || 1);
+                const criterion = parseFloat(q.passingCriterion || 80); 
+                let percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
+
+                if (q.linkedGoalId && percentage < criterion) {
+                    const obj = allObjectives.find(o => o.id == q.linkedGoalId);
+                    if (obj && !needsObjects.find(o => o.id == obj.id)) {
+                        needsObjects.push(obj);
+                    }
+                }
+            });
+        }
+
+        // 2. تجميع الأهداف التدريسية المجتازة
+        const completedLessonsMap = {};
+        studentLessons.forEach(l => { 
+            if (l.studentId == currentStudentId && (l.status === 'completed' || l.status === 'accelerated')) {
+                completedLessonsMap[String(l.objective).trim()] = true;
+            }
+        });
+
+        // 3. حساب الإجمالي والمتحقق
+        needsObjects.forEach(obj => {
+            if (obj.instructionalGoals) {
+                obj.instructionalGoals.forEach(iGoal => {
+                    totalGoals++;
+                    if (completedLessonsMap[String(iGoal).trim()]) {
+                        achievedGoals++;
+                    }
+                });
+            }
+        });
+
+        // 4. استخراج النسبة المئوية
+        if (totalGoals > 0) {
+            progressPct = Math.round((achievedGoals / totalGoals) * 100);
+        } else if (needsObjects.length === 0 && originalTest) {
+            progressPct = 100; // اجتاز التقييم بالكامل (لا توجد خطة احتياج)
+        }
+    }
+
+    // 5. تحديث كافة أشرطة ونصوص التقدم في واجهة الـ HTML ديناميكياً
+    document.querySelectorAll('.progress-percentage, .progress-text, #progressPercentage, #studentProgressText, #sideProgress').forEach(el => {
+        el.innerText = progressPct + '%';
+    });
+    document.querySelectorAll('.progress-bar, .progress-bar-fill, #studentProgressBar, #sideProgressBar').forEach(el => {
+        el.style.width = progressPct + '%';
+        el.setAttribute('aria-valuenow', progressPct);
+    });
+
+    return { progressPct, achievedGoals, totalGoals };
+}
+
+// -------------------------------------------------------------
 
 function calculateAutoGrade(q, studentAnsObj) {
     let maxScore = parseFloat(q.maxScore || q.passingScore || q.points || q.score || 1);
@@ -52,6 +129,10 @@ function loadStudentData() {
     if(document.getElementById('sideGrade')) document.getElementById('sideGrade').textContent = currentStudent.grade + ' - ' + (currentStudent.subject || 'عام');
     if(document.getElementById('sideAvatar')) document.getElementById('sideAvatar').textContent = currentStudent.name.charAt(0);
     document.title = `ملف الطالب: ${currentStudent.name}`;
+    
+    // 🔥 تحديث شريط التقدم عند تحميل الصفحة 🔥
+    calculateAndSetStudentProgress();
+
     switchSection('diagnostic');
 }
 
@@ -67,7 +148,7 @@ function switchSection(sectionId) {
     if (sectionId === 'progress') loadProgressTab();
 }
 
-// ---------------- سجل التقدم المحدث ----------------
+// ---------------- سجل التقدم ----------------
 function loadProgressTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]'); let adminEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]'); const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     let myList = studentLessons.filter(l => l.studentId == currentStudentId); const container = document.getElementById('section-progress');
@@ -97,11 +178,7 @@ function loadProgressTab() {
             else if (log.status === 'completed') { displayStatus = '<span class="text-success font-weight-bold">✔ متحقق</span>'; rowClass = 'bg-success-light'; }
             else if (log.status === 'accelerated') { displayStatus = '<span class="text-warning font-weight-bold">⚡ تسريع</span>'; rowClass = 'bg-warning-light'; }
             else if (log.status === 'pending_review') { displayStatus = '<span class="text-warning font-weight-bold">⏳ بانتظار تصحيح</span>'; rowClass = 'bg-warning-light'; }
-            // 🔥 دمج جميع حالات الإخفاق والشفاء ببديل تحت عبارة (لم يتحقق - يعاد الدرس) رسمياً 🔥
-            else if (log.status === 'passed_by_alternative' || log.status === 'struggling' || log.status === 'returned') { 
-                displayStatus = '<span class="text-danger font-weight-bold">لم يتحقق - يعاد الدرس</span>'; 
-                rowClass = 'bg-danger-light'; 
-            }
+            else if (log.status === 'passed_by_alternative' || log.status === 'struggling' || log.status === 'returned') { displayStatus = '<span class="text-danger font-weight-bold">لم يتحقق - يعاد الدرس</span>'; rowClass = 'bg-danger-light'; }
             
             if (log.cachedType) { if (log.cachedType === 'basic') displayType = 'أساسية'; else if (log.cachedType === 'compensation') { displayType = '<span class="text-primary font-weight-bold">تعويضية</span>'; balance++; } else if (log.cachedType === 'additional') { displayType = 'إضافية'; balance++; } } else { displayType = 'أساسية'; }
         }
@@ -221,6 +298,8 @@ function loadIEPTab() {
 
     iepContainer.innerHTML = `<style>@media print { body * { visibility: hidden; } .iep-printable, .iep-printable * { visibility: visible; } .iep-printable { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; border:none; } .no-print { display: none !important; } .print-footer-container { margin-top: 50px; text-align: center; border-top: 1px solid #ccc; padding-top: 10px; display: block !important; } }</style><div class="iep-printable" style="background:#fff; padding:20px; border:1px solid #ccc;"><div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #333;"><h3>الخطة التربوية الفردية</h3></div><table class="table table-bordered mb-4"><tr><td style="background:#f5f5f5; width:15%;">اسم الطالب:</td><td style="width:35%;">${currentStudent.name}</td><td style="background:#f5f5f5; width:15%;">الصف:</td><td>${currentStudent.grade}</td></tr><tr><td style="background:#f5f5f5;">المادة:</td><td>${subjectName}</td><td style="background:#f5f5f5;">التاريخ:</td><td>${new Date().toLocaleDateString('ar-SA')}</td></tr></table><h5>جدول الحصص:</h5><table class="table table-bordered text-center mb-4"><thead><tr style="background:#f5f5f5;"><th>الأحد</th><th>الاثنين</th><th>الثلاثاء</th><th>الأربعاء</th><th>الخميس</th></tr></thead><tbody><tr>${scheduleCells}</tr></tbody></table><div style="display:flex; gap:20px; margin-bottom:20px;"><div style="flex:1; border:1px solid #ddd; padding:10px;"><h6 style="background:#28a745; color:white; padding:5px; text-align:center;">نقاط القوة</h6><ul>${strengthHTML}</ul></div><div style="flex:1; border:1px solid #ddd; padding:10px;"><h6 style="background:#dc3545; color:white; padding:5px; text-align:center;">نقاط الاحتياج</h6><ul>${needsHTML}</ul></div></div><div class="alert alert-secondary text-center mb-4">الهدف بعيد المدى: أن يتقن التلميذ مهارات مادة <strong>${subjectName}</strong> بنسبة 80%</div><h5>الأهداف التدريسية:</h5><table class="table table-bordered"><thead style="background:#333; color:white;"><tr><th>#</th><th>الهدف</th><th>التحقق</th></tr></thead><tbody>${objectivesRows}</tbody></table><div class="print-footer-container"><p class="print-footer-text">تم طباعة الخطة من نظام ميسر التعلم - معلم: أ/ صالح عبد العزيز العجلان</p></div></div>`;
     const topPrintBtn = document.querySelector('#section-iep .content-header button'); if(topPrintBtn) topPrintBtn.setAttribute('onclick', 'window.print()');
+    
+    calculateAndSetStudentProgress(); // تحديث شريط التقدم 
 }
 
 // ---------------- الدروس ----------------
@@ -273,6 +352,8 @@ function loadLessonsTab() {
 
         return `<div class="content-card" style="${cardStyle} position:relative;"><div style="position:absolute; top:50px; left:10px; display:flex; z-index:5;">${orderBtns}</div><div style="display:flex; justify-content:space-between;"><div style="margin-right:20px;"><h4 style="margin:0;">${index+1}. ${l.title}</h4><small class="text-muted">${l.objective}</small></div><div>${statusBadge}</div></div><div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;"><div class="lesson-actions" style="width:100%; display:flex; gap:5px; margin-top:25px;">${controls}<button class="btn btn-danger btn-sm" onclick="deleteLesson(${l.id})">حذف</button></div></div></div>`;
     }).join('');
+    
+    calculateAndSetStudentProgress(); // تحديث شريط التقدم 
 }
 
 function autoGenerateLessons() {

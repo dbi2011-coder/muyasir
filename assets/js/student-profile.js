@@ -1,13 +1,13 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب + التقييم الجزئي + إصلاح التصحيح الآلي الجذري للخيارات والسحب والإفلات
+// الوصف: إدارة ملف الطالب + تقييم القراءة + حساب الخطط بناءً على (محك الاجتياز %)
 // ============================================
 
 // =========================================================
 // 🔥 محرك التصحيح الآلي المركزي (يحل مشكلة الخيار 0 والتقييم الجزئي) 🔥
 // =========================================================
 function calculateAutoGrade(q, studentAnsObj) {
-    let maxScore = parseFloat(q.passingScore || q.points || q.score || 1);
+    let maxScore = parseFloat(q.maxScore || q.passingScore || q.points || q.score || 1);
     if(isNaN(maxScore) || maxScore <= 0) maxScore = 1;
     
     let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
@@ -50,11 +50,11 @@ function calculateAutoGrade(q, studentAnsObj) {
         if (sAns === cAns && sAns !== '') return maxScore;
     }
 
-    return 0; // افتراضي إذا كان السؤال يحتاج لتقييم المعلم اليدوي
+    return 0; 
 }
 
 // =========================================================
-// 🔥 نظام النوافذ المنبثقة الاحترافية 🔥
+// 🔥 نظام النوافذ المنبثقة الاحترافية (Toasts & Modals) 🔥
 // =========================================================
 if (!window.showConfirmModal) {
     window.showConfirmModal = function(message, onConfirm) {
@@ -153,7 +153,6 @@ if (!window.showInfoModal) {
         };
     };
 }
-// =========================================================
 
 let currentStudentId = null;
 let currentStudent = null;
@@ -741,7 +740,7 @@ function buildTeacherReviewItem(q, index, studentAnsObj) {
     let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
     let evaluations = (studentAnsObj && studentAnsObj.evaluations) ? studentAnsObj.evaluations : {};
     
-    let maxScore = parseFloat(q.passingScore || q.points || q.score || 1);
+    let maxScore = parseFloat(q.maxScore || q.passingScore || q.points || q.score || 1);
     if(isNaN(maxScore) || maxScore <= 0) maxScore = 1;
     
     let currentScore = studentAnsObj ? studentAnsObj.score : undefined;
@@ -929,7 +928,7 @@ function recalculateScore(qId) {
     }
 }
 
-// 🔥 استخدام دالة التصحيح المركزية في شاشة المراجعة الأساسية 🔥
+// 🔥 استخدام دالة التصحيح المركزية في شاشة المراجعة الأساسية (مع حساب المحك) 🔥
 function loadDiagnosticTab() {
     let studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     let assignedTestIndex = studentTests.findIndex(t => t.studentId == currentStudentId && t.type === 'diagnostic');
@@ -951,7 +950,7 @@ function loadDiagnosticTab() {
             let needsSave = false;
             
             originalTest.questions.forEach(q => {
-                let maxQScore = parseFloat(q.passingScore || q.points || q.score || 1);
+                let maxQScore = parseFloat(q.maxScore || q.passingScore || q.points || q.score || 1);
                 if (isNaN(maxQScore) || maxQScore <= 0) maxQScore = 1;
                 maxTotalScore += maxQScore;
                 
@@ -1095,6 +1094,7 @@ function loadLessonsTab() {
     }).join('');
 }
 
+// 🔥 حساب الخطة الفردية بناءً على (محك الاجتياز) بدلاً من الدرجة الكلية 🔥
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
     const wordModel = document.querySelector('.iep-word-model');
@@ -1122,16 +1122,20 @@ function loadIEPTab() {
         originalTest.questions.forEach(q => {
             const ans = completedDiagnostic.answers ? completedDiagnostic.answers.find(a => a.questionId == q.id) : null;
             const score = ans ? parseFloat(ans.score || 0) : 0;
-            const passing = parseFloat(q.passingScore || q.points || q.score || 1);
+            const maxScore = parseFloat(q.maxScore || q.passingScore || q.points || q.score || 1);
+            const criterion = parseFloat(q.passingCriterion || 80);
+            
+            let percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
+
             if (q.linkedGoalId) {
                 const obj = allObjectives.find(o => o.id == q.linkedGoalId);
                 if (obj) {
-                    if (score >= passing) {
+                    if (percentage >= criterion) {
                         if (!strengthHTML.includes(obj.shortTermGoal)) strengthHTML += `<li>${obj.shortTermGoal}</li>`;
                     } else {
                         if (!needsObjects.find(o => o.id == obj.id)) {
                             needsObjects.push(obj);
-                            needsHTML += `<li>${obj.shortTermGoal}</li>`;
+                            needsHTML += `<li>${obj.shortTermGoal} <small class="text-danger">(${Math.round(percentage)}%)</small></li>`;
                         }
                     }
                 }
@@ -1379,7 +1383,7 @@ function saveTestReview() {
             });
 
             totalScore += newScore; 
-            let maxQScore = parseFloat(q.passingScore || q.points || q.score || 1);
+            let maxQScore = parseFloat(q.maxScore || q.passingScore || q.points || q.score || 1);
             if (isNaN(maxQScore) || maxQScore <= 0) maxQScore = 1;
             maxTotalScore += maxQScore;
         });
@@ -1430,6 +1434,81 @@ function returnTestForResubmission() {
         
         closeModal('reviewTestModal');
         showSuccess('تمت إعادة الاختبار للطالب بنجاح');
+    });
+}
+
+// 🔥 استخدام (محك الاجتياز) في توليد الخطة التلقائية 🔥
+function autoGenerateLessons() {
+    showConfirmModal('توليد الخطة العلاجية تلقائياً؟<br><small>سيتم حذف الدروس الحالية وتوليد قائمة جديدة بناءً على نتيجة التشخيص (محك الاجتياز).</small>', function() {
+        const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+        const compDiag = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic' && t.status === 'completed');
+        
+        if (!compDiag) { showError('يجب إكمال وتصحيح الاختبار التشخيصي أولاً.'); return; }
+        
+        const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
+        const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+        const allLibraryAssignments = JSON.parse(localStorage.getItem('assignments') || '[]'); 
+        const originalTest = JSON.parse(localStorage.getItem('tests') || '[]').find(t => t.id == compDiag.testId);
+
+        let newLessons = [];
+        let newAssignments = []; 
+
+        if(originalTest && originalTest.questions) {
+            originalTest.questions.forEach(q => {
+                const ans = compDiag.answers ? compDiag.answers.find(a => a.questionId == q.id) : null;
+                const score = ans ? parseFloat(ans.score || 0) : 0;
+                const maxScore = parseFloat(q.maxScore || q.passingScore || q.points || q.score || 1);
+                const criterion = parseFloat(q.passingCriterion || 80);
+                
+                const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
+                
+                // إذا لم يتجاوز الطالب المحك، يحتاج إلى درس
+                if(percentage < criterion && q.linkedGoalId) {
+                    const obj = allObjectives.find(o => o.id == q.linkedGoalId);
+                    if(obj) {
+                        const matches = allLessons.filter(l => l.linkedInstructionalGoal === obj.shortTermGoal || (obj.instructionalGoals||[]).includes(l.linkedInstructionalGoal));
+                        
+                        matches.forEach(m => {
+                            if(!newLessons.find(x => x.originalLessonId == m.id)) {
+                                newLessons.push({
+                                    id: Date.now() + Math.floor(Math.random()*10000),
+                                    studentId: currentStudentId, title: m.title, objective: m.linkedInstructionalGoal,
+                                    originalLessonId: m.id, status: 'pending', assignedDate: new Date().toISOString()
+                                });
+                                
+                                const linkedHomework = allLibraryAssignments.find(h => h.linkedInstructionalGoal === m.linkedInstructionalGoal);
+
+                                if (linkedHomework) {
+                                    newAssignments.push({
+                                        id: Date.now() + Math.floor(Math.random()*10000) + 1,
+                                        studentId: currentStudentId,
+                                        title: linkedHomework.title,
+                                        status: 'pending',
+                                        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                                        assignedDate: new Date().toISOString()
+                                    });
+                                } 
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        if(newLessons.length === 0) { showInfoModal('الخطة العلاجية', 'الطالب متفوق! لقد تجاوز محك الاجتياز في جميع المهارات، ولا توجد نقاط ضعف تتطلب خطة علاجية.'); return; }
+        
+        saveAndReindexLessons(newLessons, true);
+        
+        if (newAssignments.length > 0) {
+            let currentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
+            currentAssignments = [...currentAssignments.filter(a => a.studentId != currentStudentId), ...newAssignments];
+            localStorage.setItem('studentAssignments', JSON.stringify(currentAssignments));
+            showSuccess(`تم توليد ${newLessons.length} درس و ${newAssignments.length} واجب مرتبط بناءً على الإخفاق في محك الاجتياز.`);
+        } else {
+            showSuccess(`تم توليد ${newLessons.length} درس بناءً على الإخفاق في محك الاجتياز.`);
+        }
+
+        if (document.getElementById('section-assignments').classList.contains('active')) loadAssignmentsTab();
     });
 }
 

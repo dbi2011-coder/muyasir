@@ -1,20 +1,13 @@
 // ============================================
 // 📁 المسار: assets/js/content-library.js
-// الوصف: مكتبة المحتوى + تحديد محك الاجتياز (%) للأسئلة + النسخة الكاملة بدون أي نقص
+// الوصف: مكتبة المحتوى + إخفاء المحك للدروس + الشرط التربوي
 // ============================================
 
-// =========================================================
-// 🔥 نظام النوافذ والإشعارات 🔥
-// =========================================================
 if (!window.showError) {
     window.showError = function(message) {
         let toast = document.getElementById('globalErrorToast');
         if (!toast) {
-            const toastHtml = `
-                <div id="globalErrorToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#dc3545; color:white; padding:15px 25px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.2); z-index:999999; font-weight:bold; font-family:'Tajawal'; align-items:center; gap:10px; max-width:90%; text-align:center;">
-                    <i class="fas fa-exclamation-triangle" style="font-size:1.5rem;"></i> <span>${message}</span>
-                </div>
-            `;
+            const toastHtml = `<div id="globalErrorToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#dc3545; color:white; padding:15px 25px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.2); z-index:999999; font-weight:bold; font-family:'Tajawal'; align-items:center; gap:10px; max-width:90%; text-align:center;"><i class="fas fa-exclamation-triangle" style="font-size:1.5rem;"></i> <span>${message}</span></div>`;
             document.body.insertAdjacentHTML('beforeend', toastHtml);
             toast = document.getElementById('globalErrorToast');
         }
@@ -28,11 +21,7 @@ if (!window.showSuccess) {
     window.showSuccess = function(message) {
         let toast = document.getElementById('globalSuccessToast');
         if (!toast) {
-            const toastHtml = `
-                <div id="globalSuccessToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#10b981; color:white; padding:12px 25px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.2); z-index:999999; font-weight:bold; font-family:'Tajawal'; align-items:center; gap:10px;">
-                    <i class="fas fa-check-circle"></i> <span id="globalSuccessMessage"></span>
-                </div>
-            `;
+            const toastHtml = `<div id="globalSuccessToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#10b981; color:white; padding:12px 25px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.2); z-index:999999; font-weight:bold; font-family:'Tajawal'; align-items:center; gap:10px;"><i class="fas fa-check-circle"></i> <span id="globalSuccessMessage"></span></div>`;
             document.body.insertAdjacentHTML('beforeend', toastHtml);
             toast = document.getElementById('globalSuccessToast');
         }
@@ -46,31 +35,14 @@ if (!window.showConfirmModal) {
     window.showConfirmModal = function(message, onConfirm) {
         let modal = document.getElementById('globalConfirmModal');
         if (!modal) {
-            const modalHtml = `
-                <div id="globalConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999999; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
-                    <div style="background:white; padding:25px; border-radius:15px; width:90%; max-width:350px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.2); animation:popIn 0.3s ease;">
-                        <div style="font-size:3.5rem; color:#dc3545; margin-bottom:15px;"><i class="fas fa-exclamation-circle"></i></div>
-                        <div style="font-size:1.3rem; font-weight:bold; margin-bottom:10px; color:#333;">تأكيد الإجراء</div>
-                        <div id="globalConfirmMessage" style="color:#666; margin-bottom:25px; font-size:0.95rem; line-height:1.6;"></div>
-                        <div style="display:flex; gap:15px; justify-content:center;">
-                            <button id="globalConfirmCancel" style="background:#e2e8f0; color:#333; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; transition:0.2s; font-family:'Tajawal';">إلغاء</button>
-                            <button id="globalConfirmOk" style="background:#dc3545; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; transition:0.2s; font-family:'Tajawal';">نعم، متأكد</button>
-                        </div>
-                    </div>
-                </div>
-            `;
+            const modalHtml = `<div id="globalConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999999; justify-content:center; align-items:center; backdrop-filter:blur(4px);"><div style="background:white; padding:25px; border-radius:15px; width:90%; max-width:350px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.2); animation:popIn 0.3s ease;"><div style="font-size:3.5rem; color:#dc3545; margin-bottom:15px;"><i class="fas fa-exclamation-circle"></i></div><div style="font-size:1.3rem; font-weight:bold; margin-bottom:10px; color:#333;">تأكيد الإجراء</div><div id="globalConfirmMessage" style="color:#666; margin-bottom:25px; font-size:0.95rem; line-height:1.6;"></div><div style="display:flex; gap:15px; justify-content:center;"><button id="globalConfirmCancel" style="background:#e2e8f0; color:#333; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; transition:0.2s; font-family:'Tajawal';">إلغاء</button><button id="globalConfirmOk" style="background:#dc3545; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; transition:0.2s; font-family:'Tajawal';">نعم، متأكد</button></div></div></div>`;
             document.body.insertAdjacentHTML('beforeend', modalHtml);
             modal = document.getElementById('globalConfirmModal');
         }
         document.getElementById('globalConfirmMessage').innerHTML = message;
         modal.style.display = 'flex';
-        document.getElementById('globalConfirmOk').onclick = function() {
-            modal.style.display = 'none';
-            if (typeof onConfirm === 'function') onConfirm();
-        };
-        document.getElementById('globalConfirmCancel').onclick = function() {
-            modal.style.display = 'none';
-        };
+        document.getElementById('globalConfirmOk').onclick = function() { modal.style.display = 'none'; if (typeof onConfirm === 'function') onConfirm(); };
+        document.getElementById('globalConfirmCancel').onclick = function() { modal.style.display = 'none'; };
     };
 }
 
@@ -80,22 +52,15 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function loadContentLibrary() {
-    try { loadTests(); } catch(e) { console.error(e); }
-    try { loadLessons(); } catch(e) { console.error(e); }
-    try { loadObjectives(); } catch(e) { console.error(e); }
-    try { loadHomeworks(); } catch(e) { console.error(e); }
+    try { loadTests(); } catch(e) {}
+    try { loadLessons(); } catch(e) {}
+    try { loadObjectives(); } catch(e) {}
+    try { loadHomeworks(); } catch(e) {}
 }
 
-function getCurrentUser() { 
-    return JSON.parse(sessionStorage.getItem('currentUser')).user; 
-}
-function getAllObjectives() { 
-    return JSON.parse(localStorage.getItem('objectives') || '[]').filter(o => o.teacherId === getCurrentUser().id); 
-}
+function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser')).user; }
+function getAllObjectives() { return JSON.parse(localStorage.getItem('objectives') || '[]').filter(o => o.teacherId === getCurrentUser().id); }
 
-// =========================================================
-// 🔥 دوال العرض والتحميل 🔥
-// =========================================================
 function loadTests() {
     const grid = document.getElementById('testsGrid'); if(!grid) return;
     const tests = JSON.parse(localStorage.getItem('tests') || '[]').filter(t => t.teacherId === getCurrentUser().id);
@@ -138,23 +103,30 @@ function loadHomeworks() {
     }).join('');
 }
 
-// =========================================================
-// 🔥 بناء وتصميم الأسئلة (Questions Logic) 🔥
-// =========================================================
 function addQuestion() { addQuestionToContainer(document.getElementById('questionsContainer'), 'سؤال'); }
 function addLessonQuestion(id) { addQuestionToContainer(document.getElementById(id), 'سؤال'); }
 function addHomeworkQuestion() { addQuestionToContainer(document.getElementById('homeworkQuestionsContainer'), 'سؤال'); }
 
+// 🔥 إخفاء مربع المحك للدروس وعرضه للاختبارات فقط 🔥
 function addQuestionToContainer(container, lbl, data = null) {
     const idx = container.children.length; 
     const type = data ? data.type : 'mcq';
     const maxScore = data ? (data.maxScore || data.passingScore || 1) : 1;
     const passCriterion = data ? (data.passingCriterion || 80) : 80;
 
+    const isTestOrHomework = (container.id === 'questionsContainer' || container.id === 'homeworkQuestionsContainer');
+
     let stripeClass = 'mcq';
     if(type.includes('drag')) stripeClass = 'drag';
     else if(type.includes('ai')) stripeClass = 'ai';
     else if(type.includes('manual')) stripeClass = 'manual';
+
+    const criterionHtml = isTestOrHomework ? `
+        <div style="display:flex; flex-direction:column; align-items:center;">
+            <label style="font-size:0.75rem; font-weight:bold; color:#dc3545; margin-bottom:2px;">المحك (%)</label>
+            <input type="number" class="passing-criterion" value="${passCriterion}" style="width:60px; border:1px solid #ffcdd2; border-radius:5px; text-align:center; background:#ffebee; font-weight:bold;" title="نسبة الاجتياز للسؤال">
+        </div>
+    ` : '';
 
     const cardHtml = `
     <div class="question-card" id="q-card-${idx}">
@@ -182,13 +154,10 @@ function addQuestionToContainer(container, lbl, data = null) {
             </div>
             <div class="q-actions" style="display:flex; align-items:flex-end; gap:10px;">
                 <div style="display:flex; flex-direction:column; align-items:center;">
-                    <label style="font-size:0.75rem; font-weight:bold; color:#0056b3; margin-bottom:2px;">الدرجة الكلية</label>
+                    <label style="font-size:0.75rem; font-weight:bold; color:#0056b3; margin-bottom:2px;">درجة السؤال</label>
                     <input type="number" step="0.5" class="max-score" value="${maxScore}" style="width:60px; border:1px solid #90caf9; border-radius:5px; text-align:center; background:#e3f2fd; font-weight:bold;">
                 </div>
-                <div style="display:flex; flex-direction:column; align-items:center;">
-                    <label style="font-size:0.75rem; font-weight:bold; color:#dc3545; margin-bottom:2px;">المحك (%)</label>
-                    <input type="number" class="passing-criterion" value="${passCriterion}" style="width:60px; border:1px solid #ffcdd2; border-radius:5px; text-align:center; background:#ffebee; font-weight:bold;" title="نسبة الاجتياز المطلوبة (مثال: 80)">
-                </div>
+                ${criterionHtml}
                 <button type="button" onclick="this.closest('.question-card').remove()" title="حذف السؤال" class="btn btn-sm btn-outline-danger" style="height:32px; padding:0 10px; margin-bottom:1px;"><i class="fas fa-trash"></i></button>
             </div>
         </div>
@@ -217,50 +186,30 @@ function renderQuestionInputs(selectElem, idx, data = null) {
     if (multiTypes.includes(type)) {
         let html = '';
         let placeholder = type === 'drag-drop' ? 'مثال: رتب الكلمات وضعها في الفراغات...' : 'مثال: أكمل الفراغات التالية...';
-        
-        html += `<div class="form-group mb-3">
-                    <label class="q-label">عنوان السؤال الرئيسي</label>
-                    <input type="text" class="form-control q-text" value="${data?.text || ''}" placeholder="${placeholder}">
-                 </div>`;
-        
+        html += `<div class="form-group mb-3"><label class="q-label">عنوان السؤال الرئيسي</label><input type="text" class="form-control q-text" value="${data?.text || ''}" placeholder="${placeholder}"></div>`;
         html += `<div id="paragraphs-container-${idx}" class="paragraphs-list" style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:15px;"></div>`;
-        
         let btnText = type === 'drag-drop' ? '<i class="fas fa-plus"></i> إضافة جملة أخرى' : '<i class="fas fa-plus"></i> إضافة فقرة';
         html += `<button type="button" class="btn btn-sm btn-primary mt-2 mb-3" onclick="addParagraphInput(${idx}, '${type}')" style="width: 100%; border: 2px dashed #007bff; background: transparent; color: #007bff; font-weight: bold; padding: 10px;">${btnText}</button>`;
-        
         area.innerHTML = html;
 
         const items = data?.paragraphs || [];
-        if (items.length > 0) {
-            items.forEach(item => addParagraphInput(idx, type, item));
-        } else {
-            if (type === 'drag-drop') {
-                addParagraphInput(idx, type);
-                setTimeout(() => { addParagraphInput(idx, type); }, 50); 
-            } else {
-                addParagraphInput(idx, type);
-            }
+        if (items.length > 0) items.forEach(item => addParagraphInput(idx, type, item));
+        else {
+            if (type === 'drag-drop') { addParagraphInput(idx, type); setTimeout(() => { addParagraphInput(idx, type); }, 50); } 
+            else { addParagraphInput(idx, type); }
         }
-
     } else {
         let html = '';
         if (type === 'mcq' || type === 'mcq-media') {
             html += `<div class="form-group mb-3"><label class="q-label">نص السؤال</label><input type="text" class="form-control q-text" value="${data?.text || ''}" placeholder="اكتب السؤال هنا..."></div>`;
             if (type === 'mcq-media') {
                 const existingFile = data?.attachment || '';
-                html += `<div class="form-group mb-3 p-2 bg-light border rounded">
-                            <label class="q-label"><i class="fas fa-paperclip"></i> مرفق (صورة/فيديو/صوت)</label>
-                            <input type="file" class="form-control-file q-attachment">
-                            <input type="hidden" class="q-existing-attachment" value="${existingFile}">
-                            ${existingFile ? `<div class="attachment-preview mt-2"><img src="${existingFile}" style="max-height:80px; border:1px solid #ddd;"> (صورة محفوظة)</div>` : ''}
-                        </div>`;
+                html += `<div class="form-group mb-3 p-2 bg-light border rounded"><label class="q-label"><i class="fas fa-paperclip"></i> مرفق (صورة/فيديو/صوت)</label><input type="file" class="form-control-file q-attachment"><input type="hidden" class="q-existing-attachment" value="${existingFile}">${existingFile ? `<div class="attachment-preview mt-2"><img src="${existingFile}" style="max-height:80px; border:1px solid #ddd;"> (صورة محفوظة)</div>` : ''}</div>`;
             }
             html += `<label class="q-label">الخيارات (حدد الإجابة الصحيحة)</label><div class="choices-container" id="choices-${idx}">`;
             const choices = data?.choices || ['خيار 1', 'خيار 2'];
             const correct = data?.correctAnswer || 0;
-            choices.forEach((c, i) => {
-                html += `<div class="choice-row"><input type="radio" name="correct-${idx}" value="${i}" ${i == correct ? 'checked' : ''}><input type="text" class="form-control q-choice" value="${c}" placeholder="الخيار ${i+1}"><button type="button" class="btn-remove-choice" onclick="this.parentElement.remove()">×</button></div>`;
-            });
+            choices.forEach((c, i) => { html += `<div class="choice-row"><input type="radio" name="correct-${idx}" value="${i}" ${i == correct ? 'checked' : ''}><input type="text" class="form-control q-choice" value="${c}" placeholder="الخيار ${i+1}"><button type="button" class="btn-remove-choice" onclick="this.parentElement.remove()">×</button></div>`; });
             html += `</div><button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addChoiceInput(${idx})">+ إضافة خيار</button>`;
         } else if (type === 'open-ended') {
             html += `<div class="form-group"><label class="q-label">السؤال</label><textarea class="form-control q-text" rows="2">${data?.text || ''}</textarea></div><div class="form-group mt-2"><label class="q-label">الإجابة النموذجية (اختياري)</label><textarea class="form-control q-model-answer" rows="2">${data?.modelAnswer || ''}</textarea></div>`;
@@ -272,40 +221,23 @@ function renderQuestionInputs(selectElem, idx, data = null) {
 function addParagraphInput(qIdx, type, itemData = null) {
     const container = document.getElementById(`paragraphs-container-${qIdx}`);
     if(!container) return;
-
     const pIdx = Date.now() + Math.floor(Math.random() * 1000); 
     let innerHtml = '';
 
     if (type === 'drag-drop') {
         const text = itemData?.text || '';
-        innerHtml = `
-            <label class="q-label" style="color:#007bff;">الجملة أو الفقرة:</label>
-            <div class="input-group mb-2">
-                <input type="text" class="form-control p-text" id="drag-source-${qIdx}-${pIdx}" value="${text}" placeholder="مثال: ذهب محمد إلى المدرسة">
-                <div class="input-group-append"><button class="btn btn-warning" type="button" onclick="initDragHighlighter(${qIdx}, ${pIdx})">تجهيز الفراغات</button></div>
-            </div>
-            <div id="highlighter-area-${qIdx}-${pIdx}" class="highlight-area" style="display:none; background:#fff; padding:10px; border-radius:5px; border:1px solid #ddd; margin-bottom:10px;"></div>
-            <input type="hidden" class="p-gaps-data" id="gaps-data-${qIdx}-${pIdx}" value='${itemData?.gaps ? JSON.stringify(itemData.gaps) : ''}'>
-        `;
+        innerHtml = `<label class="q-label" style="color:#007bff;">الجملة أو الفقرة:</label><div class="input-group mb-2"><input type="text" class="form-control p-text" id="drag-source-${qIdx}-${pIdx}" value="${text}" placeholder="مثال: ذهب محمد إلى المدرسة"><div class="input-group-append"><button class="btn btn-warning" type="button" onclick="initDragHighlighter(${qIdx}, ${pIdx})">تجهيز الفراغات</button></div></div><div id="highlighter-area-${qIdx}-${pIdx}" class="highlight-area" style="display:none; background:#fff; padding:10px; border-radius:5px; border:1px solid #ddd; margin-bottom:10px;"></div><input type="hidden" class="p-gaps-data" id="gaps-data-${qIdx}-${pIdx}" value='${itemData?.gaps ? JSON.stringify(itemData.gaps) : ''}'>`;
         if (text && itemData?.gaps) { setTimeout(() => initDragHighlighter(qIdx, pIdx, itemData.gaps), 100); }
-
     } else if (type === 'ai-reading' || type === 'manual-reading') {
         innerHtml = `<label class="q-label">فقرة القراءة</label><textarea class="form-control p-text" rows="2">${itemData?.text || ''}</textarea>`;
-    
     } else if (type === 'ai-spelling' || type === 'manual-spelling') {
-        innerHtml = `<label class="q-label">الكلمة/الجملة للإملاء</label><input type="text" class="form-control p-text" value="${itemData?.text || ''}">
-                     <div class="canvas-preview-box"><div class="canvas-placeholder">مساحة الكتابة (Canvas)</div></div>`;
-    
+        innerHtml = `<label class="q-label">الكلمة/الجملة للإملاء</label><input type="text" class="form-control p-text" value="${itemData?.text || ''}"><div class="canvas-preview-box"><div class="canvas-placeholder">مساحة الكتابة (Canvas)</div></div>`;
     } else if (type === 'missing-char') {
-        innerHtml = `<div class="row">
-                        <div class="col-6"><input type="text" class="form-control p-text" value="${itemData?.text || ''}" placeholder="الكلمة كاملة (محمد)"></div>
-                        <div class="col-6"><input type="text" class="form-control p-missing" value="${itemData?.missing || ''}" placeholder="الناقص (مـ_ـمد)"></div>
-                     </div>`;
+        innerHtml = `<div class="row"><div class="col-6"><input type="text" class="form-control p-text" value="${itemData?.text || ''}" placeholder="الكلمة كاملة (محمد)"></div><div class="col-6"><input type="text" class="form-control p-missing" value="${itemData?.missing || ''}" placeholder="الناقص (مـ_ـمد)"></div></div>`;
     }
 
     const div = document.createElement('div');
-    div.className = 'paragraph-item';
-    div.id = `p-item-${qIdx}-${pIdx}`;
+    div.className = 'paragraph-item'; div.id = `p-item-${qIdx}-${pIdx}`;
     div.style.cssText = "position:relative; background:#fff; border:1px solid #eee; padding:15px; border-radius:8px; margin-bottom:15px; box-shadow:0 2px 5px rgba(0,0,0,0.02);";
     div.innerHTML = innerHtml + `<button type="button" class="btn-remove-paragraph" onclick="this.parentElement.remove()" style="position:absolute; top:5px; left:5px; background:#ffebee; border:none; color:#dc3545; border-radius:50%; width:25px; height:25px; display:flex; align-items:center; justify-content:center; cursor:pointer;">×</button>`;
     container.appendChild(div);
@@ -332,19 +264,13 @@ function initDragHighlighter(qIdx, pIdx, savedGaps = null) {
 }
 
 function markGap(qIdx, pIdx) {
-    const selection = window.getSelection();
-    const selectedText = selection.toString();
+    const selection = window.getSelection(); const selectedText = selection.toString();
     if (!selectedText) { alert('حدد النص أولاً'); return; }
-
     let processed = selectedText;
     if (selectedText.length === 1 && /[جحخعغفقثصضشسيبلتنمكطظ]/.test(selectedText)) { processed = 'ـ' + selectedText + 'ـ'; }
-
     const preview = document.getElementById(`gap-prev-${qIdx}-${pIdx}`);
-    const span = document.createElement('span'); span.className = 'badge badge-warning m-1'; 
-    span.style.fontSize = '1rem';
-    span.innerText = processed;
+    const span = document.createElement('span'); span.className = 'badge badge-warning m-1'; span.style.fontSize = '1rem'; span.innerText = processed;
     preview.appendChild(span);
-
     const hiddenInput = document.getElementById(`gaps-data-${qIdx}-${pIdx}`);
     let data = hiddenInput.value ? JSON.parse(hiddenInput.value) : [];
     data.push({ original: selectedText, dragItem: processed });
@@ -352,67 +278,35 @@ function markGap(qIdx, pIdx) {
     selection.removeAllRanges();
 }
 
-function resetGap(qIdx, pIdx) {
-    document.getElementById(`gap-prev-${qIdx}-${pIdx}`).innerHTML = '';
-    document.getElementById(`gaps-data-${qIdx}-${pIdx}`).value = '';
-}
-
-function addChoiceInput(idx) {
-    const container = document.getElementById(`choices-${idx}`);
-    const count = container.children.length;
-    const div = document.createElement('div'); div.className = 'choice-row';
-    div.innerHTML = `<input type="radio" name="correct-${idx}" value="${count}"><input type="text" class="form-control q-choice" placeholder="الخيار ${count+1}"><button type="button" class="btn-remove-choice" onclick="this.parentElement.remove()">×</button>`;
-    container.appendChild(div);
-}
-
-function readFileAsBase64(file) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = error => reject(error);
-        reader.readAsDataURL(file);
-    });
-}
+function resetGap(qIdx, pIdx) { document.getElementById(`gap-prev-${qIdx}-${pIdx}`).innerHTML = ''; document.getElementById(`gaps-data-${qIdx}-${pIdx}`).value = ''; }
+function addChoiceInput(idx) { const container = document.getElementById(`choices-${idx}`); const count = container.children.length; const div = document.createElement('div'); div.className = 'choice-row'; div.innerHTML = `<input type="radio" name="correct-${idx}" value="${count}"><input type="text" class="form-control q-choice" placeholder="الخيار ${count+1}"><button type="button" class="btn-remove-choice" onclick="this.parentElement.remove()">×</button>`; container.appendChild(div); }
+function readFileAsBase64(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error); reader.readAsDataURL(file); }); }
 
 async function collectQuestionsFromContainer(id) {
     const cards = document.querySelectorAll(`#${id} .question-card`);
     const qs = [];
-    
     for (let i = 0; i < cards.length; i++) {
         const card = cards[i];
         const type = card.querySelector('select').value;
         const maxScoreVal = parseFloat(card.querySelector('.max-score').value) || 1;
-        const criterionVal = parseFloat(card.querySelector('.passing-criterion').value) || 80;
         
-        const qData = { 
-            id: Date.now() + Math.random(), 
-            type: type, 
-            maxScore: maxScoreVal, 
-            passingScore: maxScoreVal, 
-            passingCriterion: criterionVal 
-        };
+        // المحك يتم استخراجه فقط إذا كان موجوداً في الواجهة (للاختبارات)
+        const criterionInput = card.querySelector('.passing-criterion');
+        const criterionVal = criterionInput ? (parseFloat(criterionInput.value) || 80) : 80;
+        
+        const qData = { id: Date.now() + Math.random(), type: type, maxScore: maxScoreVal, passingScore: maxScoreVal, passingCriterion: criterionVal };
         
         if (type === 'mcq' || type === 'mcq-media' || type === 'open-ended') {
             qData.text = card.querySelector('.q-text')?.value || '';
             if (type.includes('mcq')) {
                 qData.choices = Array.from(card.querySelectorAll('.q-choice')).map(c => c.value);
                 card.querySelectorAll('input[type="radio"]').forEach((r, idx) => { if(r.checked) qData.correctAnswer = idx; });
-                const fileInput = card.querySelector('.q-attachment');
-                const existingFile = card.querySelector('.q-existing-attachment')?.value;
-                if (fileInput && fileInput.files[0]) {
-                    qData.attachment = await readFileAsBase64(fileInput.files[0]);
-                } else if (existingFile) {
-                    qData.attachment = existingFile;
-                }
-            } else {
-                qData.modelAnswer = card.querySelector('.q-model-answer').value;
-            }
-        } 
-        else {
-            qData.text = card.querySelector('.q-text')?.value || '';
-            qData.paragraphs = [];
+                const fileInput = card.querySelector('.q-attachment'); const existingFile = card.querySelector('.q-existing-attachment')?.value;
+                if (fileInput && fileInput.files[0]) { qData.attachment = await readFileAsBase64(fileInput.files[0]); } else if (existingFile) { qData.attachment = existingFile; }
+            } else { qData.modelAnswer = card.querySelector('.q-model-answer').value; }
+        } else {
+            qData.text = card.querySelector('.q-text')?.value || ''; qData.paragraphs = [];
             let validDragParagraphs = 0; 
-
             card.querySelectorAll('.paragraph-item').forEach(pItem => {
                 const pData = { id: Date.now() + Math.random() };
                 if (type === 'drag-drop') {
@@ -421,18 +315,11 @@ async function collectQuestionsFromContainer(id) {
                     pData.gaps = gapsVal ? JSON.parse(gapsVal) : [];
                     if (pData.text.trim() !== '' && pData.gaps.length > 0) validDragParagraphs++;
                 } else if (type === 'missing-char') {
-                    pData.text = pItem.querySelector('.p-text').value;
-                    pData.missing = pItem.querySelector('.p-missing').value;
-                } else {
-                    pData.text = pItem.querySelector('.p-text').value;
-                }
+                    pData.text = pItem.querySelector('.p-text').value; pData.missing = pItem.querySelector('.p-missing').value;
+                } else { pData.text = pItem.querySelector('.p-text').value; }
                 qData.paragraphs.push(pData);
             });
-
-            if (type === 'drag-drop' && validDragParagraphs < 2) {
-                showError(`تنبيه تربوي في السؤال رقم ${i + 1}:<br>سؤال السحب والإفلات يجب أن يتكون من <strong>جملتين مختلفتين على الأقل</strong>، مع إخفاء كلمة من كل جملة.`);
-                return null; 
-            }
+            if (type === 'drag-drop' && validDragParagraphs < 2) { showError(`تنبيه تربوي في السؤال رقم ${i + 1}:<br>سؤال السحب والإفلات يجب أن يتكون من <strong>جملتين مختلفتين على الأقل</strong>، مع إخفاء كلمة من كل جملة.`); return null; }
         }
         qs.push(qData);
     }
@@ -440,169 +327,52 @@ async function collectQuestionsFromContainer(id) {
 }
 
 // =========================================================
-// 🔥 دوال الحفظ والإنشاء 🔥
+// 🔥 دوال التنقل داخل الدرس والاستيراد والتصدير 🔥
 // =========================================================
 
-async function saveTest() { 
-    const t = document.getElementById('testTitle').value; 
-    if(!t) return; 
-    const qs = await collectQuestionsFromContainer('questionsContainer'); 
-    if (!qs) return; 
-    const ts = JSON.parse(localStorage.getItem('tests') || '[]'); 
-    const id = document.getElementById('editTestId').value; 
-    const d = {id: id ? parseInt(id) : Date.now(), teacherId: getCurrentUser().id, title: t, subject: document.getElementById('testSubject').value, description: document.getElementById('testDescription').value, questions: qs, createdAt: new Date().toISOString()}; 
-    if(id){const i = ts.findIndex(x => x.id == id); if(i !== -1) ts[i] = d;} else ts.push(d); 
-    localStorage.setItem('tests', JSON.stringify(ts)); 
-    closeModal('createTestModal'); 
-    loadTests(); 
-}
-
-async function saveHomework() { 
-    const id = document.getElementById('editHomeworkId').value; 
-    const t = document.getElementById('homeworkTitle').value; 
-    if(!t) return; 
-    const qs = await collectQuestionsFromContainer('homeworkQuestionsContainer'); 
-    if (!qs) return; 
-    const hws = JSON.parse(localStorage.getItem('assignments') || '[]'); 
-    const d = {id: id ? parseInt(id) : Date.now(), teacherId: getCurrentUser().id, title: t, subject: document.getElementById('homeworkSubject').value, description: document.getElementById('homeworkDescription').value, questions: qs, createdAt: new Date().toISOString()}; 
-    if(id){const i = hws.findIndex(x => x.id == id); if(i !== -1) hws[i] = d;} else hws.push(d); 
-    localStorage.setItem('assignments', JSON.stringify(hws)); 
-    closeModal('createHomeworkModal'); 
-    loadHomeworks(); 
-}
-
-async function saveLesson() { 
-    const id = document.getElementById('editLessonId').value; 
-    const t = document.getElementById('lessonTitle').value; 
-    if(!t) return; 
-    const intro = {type: document.getElementById('introType').value, url: document.getElementById('introUrl').value, text: document.getElementById('introText').value}; 
-    
-    const exQs = await collectQuestionsFromContainer('exercisesContainer');
-    if (!exQs) return; 
-    const ex = {passScore: document.getElementById('exercisesPassScore').value, questions: exQs}; 
-    
-    const asQs = await collectQuestionsFromContainer('assessmentContainer');
-    if (!asQs) return; 
-    const as = {questions: asQs}; 
-    
-    const ls = JSON.parse(localStorage.getItem('lessons') || '[]'); 
-    const d = {id: id ? parseInt(id) : Date.now(), teacherId: getCurrentUser().id, title: t, subject: document.getElementById('lessonSubject').value, intro, exercises: ex, assessment: as, createdAt: new Date().toISOString()}; 
-    
-    if(id){const i = ls.findIndex(x => x.id == id); if(i !== -1) ls[i] = d;} else ls.push(d); 
-    
-    localStorage.setItem('lessons', JSON.stringify(ls)); 
-    closeModal('createLessonModal'); 
-    loadLessons(); 
-}
-
-function injectLinkContentModal() {
-    if (document.getElementById('linkContentModal')) return;
-    // ... HTML injection if needed for Link Modal (Optional if it exists in HTML)
-}
-
-function showLinkModal(type, id) {
-    document.getElementById('linkTargetId').value = id;
-    document.getElementById('linkTargetType').value = type;
-    
-    const container = document.getElementById('linkContentBody');
-    const instruction = document.getElementById('linkInstructionText');
-    container.innerHTML = '';
-
-    const objectives = getAllObjectives();
-    if(objectives.length === 0) {
-        container.innerHTML = '<div class="text-center text-danger p-3">لا توجد أهداف مضافة. الرجاء إضافة أهداف أولاً.</div>';
-        document.getElementById('linkContentModal').classList.add('show');
-        return;
-    }
-
-    if (type === 'test') {
-        instruction.textContent = 'قم بربط كل سؤال بالهدف قصير المدى الذي يقيسه.';
-        const tests = JSON.parse(localStorage.getItem('tests') || '[]');
-        const test = tests.find(t => t.id === id);
-        if(!test || !test.questions) return;
-        const relevantObjs = objectives.filter(o => o.subject === test.subject);
-        let optionsHtml = '<option value="">-- اختر الهدف --</option>';
-        relevantObjs.forEach(o => { optionsHtml += `<option value="${o.id}">${o.shortTermGoal}</option>`; });
-        test.questions.forEach((q, idx) => {
-            const row = document.createElement('div');
-            row.className = 'linking-row';
-            row.innerHTML = `<div class="linking-question-text"><strong>س${idx+1}:</strong> ${q.text || 'سؤال بدون نص'}</div><select class="form-control linking-select question-link-select" data-question-id="${q.id}">${optionsHtml}</select>`;
-            if(q.linkedGoalId) row.querySelector('select').value = q.linkedGoalId;
-            container.appendChild(row);
-        });
-    } else {
-        instruction.textContent = 'قم باختيار هدف تدريسي واحد لربط هذا المحتوى به.';
-        let currentItem;
-        let storageKey = (type === 'lesson') ? 'lessons' : 'assignments';
-        currentItem = JSON.parse(localStorage.getItem(storageKey) || '[]').find(x => x.id === id);
-        if (!currentItem) { alert('العنصر غير موجود!'); return; }
-        const relevantObjs = objectives.filter(o => o.subject && currentItem.subject && o.subject.trim() === currentItem.subject.trim());
-        let selectHtml = '<select class="form-control" id="singleInstructionalLink"><option value="">-- غير مرتبط --</option>';
-        relevantObjs.forEach(o => {
-            if(o.instructionalGoals && o.instructionalGoals.length > 0) {
-                selectHtml += `<optgroup label="${o.shortTermGoal}">`;
-                o.instructionalGoals.forEach(ig => { selectHtml += `<option value="${ig}">${ig}</option>`; });
-                selectHtml += `</optgroup>`;
-            }
-        });
-        selectHtml += '</select>';
-        container.innerHTML = `<div class="p-3"><label>الهدف التدريسي:</label>${selectHtml}</div>`;
-        if(currentItem.linkedInstructionalGoal) {
-            setTimeout(() => {
-                const el = document.getElementById('singleInstructionalLink');
-                if(el) el.value = currentItem.linkedInstructionalGoal;
-            }, 0);
-        }
-    }
-    document.getElementById('linkContentModal').classList.add('show');
-}
-
-function saveContentLinks() {
-    const id = parseInt(document.getElementById('linkTargetId').value);
-    const type = document.getElementById('linkTargetType').value;
-
-    if (type === 'test') {
-        const tests = JSON.parse(localStorage.getItem('tests') || '[]');
-        const testIndex = tests.findIndex(t => t.id === id);
-        if(testIndex !== -1) {
-            const selects = document.querySelectorAll('.question-link-select');
-            selects.forEach(sel => {
-                const qId = parseFloat(sel.getAttribute('data-question-id'));
-                const goalId = sel.value;
-                const q = tests[testIndex].questions.find(qx => qx.id === qId || Math.abs(qx.id - qId) < 0.0001);
-                if(q) q.linkedGoalId = goalId ? parseInt(goalId) : null;
-            });
-            localStorage.setItem('tests', JSON.stringify(tests));
-            loadTests();
-        }
-    } else {
-        const key = (type === 'lesson') ? 'lessons' : 'assignments';
-        const arr = JSON.parse(localStorage.getItem(key) || '[]');
-        const idx = arr.findIndex(x => x.id === id);
-        if(idx !== -1) {
-            arr[idx].linkedInstructionalGoal = document.getElementById('singleInstructionalLink').value || null;
-            localStorage.setItem(key, JSON.stringify(arr));
-            if(type === 'lesson') loadLessons(); else loadHomeworks();
-        }
-    }
-    closeModal('linkContentModal');
-    showSuccess('تم حفظ الارتباطات بنجاح');
-}
-
-// =========================================================
-// 🔥 الدوال الحيوية المفقودة (التنقل، الحذف، والاستيراد) 🔥
-// =========================================================
-
-// دالة التنقل بين التمهيد والتمارين والتقييم داخل نافذة إضافة الدرس
 function switchLessonStep(step) {
     document.querySelectorAll('.lesson-step-content').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.step-indicator').forEach(el => el.classList.remove('active'));
-    
     const stepEl = document.getElementById('step-' + step);
     const indEl = document.getElementById('indicator-' + step);
-    
     if (stepEl) stepEl.style.display = 'block';
     if (indEl) indEl.classList.add('active');
+}
+
+function closeModal(id) { 
+    const modal = document.getElementById(id);
+    if(modal) modal.classList.remove('show'); 
+}
+
+async function saveTest() { 
+    const t = document.getElementById('testTitle').value; if(!t) return; 
+    const qs = await collectQuestionsFromContainer('questionsContainer'); if (!qs) return; 
+    const ts = JSON.parse(localStorage.getItem('tests') || '[]'); const id = document.getElementById('editTestId').value; 
+    const d = {id: id ? parseInt(id) : Date.now(), teacherId: getCurrentUser().id, title: t, subject: document.getElementById('testSubject').value, description: document.getElementById('testDescription').value, questions: qs, createdAt: new Date().toISOString()}; 
+    if(id){const i = ts.findIndex(x => x.id == id); if(i !== -1) ts[i] = d;} else ts.push(d); 
+    localStorage.setItem('tests', JSON.stringify(ts)); closeModal('createTestModal'); loadTests(); showSuccess('تم الحفظ بنجاح');
+}
+
+async function saveHomework() { 
+    const id = document.getElementById('editHomeworkId').value; const t = document.getElementById('homeworkTitle').value; if(!t) return; 
+    const qs = await collectQuestionsFromContainer('homeworkQuestionsContainer'); if (!qs) return; 
+    const hws = JSON.parse(localStorage.getItem('assignments') || '[]'); 
+    const d = {id: id ? parseInt(id) : Date.now(), teacherId: getCurrentUser().id, title: t, subject: document.getElementById('homeworkSubject').value, description: document.getElementById('homeworkDescription').value, questions: qs, createdAt: new Date().toISOString()}; 
+    if(id){const i = hws.findIndex(x => x.id == id); if(i !== -1) hws[i] = d;} else hws.push(d); 
+    localStorage.setItem('assignments', JSON.stringify(hws)); closeModal('createHomeworkModal'); loadHomeworks(); showSuccess('تم الحفظ بنجاح');
+}
+
+async function saveLesson() { 
+    const id = document.getElementById('editLessonId').value; const t = document.getElementById('lessonTitle').value; if(!t) return; 
+    const intro = {type: document.getElementById('introType').value, url: document.getElementById('introUrl').value, text: document.getElementById('introText').value}; 
+    const exQs = await collectQuestionsFromContainer('exercisesContainer'); if (!exQs) return; 
+    const ex = {passScore: document.getElementById('exercisesPassScore').value, questions: exQs}; 
+    const asQs = await collectQuestionsFromContainer('assessmentContainer'); if (!asQs) return; 
+    const as = {questions: asQs}; 
+    const ls = JSON.parse(localStorage.getItem('lessons') || '[]'); 
+    const d = {id: id ? parseInt(id) : Date.now(), teacherId: getCurrentUser().id, title: t, subject: document.getElementById('lessonSubject').value, intro, exercises: ex, assessment: as, createdAt: new Date().toISOString()}; 
+    if(id){const i = ls.findIndex(x => x.id == id); if(i !== -1) ls[i] = d;} else ls.push(d); 
+    localStorage.setItem('lessons', JSON.stringify(ls)); closeModal('createLessonModal'); loadLessons(); showSuccess('تم الحفظ بنجاح');
 }
 
 function showCreateTestModal() { document.getElementById('editTestId').value=''; document.getElementById('testTitle').value=''; document.getElementById('testSubject').value='لغتي'; document.getElementById('testDescription').value=''; document.getElementById('questionsContainer').innerHTML=''; addQuestion(); document.getElementById('createTestModal').classList.add('show'); }
@@ -622,72 +392,61 @@ function toggleIntroInputs() { const t=document.getElementById('introType').valu
 function showCreateObjectiveModal() { document.getElementById('editObjectiveId').value=''; document.getElementById('shortTermGoal').value=''; document.getElementById('instructionalGoalsContainer').innerHTML=''; addInstructionalGoalInput(); document.getElementById('createObjectiveModal').classList.add('show'); }
 function editObjective(id) { const o=JSON.parse(localStorage.getItem('objectives')).find(x=>x.id===id); if(!o)return; document.getElementById('editObjectiveId').value=o.id; document.getElementById('objSubject').value=o.subject; document.getElementById('shortTermGoal').value=o.shortTermGoal; const c=document.getElementById('instructionalGoalsContainer'); c.innerHTML=''; if(o.instructionalGoals?.length>0)o.instructionalGoals.forEach(g=>addInstructionalGoalInput(g)); else addInstructionalGoalInput(); document.getElementById('createObjectiveModal').classList.add('show'); }
 function addInstructionalGoalInput(v='') { const c=document.getElementById('instructionalGoalsContainer'); const d=document.createElement('div'); d.className='d-flex mb-2'; d.innerHTML=`<input type="text" class="form-control instructional-goal-input" value="${v}" placeholder="هدف تدريسي فرعي"><button type="button" class="btn btn-outline-danger btn-sm ml-2" onclick="this.parentElement.remove()">×</button>`; c.appendChild(d); }
-function saveObjective() { const id=document.getElementById('editObjectiveId').value; const s=document.getElementById('objSubject').value; const g=document.getElementById('shortTermGoal').value; if(!g)return; const ig=[]; document.querySelectorAll('.instructional-goal-input').forEach(i=>{if(i.value.trim())ig.push(i.value.trim())}); const objs=JSON.parse(localStorage.getItem('objectives')||'[]'); const d={id:id?parseInt(id):Date.now(), teacherId:getCurrentUser().id, subject:s, shortTermGoal:g, instructionalGoals:ig}; if(id){const i=objs.findIndex(x=>x.id==id); if(i!==-1)objs[i]=d;}else objs.push(d); localStorage.setItem('objectives',JSON.stringify(objs)); closeModal('createObjectiveModal'); loadObjectives(); }
+function saveObjective() { const id=document.getElementById('editObjectiveId').value; const s=document.getElementById('objSubject').value; const g=document.getElementById('shortTermGoal').value; if(!g)return; const ig=[]; document.querySelectorAll('.instructional-goal-input').forEach(i=>{if(i.value.trim())ig.push(i.value.trim())}); const objs=JSON.parse(localStorage.getItem('objectives')||'[]'); const d={id:id?parseInt(id):Date.now(), teacherId:getCurrentUser().id, subject:s, shortTermGoal:g, instructionalGoals:ig}; if(id){const i=objs.findIndex(x=>x.id==id); if(i!==-1)objs[i]=d;}else objs.push(d); localStorage.setItem('objectives',JSON.stringify(objs)); closeModal('createObjectiveModal'); loadObjectives(); showSuccess('تم الحفظ بنجاح'); }
 function deleteObjective(id) { showConfirmModal('هل أنت متأكد من حذف هذا الهدف؟', function() { const o = JSON.parse(localStorage.getItem('objectives')).filter(x => x.id !== id); localStorage.setItem('objectives', JSON.stringify(o)); loadObjectives(); showSuccess('تم الحذف'); }); }
 
-// دالة إغلاق النوافذ
-function closeModal(id) { 
-    const modal = document.getElementById(id);
-    if(modal) modal.classList.remove('show'); 
+function injectLinkContentModal() { if (document.getElementById('linkContentModal')) return; }
+function showLinkModal(type, id) {
+    document.getElementById('linkTargetId').value = id; document.getElementById('linkTargetType').value = type;
+    const container = document.getElementById('linkContentBody'); const instruction = document.getElementById('linkInstructionText'); container.innerHTML = '';
+    const objectives = getAllObjectives();
+    if(objectives.length === 0) { container.innerHTML = '<div class="text-center text-danger p-3">لا توجد أهداف مضافة. الرجاء إضافة أهداف أولاً.</div>'; document.getElementById('linkContentModal').classList.add('show'); return; }
+    if (type === 'test') {
+        instruction.textContent = 'قم بربط كل سؤال بالهدف قصير المدى الذي يقيسه.';
+        const tests = JSON.parse(localStorage.getItem('tests') || '[]'); const test = tests.find(t => t.id === id); if(!test || !test.questions) return;
+        const relevantObjs = objectives.filter(o => o.subject === test.subject);
+        let optionsHtml = '<option value="">-- اختر الهدف --</option>'; relevantObjs.forEach(o => { optionsHtml += `<option value="${o.id}">${o.shortTermGoal}</option>`; });
+        test.questions.forEach((q, idx) => { const row = document.createElement('div'); row.className = 'linking-row'; row.innerHTML = `<div class="linking-question-text"><strong>س${idx+1}:</strong> ${q.text || 'سؤال بدون نص'}</div><select class="form-control linking-select question-link-select" data-question-id="${q.id}">${optionsHtml}</select>`; if(q.linkedGoalId) row.querySelector('select').value = q.linkedGoalId; container.appendChild(row); });
+    } else {
+        instruction.textContent = 'قم باختيار هدف تدريسي واحد لربط هذا المحتوى به.';
+        let currentItem; let storageKey = (type === 'lesson') ? 'lessons' : 'assignments';
+        currentItem = JSON.parse(localStorage.getItem(storageKey) || '[]').find(x => x.id === id);
+        if (!currentItem) { alert('العنصر غير موجود!'); return; }
+        const relevantObjs = objectives.filter(o => o.subject && currentItem.subject && o.subject.trim() === currentItem.subject.trim());
+        let selectHtml = '<select class="form-control" id="singleInstructionalLink"><option value="">-- غير مرتبط --</option>';
+        relevantObjs.forEach(o => { if(o.instructionalGoals && o.instructionalGoals.length > 0) { selectHtml += `<optgroup label="${o.shortTermGoal}">`; o.instructionalGoals.forEach(ig => { selectHtml += `<option value="${ig}">${ig}</option>`; }); selectHtml += `</optgroup>`; } }); selectHtml += '</select>';
+        container.innerHTML = `<div class="p-3"><label>الهدف التدريسي:</label>${selectHtml}</div>`;
+        if(currentItem.linkedInstructionalGoal) { setTimeout(() => { const el = document.getElementById('singleInstructionalLink'); if(el) el.value = currentItem.linkedInstructionalGoal; }, 0); }
+    }
+    document.getElementById('linkContentModal').classList.add('show');
 }
 
-// دوال الاستيراد والتصدير
+function saveContentLinks() {
+    const id = parseInt(document.getElementById('linkTargetId').value); const type = document.getElementById('linkTargetType').value;
+    if (type === 'test') {
+        const tests = JSON.parse(localStorage.getItem('tests') || '[]'); const testIndex = tests.findIndex(t => t.id === id);
+        if(testIndex !== -1) { const selects = document.querySelectorAll('.question-link-select'); selects.forEach(sel => { const qId = parseFloat(sel.getAttribute('data-question-id')); const goalId = sel.value; const q = tests[testIndex].questions.find(qx => qx.id === qId || Math.abs(qx.id - qId) < 0.0001); if(q) q.linkedGoalId = goalId ? parseInt(goalId) : null; }); localStorage.setItem('tests', JSON.stringify(tests)); loadTests(); }
+    } else {
+        const key = (type === 'lesson') ? 'lessons' : 'assignments'; const arr = JSON.parse(localStorage.getItem(key) || '[]'); const idx = arr.findIndex(x => x.id === id);
+        if(idx !== -1) { arr[idx].linkedInstructionalGoal = document.getElementById('singleInstructionalLink').value || null; localStorage.setItem(key, JSON.stringify(arr)); if(type === 'lesson') loadLessons(); else loadHomeworks(); }
+    }
+    closeModal('linkContentModal'); showSuccess('تم حفظ الارتباطات بنجاح');
+}
+
 function exportContent() {
-    const data = {
-        tests: JSON.parse(localStorage.getItem('tests') || '[]'),
-        lessons: JSON.parse(localStorage.getItem('lessons') || '[]'),
-        objectives: JSON.parse(localStorage.getItem('objectives') || '[]'),
-        assignments: JSON.parse(localStorage.getItem('assignments') || '[]')
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `muyasir_backup_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const data = { tests: JSON.parse(localStorage.getItem('tests') || '[]'), lessons: JSON.parse(localStorage.getItem('lessons') || '[]'), objectives: JSON.parse(localStorage.getItem('objectives') || '[]'), assignments: JSON.parse(localStorage.getItem('assignments') || '[]') };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `muyasir_backup_${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(url);
 }
-
 function triggerImport() { document.getElementById('importFile').click(); }
-
 function importContent(input) {
-    const file = input.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
+    const file = input.files[0]; if (!file) return; const reader = new FileReader();
     reader.onload = function(e) {
         try {
-            const data = JSON.parse(e.target.result);
-            const user = getCurrentUser();
-            let count = 0;
-
-            const mergeData = (key, newItems) => {
-                if (!newItems || newItems.length === 0) return 0;
-                const currentItems = JSON.parse(localStorage.getItem(key) || '[]');
-                let added = 0;
-                newItems.forEach(item => {
-                    if (!currentItems.some(x => x.id === item.id)) {
-                        item.teacherId = user.id; 
-                        currentItems.push(item);
-                        added++;
-                    }
-                });
-                localStorage.setItem(key, JSON.stringify(currentItems));
-                return added;
-            };
-
-            count += mergeData('tests', data.tests);
-            count += mergeData('lessons', data.lessons);
-            count += mergeData('objectives', data.objectives);
-            count += mergeData('assignments', data.assignments);
-
-            showSuccess(`تم استيراد ${count} عنصر بنجاح`);
-            loadContentLibrary(); 
-
-        } catch (err) {
-            console.error(err);
-            showError('حدث خطأ أثناء قراءة الملف. تأكد أنه ملف JSON صالح.');
-        }
-    };
-    reader.readAsText(file);
+            const data = JSON.parse(e.target.result); const user = getCurrentUser(); let count = 0;
+            const mergeData = (key, newItems) => { if (!newItems || newItems.length === 0) return 0; const currentItems = JSON.parse(localStorage.getItem(key) || '[]'); let added = 0; newItems.forEach(item => { if (!currentItems.some(x => x.id === item.id)) { item.teacherId = user.id; currentItems.push(item); added++; } }); localStorage.setItem(key, JSON.stringify(currentItems)); return added; };
+            count += mergeData('tests', data.tests); count += mergeData('lessons', data.lessons); count += mergeData('objectives', data.objectives); count += mergeData('assignments', data.assignments);
+            showSuccess(`تم استيراد ${count} عنصر بنجاح`); loadContentLibrary(); 
+        } catch (err) { showError('حدث خطأ أثناء قراءة الملف. تأكد أنه ملف JSON صالح.'); }
+    }; reader.readAsText(file);
 }

@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-tests.js
-// الوصف: إدارة الاختبارات + عرض التقييم الجزئي للطالب بعد التصحيح (علامات الصح والخطأ)
+// الوصف: إدارة الاختبارات + عرض التقييم الجزئي للطالب + إصلاح التصحيح الآلي للخيارات
 // ============================================
 
 let currentTest = null;
@@ -264,7 +264,7 @@ function closeTestMode() {
 }
 window.closeTestMode = closeTestMode; 
 
-// 🔥 دالة توليد الشارة البصرية (صح أو خطأ) 🔥
+// 🔥 دالة توليد الشارة البصرية (صح أو خطأ) للرسم والصوتيات 🔥
 function getEvalBadgeHTML(evalState) {
     if (evalState === 'correct') return `<div style="position:absolute; top:-15px; right:-15px; background:#28a745; color:white; width:35px; height:35px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.2rem; box-shadow:0 3px 6px rgba(0,0,0,0.2); z-index:10; border:2px solid #fff;">✔️</div>`;
     if (evalState === 'wrong') return `<div style="position:absolute; top:-15px; right:-15px; background:#dc3545; color:white; width:35px; height:35px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.2rem; box-shadow:0 3px 6px rgba(0,0,0,0.2); z-index:10; border:2px solid #fff;">❌</div>`;
@@ -307,11 +307,12 @@ function renderAllQuestions() {
             </div>`;
         }
 
-        // أ) اختيار من متعدد (مع علامات صح وخطأ)
+        // 🔥 أ) اختيار من متعدد (تم إصلاح منطق الصفر + علامات الصح والخطأ) 🔥
         if (q.type.includes('mcq')) {
             qHtml += `<div class="options-list" style="${isReadOnly ? 'pointer-events: none;' : ''}">`;
-            let sAns = ansValue !== null ? parseInt(ansValue) : -1;
-            let cAns = q.correctAnswer !== undefined ? parseInt(q.correctAnswer) : -1;
+            
+            let sAns = (ansValue !== null && ansValue !== undefined && ansValue !== '') ? parseInt(ansValue) : -1;
+            let cAns = (q.correctAnswer !== undefined && q.correctAnswer !== null && q.correctAnswer !== '') ? parseInt(q.correctAnswer) : -1;
 
             (q.choices || []).forEach((choice, i) => {
                 if (isReadOnly) {
@@ -349,14 +350,13 @@ function renderAllQuestions() {
             qHtml += `</div>`;
         }
 
-        // ج) القراءة (مع دعم التقييم كلمة بكلمة)
+        // 🔥 ج) القراءة (عرض التقييم كلمة بكلمة للطالب) 🔥
         else if (q.type.includes('reading')) {
             qHtml += `<div class="paragraphs-container">`;
             (q.paragraphs || []).forEach((p, pIdx) => {
                 let audioSrc = (ansValue && typeof ansValue === 'object' && ansValue[`p_${pIdx}`]) ? ansValue[`p_${pIdx}`] : '';
                 
                 if (isReadOnly && q.type === 'manual-reading') {
-                    // عرض الكلمات مصححة
                     let pKey = `p_${pIdx}`;
                     let words = (p.text || '').trim().split(/\s+/);
                     let wordsHtml = words.map((w, wIdx) => {
@@ -448,6 +448,7 @@ function renderAllQuestions() {
             qHtml += sentencesHtml;
         }
         
+        // و) نصي
         else if (q.type === 'open-ended') {
             const roAttr = isReadOnly ? 'readonly style="background:#f1f5f9;"' : '';
             qHtml += `<textarea class="form-control" rows="4" placeholder="اكتب إجابتك هنا..." onchange="saveSimpleAnswer(${index}, this.value)" ${roAttr}>${ansValue || ''}</textarea>`;

@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-tests.js
-// الوصف: إدارة الاختبارات + النوافذ الاحترافية + الحفظ الصامت + توحيد بنك كلمات السحب والإفلات
+// الوصف: إدارة الاختبارات + النوافذ الاحترافية + ميزة التراجع وإعادة الكلمات لبنك الكلمات
 // ============================================
 
 // =========================================================
@@ -362,9 +362,9 @@ function renderAllQuestions() {
             qHtml += `</div>`;
         }
 
-        // 🔥 هـ) السحب والإفلات (تم التحديث لتوحيد بنك الكلمات) 🔥
+        // 🔥 هـ) السحب والإفلات (مع ميزة الضغط للإعادة) 🔥
         else if (q.type === 'drag-drop') {
-            let allDraggables = []; // مصفوفة لتجميع كل الكلمات من كل الجمل
+            let allDraggables = []; 
             let sentencesHtml = '<div class="sentences-container" style="display:flex; flex-direction:column; gap:15px;">';
 
             (q.paragraphs || []).forEach((p, pIdx) => {
@@ -376,12 +376,11 @@ function renderAllQuestions() {
                             saved = ansValue[`p_${pIdx}_g_${gIdx}`];
                         }
                         const dropId = `drop-${q.id}-${pIdx}-${gIdx}`;
-                        const dropEvts = isReadOnly ? '' : `ondrop="drop(event)" ondragover="allowDrop(event)"`;
-                        processedText = processedText.replace(g.dragItem, `<span class="drop-zone" id="${dropId}" ${dropEvts} data-qid="${index}" data-pid="${pIdx}" data-gid="${gIdx}" style="${isReadOnly ? 'background:#e2e8f0; pointer-events:none;' : ''}">${saved}</span>`);
+                        // إضافة حدث النقر (onclick) لإعادة الكلمة للبنك إذا لم يكن وضع مراجعة
+                        const extraAttrs = isReadOnly ? `style="background:#e2e8f0; pointer-events:none;"` : `ondrop="drop(event)" ondragover="allowDrop(event)" onclick="returnWordToBank(this)" title="اضغط لإعادة الكلمة" style="cursor:pointer;"`;
+                        processedText = processedText.replace(g.dragItem, `<span class="drop-zone" id="${dropId}" ${extraAttrs} data-qid="${index}" data-pid="${pIdx}" data-gid="${gIdx}">${saved}</span>`);
                         
-                        // إضافة الكلمة إلى البنك الموحد فقط إذا لم يكن وضع مراجعة
                         if (!isReadOnly) {
-                            // استخدام ID فريد جداً لضمان عدم تعارض الكلمات المتشابهة
                             const uniqueId = `w-${q.id}-${pIdx}-${gIdx}-${Math.random().toString(36).substr(2, 5)}`;
                             allDraggables.push({ word: g.dragItem, id: uniqueId });
                         }
@@ -391,19 +390,19 @@ function renderAllQuestions() {
             });
             sentencesHtml += '</div>';
 
-            // إذا لم يكن وضع مراجعة، نعرض البنك الموحد
             if (!isReadOnly && allDraggables.length > 0) {
-                // خلط الكلمات عشوائياً (Shuffle)
                 allDraggables.sort(() => Math.random() - 0.5);
+                
+                // نص إرشادي للطالب
+                qHtml += `<div class="text-center text-muted mb-2" style="font-size:0.95rem;">💡 اسحب الكلمة للمكان المناسب (ويمكنك الضغط على الكلمة في الفراغ لإعادتها)</div>`;
                 
                 qHtml += `<div class="word-bank mb-4" style="background:#f1f8e9; padding:20px; border-radius:10px; border:2px dashed #8bc34a; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom: 25px;">`;
                 allDraggables.forEach(item => {
-                    qHtml += `<div class="draggable-word" draggable="true" ondragstart="drag(event)" id="${item.id}" style="background:#fff; border:2px solid #c5e1a5; color:#33691e; padding:8px 20px; border-radius:25px; cursor:grab; font-weight:bold; font-size:1.1rem; box-shadow:0 2px 5px rgba(0,0,0,0.05);">${item.word}</div>`;
+                    qHtml += `<div class="draggable-word" draggable="true" ondragstart="drag(event)" id="${item.id}" style="background:#fff; border:2px solid #c5e1a5; color:#33691e; padding:8px 20px; border-radius:25px; cursor:grab; font-weight:bold; font-size:1.1rem; box-shadow:0 2px 5px rgba(0,0,0,0.05); display:inline-block;">${item.word}</div>`;
                 });
                 qHtml += `</div>`;
             }
 
-            // إضافة جميع الجمل تحت البنك
             qHtml += sentencesHtml;
         }
         
@@ -417,7 +416,32 @@ function renderAllQuestions() {
         container.insertAdjacentHTML('beforeend', qHtml);
     });
 
+    // استدعاء دالة تهيئة حالة السحب والإفلات لربط الكلمات المحفوظة مسبقاً
+    initializeDragAndDropState();
     updateNavigationButtons();
+}
+
+// 🔥 دالة لتهيئة وإخفاء الكلمات التي تم سحبها وحفظها مسبقاً عند إعادة فتح الاختبار 🔥
+function initializeDragAndDropState() {
+    if (currentAssignment && currentAssignment.status === 'completed') return;
+    
+    document.querySelectorAll('.question-card').forEach(card => {
+        const dropZones = card.querySelectorAll('.drop-zone');
+        const draggables = Array.from(card.querySelectorAll('.draggable-word'));
+        
+        dropZones.forEach(zone => {
+            const text = zone.innerText.trim();
+            if (text && !zone.dataset.sourceId) {
+                // العثور على كلمة مطابقة ظاهرة في البنك وإخفائها
+                const match = draggables.find(d => d.innerText.trim() === text && d.style.display !== 'none');
+                if (match) {
+                    match.style.display = 'none';
+                    zone.dataset.sourceId = match.id;
+                    zone.style.background = '#e3f2fd';
+                }
+            }
+        });
+    });
 }
 
 // 4. التنقل والتهيئة
@@ -592,7 +616,7 @@ function resetRecording(qId, pIdx) {
 }
 
 // ==========================================
-// 7. الحفظ والتسليم
+// 7. الحفظ والتسليم والسحب والإفلات المطور
 // ==========================================
 function selectOption(el, qIdx, choiceIdx) {
     if(currentAssignment.status === 'completed') return;
@@ -700,22 +724,85 @@ function playAudio(text) {
     window.speechSynthesis.speak(speech);
 }
 
+// 🔥 دوال السحب والإفلات المطورة (Drag, Drop, Return) 🔥
+
 function allowDrop(ev) { ev.preventDefault(); }
-function drag(ev) { ev.dataTransfer.setData("text", ev.target.innerText); ev.dataTransfer.setData("id", ev.target.id); }
+
+function drag(ev) { 
+    ev.dataTransfer.setData("text", ev.target.innerText); 
+    ev.dataTransfer.setData("id", ev.target.id); 
+}
 
 function drop(ev) {
     if(currentAssignment.status === 'completed') return;
     ev.preventDefault();
     const data = ev.dataTransfer.getData("text");
     const elId = ev.dataTransfer.getData("id");
-    if(ev.target.classList.contains('drop-zone')) {
-        ev.target.innerText = data;
-        ev.target.style.background = '#e3f2fd';
+    if (!elId || !data) return;
+
+    const dropZone = ev.target.closest('.drop-zone');
+    if(dropZone) {
+        // إذا كان الفراغ يحتوي على كلمة مسبقاً، قم بإعادتها للبنك أولاً
+        if (dropZone.innerText.trim()) {
+            const oldSourceId = dropZone.dataset.sourceId;
+            if (oldSourceId) {
+                const oldEl = document.getElementById(oldSourceId);
+                if (oldEl) oldEl.style.display = 'inline-block';
+            } else {
+                const card = dropZone.closest('.question-card');
+                if (card) {
+                   const words = Array.from(card.querySelectorAll('.draggable-word'));
+                   const hiddenMatch = words.find(w => w.style.display === 'none' && w.innerText.trim() === dropZone.innerText.trim());
+                   if (hiddenMatch) hiddenMatch.style.display = 'inline-block';
+                }
+            }
+        }
+
+        // وضع الكلمة الجديدة
+        dropZone.innerText = data;
+        dropZone.style.background = '#e3f2fd';
+        dropZone.dataset.sourceId = elId;
+        
         const srcEl = document.getElementById(elId);
         if(srcEl) srcEl.style.display = 'none';
-        const qIdx = ev.target.dataset.qid;
-        const pIdx = ev.target.dataset.pid;
-        const gIdx = ev.target.dataset.gid;
+        
+        const qIdx = dropZone.dataset.qid;
+        const pIdx = dropZone.dataset.pid;
+        const gIdx = dropZone.dataset.gid;
         saveInputAnswerByQId(currentTest.questions[qIdx].id, `p_${pIdx}_g_${gIdx}`, data);
     }
 }
+
+// دالة جديدة لإعادة الكلمة بالضغط عليها
+function returnWordToBank(el) {
+    if(currentAssignment.status === 'completed') return;
+    const text = el.innerText.trim();
+    if (!text) return; // الفراغ فارغ أصلاً
+
+    // إعادة الكلمة للبنك (إظهار العنصر المخفي)
+    const sourceId = el.dataset.sourceId;
+    if (sourceId) {
+        const srcEl = document.getElementById(sourceId);
+        if (srcEl) srcEl.style.display = 'inline-block';
+    } else {
+        // بحث بديل في حال ضياع الـ ID
+        const card = el.closest('.question-card');
+        if (card) {
+           const words = Array.from(card.querySelectorAll('.draggable-word'));
+           const hiddenMatch = words.find(w => w.style.display === 'none' && w.innerText.trim() === text);
+           if (hiddenMatch) hiddenMatch.style.display = 'inline-block';
+        }
+    }
+
+    // تفريغ الفراغ
+    el.innerText = '';
+    el.style.background = '#fafafa';
+    delete el.dataset.sourceId;
+
+    // تحديث الإجابة المحفوظة (حذفها)
+    const qIdx = el.dataset.qid;
+    const pIdx = el.dataset.pid;
+    const gIdx = el.dataset.gid;
+    saveInputAnswerByQId(currentTest.questions[qIdx].id, `p_${pIdx}_g_${gIdx}`, '');
+}
+window.returnWordToBank = returnWordToBank;

@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب + نظام تصحيح ذكي + عرض كامل لجميع الفقرات وإجابات ترتيب الكلمات
+// الوصف: إدارة ملف الطالب + محرك مراجعة ذكي يظهر جمل السحب والإفلات كاملة مع تصحيح لوني
 // ============================================
 
 let currentStudentId = null;
@@ -355,10 +355,9 @@ function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDa
 
 
 // ============================================
-// 🔥 2. استخراج وعرض الإجابات الذكي (المطور لجمع كافة الفقرات) 🔥
+// 🔥 2. استخراج وعرض الإجابات الذكي 🔥
 // ============================================
 
-// دالة مخصصة فقط للتصحيح التلقائي وتدعم ترتيب الكلمات (السحب والإفلات)
 function extractAnswerText(ans) {
     if (ans === null || ans === undefined) return '';
     if (typeof ans === 'string') {
@@ -372,8 +371,7 @@ function extractAnswerText(ans) {
         if (ans.answer) return ans.answer;
         if (ans.selected) return Array.isArray(ans.selected) ? ans.selected.join(' ، ') : String(ans.selected);
         
-        // 🔥 الحل الجذري לסؤال ترتيب الكلمات والسحب والإفلات للتقييم التلقائي 🔥
-        let keys = Object.keys(ans).sort(); // ترتيب p_0_g_0, p_0_g_1 ... 
+        let keys = Object.keys(ans).sort(); 
         let textParts = [];
         for (let k of keys) {
             if (typeof ans[k] === 'string' && !ans[k].startsWith('data:')) {
@@ -387,7 +385,6 @@ function extractAnswerText(ans) {
     return String(ans);
 }
 
-// الدالة الذكية التي تعالج النصوص والصور وتعرض كل الفقرات بشكل جمالي
 function formatAnswerDisplay(rawAnswer) {
     if (rawAnswer === null || rawAnswer === undefined || rawAnswer === '') {
         return '<span class="text-muted" style="font-style:italic;">(لم يُجب الطالب على هذا السؤال)</span>';
@@ -404,9 +401,8 @@ function formatAnswerDisplay(rawAnswer) {
             return formatSingleItem(val);
         }
 
-        // 🔥 الحل الجذري: استخراج جميع عناصر الكائن وعرضها (يدعم أكثر من فقرة رسم أو صوت) 🔥
         let itemsHtml = [];
-        let keys = Object.keys(rawAnswer).sort(); // لضمان ترتيب الفقرات الأول فالثاني
+        let keys = Object.keys(rawAnswer).sort(); 
         
         for (let k of keys) {
             let itemVal = rawAnswer[k];
@@ -419,14 +415,10 @@ function formatAnswerDisplay(rawAnswer) {
         }
 
         if (itemsHtml.length > 0) {
-            // التحقق مما إذا كانت الفقرات تحتوي وسائط (صور/صوت) أو مجرد كلمات (كالسحب والإفلات)
             let isMedia = itemsHtml.some(html => html.includes('<img') || html.includes('<audio') || html.includes('<a '));
-            
             if (isMedia) {
-                // عرض الوسائط تحت بعضها مع فاصل خطي أنيق
                 return itemsHtml.join('<div style="margin:15px 0; border-bottom:2px dashed #cbd5e1;"></div>');
             } else {
-                // عرض الكلمات المرتبة بجانب بعضها مع سهم واضح ومميز
                 return itemsHtml.join(' <span style="color:#007bff; font-weight:bold; margin:0 5px;">&larr;</span> ');
             }
         } else {
@@ -437,7 +429,6 @@ function formatAnswerDisplay(rawAnswer) {
     return formatSingleItem(rawAnswer);
 }
 
-// دالة فك التشفير ورسم المحتوى
 function formatSingleItem(text) {
     if (!text) return '';
     let str = String(text).trim();
@@ -467,6 +458,40 @@ function formatSingleItem(text) {
     }
 
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// 🔥 دالة مساعدة لطباعة الجملة كاملة في سؤال السحب والإفلات مع التلوين التصحيحي 🔥
+function renderDragDropReview(q, rawAnswer) {
+    if (!q.paragraphs || q.paragraphs.length === 0) return '<span class="text-muted">لا توجد جمل لعرضها</span>';
+    
+    let sentencesHtml = '<div style="display:flex; flex-direction:column; gap:15px; margin-top:10px;">';
+    
+    q.paragraphs.forEach((p, pIdx) => {
+        let processedText = p.text;
+        if (p.gaps) {
+            p.gaps.forEach((g, gIdx) => {
+                let studentWord = (rawAnswer && typeof rawAnswer === 'object' && rawAnswer[`p_${pIdx}_g_${gIdx}`]) 
+                                  ? rawAnswer[`p_${pIdx}_g_${gIdx}`] 
+                                  : '';
+                                  
+                // التصحيح التلقائي اللوني
+                let isCorrect = studentWord.trim() === g.dragItem.trim();
+                let color = isCorrect ? '#155724' : '#721c24';
+                let bg = isCorrect ? '#d4edda' : '#f8d7da';
+                let border = isCorrect ? '#c3e6cb' : '#f5c6cb';
+                
+                let displayWord = studentWord ? studentWord : '<span style="color:#999; font-size:0.95rem;">(لم يُجب)</span>';
+                let icon = studentWord ? (isCorrect ? '<i class="fas fa-check" style="margin-right:8px; font-size:1rem;"></i>' : '<i class="fas fa-times" style="margin-right:8px; font-size:1rem;"></i>') : '';
+
+                let wordBadge = `<span style="background:${bg}; color:${color}; padding:2px 15px; border-radius:8px; border-bottom:3px solid ${border}; font-weight:bold; margin:0 5px; display:inline-flex; align-items:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">${displayWord} ${icon}</span>`;
+                
+                processedText = processedText.replace(g.dragItem, wordBadge);
+            });
+        }
+        sentencesHtml += `<div style="background:#fff; padding:15px 25px; border:1px solid #e2e8f0; border-radius:10px; font-size:1.35rem; line-height:2.6; box-shadow:inset 0 0 10px rgba(0,0,0,0.02); color:#334155;">${processedText}</div>`;
+    });
+    sentencesHtml += '</div>';
+    return sentencesHtml;
 }
 
 function loadAssignmentsTab() {
@@ -574,15 +599,29 @@ function loadDiagnosticTab() {
                     let ansObj = assignedTest.answers.find(a => a.questionId == q.id);
                     if (ansObj) {
                         if (ansObj.score === undefined || ansObj.score === null) {
-                            let textAns = extractAnswerText(ansObj.answer || ansObj.value);
-                            let studentAns = String(textAns).trim().toLowerCase();
-                            let correctAns = String(q.correctAnswer || '').trim().toLowerCase();
                             
-                            // المطابقة الدقيقة لدعم ترتيب الكلمات والنصوص
-                            if (studentAns === correctAns && studentAns !== '') {
-                                ansObj.score = maxQScore; 
+                            // 🔥 التصحيح التلقائي لأسئلة السحب والإفلات 🔥
+                            if (q.type === 'drag-drop') {
+                                let allCorrect = true;
+                                let hasAnswer = false;
+                                (q.paragraphs || []).forEach((p, pIdx) => {
+                                    (p.gaps || []).forEach((g, gIdx) => {
+                                        let w = (ansObj.answer && ansObj.answer[`p_${pIdx}_g_${gIdx}`]) ? ansObj.answer[`p_${pIdx}_g_${gIdx}`] : '';
+                                        if (w) hasAnswer = true;
+                                        if (w.trim() !== g.dragItem.trim()) allCorrect = false;
+                                    });
+                                });
+                                ansObj.score = hasAnswer ? (allCorrect ? maxQScore : 0) : 0;
                             } else {
-                                ansObj.score = 0; 
+                                let textAns = extractAnswerText(ansObj.answer || ansObj.value);
+                                let studentAns = String(textAns).trim().toLowerCase();
+                                let correctAns = String(q.correctAnswer || '').trim().toLowerCase();
+                                
+                                if (studentAns === correctAns && studentAns !== '') {
+                                    ansObj.score = maxQScore; 
+                                } else {
+                                    ansObj.score = 0; 
+                                }
                             }
                             needsSave = true;
                         }
@@ -1083,7 +1122,7 @@ function deleteAssignment(id) {
 }
 
 
-// 🔥 نافذة المراجعة مع دعم استخراج الوسائط وعرضها بوضوح (دعم جميع الفقرات وترتيب الكلمات) 🔥
+// 🔥 نافذة المراجعة مع التخصيص الجديد لسؤال السحب والإفلات 🔥
 function openReviewModal(assignmentId) {
     const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
     const assignment = studentAssignments.find(a => a.id == assignmentId);
@@ -1119,14 +1158,33 @@ function openReviewModal(assignmentId) {
         assignment.questions.forEach((q, index) => {
             const studentAnsObj = assignment.answers ? assignment.answers.find(a => a.questionId == q.id) : null;
             let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
-            const formattedAnswer = formatAnswerDisplay(rawAnswer);
+            
+            // 🔥 استخدام محرك العرض الذكي للسحب والإفلات أو العادي لبقية الأسئلة 🔥
+            let formattedAnswer = '';
+            if (q.type === 'drag-drop') {
+                formattedAnswer = renderDragDropReview(q, rawAnswer);
+            } else {
+                formattedAnswer = formatAnswerDisplay(rawAnswer);
+            }
             
             let maxScore = parseFloat(q.passingScore || q.points || q.score || 1);
             if(isNaN(maxScore) || maxScore <= 0) maxScore = 1;
             
             let currentScore = studentAnsObj ? studentAnsObj.score : undefined;
             if (currentScore === undefined || currentScore === null) {
-                if (q.correctAnswer) {
+                // التصحيح التلقائي للواجهة فقط
+                if (q.type === 'drag-drop') {
+                    let allCorrect = true;
+                    let hasAnswer = false;
+                    (q.paragraphs || []).forEach((p, pIdx) => {
+                        (p.gaps || []).forEach((g, gIdx) => {
+                            let w = (rawAnswer && rawAnswer[`p_${pIdx}_g_${gIdx}`]) ? rawAnswer[`p_${pIdx}_g_${gIdx}`] : '';
+                            if (w) hasAnswer = true;
+                            if (w.trim() !== g.dragItem.trim()) allCorrect = false;
+                        });
+                    });
+                    currentScore = hasAnswer ? (allCorrect ? maxScore : 0) : 0;
+                } else if (q.correctAnswer) {
                     let textAns = extractAnswerText(rawAnswer);
                     let sAns = String(textAns).trim().toLowerCase();
                     let cAns = String(q.correctAnswer || '').trim().toLowerCase();
@@ -1166,6 +1224,7 @@ function openReviewModal(assignmentId) {
     document.getElementById('reviewTestModal').classList.add('show');
 }
 
+// 🔥 نافذة المراجعة للاختبارات بنفس نظام الجمل الذكي 🔥
 function openTestReviewModal(test) {
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const originalTest = allTests.find(t => t.id == test.testId);
@@ -1177,14 +1236,31 @@ function openTestReviewModal(test) {
         originalTest.questions.forEach((q, index) => {
             const studentAnsObj = test.answers ? test.answers.find(a => a.questionId == q.id) : null;
             let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
-            const formattedAnswer = formatAnswerDisplay(rawAnswer);
+            
+            let formattedAnswer = '';
+            if (q.type === 'drag-drop') {
+                formattedAnswer = renderDragDropReview(q, rawAnswer);
+            } else {
+                formattedAnswer = formatAnswerDisplay(rawAnswer);
+            }
             
             let maxScore = parseFloat(q.passingScore || q.points || q.score || 1);
             if(isNaN(maxScore) || maxScore <= 0) maxScore = 1;
             
             let currentScore = studentAnsObj ? studentAnsObj.score : undefined;
             if (currentScore === undefined || currentScore === null) {
-                if (q.correctAnswer) {
+                if (q.type === 'drag-drop') {
+                    let allCorrect = true;
+                    let hasAnswer = false;
+                    (q.paragraphs || []).forEach((p, pIdx) => {
+                        (p.gaps || []).forEach((g, gIdx) => {
+                            let w = (rawAnswer && rawAnswer[`p_${pIdx}_g_${gIdx}`]) ? rawAnswer[`p_${pIdx}_g_${gIdx}`] : '';
+                            if (w) hasAnswer = true;
+                            if (w.trim() !== g.dragItem.trim()) allCorrect = false;
+                        });
+                    });
+                    currentScore = hasAnswer ? (allCorrect ? maxScore : 0) : 0;
+                } else if (q.correctAnswer) {
                     let textAns = extractAnswerText(rawAnswer);
                     let sAns = String(textAns).trim().toLowerCase();
                     let cAns = String(q.correctAnswer || '').trim().toLowerCase();

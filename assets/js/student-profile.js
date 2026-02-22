@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب + التقييم الجزئي والمحك + النسخة الكاملة
+// الوصف: إدارة ملف الطالب + التقييم الجزئي والمحك + إزالة النسب المئوية من نقاط الاحتياج
 // ============================================
 
 // =========================================================
@@ -305,7 +305,6 @@ function switchSection(sectionId) {
     const activeSection = document.getElementById(`section-${sectionId}`);
     if(activeSection) activeSection.classList.add('active');
 
-    // استدعاء الدوال بناءً على القسم النشط
     if (sectionId === 'diagnostic') loadDiagnosticTab();
     if (sectionId === 'iep') loadIEPTab();
     if (sectionId === 'lessons') loadLessonsTab();
@@ -438,7 +437,7 @@ function deleteAssignedTest(id) {
 }
 
 // =========================================================
-// 🔥 6. قسم الخطة التربوية الفردية (IEP) 🔥
+// 🔥 6. قسم الخطة التربوية الفردية (IEP) وحذف النسب المئوية 🔥
 // =========================================================
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
@@ -468,7 +467,7 @@ function loadIEPTab() {
             const ans = completedDiagnostic.answers ? completedDiagnostic.answers.find(a => a.questionId == q.id) : null;
             const score = ans ? parseFloat(ans.score || 0) : 0;
             const maxScore = parseFloat(q.maxScore || q.passingScore || q.points || q.score || 1);
-            const criterion = parseFloat(q.passingCriterion || 80); // استخدام المحك
+            const criterion = parseFloat(q.passingCriterion || 80); 
             
             let percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
 
@@ -480,7 +479,8 @@ function loadIEPTab() {
                     } else {
                         if (!needsObjects.find(o => o.id == obj.id)) {
                             needsObjects.push(obj);
-                            needsHTML += `<li>${obj.shortTermGoal} <small class="text-danger">(${Math.round(percentage)}%)</small></li>`;
+                            // 🔥 تم حذف عرض النسبة المئوية من نقاط الاحتياج بناءً على طلبك 🔥
+                            needsHTML += `<li>${obj.shortTermGoal}</li>`;
                         }
                     }
                 }
@@ -790,7 +790,6 @@ function assignLibraryLesson() {
     if (document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
     showSuccess('تم إسناد الدرس للطالب بنجاح');
 }
-
 
 // =========================================================
 // 🔥 8. قسم الواجبات 🔥

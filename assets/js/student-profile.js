@@ -1,7 +1,109 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب + محرك مراجعة ذكي يظهر جمل السحب والإفلات كاملة مع تصحيح لوني
+// الوصف: إدارة ملف الطالب + محرك مراجعة ذكي + رسائل ونوافذ منبثقة احترافية
 // ============================================
+
+// =========================================================
+// 🔥 نظام النوافذ المنبثقة الاحترافية (Toasts & Modals) 🔥
+// =========================================================
+if (!window.showConfirmModal) {
+    window.showConfirmModal = function(message, onConfirm) {
+        let modal = document.getElementById('globalConfirmModal');
+        if (!modal) {
+            const modalHtml = `
+                <div id="globalConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999999; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+                    <div style="background:white; padding:25px; border-radius:15px; width:90%; max-width:350px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.2); animation:popIn 0.3s ease;">
+                        <div style="font-size:3.5rem; color:#dc3545; margin-bottom:15px;"><i class="fas fa-exclamation-circle"></i></div>
+                        <div style="font-size:1.3rem; font-weight:bold; margin-bottom:10px; color:#333;">تأكيد الإجراء</div>
+                        <div id="globalConfirmMessage" style="color:#666; margin-bottom:25px; font-size:0.95rem; line-height:1.6;"></div>
+                        <div style="display:flex; gap:15px; justify-content:center;">
+                            <button id="globalConfirmCancel" style="background:#e2e8f0; color:#333; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; transition:0.2s; font-family:'Tajawal';">إلغاء</button>
+                            <button id="globalConfirmOk" style="background:#dc3545; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; transition:0.2s; font-family:'Tajawal';">نعم، متأكد</button>
+                        </div>
+                    </div>
+                </div>
+                <style>@keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }</style>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            modal = document.getElementById('globalConfirmModal');
+        }
+        document.getElementById('globalConfirmMessage').innerHTML = message;
+        modal.style.display = 'flex';
+        document.getElementById('globalConfirmOk').onclick = function() {
+            modal.style.display = 'none';
+            if (typeof onConfirm === 'function') onConfirm();
+        };
+        document.getElementById('globalConfirmCancel').onclick = function() {
+            modal.style.display = 'none';
+        };
+    };
+}
+
+if (!window.showSuccess) {
+    window.showSuccess = function(message) {
+        let toast = document.getElementById('globalSuccessToast');
+        if (!toast) {
+            const toastHtml = `
+                <div id="globalSuccessToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#10b981; color:white; padding:12px 25px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.2); z-index:999999; font-weight:bold; font-family:'Tajawal'; align-items:center; gap:10px;">
+                    <i class="fas fa-check-circle"></i> <span id="globalSuccessMessage"></span>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', toastHtml);
+            toast = document.getElementById('globalSuccessToast');
+        }
+        document.getElementById('globalSuccessMessage').textContent = message;
+        toast.style.display = 'flex';
+        setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    };
+}
+
+if (!window.showError) {
+    window.showError = function(message) {
+        let toast = document.getElementById('globalErrorToast');
+        if (!toast) {
+            const toastHtml = `
+                <div id="globalErrorToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#dc3545; color:white; padding:12px 25px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.2); z-index:999999; font-weight:bold; font-family:'Tajawal'; align-items:center; gap:10px;">
+                    <i class="fas fa-exclamation-triangle"></i> <span id="globalErrorMessage"></span>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', toastHtml);
+            toast = document.getElementById('globalErrorToast');
+        }
+        document.getElementById('globalErrorMessage').innerHTML = message;
+        toast.style.display = 'flex';
+        setTimeout(() => { toast.style.display = 'none'; }, 4000);
+    };
+}
+
+if (!window.showInfoModal) {
+    window.showInfoModal = function(title, message, onClose) {
+        let modal = document.getElementById('globalInfoModal');
+        if (!modal) {
+            const modalHtml = `
+                <div id="globalInfoModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999999; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+                    <div style="background:white; padding:25px; border-radius:15px; width:90%; max-width:350px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.2); animation:popIn 0.3s ease;">
+                        <div style="font-size:3.5rem; color:#007bff; margin-bottom:15px;"><i class="fas fa-info-circle"></i></div>
+                        <div id="globalInfoTitle" style="font-size:1.3rem; font-weight:bold; margin-bottom:10px; color:#333;"></div>
+                        <div id="globalInfoMessage" style="color:#666; margin-bottom:25px; font-size:0.95rem; line-height:1.6;"></div>
+                        <div style="display:flex; justify-content:center;">
+                            <button id="globalInfoOk" style="background:#007bff; color:white; border:none; padding:12px 30px; border-radius:8px; cursor:pointer; font-weight:bold; transition:0.2s; font-family:'Tajawal'; width:100%;">حسناً، فهمت</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            modal = document.getElementById('globalInfoModal');
+        }
+        document.getElementById('globalInfoTitle').innerHTML = title;
+        document.getElementById('globalInfoMessage').innerHTML = message;
+        modal.style.display = 'flex';
+        document.getElementById('globalInfoOk').onclick = function() {
+            modal.style.display = 'none';
+            if (typeof onClose === 'function') onClose();
+        };
+    };
+}
+// =========================================================
 
 let currentStudentId = null;
 let currentStudent = null;
@@ -12,8 +114,8 @@ document.addEventListener('DOMContentLoaded', function() {
     currentStudentId = parseInt(params.get('id'));
     
     if (!currentStudentId) {
-        alert('لم يتم تحديد طالب');
-        window.location.href = 'students.html';
+        showError('لم يتم تحديد طالب');
+        setTimeout(() => { window.location.href = 'students.html'; }, 1500);
         return;
     }
     
@@ -25,39 +127,15 @@ document.addEventListener('DOMContentLoaded', function() {
     loadStudentData();
 });
 
-// 🔥 تنسيقات نافذة التصحيح الذكية لتمدد الإجابات وعرض الصور والكلمات المرتبة 🔥
 function injectReviewStyles() {
     if (document.getElementById('customReviewStyles')) return;
     const style = document.createElement('style');
     style.id = 'customReviewStyles';
     style.innerHTML = `
-        .student-answer-box {
-            padding: 15px; 
-            background: #f8f9fa; 
-            border-radius: 8px; 
-            margin-bottom: 10px; 
-            border-right: 4px solid #007bff;
-            white-space: pre-wrap; 
-            word-break: break-word; 
-            font-size: 1.05rem;
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-        .review-question-item {
-            border: 1px solid #e2e8f0;
-            padding: 20px;
-            margin-bottom: 20px;
-            border-radius: 12px;
-            background: #fff;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
-        }
-        .review-q-header {
-            display: flex; justify-content: space-between; align-items: flex-start; 
-            margin-bottom: 15px; background: #f1f5f9; padding: 12px 15px; border-radius: 8px;
-        }
-        .score-input-container {
-            display: flex; align-items: center; gap: 5px; background: #fff; padding: 5px 10px; border-radius: 6px; border: 1px solid #cbd5e1;
-        }
+        .student-answer-box { padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 10px; border-right: 4px solid #007bff; white-space: pre-wrap; word-break: break-word; font-size: 1.05rem; line-height: 1.6; overflow-x: hidden; }
+        .review-question-item { border: 1px solid #e2e8f0; padding: 20px; margin-bottom: 20px; border-radius: 12px; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+        .review-q-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; background: #f1f5f9; padding: 12px 15px; border-radius: 8px; }
+        .score-input-container { display: flex; align-items: center; gap: 5px; background: #fff; padding: 5px 10px; border-radius: 6px; border: 1px solid #cbd5e1; }
         .score-input { width: 70px; text-align: center; font-weight: bold; border: 1px solid #ccc; border-radius: 4px; padding: 4px; font-size:1.1rem; color:#007bff; }
         .teacher-feedback-box textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; min-height: 80px; margin-top: 10px; font-family: inherit; }
     `;
@@ -69,8 +147,8 @@ function loadStudentData() {
     currentStudent = users.find(u => u.id == currentStudentId);
     
     if (!currentStudent) {
-        alert('الطالب غير موجود');
-        window.location.href = 'students.html';
+        showError('الطالب غير موجود');
+        setTimeout(() => { window.location.href = 'students.html'; }, 1500);
         return;
     }
     
@@ -240,7 +318,7 @@ function loadProgressTab() {
 }
 
 function printProgressLog() {
-    if (!currentStudent) { alert('بيانات الطالب غير جاهزة'); return; }
+    if (!currentStudent) { showError('بيانات الطالب غير جاهزة'); return; }
 
     const studentName = currentStudent.name || 'الطالب';
     const studentGrade = currentStudent.grade || '-';
@@ -460,7 +538,6 @@ function formatSingleItem(text) {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-// 🔥 دالة مساعدة لطباعة الجملة كاملة في سؤال السحب والإفلات مع التلوين التصحيحي 🔥
 function renderDragDropReview(q, rawAnswer) {
     if (!q.paragraphs || q.paragraphs.length === 0) return '<span class="text-muted">لا توجد جمل لعرضها</span>';
     
@@ -474,7 +551,6 @@ function renderDragDropReview(q, rawAnswer) {
                                   ? rawAnswer[`p_${pIdx}_g_${gIdx}`] 
                                   : '';
                                   
-                // التصحيح التلقائي اللوني
                 let isCorrect = studentWord.trim() === g.dragItem.trim();
                 let color = isCorrect ? '#155724' : '#721c24';
                 let bg = isCorrect ? '#d4edda' : '#f8d7da';
@@ -569,7 +645,6 @@ function loadLessonsTab() {
     }).join('');
 }
 
-
 function loadDiagnosticTab() {
     let studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     let assignedTestIndex = studentTests.findIndex(t => t.studentId == currentStudentId && t.type === 'diagnostic');
@@ -599,8 +674,6 @@ function loadDiagnosticTab() {
                     let ansObj = assignedTest.answers.find(a => a.questionId == q.id);
                     if (ansObj) {
                         if (ansObj.score === undefined || ansObj.score === null) {
-                            
-                            // 🔥 التصحيح التلقائي لأسئلة السحب والإفلات 🔥
                             if (q.type === 'drag-drop') {
                                 let allCorrect = true;
                                 let hasAnswer = false;
@@ -876,7 +949,7 @@ function saveAdminEvent() {
     const dateInput = document.getElementById('manualEventDate').value;
     const note = document.getElementById('manualEventNote').value;
     
-    if (!dateInput) { alert('يرجى اختيار التاريخ'); return; }
+    if (!dateInput) { showError('يرجى اختيار التاريخ'); return; }
 
     const targetDateStr = new Date(dateInput).toDateString();
     let events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
@@ -901,11 +974,13 @@ function saveAdminEvent() {
 }
 
 function deleteAdminEvent(id) {
-    if (!confirm('حذف هذا السجل؟')) return;
-    let events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
-    events = events.filter(e => e.id != id);
-    localStorage.setItem('studentEvents', JSON.stringify(events));
-    loadProgressTab();
+    showConfirmModal('هل أنت متأكد من حذف هذا السجل؟', function() {
+        let events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
+        events = events.filter(e => e.id != id);
+        localStorage.setItem('studentEvents', JSON.stringify(events));
+        loadProgressTab();
+        showSuccess('تم حذف السجل بنجاح');
+    });
 }
 
 function closeModal(id) { 
@@ -927,109 +1002,115 @@ function moveLesson(lessonId, direction) {
 }
 
 function accelerateLesson(id) {
-    if(!confirm('تسريع هذا الدرس؟ سيتم اعتباره منجزاً.')) return;
-    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    const target = studentLessons.find(l => l.id == id);
-    if(target) {
-        target.status = 'accelerated';
-        target.completedDate = new Date().toISOString();
-        if(!target.historyLog) target.historyLog = [];
-        target.historyLog.push({ date: new Date().toISOString(), status: 'accelerated' });
-        localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
-        loadLessonsTab();
-        if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
-    }
+    showConfirmModal('تسريع هذا الدرس؟<br><small>سيتم اعتباره منجزاً للتميز.</small>', function() {
+        const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+        const target = studentLessons.find(l => l.id == id);
+        if(target) {
+            target.status = 'accelerated';
+            target.completedDate = new Date().toISOString();
+            if(!target.historyLog) target.historyLog = [];
+            target.historyLog.push({ date: new Date().toISOString(), status: 'accelerated' });
+            localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
+            loadLessonsTab();
+            if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
+            showSuccess('تم تسريع الدرس بنجاح');
+        }
+    });
 }
 
 function resetLesson(id) {
-    if(!confirm('سيتم مسح السجل التاريخي لهذا الدرس بالكامل.')) return;
-    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    const target = studentLessons.find(l => l.id == id);
-    if(target) {
-        target.status = 'pending';
-        delete target.completedDate;
-        delete target.answers;
-        target.historyLog = [];
-        localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
-        loadLessonsTab();
-        if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
-    }
+    showConfirmModal('إعادة فتح الدرس؟<br><small>سيتم مسح السجل التاريخي لهذا الدرس بالكامل وإعادته للحالة المعلقة.</small>', function() {
+        const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+        const target = studentLessons.find(l => l.id == id);
+        if(target) {
+            target.status = 'pending';
+            delete target.completedDate;
+            delete target.answers;
+            target.historyLog = [];
+            localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
+            loadLessonsTab();
+            if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
+            showSuccess('تم إعادة فتح الدرس');
+        }
+    });
 }
 
 function deleteLesson(id) {
-    if(!confirm('حذف الدرس؟')) return;
-    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    let myLessons = studentLessons.filter(l => l.studentId == currentStudentId && l.id != id);
-    let otherLessons = studentLessons.filter(l => l.studentId != currentStudentId);
-    saveAndReindexLessons(myLessons, false, otherLessons);
+    showConfirmModal('هل أنت متأكد من حذف هذا الدرس؟', function() {
+        const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+        let myLessons = studentLessons.filter(l => l.studentId == currentStudentId && l.id != id);
+        let otherLessons = studentLessons.filter(l => l.studentId != currentStudentId);
+        saveAndReindexLessons(myLessons, false, otherLessons);
+        showSuccess('تم حذف الدرس بنجاح');
+    });
 }
 
 function autoGenerateLessons() {
-    if(!confirm('سيتم حذف الدروس الحالية وتوليد قائمة جديدة بناءً على التشخيص. متابعة؟')) return;
-    
-    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    const compDiag = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic' && t.status === 'completed');
-    
-    if (!compDiag) { alert('يجب إكمال وتصحيح الاختبار التشخيصي أولاً'); return; }
-    
-    const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
-    const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    const allLibraryAssignments = JSON.parse(localStorage.getItem('assignments') || '[]'); 
-    const originalTest = JSON.parse(localStorage.getItem('tests') || '[]').find(t => t.id == compDiag.testId);
+    showConfirmModal('توليد الخطة العلاجية تلقائياً؟<br><small>سيتم حذف الدروس الحالية وتوليد قائمة جديدة بناءً على نتيجة التشخيص.</small>', function() {
+        const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+        const compDiag = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic' && t.status === 'completed');
+        
+        if (!compDiag) { showError('يجب إكمال وتصحيح الاختبار التشخيصي أولاً.'); return; }
+        
+        const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
+        const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+        const allLibraryAssignments = JSON.parse(localStorage.getItem('assignments') || '[]'); 
+        const originalTest = JSON.parse(localStorage.getItem('tests') || '[]').find(t => t.id == compDiag.testId);
 
-    let newLessons = [];
-    let newAssignments = []; 
+        let newLessons = [];
+        let newAssignments = []; 
 
-    if(originalTest && originalTest.questions) {
-        originalTest.questions.forEach(q => {
-            const ans = compDiag.answers ? compDiag.answers.find(a => a.questionId == q.id) : null;
-            
-            if((ans?.score || 0) < (q.passingScore || 1) && q.linkedGoalId) {
-                const obj = allObjectives.find(o => o.id == q.linkedGoalId);
-                if(obj) {
-                    const matches = allLessons.filter(l => l.linkedInstructionalGoal === obj.shortTermGoal || (obj.instructionalGoals||[]).includes(l.linkedInstructionalGoal));
-                    
-                    matches.forEach(m => {
-                        if(!newLessons.find(x => x.originalLessonId == m.id)) {
-                            newLessons.push({
-                                id: Date.now() + Math.floor(Math.random()*10000),
-                                studentId: currentStudentId, title: m.title, objective: m.linkedInstructionalGoal,
-                                originalLessonId: m.id, status: 'pending', assignedDate: new Date().toISOString()
-                            });
-                            
-                            const linkedHomework = allLibraryAssignments.find(h => h.linkedInstructionalGoal === m.linkedInstructionalGoal);
-
-                            if (linkedHomework) {
-                                newAssignments.push({
-                                    id: Date.now() + Math.floor(Math.random()*10000) + 1,
-                                    studentId: currentStudentId,
-                                    title: linkedHomework.title,
-                                    status: 'pending',
-                                    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                                    assignedDate: new Date().toISOString()
+        if(originalTest && originalTest.questions) {
+            originalTest.questions.forEach(q => {
+                const ans = compDiag.answers ? compDiag.answers.find(a => a.questionId == q.id) : null;
+                
+                if((ans?.score || 0) < (q.passingScore || 1) && q.linkedGoalId) {
+                    const obj = allObjectives.find(o => o.id == q.linkedGoalId);
+                    if(obj) {
+                        const matches = allLessons.filter(l => l.linkedInstructionalGoal === obj.shortTermGoal || (obj.instructionalGoals||[]).includes(l.linkedInstructionalGoal));
+                        
+                        matches.forEach(m => {
+                            if(!newLessons.find(x => x.originalLessonId == m.id)) {
+                                newLessons.push({
+                                    id: Date.now() + Math.floor(Math.random()*10000),
+                                    studentId: currentStudentId, title: m.title, objective: m.linkedInstructionalGoal,
+                                    originalLessonId: m.id, status: 'pending', assignedDate: new Date().toISOString()
                                 });
-                            } 
-                        }
-                    });
+                                
+                                const linkedHomework = allLibraryAssignments.find(h => h.linkedInstructionalGoal === m.linkedInstructionalGoal);
+
+                                if (linkedHomework) {
+                                    newAssignments.push({
+                                        id: Date.now() + Math.floor(Math.random()*10000) + 1,
+                                        studentId: currentStudentId,
+                                        title: linkedHomework.title,
+                                        status: 'pending',
+                                        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                                        assignedDate: new Date().toISOString()
+                                    });
+                                } 
+                            }
+                        });
+                    }
                 }
-            }
-        });
-    }
+            });
+        }
 
-    if(newLessons.length === 0) { alert('لا توجد نقاط ضعف تتطلب خطة علاجية.'); return; }
-    
-    saveAndReindexLessons(newLessons, true);
-    
-    if (newAssignments.length > 0) {
-        let currentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
-        currentAssignments = [...currentAssignments.filter(a => a.studentId != currentStudentId), ...newAssignments];
-        localStorage.setItem('studentAssignments', JSON.stringify(currentAssignments));
-        alert(`تم توليد ${newLessons.length} درس و ${newAssignments.length} واجب مرتبط.`);
-    } else {
-        alert(`تم توليد ${newLessons.length} درس.`);
-    }
+        if(newLessons.length === 0) { showInfoModal('الخطة العلاجية', 'الطالب متفوق! لا توجد نقاط ضعف تتطلب خطة علاجية.'); return; }
+        
+        saveAndReindexLessons(newLessons, true);
+        
+        if (newAssignments.length > 0) {
+            let currentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
+            currentAssignments = [...currentAssignments.filter(a => a.studentId != currentStudentId), ...newAssignments];
+            localStorage.setItem('studentAssignments', JSON.stringify(currentAssignments));
+            showSuccess(`تم توليد ${newLessons.length} درس و ${newAssignments.length} واجب مرتبط.`);
+        } else {
+            showSuccess(`تم توليد ${newLessons.length} درس.`);
+        }
 
-    if (document.getElementById('section-assignments').classList.contains('active')) loadAssignmentsTab();
+        if (document.getElementById('section-assignments').classList.contains('active')) loadAssignmentsTab();
+    });
 }
 
 function saveAndReindexLessons(myList, replaceAll, others) {
@@ -1050,20 +1131,22 @@ function assignTest() {
     const testId = parseInt(document.getElementById('testSelect').value);
     if(!testId) return;
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    if(studentTests.some(t => t.studentId == currentStudentId && t.type === 'diagnostic')) { alert('يوجد اختبار معين مسبقاً'); return; }
+    if(studentTests.some(t => t.studentId == currentStudentId && t.type === 'diagnostic')) { showError('يوجد اختبار معين مسبقاً لهذا الطالب.'); return; }
     studentTests.push({ id: Date.now(), studentId: currentStudentId, testId: testId, type: 'diagnostic', status: 'pending', assignedDate: new Date().toISOString() });
     localStorage.setItem('studentTests', JSON.stringify(studentTests));
     closeModal('assignTestModal');
     loadDiagnosticTab();
-    alert('تم تعيين الاختبار بنجاح.');
+    showSuccess('تم تعيين الاختبار بنجاح.');
 }
 function deleteAssignedTest(id) {
-    if(!confirm('حذف؟')) return;
-    let st = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    st = st.filter(t => t.id != id);
-    localStorage.setItem('studentTests', JSON.stringify(st));
-    loadDiagnosticTab();
-    if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
+    showConfirmModal('هل أنت متأكد من حذف هذا الاختبار المعين؟', function() {
+        let st = JSON.parse(localStorage.getItem('studentTests') || '[]');
+        st = st.filter(t => t.id != id);
+        localStorage.setItem('studentTests', JSON.stringify(st));
+        loadDiagnosticTab();
+        if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
+        showSuccess('تم الحذف بنجاح.');
+    });
 }
 
 function showAssignHomeworkModal() { 
@@ -1092,7 +1175,7 @@ function showAssignHomeworkModal() {
 function assignHomework() { 
     const select = document.getElementById('homeworkSelect'); 
     
-    if(!select || !select.value) { alert('الرجاء اختيار واجب من القائمة'); return; }
+    if(!select || !select.value) { showError('الرجاء اختيار واجب من القائمة'); return; }
     
     const title = select.value; 
     
@@ -1109,20 +1192,19 @@ function assignHomework() {
     localStorage.setItem('studentAssignments', JSON.stringify(list)); 
     closeModal('assignHomeworkModal'); 
     loadAssignmentsTab(); 
-    alert('تم الإسناد بنجاح'); 
+    showSuccess('تم إسناد الواجب بنجاح'); 
 }
 
 function deleteAssignment(id) { 
-    if(confirm('حذف هذا الواجب؟')) { 
+    showConfirmModal('هل أنت متأكد من حذف هذا الواجب؟', function() {
         let list = JSON.parse(localStorage.getItem('studentAssignments') || '[]'); 
         list = list.filter(a => a.id != id); 
         localStorage.setItem('studentAssignments', JSON.stringify(list)); 
         loadAssignmentsTab(); 
-    } 
+        showSuccess('تم الحذف بنجاح');
+    });
 }
 
-
-// 🔥 نافذة المراجعة مع التخصيص الجديد لسؤال السحب والإفلات 🔥
 function openReviewModal(assignmentId) {
     const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
     const assignment = studentAssignments.find(a => a.id == assignmentId);
@@ -1131,7 +1213,7 @@ function openReviewModal(assignmentId) {
         const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
         const test = studentTests.find(t => t.id == assignmentId);
         if (test) { openTestReviewModal(test); return; } 
-        alert('لم يتم العثور على الواجب/الاختبار'); return; 
+        showError('لم يتم العثور على الواجب أو الاختبار.'); return; 
     }
 
     const allLibraryAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
@@ -1159,7 +1241,6 @@ function openReviewModal(assignmentId) {
             const studentAnsObj = assignment.answers ? assignment.answers.find(a => a.questionId == q.id) : null;
             let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
             
-            // 🔥 استخدام محرك العرض الذكي للسحب والإفلات أو العادي لبقية الأسئلة 🔥
             let formattedAnswer = '';
             if (q.type === 'drag-drop') {
                 formattedAnswer = renderDragDropReview(q, rawAnswer);
@@ -1172,7 +1253,6 @@ function openReviewModal(assignmentId) {
             
             let currentScore = studentAnsObj ? studentAnsObj.score : undefined;
             if (currentScore === undefined || currentScore === null) {
-                // التصحيح التلقائي للواجهة فقط
                 if (q.type === 'drag-drop') {
                     let allCorrect = true;
                     let hasAnswer = false;
@@ -1224,7 +1304,6 @@ function openReviewModal(assignmentId) {
     document.getElementById('reviewTestModal').classList.add('show');
 }
 
-// 🔥 نافذة المراجعة للاختبارات بنفس نظام الجمل الذكي 🔥
 function openTestReviewModal(test) {
     const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
     const originalTest = allTests.find(t => t.id == test.testId);
@@ -1375,38 +1454,38 @@ function saveTestReview() {
         loadDiagnosticTab(); 
     }
     
-    alert('تم حفظ التصحيح واعتماد الدرجة بنجاح ✅');
+    showSuccess('تم حفظ التصحيح واعتماد الدرجة بنجاح');
 }
 
 function returnTestForResubmission() {
     const id = parseInt(document.getElementById('reviewAssignmentId').value);
-    if(!confirm('إعادة الاختبار/الواجب للطالب للتعديل؟')) return;
-    
-    let studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
-    let idx = studentAssignments.findIndex(a => a.id == id);
-    let isAssignment = true;
+    showConfirmModal('إعادة الاختبار للطالب؟<br><small>سيتم إرجاع الاختبار للطالب ليقوم بتعديل إجاباته وإعادة التسليم.</small>', function() {
+        let studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
+        let idx = studentAssignments.findIndex(a => a.id == id);
+        let isAssignment = true;
 
-    if (idx === -1) {
-        const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-        idx = studentTests.findIndex(t => t.id == id);
-        if (idx !== -1) {
-            studentAssignments = studentTests;
-            isAssignment = false;
-        } else return;
-    }
+        if (idx === -1) {
+            const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+            idx = studentTests.findIndex(t => t.id == id);
+            if (idx !== -1) {
+                studentAssignments = studentTests;
+                isAssignment = false;
+            } else return;
+        }
 
-    studentAssignments[idx].status = 'returned'; 
-    
-    if (isAssignment) {
-        localStorage.setItem('studentAssignments', JSON.stringify(studentAssignments));
-        loadAssignmentsTab();
-    } else {
-        localStorage.setItem('studentTests', JSON.stringify(studentAssignments));
-        loadDiagnosticTab();
-    }
-    
-    closeModal('reviewTestModal');
-    alert('تمت الإعادة');
+        studentAssignments[idx].status = 'returned'; 
+        
+        if (isAssignment) {
+            localStorage.setItem('studentAssignments', JSON.stringify(studentAssignments));
+            loadAssignmentsTab();
+        } else {
+            localStorage.setItem('studentTests', JSON.stringify(studentAssignments));
+            loadDiagnosticTab();
+        }
+        
+        closeModal('reviewTestModal');
+        showSuccess('تمت إعادة الاختبار للطالب بنجاح');
+    });
 }
 
 function showAssignLibraryLessonModal() {
@@ -1433,7 +1512,7 @@ function assignLibraryLesson() {
     const lessonId = select.value;
 
     if (!lessonId) {
-        alert('يرجى اختيار درس لإسناده');
+        showError('يرجى اختيار درس لإسناده');
         return;
     }
 
@@ -1441,7 +1520,7 @@ function assignLibraryLesson() {
     const targetLesson = allLessons.find(l => l.id == lessonId);
 
     if (!targetLesson) {
-        alert('الدرس المختار لم يعد موجوداً');
+        showError('الدرس المختار لم يعد موجوداً');
         return;
     }
 
@@ -1468,7 +1547,7 @@ function assignLibraryLesson() {
         loadIEPTab();
     }
     
-    alert('تم إسناد الدرس للطالب بنجاح ✅');
+    showSuccess('تم إسناد الدرس للطالب بنجاح');
 }
 
 function regenerateLessons() {

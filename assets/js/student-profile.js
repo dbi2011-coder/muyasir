@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة الطالب + اعتماد التصحيح اليدوي للدروس (اللحظة الحاسمة)
+// الوصف: إدارة الطالب + طباعة (مخفق - يعاد الدرس) في سجل المتابعة بدقة
 // ============================================
 
 function calculateAutoGrade(q, studentAnsObj) {
@@ -67,6 +67,7 @@ function switchSection(sectionId) {
     if (sectionId === 'progress') loadProgressTab();
 }
 
+// 🔥 تحديث قسم سجل المتابعة لإظهار حالة الإخفاق بوضوح 🔥
 function loadProgressTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]'); let adminEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]'); const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     let myList = studentLessons.filter(l => l.studentId == currentStudentId); const container = document.getElementById('section-progress');
@@ -77,8 +78,13 @@ function loadProgressTab() {
     myList.forEach(l => { if (l.historyLog) { l.historyLog.forEach(log => { rawLogs.push({ dateObj: new Date(log.date), dateStr: new Date(log.date).toDateString(), type: 'lesson', status: log.status, title: l.title, lessonId: l.id, cachedType: log.cachedSessionType || null }); }); } });
     myEvents.forEach(e => { rawLogs.push({ dateObj: new Date(e.date), dateStr: new Date(e.date).toDateString(), type: e.type === 'auto-absence' ? 'auto-absence' : 'event', status: e.type, title: e.title || (e.type === 'auto-absence' ? 'درس غير محدد' : 'حدث إداري'), id: e.id, note: e.note }); });
     let finalTimeline = []; let balance = 0; rawLogs.sort((a, b) => a.dateObj - b.dateObj);
+    
     rawLogs.forEach(log => {
-        if (log.status === 'started' || log.status === 'extension') { const hasCompletion = rawLogs.some(l => l.dateStr === log.dateStr && l.lessonId === log.lessonId && (l.status === 'completed' || l.status === 'accelerated')); if (hasCompletion) return; }
+        if (log.status === 'started' || log.status === 'extension') { 
+            const hasFinalStateToday = rawLogs.some(l => l.dateStr === log.dateStr && l.lessonId === log.lessonId && ['completed', 'accelerated', 'passed_by_alternative', 'struggling', 'returned', 'pending_review'].includes(l.status)); 
+            if (hasFinalStateToday) return; // نتجاهل حالة البدء إذا كان هناك تحديث نهائي أو إخفاق في نفس اليوم
+        }
+        
         let displayStatus = '', displayType = '', rowClass = '', studentState = '';
         if (log.type === 'event' || log.type === 'auto-absence') {
             if (log.status === 'vacation') { studentState = 'إجازة'; displayStatus = 'توقف مؤقت'; rowClass = 'bg-info-light'; }
@@ -91,10 +97,18 @@ function loadProgressTab() {
             else if (log.status === 'completed') { displayStatus = '<span class="text-success font-weight-bold">✔ متحقق</span>'; rowClass = 'bg-success-light'; }
             else if (log.status === 'accelerated') { displayStatus = '<span class="text-warning font-weight-bold">⚡ تسريع</span>'; rowClass = 'bg-warning-light'; }
             else if (log.status === 'pending_review') { displayStatus = '<span class="text-warning font-weight-bold">⏳ بانتظار تصحيح</span>'; rowClass = 'bg-warning-light'; }
+            else if (log.status === 'passed_by_alternative') { displayStatus = '<span class="text-info font-weight-bold">🎯 مجتاز ببديل</span>'; rowClass = 'bg-info-light'; }
+            // 🔥 هنا يتم رصد الإخفاق وطلب المساعدة ويُطبع باللون الأحمر 🔥
+            else if (log.status === 'struggling' || log.status === 'returned') { 
+                displayStatus = '<span class="text-danger font-weight-bold">مخفق - يعاد الدرس</span>'; 
+                rowClass = 'bg-danger-light'; 
+            }
+            
             if (log.cachedType) { if (log.cachedType === 'basic') displayType = 'أساسية'; else if (log.cachedType === 'compensation') { displayType = '<span class="text-primary font-weight-bold">تعويضية</span>'; balance++; } else if (log.cachedType === 'additional') { displayType = 'إضافية'; balance++; } } else { displayType = 'أساسية'; }
         }
         finalTimeline.push({ title: log.title, lessonStatus: displayStatus, studentStatus: studentState, sessionType: displayType || '-', date: log.dateObj.toLocaleDateString('ar-SA'), rawDate: log.dateObj, balanceSnapshot: balance, actions: (log.type === 'event' || log.type === 'auto-absence') ? log.id : null, note: log.note, rowClass: rowClass });
     });
+    
     let rowsHtml = finalTimeline.map(item => {
         let actionsHtml = '-'; if (item.actions) { actionsHtml = `<button class="btn-icon text-danger no-print" onclick="deleteAdminEvent(${item.actions})">🗑️</button>`; if (item.rowClass !== 'bg-danger-light') { actionsHtml = `<button class="btn-icon text-primary no-print" onclick="editAdminEvent(${item.actions})">✏️</button>` + actionsHtml; } }
         let noteHtml = item.note ? `<br><small class="text-muted">[${item.note}]</small>` : ''; return `<tr class="${item.rowClass || ''}"><td><strong>${item.title}</strong>${noteHtml}</td><td class="text-center">${item.lessonStatus}</td><td class="text-center">${item.studentStatus}</td><td class="text-center">${item.sessionType}</td><td class="text-center">${item.date}</td><td class="text-center no-print">${actionsHtml}</td></tr>`;
@@ -181,15 +195,20 @@ function loadIEPTab() {
     if(!strengthHTML) strengthHTML = '<li>لا توجد نقاط مسجلة.</li>'; if(!needsHTML) needsHTML = '<li>لا توجد نقاط احتياج مسجلة.</li>';
 
     const completedLessonsMap = {}; const acceleratedLessonsMap = {};
-    studentLessons.forEach(l => { if (l.studentId == currentStudentId) { if (l.status === 'completed') completedLessonsMap[l.objective] = l.completedDate; if (l.status === 'accelerated') acceleratedLessonsMap[l.objective] = l.completedDate; } });
+    studentLessons.forEach(l => { 
+        if (l.studentId == currentStudentId) { 
+            if (l.status === 'completed') completedLessonsMap[l.objective] = l.completedDate || 'old_data'; 
+            if (l.status === 'accelerated') acceleratedLessonsMap[l.objective] = l.completedDate || 'old_data'; 
+        } 
+    });
 
     let objectivesRows = ''; let stgCounter = 1;
     needsObjects.forEach(obj => {
         objectivesRows += `<tr style="background-color:#dbeeff !important;"><td class="text-center" style="font-weight:bold; color:#0056b3;">${stgCounter++}</td><td colspan="2" style="font-weight:bold; color:#0056b3;">الهدف: ${obj.shortTermGoal}</td></tr>`;
         if (obj.instructionalGoals) obj.instructionalGoals.forEach(iGoal => {
             const compDate = completedLessonsMap[iGoal], accelDate = acceleratedLessonsMap[iGoal]; let dateDisplay = '', rowStyle = '';
-            if (accelDate) { dateDisplay = `<span style="font-weight:bold; color:#856404;">⚡ ${new Date(accelDate).toLocaleDateString('ar-SA')} (تفوق)</span>`; rowStyle = 'background-color:#fff3cd !important;'; }
-            else if (compDate) { dateDisplay = `<span class="text-success font-weight-bold">✔ ${new Date(compDate).toLocaleDateString('ar-SA')}</span>`; }
+            if (accelDate) { let validDate = new Date(accelDate); let displayStr = isNaN(validDate) ? 'مكتمل بتفوق' : validDate.toLocaleDateString('ar-SA'); dateDisplay = `<span style="font-weight:bold; color:#856404;">⚡ ${displayStr} (تسريع)</span>`; rowStyle = 'background-color:#fff3cd !important;'; }
+            else if (compDate) { let validDate = new Date(compDate); let displayStr = isNaN(validDate) ? 'مكتمل' : validDate.toLocaleDateString('ar-SA'); dateDisplay = `<span class="text-success font-weight-bold">✔ ${displayStr}</span>`; }
             else { dateDisplay = `<span style="color:#ccc;">--/--/----</span>`; }
             objectivesRows += `<tr style="${rowStyle}"><td class="text-center">-</td><td>${iGoal}</td><td>${dateDisplay}</td></tr>`;
         });
@@ -454,7 +473,7 @@ function deleteAssignment(id) {
     });
 }
 
-// ---------------- نظام المراجعة والتصحيح (اللحظة الحاسمة) ----------------
+// ---------------- نظام المراجعة الموحد ----------------
 function extractAnswerText(ans) {
     if (ans === null || ans === undefined) return '';
     if (typeof ans === 'string') { if (ans.startsWith('data:') || (ans.length > 200 && !ans.includes(' '))) return ''; return ans; }
@@ -658,7 +677,6 @@ function recalculateScore(qId) {
     }
 }
 
-// 🔥 اللحظة الحاسمة: جمع تقييم المعلم اليدوي ومحاكمة الدرس 🔥
 function saveTestReview() {
     const id = parseInt(document.getElementById('reviewAssignmentId').value);
     const type = document.getElementById('reviewAssignmentId').getAttribute('data-type');
@@ -705,7 +723,6 @@ function saveTestReview() {
         collection[idx].score = maxTotalScore > 0 ? Math.round((totalScore / maxTotalScore) * 100) : 0;
     }
     
-    // 🔥 الحكم النهائي للدروس بناءً على تصحيح المعلم 🔥
     if (type === 'lesson') {
         const lib = JSON.parse(localStorage.getItem('lessons') || '[]');
         const orig = lib.find(l => l.id == collection[idx].originalLessonId);
@@ -714,8 +731,6 @@ function saveTestReview() {
         if (collection[idx].score >= passScore) {
             collection[idx].status = 'completed';
             collection[idx].completedDate = new Date().toISOString();
-            
-            // الشفاء الذاتي للدرس الأساسي إن كان هذا درساً علاجياً
             if (collection[idx].rescueLessonId) {
                 const originalIdx = collection.findIndex(l => l.id == collection[idx].rescueLessonId);
                 if (originalIdx !== -1) {
@@ -727,6 +742,9 @@ function saveTestReview() {
             showSuccess('تم حفظ التصحيح. الطالب اجتاز المحك واكتمل الدرس بنجاح!');
         } else {
             collection[idx].status = 'returned'; 
+            // 🔥 إضافة حالة الإخفاق (الإعادة) للسجل اليومي عند تصحيح المعلم 🔥
+            if(!collection[idx].historyLog) collection[idx].historyLog = [];
+            collection[idx].historyLog.push({ date: new Date().toISOString(), status: 'returned' });
             showError(`تم حفظ التقييم. نتيجة الطالب (${collection[idx].score}%) لم تحقق المحك (${passScore}%). أُعيد الدرس للطالب.`);
         }
     } else {
@@ -756,6 +774,10 @@ function returnTestForResubmission() {
         if (idx === -1) return;
 
         collection[idx].status = 'returned'; 
+        // 🔥 توثيق إعادة المعلم للدرس في السجل التاريخي 🔥
+        if(!collection[idx].historyLog) collection[idx].historyLog = [];
+        collection[idx].historyLog.push({ date: new Date().toISOString(), status: 'returned' });
+
         localStorage.setItem(storageKey, JSON.stringify(collection));
         closeModal('reviewTestModal');
         

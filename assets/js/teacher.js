@@ -1,10 +1,9 @@
 // ============================================
 // 📁 الملف: assets/js/teacher.js
-// الوصف: إدارة شاشة الطلاب + شريط تقدم بألوان عصرية وفخمة
 // ============================================
 
 // =========================================================
-// 🔥 دوال النوافذ المنبثقة الاحترافية 🔥
+// 🔥 دوال النوافذ المنبثقة الاحترافية (تمت إضافتها لمنع الخطأ) 🔥
 // =========================================================
 if (!window.showConfirmModal) {
     window.showConfirmModal = function(message, onConfirm) {
@@ -26,10 +25,18 @@ if (!window.showConfirmModal) {
             document.body.insertAdjacentHTML('beforeend', modalHtml);
             modal = document.getElementById('globalConfirmModal');
         }
+
         document.getElementById('globalConfirmMessage').innerHTML = message;
         modal.style.display = 'flex';
-        document.getElementById('globalConfirmOk').onclick = function() { modal.style.display = 'none'; if (typeof onConfirm === 'function') onConfirm(); };
-        document.getElementById('globalConfirmCancel').onclick = function() { modal.style.display = 'none'; };
+
+        document.getElementById('globalConfirmOk').onclick = function() {
+            modal.style.display = 'none';
+            if (typeof onConfirm === 'function') onConfirm();
+        };
+
+        document.getElementById('globalConfirmCancel').onclick = function() {
+            modal.style.display = 'none';
+        };
     };
 }
 
@@ -47,6 +54,8 @@ if (!window.showSuccess) {
         }
         document.getElementById('globalSuccessMessage').textContent = message;
         toast.style.display = 'flex';
+        
+        // إخفاء الرسالة تلقائياً بعد 3 ثواني
         setTimeout(() => { toast.style.display = 'none'; }, 3000);
     };
 }
@@ -90,7 +99,6 @@ function loadTeacherStats() {
     if (document.getElementById('unreadMessages')) document.getElementById('unreadMessages').innerText = messagesCount;
 }
 
-// 🔥 دالة رسم الجدول مع الألوان العصرية الجديدة 🔥
 function loadStudentsData() {
     const loadingState = document.getElementById('loadingState');
     const emptyState = document.getElementById('emptyState');
@@ -106,6 +114,7 @@ function loadStudentsData() {
         const currentTeacher = getCurrentUser();
         const students = users.filter(u => u.role === 'student' && u.teacherId === currentTeacher.id);
         
+        // جلب سجلات الدروس لحساب النسبة ديناميكياً
         const allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
         
         if(loadingState) loadingState.style.display = 'none';
@@ -124,37 +133,30 @@ function loadStudentsData() {
                 progressPct = Math.round((completed / myLessons.length) * 100);
             }
 
-            // 🔥 الألوان العصرية الجديدة والمريحة للعين 🔥
-            let hexColor = '#3b82f6'; // أزرق ساطع للبداية (0%)
-            if (progressPct >= 80) {
-                hexColor = '#10b981'; // أخضر زمردي للتقدم العالي
-            } else if (progressPct >= 50) {
-                hexColor = '#8b5cf6'; // بنفسجي أنيق للتقدم المتوسط
-            } else if (progressPct > 0) {
-                hexColor = '#0ea5e9'; // أزرق سماوي للتقدم المبدئي
-            }
+            // تطبيق الألوان العصرية المطلوبة على تصميمك الأصلي فقط
+            let hexColor = '#3b82f6'; // أزرق (للبداية 0%)
+            if (progressPct >= 80) hexColor = '#10b981'; // أخضر
+            else if (progressPct >= 50) hexColor = '#8b5cf6'; // بنفسجي
+            else if (progressPct > 0) hexColor = '#0ea5e9'; // سماوي
 
-            return `
-            <tr>
+            return `<tr>
                 <td>${index + 1}</td>
-                <td style="font-weight: bold; color: #2c3e50; font-size: 1.05rem;">${student.name}</td>
+                <td>${student.name}</td>
                 <td>${student.grade}</td>
-                <td><span style="background:#f1f5f9; padding:4px 10px; border-radius:6px; color:#475569; font-size:0.9rem;">${student.subject || 'عام'}</span></td>
-                <td style="width: 220px;">
-                    <div style="display:flex; align-items:center; gap:12px;">
-                        <span style="font-weight:900; color:${hexColor}; min-width:40px; text-align:right; font-size:1.1rem;">${progressPct}%</span>
-                        <div style="flex-grow:1; background:#e2e8f0; height:12px; border-radius:10px; overflow:hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="width: ${progressPct}%; background-color: ${hexColor}; height:100%; border-radius:10px; transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);"></div>
-                        </div>
+                <td>${student.subject}</td>
+                <td class="progress-cell">
+                    <div class="progress-text" style="color: ${hexColor}; font-weight: bold;">${progressPct}%</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${progressPct}%; background-color: ${hexColor} !important;"></div>
                     </div>
                 </td>
                 <td>
-                    <div class="student-actions" style="display: flex; gap: 6px; flex-wrap: wrap;">
-                        <button class="btn btn-sm btn-primary" onclick="openStudentFile(${student.id})"><i class="fas fa-folder-open"></i> ملف</button>
-                        <button class="btn btn-sm btn-secondary" onclick="showStudentLoginData(${student.id})"><i class="fas fa-key"></i> بيانات</button>
-                        <button class="btn btn-sm btn-warning" onclick="editStudent(${student.id})"><i class="fas fa-edit"></i> تعديل</button>
-                        <button class="btn btn-sm btn-info" onclick="exportStudentData(${student.id})"><i class="fas fa-file-export"></i> تصدير</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})"><i class="fas fa-trash"></i> حذف</button>
+                    <div class="student-actions" style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        <button class="btn btn-sm btn-primary" onclick="openStudentFile(${student.id})">ملف</button>
+                        <button class="btn btn-sm btn-secondary" onclick="showStudentLoginData(${student.id})">بيانات</button>
+                        <button class="btn btn-sm btn-warning" onclick="editStudent(${student.id})">تعديل</button>
+                        <button class="btn btn-sm btn-info" onclick="exportStudentData(${student.id})">تصدير</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})">حذف</button>
                     </div>
                 </td>
             </tr>`;

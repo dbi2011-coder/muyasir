@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب + محرك مراجعة ذكي + رسائل ونوافذ منبثقة احترافية
+// الوصف: نظام التقييم الجزئي وتحديد الصح/الخطأ لكل فقرة مع الحساب التلقائي
 // ============================================
 
 // =========================================================
@@ -431,11 +431,6 @@ function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDa
     return myEvents;
 }
 
-
-// ============================================
-// 🔥 2. استخراج وعرض الإجابات الذكي 🔥
-// ============================================
-
 function extractAnswerText(ans) {
     if (ans === null || ans === undefined) return '';
     if (typeof ans === 'string') {
@@ -448,7 +443,6 @@ function extractAnswerText(ans) {
         if (ans.value) return ans.value;
         if (ans.answer) return ans.answer;
         if (ans.selected) return Array.isArray(ans.selected) ? ans.selected.join(' ، ') : String(ans.selected);
-        
         let keys = Object.keys(ans).sort(); 
         let textParts = [];
         for (let k of keys) {
@@ -457,110 +451,48 @@ function extractAnswerText(ans) {
             }
         }
         if (textParts.length > 0) return textParts.join(' ');
-        
         return ''; 
     }
     return String(ans);
 }
 
-function formatAnswerDisplay(rawAnswer) {
-    if (rawAnswer === null || rawAnswer === undefined || rawAnswer === '') {
-        return '<span class="text-muted" style="font-style:italic;">(لم يُجب الطالب على هذا السؤال)</span>';
-    }
-
-    if (Array.isArray(rawAnswer)) {
-        let html = rawAnswer.map(item => formatSingleItem(item)).join('<div style="margin-top:8px; border-bottom:1px dashed #eee; padding-bottom:5px;"></div>');
-        return html || '<span class="text-muted">(إجابة فارغة)</span>';
-    }
-
-    if (typeof rawAnswer === 'object') {
-        if (rawAnswer.selected) {
-            let val = Array.isArray(rawAnswer.selected) ? rawAnswer.selected.join(' ، ') : rawAnswer.selected;
-            return formatSingleItem(val);
-        }
-
-        let itemsHtml = [];
-        let keys = Object.keys(rawAnswer).sort(); 
-        
-        for (let k of keys) {
-            let itemVal = rawAnswer[k];
-            if (itemVal !== null && itemVal !== undefined && itemVal !== '') {
-                if (typeof itemVal !== 'object') {
-                    let formatted = formatSingleItem(itemVal);
-                    if (formatted) itemsHtml.push(formatted);
-                }
-            }
-        }
-
-        if (itemsHtml.length > 0) {
-            let isMedia = itemsHtml.some(html => html.includes('<img') || html.includes('<audio') || html.includes('<a '));
-            if (isMedia) {
-                return itemsHtml.join('<div style="margin:15px 0; border-bottom:2px dashed #cbd5e1;"></div>');
-            } else {
-                return itemsHtml.join(' <span style="color:#007bff; font-weight:bold; margin:0 5px;">&larr;</span> ');
-            }
-        } else {
-            return '<span class="text-muted">(إجابة فارغة)</span>';
-        }
-    }
-
-    return formatSingleItem(rawAnswer);
-}
-
 function formatSingleItem(text) {
     if (!text) return '';
     let str = String(text).trim();
-    
     if (str.startsWith('{') && str.endsWith('}')) {
         try { return formatAnswerDisplay(JSON.parse(str)); } catch(e) {}
     }
-    
     if (str.startsWith('data:image')) {
-        return `<img src="${str}" style="max-width:100%; max-height:300px; border:1px solid #ccc; border-radius:8px; margin-top:5px; display:block; object-fit:contain; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">`;
+        return `<img src="${str}" style="max-width:100%; max-height:200px; border:1px solid #ccc; border-radius:8px; display:block; object-fit:contain; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">`;
     }
-    
     if (str.startsWith('data:audio')) {
-        return `<audio controls src="${str}" style="margin-top:5px; width:100%; max-width:300px; height:45px;"></audio>`;
+        return `<audio controls src="${str}" style="width:100%; max-width:300px; height:45px;"></audio>`;
     }
-    
     if (str.startsWith('data:')) {
-        return `<a href="${str}" download="مرفق_إجابة" class="btn btn-sm btn-outline-primary mt-2" style="display:inline-block;"><i class="fas fa-file-download"></i> تحميل المرفق</a>`;
+        return `<a href="${str}" download="مرفق_إجابة" class="btn btn-sm btn-outline-primary"><i class="fas fa-file-download"></i> تحميل المرفق</a>`;
     }
-    
     if (str.length > 500 && !str.includes(' ')) {
-        return `
-            <div style="overflow-wrap: anywhere; font-size: 0.85rem; color: #dc3545; background:#fff5f5; padding:10px; border-radius:5px; max-height: 100px; overflow-y: auto; border:1px solid #ffcdd2;">
-                <i class="fas fa-exclamation-triangle"></i> ملف أو بيانات غير مدعومة العرض المباشر.<br>
-                <span style="opacity:0.6; font-size:0.7rem;">${str}</span>
-            </div>`;
+        return `<span style="color:#dc3545; font-size:0.85rem;"><i class="fas fa-exclamation-triangle"></i> بيانات غير مدعومة</span>`;
     }
-
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function renderDragDropReview(q, rawAnswer) {
     if (!q.paragraphs || q.paragraphs.length === 0) return '<span class="text-muted">لا توجد جمل لعرضها</span>';
-    
     let sentencesHtml = '<div style="display:flex; flex-direction:column; gap:15px; margin-top:10px;">';
-    
     q.paragraphs.forEach((p, pIdx) => {
         let processedText = p.text;
         if (p.gaps) {
             p.gaps.forEach((g, gIdx) => {
                 let studentWord = (rawAnswer && typeof rawAnswer === 'object' && rawAnswer[`p_${pIdx}_g_${gIdx}`]) 
-                                  ? rawAnswer[`p_${pIdx}_g_${gIdx}`] 
-                                  : '';
-                                  
+                                  ? rawAnswer[`p_${pIdx}_g_${gIdx}`] : '';
                 let isCorrect = studentWord.trim() === g.dragItem.trim();
                 let color = isCorrect ? '#155724' : '#721c24';
                 let bg = isCorrect ? '#d4edda' : '#f8d7da';
                 let border = isCorrect ? '#c3e6cb' : '#f5c6cb';
-                
                 let displayWord = studentWord ? studentWord : '<span style="color:#999; font-size:0.95rem;">(لم يُجب)</span>';
                 let icon = studentWord ? (isCorrect ? '<i class="fas fa-check" style="margin-right:8px; font-size:1rem;"></i>' : '<i class="fas fa-times" style="margin-right:8px; font-size:1rem;"></i>') : '';
-
                 let wordBadge = `<span style="background:${bg}; color:${color}; padding:2px 15px; border-radius:8px; border-bottom:3px solid ${border}; font-weight:bold; margin:0 5px; display:inline-flex; align-items:center; box-shadow:0 2px 4px rgba(0,0,0,0.05);">${displayWord} ${icon}</span>`;
-                
                 processedText = processedText.replace(g.dragItem, wordBadge);
             });
         }
@@ -568,6 +500,164 @@ function renderDragDropReview(q, rawAnswer) {
     });
     sentencesHtml += '</div>';
     return sentencesHtml;
+}
+
+// 🔥 المُولد الشامل لنوافذ المراجعة مع التقييم الجزئي للفقرات 🔥
+function buildTeacherReviewItem(q, index, studentAnsObj) {
+    let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
+    let evaluations = (studentAnsObj && studentAnsObj.evaluations) ? studentAnsObj.evaluations : {};
+    
+    let maxScore = parseFloat(q.passingScore || q.points || q.score || 1);
+    if(isNaN(maxScore) || maxScore <= 0) maxScore = 1;
+    
+    let currentScore = studentAnsObj ? studentAnsObj.score : undefined;
+    let teacherNote = studentAnsObj ? (studentAnsObj.teacherNote || '') : '';
+    let html = '';
+
+    if (q.type.includes('mcq')) {
+        let sAns = rawAnswer !== null ? parseInt(rawAnswer) : -1;
+        let cAns = q.correctAnswer !== undefined ? parseInt(q.correctAnswer) : -1;
+        
+        if (currentScore === undefined || currentScore === null) {
+            currentScore = (sAns === cAns && sAns !== -1) ? maxScore : 0;
+        }
+
+        html += `<div style="display:flex; flex-direction:column; gap:8px;">`;
+        (q.choices || []).forEach((choice, i) => {
+            let isStudent = (sAns === i);
+            let isCorrect = (cAns === i);
+            let bg = isCorrect ? '#d4edda' : (isStudent ? '#f8d7da' : '#f8f9fa');
+            let border = isCorrect ? '#c3e6cb' : (isStudent ? '#f5c6cb' : '#eee');
+            let icon = isCorrect ? '✔️' : (isStudent ? '❌' : '');
+            html += `<div style="padding:10px; border:2px solid ${border}; border-radius:8px; background:${bg}; display:flex; justify-content:space-between; align-items:center; font-weight:bold;">
+                <span>${icon} ${choice}</span>
+                ${isStudent && !isCorrect ? '<span class="badge badge-danger">إجابة الطالب</span>' : ''}
+                ${isStudent && isCorrect ? '<span class="badge badge-success">إجابة الطالب</span>' : ''}
+            </div>`;
+        });
+        html += `</div>`;
+        
+    } else if (q.type === 'drag-drop') {
+        if (currentScore === undefined || currentScore === null) {
+            let allCorrect = true; let hasAnswer = false;
+            (q.paragraphs || []).forEach((p, pIdx) => {
+                (p.gaps || []).forEach((g, gIdx) => {
+                    let w = (rawAnswer && rawAnswer[`p_${pIdx}_g_${gIdx}`]) ? rawAnswer[`p_${pIdx}_g_${gIdx}`] : '';
+                    if (w) hasAnswer = true;
+                    if (w.trim() !== g.dragItem.trim()) allCorrect = false;
+                });
+            });
+            currentScore = hasAnswer ? (allCorrect ? maxScore : 0) : 0;
+        }
+        html += renderDragDropReview(q, rawAnswer);
+        
+    } else if (q.paragraphs && q.paragraphs.length > 0) {
+        if (currentScore === undefined || currentScore === null) currentScore = 0;
+        
+        html += `<div style="display:flex; flex-direction:column; gap:15px;">`;
+        q.paragraphs.forEach((p, pIdx) => {
+            let pKey = `p_${pIdx}`;
+            let pAns = (rawAnswer && typeof rawAnswer === 'object') ? rawAnswer[pKey] : null;
+            let displayAns = formatSingleItem(pAns);
+            let evalState = evaluations[pKey] || ''; 
+            
+            let btnCorrect = `<button type="button" class="btn btn-sm ${evalState === 'correct' ? 'btn-success' : 'btn-outline-success'}" onclick="setEvalState(this, '${q.id}', '${pKey}', 'correct')">✔️ إجابة صحيحة</button>`;
+            let btnWrong = `<button type="button" class="btn btn-sm ${evalState === 'wrong' ? 'btn-danger' : 'btn-outline-danger'}" onclick="setEvalState(this, '${q.id}', '${pKey}', 'wrong')">❌ إجابة خاطئة</button>`;
+
+            html += `
+            <div style="border:1px solid #e2e8f0; padding:15px; border-radius:8px; background:#fff; position:relative; overflow:hidden;">
+                ${evalState === 'correct' ? '<div style="position:absolute; top:0; right:0; bottom:0; width:5px; background:#28a745;"></div>' : ''}
+                ${evalState === 'wrong' ? '<div style="position:absolute; top:0; right:0; bottom:0; width:5px; background:#dc3545;"></div>' : ''}
+                
+                <div style="font-weight:bold; margin-bottom:10px; color:#475569;"><i class="fas fa-caret-left"></i> ${p.text || 'الفقرة ' + (pIdx+1)}</div>
+                <div style="background:#f8f9fa; padding:10px; border-radius:5px; margin-bottom:10px; text-align:center; min-height:60px; display:flex; align-items:center; justify-content:center;">
+                    ${displayAns || '<span class="text-muted">لم يُجب الطالب</span>'}
+                </div>
+                <div class="eval-controls" style="display:flex; gap:10px; justify-content:center; background:#f1f5f9; padding:10px; border-radius:5px; border:1px dashed #cbd5e1;">
+                    <span style="font-size:0.9rem; color:#64748b; margin-top:5px; font-weight:bold;">تصحيح هذه الفقرة:</span>
+                    ${btnCorrect}
+                    ${btnWrong}
+                    <input type="hidden" name="eval_${q.id}_${pKey}" value="${evalState}">
+                </div>
+            </div>`;
+        });
+        html += `</div>`;
+        
+    } else {
+        if (currentScore === undefined || currentScore === null) currentScore = 0;
+        html += `<div style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #eee;">${formatSingleItem(rawAnswer)}</div>`;
+    }
+
+    currentScore = parseFloat(currentScore) || 0;
+
+    return `
+        <div class="review-question-item" id="q-review-item-${q.id}">
+            <div class="review-q-header" style="background:#e3f2fd; border-bottom:2px solid #90caf9;">
+                <div style="flex:1; font-size:1.1rem; color:#1565c0;"><strong>س${index+1}: ${q.text}</strong></div>
+                <div class="score-input-container" style="box-shadow:0 2px 5px rgba(0,0,0,0.1);">
+                    <input type="number" step="0.5" class="score-input" name="score_${q.id}" value="${currentScore}" max="${maxScore}" min="0">
+                    <span class="text-muted" style="font-size:0.9rem;"> / ${maxScore} درجة</span>
+                </div>
+            </div>
+            <div class="student-answer-box" style="background:transparent; border:none; padding:0;">
+                ${html}
+            </div>
+            <div class="teacher-feedback-box mt-3">
+                <label style="font-weight:bold; color:#555; font-size:0.9rem;"><i class="fas fa-comment-medical"></i> ملاحظات المعلم (تظهر للطالب):</label>
+                <textarea class="form-control" name="note_${q.id}" placeholder="اكتب توجيهاً للطالب هنا...">${teacherNote}</textarea>
+            </div>
+        </div>`;
+}
+
+// 🔥 دالة تفاعلية لحساب الدرجة الكلية بناءً على عدد الفقرات الصحيحة 🔥
+window.setEvalState = function(btn, qId, pKey, state) {
+    const container = btn.closest('.eval-controls');
+    const hiddenInput = container.querySelector(`input[name="eval_${qId}_${pKey}"]`);
+    const btns = container.querySelectorAll('button');
+    
+    btns[0].className = 'btn btn-sm btn-outline-success';
+    btns[1].className = 'btn btn-sm btn-outline-danger';
+
+    if (hiddenInput.value === state) {
+        hiddenInput.value = ''; // إلغاء التحديد
+    } else {
+        hiddenInput.value = state;
+        if (state === 'correct') btns[0].className = 'btn btn-sm btn-success';
+        else if (state === 'wrong') btns[1].className = 'btn btn-sm btn-danger';
+    }
+    
+    // تحديث الإطار الجانبي الملون
+    const wrapper = container.closest('div[style*="position:relative"]');
+    if (wrapper) {
+        let coloredBar = wrapper.querySelector('div[style*="position:absolute"]');
+        if (coloredBar) coloredBar.remove();
+        if (hiddenInput.value === 'correct') wrapper.insertAdjacentHTML('afterbegin', '<div style="position:absolute; top:0; right:0; bottom:0; width:5px; background:#28a745;"></div>');
+        else if (hiddenInput.value === 'wrong') wrapper.insertAdjacentHTML('afterbegin', '<div style="position:absolute; top:0; right:0; bottom:0; width:5px; background:#dc3545;"></div>');
+    }
+
+    // حساب الدرجة آلياً
+    const qCard = document.getElementById(`q-review-item-${qId}`);
+    if(!qCard) return;
+    const scoreInp = qCard.querySelector('.score-input');
+    const maxScore = parseFloat(scoreInp.max);
+    const hiddenInputs = qCard.querySelectorAll('input[type="hidden"][name^="eval_"]');
+    
+    if(hiddenInputs.length > 0) {
+        let correctCount = 0;
+        let answeredCount = 0;
+        hiddenInputs.forEach(inp => {
+            if(inp.value === 'correct') correctCount++;
+            if(inp.value !== '') answeredCount++;
+        });
+        
+        if (answeredCount > 0) {
+            let calcScore = (correctCount / hiddenInputs.length) * maxScore;
+            scoreInp.value = Math.round(calcScore * 2) / 2; // تقريب لأقرب نصف
+            // تأثير بصري للفت الانتباه لتغير الدرجة
+            scoreInp.style.backgroundColor = '#fff3cd';
+            setTimeout(() => scoreInp.style.backgroundColor = '#fff', 1000);
+        }
+    }
 }
 
 function loadAssignmentsTab() {
@@ -644,6 +734,7 @@ function loadLessonsTab() {
         </div>`;
     }).join('');
 }
+
 
 function loadDiagnosticTab() {
     let studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
@@ -1239,63 +1330,7 @@ function openReviewModal(assignmentId) {
     if (assignment.questions) {
         assignment.questions.forEach((q, index) => {
             const studentAnsObj = assignment.answers ? assignment.answers.find(a => a.questionId == q.id) : null;
-            let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
-            
-            let formattedAnswer = '';
-            if (q.type === 'drag-drop') {
-                formattedAnswer = renderDragDropReview(q, rawAnswer);
-            } else {
-                formattedAnswer = formatAnswerDisplay(rawAnswer);
-            }
-            
-            let maxScore = parseFloat(q.passingScore || q.points || q.score || 1);
-            if(isNaN(maxScore) || maxScore <= 0) maxScore = 1;
-            
-            let currentScore = studentAnsObj ? studentAnsObj.score : undefined;
-            if (currentScore === undefined || currentScore === null) {
-                if (q.type === 'drag-drop') {
-                    let allCorrect = true;
-                    let hasAnswer = false;
-                    (q.paragraphs || []).forEach((p, pIdx) => {
-                        (p.gaps || []).forEach((g, gIdx) => {
-                            let w = (rawAnswer && rawAnswer[`p_${pIdx}_g_${gIdx}`]) ? rawAnswer[`p_${pIdx}_g_${gIdx}`] : '';
-                            if (w) hasAnswer = true;
-                            if (w.trim() !== g.dragItem.trim()) allCorrect = false;
-                        });
-                    });
-                    currentScore = hasAnswer ? (allCorrect ? maxScore : 0) : 0;
-                } else if (q.correctAnswer) {
-                    let textAns = extractAnswerText(rawAnswer);
-                    let sAns = String(textAns).trim().toLowerCase();
-                    let cAns = String(q.correctAnswer || '').trim().toLowerCase();
-                    if (sAns === cAns && sAns !== '') currentScore = maxScore;
-                    else currentScore = 0;
-                } else {
-                    currentScore = 0;
-                }
-            }
-            currentScore = parseFloat(currentScore) || 0;
-
-            const teacherNote = studentAnsObj ? (studentAnsObj.teacherNote || '') : '';
-            
-            const item = document.createElement('div');
-            item.className = 'review-question-item';
-            item.innerHTML = `
-                <div class="review-q-header">
-                    <div style="flex:1;"><strong>س${index+1}: ${q.text}</strong></div>
-                    <div class="score-input-container">
-                        <input type="number" step="0.5" class="score-input" name="score_${q.id}" value="${currentScore}" max="${maxScore}" min="0">
-                        <span class="text-muted" style="font-size:0.9rem;"> / ${maxScore} درجة</span>
-                    </div>
-                </div>
-                <div class="student-answer-box">
-                    <div style="font-weight:bold; color:#0056b3; margin-bottom:8px;"><i class="fas fa-comment-dots"></i> إجابة الطالب:</div>
-                    <div>${formattedAnswer}</div>
-                </div>
-                <div class="teacher-feedback-box">
-                    <textarea class="form-control" name="note_${q.id}" placeholder="اكتب ملاحظاتك للطالب هنا (اختياري)...">${teacherNote}</textarea>
-                </div>`;
-            container.appendChild(item);
+            container.innerHTML += buildTeacherReviewItem(q, index, studentAnsObj);
         });
     } else {
         container.innerHTML += '<div class="text-center p-3">لا توجد أسئلة رقمية لعرضها (قد يكون الواجب ورقياً فقط).</div>';
@@ -1314,63 +1349,7 @@ function openTestReviewModal(test) {
     if (originalTest && originalTest.questions) {
         originalTest.questions.forEach((q, index) => {
             const studentAnsObj = test.answers ? test.answers.find(a => a.questionId == q.id) : null;
-            let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
-            
-            let formattedAnswer = '';
-            if (q.type === 'drag-drop') {
-                formattedAnswer = renderDragDropReview(q, rawAnswer);
-            } else {
-                formattedAnswer = formatAnswerDisplay(rawAnswer);
-            }
-            
-            let maxScore = parseFloat(q.passingScore || q.points || q.score || 1);
-            if(isNaN(maxScore) || maxScore <= 0) maxScore = 1;
-            
-            let currentScore = studentAnsObj ? studentAnsObj.score : undefined;
-            if (currentScore === undefined || currentScore === null) {
-                if (q.type === 'drag-drop') {
-                    let allCorrect = true;
-                    let hasAnswer = false;
-                    (q.paragraphs || []).forEach((p, pIdx) => {
-                        (p.gaps || []).forEach((g, gIdx) => {
-                            let w = (rawAnswer && rawAnswer[`p_${pIdx}_g_${gIdx}`]) ? rawAnswer[`p_${pIdx}_g_${gIdx}`] : '';
-                            if (w) hasAnswer = true;
-                            if (w.trim() !== g.dragItem.trim()) allCorrect = false;
-                        });
-                    });
-                    currentScore = hasAnswer ? (allCorrect ? maxScore : 0) : 0;
-                } else if (q.correctAnswer) {
-                    let textAns = extractAnswerText(rawAnswer);
-                    let sAns = String(textAns).trim().toLowerCase();
-                    let cAns = String(q.correctAnswer || '').trim().toLowerCase();
-                    if (sAns === cAns && sAns !== '') currentScore = maxScore;
-                    else currentScore = 0;
-                } else {
-                    currentScore = 0;
-                }
-            }
-            currentScore = parseFloat(currentScore) || 0;
-
-            const teacherNote = studentAnsObj ? (studentAnsObj.teacherNote || '') : '';
-            
-            const item = document.createElement('div');
-            item.className = 'review-question-item';
-            item.innerHTML = `
-                <div class="review-q-header">
-                    <div style="flex:1;"><strong>س${index+1}: ${q.text}</strong></div>
-                    <div class="score-input-container">
-                        <input type="number" step="0.5" class="score-input" name="score_${q.id}" value="${currentScore}" max="${maxScore}" min="0">
-                        <span class="text-muted" style="font-size:0.9rem;"> / ${maxScore} درجة</span>
-                    </div>
-                </div>
-                <div class="student-answer-box">
-                    <div style="font-weight:bold; color:#0056b3; margin-bottom:8px;"><i class="fas fa-comment-dots"></i> إجابة الطالب:</div>
-                    <div>${formattedAnswer}</div>
-                </div>
-                <div class="teacher-feedback-box">
-                    <textarea class="form-control" name="note_${q.id}" placeholder="اكتب ملاحظاتك للطالب هنا (اختياري)...">${teacherNote}</textarea>
-                </div>`;
-            container.appendChild(item);
+            container.innerHTML += buildTeacherReviewItem(q, index, studentAnsObj);
         });
     }
     document.getElementById('reviewTestModal').classList.add('show');
@@ -1411,7 +1390,6 @@ function saveTestReview() {
             const noteInp = container.querySelector(`textarea[name="note_${q.id}"]`);
             
             if (!studentAssignments[idx].answers) studentAssignments[idx].answers = [];
-            
             let ansIdx = studentAssignments[idx].answers.findIndex(a => a.questionId == q.id);
             
             let newScore = 0;
@@ -1420,20 +1398,25 @@ function saveTestReview() {
                 if(isNaN(newScore)) newScore = 0;
             }
             
-            if(ansIdx !== -1) { 
-                studentAssignments[idx].answers[ansIdx].score = newScore; 
-                studentAssignments[idx].answers[ansIdx].teacherNote = noteInp ? noteInp.value : ''; 
-            } else { 
-                studentAssignments[idx].answers.push({ 
-                    questionId: q.id, 
-                    score: newScore, 
-                    teacherNote: noteInp ? noteInp.value : '', 
-                    answer: null 
-                }); 
+            if(ansIdx === -1) {
+                studentAssignments[idx].answers.push({ questionId: q.id, answer: null });
+                ansIdx = studentAssignments[idx].answers.length - 1;
             }
             
-            totalScore += newScore; 
+            studentAssignments[idx].answers[ansIdx].score = newScore;
+            studentAssignments[idx].answers[ansIdx].teacherNote = noteInp ? noteInp.value : '';
             
+            // استخراج حفظ التقييمات الجزئية
+            if (!studentAssignments[idx].answers[ansIdx].evaluations) {
+                studentAssignments[idx].answers[ansIdx].evaluations = {};
+            }
+            const evalInputs = container.querySelectorAll(`input[type="hidden"][name^="eval_${q.id}_"]`);
+            evalInputs.forEach(inp => {
+                let pKey = inp.name.replace(`eval_${q.id}_`, '');
+                studentAssignments[idx].answers[ansIdx].evaluations[pKey] = inp.value;
+            });
+
+            totalScore += newScore; 
             let maxQScore = parseFloat(q.passingScore || q.points || q.score || 1);
             if (isNaN(maxQScore) || maxQScore <= 0) maxQScore = 1;
             maxTotalScore += maxQScore;

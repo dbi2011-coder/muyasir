@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: نظام التقييم الجزئي وتحديد الصح/الخطأ لكل فقرة مع الحساب التلقائي
+// الوصف: إدارة ملف الطالب + تقييم القراءة كلمة بكلمة + النوافذ الاحترافية
 // ============================================
 
 // =========================================================
@@ -138,6 +138,11 @@ function injectReviewStyles() {
         .score-input-container { display: flex; align-items: center; gap: 5px; background: #fff; padding: 5px 10px; border-radius: 6px; border: 1px solid #cbd5e1; }
         .score-input { width: 70px; text-align: center; font-weight: bold; border: 1px solid #ccc; border-radius: 4px; padding: 4px; font-size:1.1rem; color:#007bff; }
         .teacher-feedback-box textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; min-height: 80px; margin-top: 10px; font-family: inherit; }
+        .reading-word-eval { display:inline-block; font-size:1.2rem; margin:5px; cursor:pointer; padding:8px 15px; border-radius:8px; transition:0.2s; border:2px solid transparent; user-select:none; }
+        .reading-word-eval:hover { transform:scale(1.05); }
+        .word-neutral { background:#f1f5f9; color:#475569; border-color:#cbd5e1; }
+        .word-correct { background:#d4edda; color:#155724; border-color:#c3e6cb; }
+        .word-wrong { background:#f8d7da; color:#721c24; border-color:#f5c6cb; }
     `;
     document.head.appendChild(style);
 }
@@ -502,7 +507,7 @@ function renderDragDropReview(q, rawAnswer) {
     return sentencesHtml;
 }
 
-// 🔥 المُولد الشامل لنوافذ المراجعة مع التقييم الجزئي للفقرات 🔥
+// 🔥 المُولد الشامل لنوافذ المراجعة مع التقييم الجزئي وتصحيح الكلمات 🔥
 function buildTeacherReviewItem(q, index, studentAnsObj) {
     let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
     let evaluations = (studentAnsObj && studentAnsObj.evaluations) ? studentAnsObj.evaluations : {};
@@ -528,7 +533,7 @@ function buildTeacherReviewItem(q, index, studentAnsObj) {
             let isCorrect = (cAns === i);
             let bg = isCorrect ? '#d4edda' : (isStudent ? '#f8d7da' : '#f8f9fa');
             let border = isCorrect ? '#c3e6cb' : (isStudent ? '#f5c6cb' : '#eee');
-            let icon = isCorrect ? '✔️' : (isStudent ? '❌' : '');
+            let icon = isCorrect ? '✅' : (isStudent ? '❌' : '');
             html += `<div style="padding:10px; border:2px solid ${border}; border-radius:8px; background:${bg}; display:flex; justify-content:space-between; align-items:center; font-weight:bold;">
                 <span>${icon} ${choice}</span>
                 ${isStudent && !isCorrect ? '<span class="badge badge-danger">إجابة الطالب</span>' : ''}
@@ -554,34 +559,65 @@ function buildTeacherReviewItem(q, index, studentAnsObj) {
     } else if (q.paragraphs && q.paragraphs.length > 0) {
         if (currentScore === undefined || currentScore === null) currentScore = 0;
         
-        html += `<div style="display:flex; flex-direction:column; gap:15px;">`;
-        q.paragraphs.forEach((p, pIdx) => {
-            let pKey = `p_${pIdx}`;
-            let pAns = (rawAnswer && typeof rawAnswer === 'object') ? rawAnswer[pKey] : null;
-            let displayAns = formatSingleItem(pAns);
-            let evalState = evaluations[pKey] || ''; 
-            
-            let btnCorrect = `<button type="button" class="btn btn-sm ${evalState === 'correct' ? 'btn-success' : 'btn-outline-success'}" onclick="setEvalState(this, '${q.id}', '${pKey}', 'correct')">✔️ إجابة صحيحة</button>`;
-            let btnWrong = `<button type="button" class="btn btn-sm ${evalState === 'wrong' ? 'btn-danger' : 'btn-outline-danger'}" onclick="setEvalState(this, '${q.id}', '${pKey}', 'wrong')">❌ إجابة خاطئة</button>`;
-
-            html += `
-            <div style="border:1px solid #e2e8f0; padding:15px; border-radius:8px; background:#fff; position:relative; overflow:hidden;">
-                ${evalState === 'correct' ? '<div style="position:absolute; top:0; right:0; bottom:0; width:5px; background:#28a745;"></div>' : ''}
-                ${evalState === 'wrong' ? '<div style="position:absolute; top:0; right:0; bottom:0; width:5px; background:#dc3545;"></div>' : ''}
+        // 🔥 ميزة التقييم كلمة بكلمة لـ "تقييم قراءة يدوي" 🔥
+        if (q.type === 'manual-reading') {
+            html += `<div style="display:flex; flex-direction:column; gap:15px;">`;
+            q.paragraphs.forEach((p, pIdx) => {
+                let pKey = `p_${pIdx}`;
+                let words = (p.text || '').trim().split(/\s+/);
                 
-                <div style="font-weight:bold; margin-bottom:10px; color:#475569;"><i class="fas fa-caret-left"></i> ${p.text || 'الفقرة ' + (pIdx+1)}</div>
-                <div style="background:#f8f9fa; padding:10px; border-radius:5px; margin-bottom:10px; text-align:center; min-height:60px; display:flex; align-items:center; justify-content:center;">
-                    ${displayAns || '<span class="text-muted">لم يُجب الطالب</span>'}
-                </div>
-                <div class="eval-controls" style="display:flex; gap:10px; justify-content:center; background:#f1f5f9; padding:10px; border-radius:5px; border:1px dashed #cbd5e1;">
-                    <span style="font-size:0.9rem; color:#64748b; margin-top:5px; font-weight:bold;">تصحيح هذه الفقرة:</span>
-                    ${btnCorrect}
-                    ${btnWrong}
-                    <input type="hidden" name="eval_${q.id}_${pKey}" value="${evalState}">
-                </div>
-            </div>`;
-        });
-        html += `</div>`;
+                let wordsHtml = words.map((w, wIdx) => {
+                    let wKey = `${pKey}_w_${wIdx}`;
+                    let wEval = evaluations[wKey] || '';
+                    let wClass = wEval === 'correct' ? 'word-correct' : (wEval === 'wrong' ? 'word-wrong' : 'word-neutral');
+                    let icon = wEval === 'correct' ? ' ✔️' : (wEval === 'wrong' ? ' ❌' : '');
+                    return `<span class="reading-word-eval ${wClass}" onclick="toggleReadingWord(this, '${q.id}', '${wKey}')" data-state="${wEval}">
+                        ${w}${icon}
+                        <input type="hidden" name="eval_${q.id}_${wKey}" value="${wEval}">
+                    </span>`;
+                }).join(' ');
+
+                html += `
+                <div style="border:1px solid #e2e8f0; padding:15px; border-radius:8px; background:#fff; position:relative;">
+                    <div style="font-weight:bold; margin-bottom:10px; color:#007bff; font-size:0.9rem;"><i class="fas fa-hand-pointer"></i> اضغط على الكلمة لتصحيحها (أخضر=صح، أحمر=خطأ):</div>
+                    <div style="background:#f8f9fa; padding:15px; border-radius:5px; line-height:2.8; text-align:justify;">
+                        ${wordsHtml}
+                    </div>
+                </div>`;
+            });
+            html += `</div>`;
+        } 
+        // التقييم العادي (صورة أو صوت)
+        else {
+            html += `<div style="display:flex; flex-direction:column; gap:15px;">`;
+            q.paragraphs.forEach((p, pIdx) => {
+                let pKey = `p_${pIdx}`;
+                let pAns = (rawAnswer && typeof rawAnswer === 'object') ? rawAnswer[pKey] : null;
+                let displayAns = formatSingleItem(pAns);
+                let evalState = evaluations[pKey] || ''; 
+                
+                let btnCorrect = `<button type="button" class="btn btn-sm ${evalState === 'correct' ? 'btn-success' : 'btn-outline-success'}" onclick="setEvalState(this, '${q.id}', '${pKey}', 'correct')">✔️ صحيح</button>`;
+                let btnWrong = `<button type="button" class="btn btn-sm ${evalState === 'wrong' ? 'btn-danger' : 'btn-outline-danger'}" onclick="setEvalState(this, '${q.id}', '${pKey}', 'wrong')">❌ خاطئ</button>`;
+
+                html += `
+                <div style="border:1px solid #e2e8f0; padding:15px; border-radius:8px; background:#fff; position:relative; overflow:hidden;">
+                    ${evalState === 'correct' ? '<div style="position:absolute; top:0; right:0; bottom:0; width:5px; background:#28a745;"></div>' : ''}
+                    ${evalState === 'wrong' ? '<div style="position:absolute; top:0; right:0; bottom:0; width:5px; background:#dc3545;"></div>' : ''}
+                    
+                    <div style="font-weight:bold; margin-bottom:10px; color:#475569;"><i class="fas fa-caret-left"></i> ${p.text || 'الفقرة ' + (pIdx+1)}</div>
+                    <div style="background:#f8f9fa; padding:10px; border-radius:5px; margin-bottom:10px; text-align:center; min-height:60px; display:flex; align-items:center; justify-content:center;">
+                        ${displayAns || '<span class="text-muted">لم يُجب الطالب</span>'}
+                    </div>
+                    <div class="eval-controls" style="display:flex; gap:10px; justify-content:center; background:#f1f5f9; padding:10px; border-radius:5px; border:1px dashed #cbd5e1;">
+                        <span style="font-size:0.9rem; color:#64748b; margin-top:5px; font-weight:bold;">التقييم:</span>
+                        ${btnCorrect}
+                        ${btnWrong}
+                        <input type="hidden" name="eval_${q.id}_${pKey}" value="${evalState}">
+                    </div>
+                </div>`;
+            });
+            html += `</div>`;
+        }
         
     } else {
         if (currentScore === undefined || currentScore === null) currentScore = 0;
@@ -609,7 +645,27 @@ function buildTeacherReviewItem(q, index, studentAnsObj) {
         </div>`;
 }
 
-// 🔥 دالة تفاعلية لحساب الدرجة الكلية بناءً على عدد الفقرات الصحيحة 🔥
+// دالة تفاعلية لتغيير حالة الكلمة في تقييم القراءة
+window.toggleReadingWord = function(span, qId, wKey) {
+    let currentState = span.getAttribute('data-state');
+    let hiddenInput = span.querySelector('input');
+    let newState = '';
+    let newClass = 'word-neutral';
+    let icon = '';
+    let textOnly = span.innerText.replace(/✔️|❌/g, '').trim();
+
+    if (currentState === '') { newState = 'correct'; newClass = 'word-correct'; icon = ' ✔️'; }
+    else if (currentState === 'correct') { newState = 'wrong'; newClass = 'word-wrong'; icon = ' ❌'; }
+    else { newState = ''; newClass = 'word-neutral'; icon = ''; } // إرجاع للصفر
+
+    span.setAttribute('data-state', newState);
+    hiddenInput.value = newState;
+    span.className = `reading-word-eval ${newClass}`;
+    span.innerHTML = `${textOnly}${icon}<input type="hidden" name="eval_${qId}_${wKey}" value="${newState}">`;
+    
+    recalculateScore(qId);
+}
+
 window.setEvalState = function(btn, qId, pKey, state) {
     const container = btn.closest('.eval-controls');
     const hiddenInput = container.querySelector(`input[name="eval_${qId}_${pKey}"]`);
@@ -619,14 +675,13 @@ window.setEvalState = function(btn, qId, pKey, state) {
     btns[1].className = 'btn btn-sm btn-outline-danger';
 
     if (hiddenInput.value === state) {
-        hiddenInput.value = ''; // إلغاء التحديد
+        hiddenInput.value = ''; 
     } else {
         hiddenInput.value = state;
         if (state === 'correct') btns[0].className = 'btn btn-sm btn-success';
         else if (state === 'wrong') btns[1].className = 'btn btn-sm btn-danger';
     }
     
-    // تحديث الإطار الجانبي الملون
     const wrapper = container.closest('div[style*="position:relative"]');
     if (wrapper) {
         let coloredBar = wrapper.querySelector('div[style*="position:absolute"]');
@@ -635,7 +690,10 @@ window.setEvalState = function(btn, qId, pKey, state) {
         else if (hiddenInput.value === 'wrong') wrapper.insertAdjacentHTML('afterbegin', '<div style="position:absolute; top:0; right:0; bottom:0; width:5px; background:#dc3545;"></div>');
     }
 
-    // حساب الدرجة آلياً
+    recalculateScore(qId);
+}
+
+function recalculateScore(qId) {
     const qCard = document.getElementById(`q-review-item-${qId}`);
     if(!qCard) return;
     const scoreInp = qCard.querySelector('.score-input');
@@ -652,8 +710,7 @@ window.setEvalState = function(btn, qId, pKey, state) {
         
         if (answeredCount > 0) {
             let calcScore = (correctCount / hiddenInputs.length) * maxScore;
-            scoreInp.value = Math.round(calcScore * 2) / 2; // تقريب لأقرب نصف
-            // تأثير بصري للفت الانتباه لتغير الدرجة
+            scoreInp.value = Math.round(calcScore * 2) / 2;
             scoreInp.style.backgroundColor = '#fff3cd';
             setTimeout(() => scoreInp.style.backgroundColor = '#fff', 1000);
         }
@@ -1390,6 +1447,7 @@ function saveTestReview() {
             const noteInp = container.querySelector(`textarea[name="note_${q.id}"]`);
             
             if (!studentAssignments[idx].answers) studentAssignments[idx].answers = [];
+            
             let ansIdx = studentAssignments[idx].answers.findIndex(a => a.questionId == q.id);
             
             let newScore = 0;
@@ -1406,7 +1464,6 @@ function saveTestReview() {
             studentAssignments[idx].answers[ansIdx].score = newScore;
             studentAssignments[idx].answers[ansIdx].teacherNote = noteInp ? noteInp.value : '';
             
-            // استخراج حفظ التقييمات الجزئية
             if (!studentAssignments[idx].answers[ansIdx].evaluations) {
                 studentAssignments[idx].answers[ansIdx].evaluations = {};
             }

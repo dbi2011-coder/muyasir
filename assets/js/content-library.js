@@ -70,7 +70,6 @@ if (!window.showConfirmModal) {
 // =========================================================
 document.addEventListener('DOMContentLoaded', function() {
     injectLinkContentModal(); 
-    injectExportModal(); // حقن نافذة التصدير
     loadContentLibrary();
 });
 
@@ -466,74 +465,136 @@ function saveContentLinks() {
 }
 
 // =========================================================
-// 🔥 6. نظام الاستيراد والتصدير مع النافذة التفاعلية 🔥
+// 🔥 6. نافذة التصدير التفاعلية (الاختيارية) 🔥
 // =========================================================
 
+// بناء وحقن النافذة في الـ HTML
 function injectExportModal() {
-    if (document.getElementById('exportModal')) return;
+    if (document.getElementById('exportContentModal')) return; // تجنب التكرار
+
     const html = `
-    <div id="exportModal" class="modal">
-        <div class="modal-content" style="border: 2px solid #2c3e50; max-width: 400px;">
-            <div class="modal-header">
-                <h3>📤 تصدير نسخة احتياطية</h3>
-                <button class="modal-close" onclick="closeModal('exportModal')">&times;</button>
+    <div id="exportContentModal" class="modal">
+        <div class="modal-content large" style="max-width: 500px; border: 2px solid #2c3e50; border-radius: 12px; overflow: hidden;">
+            <div class="modal-header" style="background-color: #f8f9fa; border-bottom: 1px solid #e2e8f0; padding: 15px 20px;">
+                <h3 style="margin: 0; color: #1e293b; font-size: 1.3rem;"><i class="fas fa-file-export text-primary"></i> تصدير نسخة احتياطية</h3>
+                <button class="modal-close" style="font-size: 1.5rem; color: #64748b;" onclick="closeModal('exportContentModal')">&times;</button>
             </div>
             <div class="modal-body" style="padding: 20px;">
-                <p style="margin-bottom: 15px; color: #555; font-size:1.1rem;">اختر العناصر التي ترغب في تصديرها:</p>
-                <div style="display: flex; flex-direction: column; gap: 15px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:1.1rem; font-weight:bold; color:#333;">
-                        <input type="checkbox" id="exportTests" checked style="width:20px; height:20px; accent-color:#007bff;"> الاختبارات التشخيصية
-                    </label>
-                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:1.1rem; font-weight:bold; color:#333;">
-                        <input type="checkbox" id="exportLessons" checked style="width:20px; height:20px; accent-color:#007bff;"> الدروس التفاعلية
-                    </label>
-                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:1.1rem; font-weight:bold; color:#333;">
-                        <input type="checkbox" id="exportObjectives" checked style="width:20px; height:20px; accent-color:#007bff;"> بنك الأهداف
-                    </label>
-                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:1.1rem; font-weight:bold; color:#333;">
-                        <input type="checkbox" id="exportHomeworks" checked style="width:20px; height:20px; accent-color:#007bff;"> الواجبات
+                <p class="text-muted mb-3" style="font-size: 0.95rem;">اختر العناصر التي تريد تصديرها في ملف واحد.</p>
+                <div class="form-check mb-3" style="background: #e3f2fd; padding: 10px 15px; border-radius: 8px; border: 1px solid #90caf9;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: bold; color: #0d6efd; margin: 0;">
+                        <input type="checkbox" id="selectAllGlobal" onchange="toggleGlobalSelect(this)" checked style="width: 18px; height: 18px;">
+                        تحديد كامل المكتبة
                     </label>
                 </div>
+                <div id="exportListsContainer" style="max-height: 350px; overflow-y: auto; padding-right: 10px;"></div>
             </div>
-            <div class="modal-footer" style="display:flex; gap:10px;">
-                <button class="btn btn-secondary" style="flex:1;" onclick="closeModal('exportModal')">إلغاء</button>
-                <button class="btn btn-primary" style="flex:2; font-size:1.1rem;" onclick="exportContent()">تحميل الملف 📥</button>
+            <div class="modal-footer" style="background-color: #f8f9fa; border-top: 1px solid #e2e8f0; padding: 15px 20px; display: flex; gap: 10px;">
+                <button class="btn btn-secondary" style="flex: 1; font-weight: bold;" onclick="closeModal('exportContentModal')">إلغاء</button>
+                <button class="btn btn-success" style="flex: 2; font-weight: bold; font-size: 1.1rem;" onclick="executeExport()">تحميل الملف 📥</button>
             </div>
         </div>
     </div>`;
     document.body.insertAdjacentHTML('beforeend', html);
 }
 
+// عرض النافذة وتعبئتها بالعناصر
 function showExportModal() {
-    document.getElementById('exportModal').classList.add('show');
-}
+    const modal = document.getElementById('exportContentModal');
+    if (!modal) { console.error('exportContentModal not found'); return; }
 
-function exportContent() {
-    const data = {};
-    
-    // قراءة حالة كل مربع اختيار (Checkbox) وإضافة بياناته فقط إذا كان محدداً
-    if (document.getElementById('exportTests').checked) data.tests = JSON.parse(localStorage.getItem('tests') || '[]');
-    if (document.getElementById('exportLessons').checked) data.lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-    if (document.getElementById('exportObjectives').checked) data.objectives = JSON.parse(localStorage.getItem('objectives') || '[]');
-    if (document.getElementById('exportHomeworks').checked) data.assignments = JSON.parse(localStorage.getItem('assignments') || '[]');
+    const container = document.getElementById('exportListsContainer');
+    container.innerHTML = ''; 
 
-    if (Object.keys(data).length === 0) {
-        return showError('يرجى تحديد عنصر واحد على الأقل لتصديره!');
+    const user = getCurrentUser();
+    const tests = JSON.parse(localStorage.getItem('tests') || '[]').filter(x => x.teacherId === user.id);
+    const lessons = JSON.parse(localStorage.getItem('lessons') || '[]').filter(x => x.teacherId === user.id);
+    const objectives = JSON.parse(localStorage.getItem('objectives') || '[]').filter(x => x.teacherId === user.id);
+    const homeworks = JSON.parse(localStorage.getItem('assignments') || '[]').filter(x => x.teacherId === user.id);
+
+    const createSection = (title, items, type) => {
+        if (items.length === 0) return '';
+        let html = `<div style="margin-bottom: 20px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px;">
+                        <h5 style="border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; margin-bottom: 10px; color: #475569; font-size: 1.05rem;">${title}</h5>
+                        <div style="display: flex; flex-direction: column; gap: 8px; padding-right: 10px;">`;
+        items.forEach(item => {
+            let label = item.title || item.shortTermGoal;
+            html += `
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; color: #334155; font-size: 0.95rem; margin: 0;">
+                    <input class="export-item" type="checkbox" data-type="${type}" value="${item.id}" checked style="width: 16px; height: 16px; accent-color: #28a745;">
+                    ${label}
+                </label>`;
+        });
+        html += `</div></div>`;
+        return html;
+    };
+
+    let contentHtml = '';
+    contentHtml += createSection('📝 الاختبارات التشخيصية', tests, 'tests');
+    contentHtml += createSection('📚 الدروس التفاعلية', lessons, 'lessons');
+    contentHtml += createSection('🎯 الأهداف التعليمية', objectives, 'objectives');
+    contentHtml += createSection('📋 الواجبات', homeworks, 'assignments');
+
+    if (contentHtml === '') {
+        container.innerHTML = '<div style="text-align: center; padding: 30px; color: #94a3b8;"><i class="fas fa-box-open" style="font-size: 3rem; margin-bottom: 10px;"></i><br>مكتبة المحتوى فارغة حالياً</div>';
+    } else {
+        container.innerHTML = contentHtml;
+        document.getElementById('selectAllGlobal').checked = true; // إعادة تعيين التحديد الكل
     }
 
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); 
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); 
-    a.href = url; 
-    a.download = `muyasir_backup_${new Date().toISOString().split('T')[0]}.json`; 
-    a.click(); 
-    URL.revokeObjectURL(url);
-    
-    closeModal('exportModal'); // إغلاق النافذة بعد التنزيل
-    showSuccess('تم تجهيز وتحميل النسخة الاحتياطية بنجاح 📥');
+    modal.classList.add('show');
 }
 
-function triggerImport() { document.getElementById('importFile').click(); }
+// تحديد/إلغاء تحديد الكل
+function toggleGlobalSelect(source) {
+    const checkboxes = document.querySelectorAll('.export-item');
+    checkboxes.forEach(cb => cb.checked = source.checked);
+}
+
+// تنفيذ التصدير للعناصر المحددة فقط
+function executeExport() {
+    const selected = {
+        tests: [],
+        lessons: [],
+        objectives: [],
+        assignments: [],
+        exportDate: new Date().toISOString(),
+        exportedBy: getCurrentUser().name
+    };
+
+    document.querySelectorAll('.export-item:checked').forEach(cb => {
+        const type = cb.getAttribute('data-type');
+        const id = parseInt(cb.value);
+        
+        let sourceKey = type;
+        if(type === 'assignments') sourceKey = 'assignments'; 
+
+        const allItems = JSON.parse(localStorage.getItem(sourceKey) || '[]');
+        const item = allItems.find(x => x.id === id);
+        if (item) selected[type].push(item);
+    });
+
+    const totalCount = selected.tests.length + selected.lessons.length + selected.objectives.length + selected.assignments.length;
+    if (totalCount === 0) {
+        return showError('الرجاء تحديد عنصر واحد على الأقل للتصدير.');
+    }
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(selected));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "muyasir_backup_" + new Date().toISOString().split('T')[0] + ".json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+    
+    closeModal('exportContentModal');
+    showSuccess(`تم تصدير ${totalCount} عنصر بنجاح 📥`);
+}
+
+// ---------------------------------------------------------
+// 🔥 7. دوال الاستيراد (Import Logic) 🔥
+// ---------------------------------------------------------
+function triggerImport() { document.getElementById('importFileInput').click(); }
 
 function importContent(input) {
     const file = input.files[0]; if (!file) return; 
@@ -567,11 +628,13 @@ function importContent(input) {
         } catch (err) { showError('حدث خطأ أثناء قراءة الملف. تأكد أنه ملف JSON صالح.'); }
     }; 
     reader.readAsText(file);
+    input.value = ''; // تصفير لتفعيل نفس الملف مجدداً
 }
 
 // ربط الدوال بالـ Window لتعمل مع HTML
 window.showExportModal = showExportModal;
-window.exportContent = exportContent;
+window.executeExport = executeExport;
+window.toggleGlobalSelect = toggleGlobalSelect;
 window.triggerImport = triggerImport;
 window.importContent = importContent;
 

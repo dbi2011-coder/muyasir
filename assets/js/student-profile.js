@@ -1,10 +1,60 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب + التقييم الجزئي + إصلاح النواقص البرمجية
+// الوصف: إدارة ملف الطالب + التقييم الجزئي + إصلاح التصحيح الآلي الجذري للخيارات والسحب والإفلات
 // ============================================
 
 // =========================================================
-// 🔥 نظام النوافذ المنبثقة الاحترافية (Toasts & Modals) 🔥
+// 🔥 محرك التصحيح الآلي المركزي (يحل مشكلة الخيار 0 والتقييم الجزئي) 🔥
+// =========================================================
+function calculateAutoGrade(q, studentAnsObj) {
+    let maxScore = parseFloat(q.passingScore || q.points || q.score || 1);
+    if(isNaN(maxScore) || maxScore <= 0) maxScore = 1;
+    
+    let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
+    if (rawAnswer === null || rawAnswer === undefined || rawAnswer === '') return 0;
+
+    // 1. تصحيح أسئلة الاختيار من متعدد (عادي ومرفق)
+    if (q.type.includes('mcq')) {
+        let sAns = parseInt(rawAnswer);
+        let cAns = parseInt(q.correctAnswer);
+        // التحقق كأرقام صريحة لمنع ضياع الخيار رقم 0
+        if (!isNaN(sAns) && !isNaN(cAns) && sAns === cAns) return maxScore;
+        return 0;
+    } 
+    
+    // 2. تصحيح سؤال السحب والإفلات (مع التقييم الجزئي العادل)
+    if (q.type === 'drag-drop') {
+        let totalGaps = 0;
+        let correctGaps = 0;
+        (q.paragraphs || []).forEach((p, pIdx) => {
+            (p.gaps || []).forEach((g, gIdx) => {
+                totalGaps++;
+                let w = (rawAnswer && typeof rawAnswer === 'object' && rawAnswer[`p_${pIdx}_g_${gIdx}`]) ? rawAnswer[`p_${pIdx}_g_${gIdx}`] : '';
+                if (String(w).trim() === String(g.dragItem).trim() && String(w).trim() !== '') {
+                    correctGaps++;
+                }
+            });
+        });
+        if (totalGaps > 0) {
+            let calc = (correctGaps / totalGaps) * maxScore;
+            return Math.round(calc * 2) / 2; // تقريب لأقرب نصف درجة
+        }
+        return 0;
+    }
+
+    // 3. الأسئلة النصية العادية (إن وجدت لها إجابة نموذجية مطابقة)
+    if (q.correctAnswer !== undefined && q.correctAnswer !== null && q.correctAnswer !== '') {
+        let textAns = extractAnswerText(rawAnswer);
+        let sAns = String(textAns).trim().toLowerCase();
+        let cAns = String(q.correctAnswer).trim().toLowerCase();
+        if (sAns === cAns && sAns !== '') return maxScore;
+    }
+
+    return 0; // افتراضي إذا كان السؤال يحتاج لتقييم المعلم اليدوي
+}
+
+// =========================================================
+// 🔥 نظام النوافذ المنبثقة الاحترافية 🔥
 // =========================================================
 if (!window.showConfirmModal) {
     window.showConfirmModal = function(message, onConfirm) {
@@ -119,7 +169,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
-    // حقن النوافذ المخفية والتنسيقات
     injectAdminEventModal();
     injectHomeworkModal(); 
     injectWordTableStyles();
@@ -128,7 +177,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadStudentData();
 });
 
-// 🔥 حقن ستايلات نافذة المراجعة وتقييم القراءة 🔥
 function injectReviewStyles() {
     if (document.getElementById('customReviewStyles')) return;
     const style = document.createElement('style');
@@ -149,7 +197,6 @@ function injectReviewStyles() {
     document.head.appendChild(style);
 }
 
-// 🔥 حقن ستايلات جدول المتابعة 🔥
 function injectWordTableStyles() {
     if (document.getElementById('wordTableStyles')) return;
     const style = document.createElement('style');
@@ -173,7 +220,6 @@ function injectWordTableStyles() {
     document.head.appendChild(style);
 }
 
-// 🔥 حقن نوافذ الأحداث والواجبات 🔥
 function injectAdminEventModal() {
     if (document.getElementById('adminEventModal')) return;
     const html = `
@@ -227,8 +273,6 @@ function injectHomeworkModal() {
     document.body.insertAdjacentHTML('beforeend', html);
 }
 
-// ------------------------------------------------------------------
-
 function loadStudentData() {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
     currentStudent = users.find(u => u.id == currentStudentId);
@@ -265,7 +309,6 @@ function switchSection(sectionId) {
     if (sectionId === 'progress') loadProgressTab();
 }
 
-// --- قسم سجل التقدم ---
 function loadProgressTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     let adminEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]');
@@ -519,7 +562,6 @@ function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDa
     return myEvents;
 }
 
-// --- دوال الأحداث ---
 function openAdminEventModal() {
     editingEventId = null;
     document.getElementById('modalTitle').textContent = "تسجيل حدث إداري";
@@ -589,7 +631,6 @@ function closeModal(id) {
     if(modal) modal.classList.remove('show'); 
 }
 
-// --- استخراج الإجابات وعرضها (للنافذة المنبثقة) ---
 function extractAnswerText(ans) {
     if (ans === null || ans === undefined) return '';
     if (typeof ans === 'string') {
@@ -619,21 +660,17 @@ function formatAnswerDisplay(rawAnswer) {
     if (rawAnswer === null || rawAnswer === undefined || rawAnswer === '') {
         return '<span class="text-muted" style="font-style:italic;">(لم يُجب الطالب على هذا السؤال)</span>';
     }
-
     if (Array.isArray(rawAnswer)) {
         let html = rawAnswer.map(item => formatSingleItem(item)).join('<div style="margin-top:8px; border-bottom:1px dashed #eee; padding-bottom:5px;"></div>');
         return html || '<span class="text-muted">(إجابة فارغة)</span>';
     }
-
     if (typeof rawAnswer === 'object') {
         if (rawAnswer.selected) {
             let val = Array.isArray(rawAnswer.selected) ? rawAnswer.selected.join(' ، ') : rawAnswer.selected;
             return formatSingleItem(val);
         }
-
         let itemsHtml = [];
         let keys = Object.keys(rawAnswer).sort(); 
-        
         for (let k of keys) {
             let itemVal = rawAnswer[k];
             if (itemVal !== null && itemVal !== undefined && itemVal !== '') {
@@ -643,19 +680,14 @@ function formatAnswerDisplay(rawAnswer) {
                 }
             }
         }
-
         if (itemsHtml.length > 0) {
             let isMedia = itemsHtml.some(html => html.includes('<img') || html.includes('<audio') || html.includes('<a '));
-            if (isMedia) {
-                return itemsHtml.join('<div style="margin:15px 0; border-bottom:2px dashed #cbd5e1;"></div>');
-            } else {
-                return itemsHtml.join(' <span style="color:#007bff; font-weight:bold; margin:0 5px;">&larr;</span> ');
-            }
+            if (isMedia) return itemsHtml.join('<div style="margin:15px 0; border-bottom:2px dashed #cbd5e1;"></div>');
+            else return itemsHtml.join(' <span style="color:#007bff; font-weight:bold; margin:0 5px;">&larr;</span> ');
         } else {
             return '<span class="text-muted">(إجابة فارغة)</span>';
         }
     }
-
     return formatSingleItem(rawAnswer);
 }
 
@@ -705,7 +737,6 @@ function renderDragDropReview(q, rawAnswer) {
     return sentencesHtml;
 }
 
-// 🔥 المُولد الشامل لنوافذ المراجعة مع التقييم الجزئي 🔥
 function buildTeacherReviewItem(q, index, studentAnsObj) {
     let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
     let evaluations = (studentAnsObj && studentAnsObj.evaluations) ? studentAnsObj.evaluations : {};
@@ -714,6 +745,10 @@ function buildTeacherReviewItem(q, index, studentAnsObj) {
     if(isNaN(maxScore) || maxScore <= 0) maxScore = 1;
     
     let currentScore = studentAnsObj ? studentAnsObj.score : undefined;
+    if (currentScore === undefined || currentScore === null) {
+         currentScore = calculateAutoGrade(q, studentAnsObj);
+    }
+    
     let teacherNote = studentAnsObj ? (studentAnsObj.teacherNote || '') : '';
     let html = '';
 
@@ -721,10 +756,6 @@ function buildTeacherReviewItem(q, index, studentAnsObj) {
         let sAns = (rawAnswer !== null && rawAnswer !== undefined && rawAnswer !== '') ? parseInt(rawAnswer) : -1;
         let cAns = (q.correctAnswer !== undefined && q.correctAnswer !== null && q.correctAnswer !== '') ? parseInt(q.correctAnswer) : -1;
         
-        if (currentScore === undefined || currentScore === null) {
-            currentScore = (sAns === cAns && sAns !== -1) ? maxScore : 0;
-        }
-
         html += `<div style="display:flex; flex-direction:column; gap:8px;">`;
         (q.choices || []).forEach((choice, i) => {
             let isStudent = (sAns === i);
@@ -741,21 +772,8 @@ function buildTeacherReviewItem(q, index, studentAnsObj) {
         html += `</div>`;
         
     } else if (q.type === 'drag-drop') {
-        if (currentScore === undefined || currentScore === null) {
-            let allCorrect = true; let hasAnswer = false;
-            (q.paragraphs || []).forEach((p, pIdx) => {
-                (p.gaps || []).forEach((g, gIdx) => {
-                    let w = (rawAnswer && rawAnswer[`p_${pIdx}_g_${gIdx}`]) ? rawAnswer[`p_${pIdx}_g_${gIdx}`] : '';
-                    if (w) hasAnswer = true;
-                    if (w.trim() !== g.dragItem.trim()) allCorrect = false;
-                });
-            });
-            currentScore = hasAnswer ? (allCorrect ? maxScore : 0) : 0;
-        }
         html += renderDragDropReview(q, rawAnswer);
-        
     } else if (q.paragraphs && q.paragraphs.length > 0) {
-        if (currentScore === undefined || currentScore === null) currentScore = 0;
         
         if (q.type === 'manual-reading') {
             html += `<div style="display:flex; flex-direction:column; gap:15px;">`;
@@ -816,7 +834,6 @@ function buildTeacherReviewItem(q, index, studentAnsObj) {
         }
         
     } else {
-        if (currentScore === undefined || currentScore === null) currentScore = 0;
         html += `<div style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #eee;">${formatSingleItem(rawAnswer)}</div>`;
     }
 
@@ -912,7 +929,97 @@ function recalculateScore(qId) {
     }
 }
 
-// --- دوال الدروس والواجبات والاختبارات ---
+// 🔥 استخدام دالة التصحيح المركزية في شاشة المراجعة الأساسية 🔥
+function loadDiagnosticTab() {
+    let studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    let assignedTestIndex = studentTests.findIndex(t => t.studentId == currentStudentId && t.type === 'diagnostic');
+    
+    if (assignedTestIndex !== -1) {
+        let assignedTest = studentTests[assignedTestIndex];
+        document.getElementById('noDiagnosticTest').style.display = 'none';
+        const detailsDiv = document.getElementById('diagnosticTestDetails');
+        detailsDiv.style.display = 'block';
+        
+        const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+        const originalTest = allTests.find(t => t.id == assignedTest.testId);
+        
+        let finalPercentage = assignedTest.score || 0;
+        
+        if (assignedTest.status === 'completed' && originalTest && originalTest.questions) {
+            let totalScore = 0;
+            let maxTotalScore = 0;
+            let needsSave = false;
+            
+            originalTest.questions.forEach(q => {
+                let maxQScore = parseFloat(q.passingScore || q.points || q.score || 1);
+                if (isNaN(maxQScore) || maxQScore <= 0) maxQScore = 1;
+                maxTotalScore += maxQScore;
+                
+                if (assignedTest.answers) {
+                    let ansObj = assignedTest.answers.find(a => a.questionId == q.id);
+                    if (ansObj) {
+                        if (ansObj.score === undefined || ansObj.score === null) {
+                            ansObj.score = calculateAutoGrade(q, ansObj);
+                            needsSave = true;
+                        }
+                        totalScore += parseFloat(ansObj.score) || 0;
+                    }
+                }
+            });
+            
+            if (maxTotalScore > 0) {
+                let calcPercentage = Math.round((totalScore / maxTotalScore) * 100);
+                if (assignedTest.score !== calcPercentage) {
+                    assignedTest.score = calcPercentage;
+                    needsSave = true;
+                }
+            }
+            
+            if (needsSave) {
+                studentTests[assignedTestIndex] = assignedTest;
+                localStorage.setItem('studentTests', JSON.stringify(studentTests));
+            }
+            finalPercentage = assignedTest.score || 0;
+        }
+
+        let statusBadge = '';
+        let actionContent = '';
+        if(assignedTest.status === 'completed') {
+            statusBadge = '<span class="badge badge-success">مكتمل</span>';
+            actionContent = `
+                <div style="margin-top:15px; padding:15px; background:#f0fff4; border:1px solid #c3e6cb; border-radius:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="font-size:1.1rem;">الدرجة الحالية: <span style="font-size:1.4rem; color:#28a745; font-weight:900;">${finalPercentage}%</span></strong>
+                    </div>
+                    <div style="margin-top:15px; display:flex; gap:10px;">
+                        <button class="btn btn-warning" onclick="openReviewModal(${assignedTest.id})">🔍 مراجعة وتعديل التصحيح</button>
+                        <button class="btn btn-primary" onclick="autoGenerateLessons()">⚡ توليد الخطة والدروس</button>
+                    </div>
+                </div>`;
+        } else if (assignedTest.status === 'returned') {
+            statusBadge = '<span class="badge badge-warning">معاد للتعديل</span>';
+            actionContent = `<div class="alert alert-warning mt-2">تم إعادة الاختبار للطالب ليقوم بتعديله.</div>`;
+        } else {
+            statusBadge = '<span class="badge badge-secondary">بانتظار حل الطالب</span>';
+        }
+        detailsDiv.innerHTML = `
+            <div class="card" style="border:1px solid #eee; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3>${originalTest ? originalTest.title : 'اختبار (محذوف)'}</h3>
+                    <div style="display:flex; gap:5px; align-items:center;">
+                        ${statusBadge}
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAssignedTest(${assignedTest.id})" title="حذف الاختبار"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+                <p class="text-muted" style="margin-top:5px;"><i class="fas fa-calendar-alt"></i> تاريخ التعيين: ${new Date(assignedTest.assignedDate).toLocaleDateString('ar-SA')}</p>
+                ${actionContent}
+            </div>`;
+    } else {
+        document.getElementById('noDiagnosticTest').style.display = 'block';
+        document.getElementById('diagnosticTestDetails').style.display = 'none';
+    }
+}
+
 function loadAssignmentsTab() {
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId == currentStudentId);
     const container = document.getElementById('studentAssignmentsGrid');
@@ -986,121 +1093,6 @@ function loadLessonsTab() {
             </div>
         </div>`;
     }).join('');
-}
-
-function loadDiagnosticTab() {
-    let studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    let assignedTestIndex = studentTests.findIndex(t => t.studentId == currentStudentId && t.type === 'diagnostic');
-    
-    if (assignedTestIndex !== -1) {
-        let assignedTest = studentTests[assignedTestIndex];
-        document.getElementById('noDiagnosticTest').style.display = 'none';
-        const detailsDiv = document.getElementById('diagnosticTestDetails');
-        detailsDiv.style.display = 'block';
-        
-        const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
-        const originalTest = allTests.find(t => t.id == assignedTest.testId);
-        
-        let finalPercentage = assignedTest.score || 0;
-        
-        if (assignedTest.status === 'completed' && originalTest && originalTest.questions) {
-            let totalScore = 0;
-            let maxTotalScore = 0;
-            let needsSave = false;
-            
-            originalTest.questions.forEach(q => {
-                let maxQScore = parseFloat(q.passingScore || q.points || q.score || 1);
-                if (isNaN(maxQScore) || maxQScore <= 0) maxQScore = 1;
-                maxTotalScore += maxQScore;
-                
-                if (assignedTest.answers) {
-                    let ansObj = assignedTest.answers.find(a => a.questionId == q.id);
-                    if (ansObj) {
-                        if (ansObj.score === undefined || ansObj.score === null) {
-                            if (q.type === 'drag-drop') {
-                                let allCorrect = true;
-                                let hasAnswer = false;
-                                (q.paragraphs || []).forEach((p, pIdx) => {
-                                    (p.gaps || []).forEach((g, gIdx) => {
-                                        let w = (ansObj.answer && ansObj.answer[`p_${pIdx}_g_${gIdx}`]) ? ansObj.answer[`p_${pIdx}_g_${gIdx}`] : '';
-                                        if (w) hasAnswer = true;
-                                        if (w.trim() !== g.dragItem.trim()) allCorrect = false;
-                                    });
-                                });
-                                ansObj.score = hasAnswer ? (allCorrect ? maxQScore : 0) : 0;
-                            } else if (q.type.includes('mcq')) {
-                                let sAns = (ansObj.answer !== null && ansObj.answer !== undefined && ansObj.answer !== '') ? parseInt(ansObj.answer) : -1;
-                                let cAns = (q.correctAnswer !== undefined && q.correctAnswer !== null && q.correctAnswer !== '') ? parseInt(q.correctAnswer) : -1;
-                                ansObj.score = (sAns === cAns && sAns !== -1) ? maxQScore : 0;
-                            } else {
-                                let textAns = extractAnswerText(ansObj.answer || ansObj.value);
-                                let studentAns = String(textAns).trim().toLowerCase();
-                                let correctAns = String(q.correctAnswer !== undefined && q.correctAnswer !== null ? q.correctAnswer : '').trim().toLowerCase();
-                                
-                                if (studentAns === correctAns && studentAns !== '') {
-                                    ansObj.score = maxQScore; 
-                                } else {
-                                    ansObj.score = 0; 
-                                }
-                            }
-                            needsSave = true;
-                        }
-                        totalScore += parseFloat(ansObj.score) || 0;
-                    }
-                }
-            });
-            
-            if (maxTotalScore > 0) {
-                let calcPercentage = Math.round((totalScore / maxTotalScore) * 100);
-                if (assignedTest.score !== calcPercentage) {
-                    assignedTest.score = calcPercentage;
-                    needsSave = true;
-                }
-            }
-            
-            if (needsSave) {
-                studentTests[assignedTestIndex] = assignedTest;
-                localStorage.setItem('studentTests', JSON.stringify(studentTests));
-            }
-            finalPercentage = assignedTest.score || 0;
-        }
-
-        let statusBadge = '';
-        let actionContent = '';
-        if(assignedTest.status === 'completed') {
-            statusBadge = '<span class="badge badge-success">مكتمل</span>';
-            actionContent = `
-                <div style="margin-top:15px; padding:15px; background:#f0fff4; border:1px solid #c3e6cb; border-radius:8px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="font-size:1.1rem;">الدرجة الحالية: <span style="font-size:1.4rem; color:#28a745; font-weight:900;">${finalPercentage}%</span></strong>
-                    </div>
-                    <div style="margin-top:15px; display:flex; gap:10px;">
-                        <button class="btn btn-warning" onclick="openReviewModal(${assignedTest.id})">🔍 مراجعة وتعديل التصحيح</button>
-                        <button class="btn btn-primary" onclick="autoGenerateLessons()">⚡ توليد الخطة والدروس</button>
-                    </div>
-                </div>`;
-        } else if (assignedTest.status === 'returned') {
-            statusBadge = '<span class="badge badge-warning">معاد للتعديل</span>';
-            actionContent = `<div class="alert alert-warning mt-2">تم إعادة الاختبار للطالب ليقوم بتعديله.</div>`;
-        } else {
-            statusBadge = '<span class="badge badge-secondary">بانتظار حل الطالب</span>';
-        }
-        detailsDiv.innerHTML = `
-            <div class="card" style="border:1px solid #eee; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3>${originalTest ? originalTest.title : 'اختبار (محذوف)'}</h3>
-                    <div style="display:flex; gap:5px; align-items:center;">
-                        ${statusBadge}
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAssignedTest(${assignedTest.id})" title="حذف الاختبار"><i class="fas fa-trash"></i></button>
-                    </div>
-                </div>
-                <p class="text-muted" style="margin-top:5px;"><i class="fas fa-calendar-alt"></i> تاريخ التعيين: ${new Date(assignedTest.assignedDate).toLocaleDateString('ar-SA')}</p>
-                ${actionContent}
-            </div>`;
-    } else {
-        document.getElementById('noDiagnosticTest').style.display = 'block';
-        document.getElementById('diagnosticTestDetails').style.display = 'none';
-    }
 }
 
 function loadIEPTab() {

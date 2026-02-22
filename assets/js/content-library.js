@@ -1,25 +1,18 @@
 // ============================================
 // 📁 المسار: assets/js/content-library.js
-// الوصف: مكتبة المحتوى + إغلاق القوائم المنسدلة ذكياً (Click Outside)
+// الوصف: مكتبة المحتوى + نافذة التصدير التفاعلية (اختيار العناصر)
 // ============================================
 
 // =========================================================
 // 🔥 1. إغلاق القوائم المنسدلة عند النقر في أي مكان فارغ 🔥
 // =========================================================
 document.addEventListener('click', function(event) {
-    // التحقق مما إذا كانت النقرة تمت على زر يفتح القائمة (حتى لا نلغي عمل الزر نفسه)
     const isDropdownButton = event.target.closest('.dropdown-btn, .dropbtn, .dropdown-toggle, [onclick*="toggle"], [onclick*="classList.toggle"]');
-    
-    // إذا لم تكن النقرة على زر القائمة
     if (!isDropdownButton) {
-        // البحث عن جميع القوائم المفتوحة حالياً (التي تحتوي على كلاس show)
         const openDropdowns = document.querySelectorAll('.dropdown-content.show, .dropdown-menu.show, .menu-options.show, #addContentMenu.show');
-        
         openDropdowns.forEach(dropdown => {
-            // التأكد أن النقرة لم تحدث بداخل القائمة نفسها (مثل اختيار خيار منها)
             if (!dropdown.contains(event.target)) {
-                dropdown.classList.remove('show'); // إخفاء القائمة
-                // دعم إضافي إن كانت القائمة مبرمجة لتعمل بـ display:block
+                dropdown.classList.remove('show'); 
                 if(dropdown.style.display === 'block') dropdown.style.display = 'none';
             }
         });
@@ -77,6 +70,7 @@ if (!window.showConfirmModal) {
 // =========================================================
 document.addEventListener('DOMContentLoaded', function() {
     injectLinkContentModal(); 
+    injectExportModal(); // حقن نافذة التصدير
     loadContentLibrary();
 });
 
@@ -472,20 +466,61 @@ function saveContentLinks() {
 }
 
 // =========================================================
-// 🔥 6. دوال الاستيراد والتصدير 🔥
+// 🔥 6. نظام الاستيراد والتصدير مع النافذة التفاعلية 🔥
 // =========================================================
 
+function injectExportModal() {
+    if (document.getElementById('exportModal')) return;
+    const html = `
+    <div id="exportModal" class="modal">
+        <div class="modal-content" style="border: 2px solid #2c3e50; max-width: 400px;">
+            <div class="modal-header">
+                <h3>📤 تصدير نسخة احتياطية</h3>
+                <button class="modal-close" onclick="closeModal('exportModal')">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px;">
+                <p style="margin-bottom: 15px; color: #555; font-size:1.1rem;">اختر العناصر التي ترغب في تصديرها:</p>
+                <div style="display: flex; flex-direction: column; gap: 15px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:1.1rem; font-weight:bold; color:#333;">
+                        <input type="checkbox" id="exportTests" checked style="width:20px; height:20px; accent-color:#007bff;"> الاختبارات التشخيصية
+                    </label>
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:1.1rem; font-weight:bold; color:#333;">
+                        <input type="checkbox" id="exportLessons" checked style="width:20px; height:20px; accent-color:#007bff;"> الدروس التفاعلية
+                    </label>
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:1.1rem; font-weight:bold; color:#333;">
+                        <input type="checkbox" id="exportObjectives" checked style="width:20px; height:20px; accent-color:#007bff;"> بنك الأهداف
+                    </label>
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:1.1rem; font-weight:bold; color:#333;">
+                        <input type="checkbox" id="exportHomeworks" checked style="width:20px; height:20px; accent-color:#007bff;"> الواجبات
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer" style="display:flex; gap:10px;">
+                <button class="btn btn-secondary" style="flex:1;" onclick="closeModal('exportModal')">إلغاء</button>
+                <button class="btn btn-primary" style="flex:2; font-size:1.1rem;" onclick="exportContent()">تحميل الملف 📥</button>
+            </div>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
 function showExportModal() {
-    exportContent();
+    document.getElementById('exportModal').classList.add('show');
 }
 
 function exportContent() {
-    const data = { 
-        tests: JSON.parse(localStorage.getItem('tests') || '[]'), 
-        lessons: JSON.parse(localStorage.getItem('lessons') || '[]'), 
-        objectives: JSON.parse(localStorage.getItem('objectives') || '[]'), 
-        assignments: JSON.parse(localStorage.getItem('assignments') || '[]') 
-    };
+    const data = {};
+    
+    // قراءة حالة كل مربع اختيار (Checkbox) وإضافة بياناته فقط إذا كان محدداً
+    if (document.getElementById('exportTests').checked) data.tests = JSON.parse(localStorage.getItem('tests') || '[]');
+    if (document.getElementById('exportLessons').checked) data.lessons = JSON.parse(localStorage.getItem('lessons') || '[]');
+    if (document.getElementById('exportObjectives').checked) data.objectives = JSON.parse(localStorage.getItem('objectives') || '[]');
+    if (document.getElementById('exportHomeworks').checked) data.assignments = JSON.parse(localStorage.getItem('assignments') || '[]');
+
+    if (Object.keys(data).length === 0) {
+        return showError('يرجى تحديد عنصر واحد على الأقل لتصديره!');
+    }
+
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); 
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); 
@@ -493,7 +528,9 @@ function exportContent() {
     a.download = `muyasir_backup_${new Date().toISOString().split('T')[0]}.json`; 
     a.click(); 
     URL.revokeObjectURL(url);
-    showSuccess('تم تحميل النسخة الاحتياطية بنجاح 📥');
+    
+    closeModal('exportModal'); // إغلاق النافذة بعد التنزيل
+    showSuccess('تم تجهيز وتحميل النسخة الاحتياطية بنجاح 📥');
 }
 
 function triggerImport() { document.getElementById('importFile').click(); }
@@ -520,10 +557,11 @@ function importContent(input) {
                 localStorage.setItem(key, JSON.stringify(currentItems)); 
                 return added; 
             };
-            count += mergeData('tests', data.tests); 
-            count += mergeData('lessons', data.lessons); 
-            count += mergeData('objectives', data.objectives); 
-            count += mergeData('assignments', data.assignments);
+            if (data.tests) count += mergeData('tests', data.tests); 
+            if (data.lessons) count += mergeData('lessons', data.lessons); 
+            if (data.objectives) count += mergeData('objectives', data.objectives); 
+            if (data.assignments) count += mergeData('assignments', data.assignments);
+            
             showSuccess(`تم استيراد ${count} عنصر بنجاح`); 
             loadContentLibrary(); 
         } catch (err) { showError('حدث خطأ أثناء قراءة الملف. تأكد أنه ملف JSON صالح.'); }

@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب + الإسناد الذكي للدروس العلاجية
+// الوصف: إدارة الطالب + اعتماد التصحيح اليدوي للدروس (اللحظة الحاسمة)
 // ============================================
 
 function calculateAutoGrade(q, studentAnsObj) {
@@ -90,6 +90,7 @@ function loadProgressTab() {
             else if (log.status === 'extension') displayStatus = 'تمديد';
             else if (log.status === 'completed') { displayStatus = '<span class="text-success font-weight-bold">✔ متحقق</span>'; rowClass = 'bg-success-light'; }
             else if (log.status === 'accelerated') { displayStatus = '<span class="text-warning font-weight-bold">⚡ تسريع</span>'; rowClass = 'bg-warning-light'; }
+            else if (log.status === 'pending_review') { displayStatus = '<span class="text-warning font-weight-bold">⏳ بانتظار تصحيح</span>'; rowClass = 'bg-warning-light'; }
             if (log.cachedType) { if (log.cachedType === 'basic') displayType = 'أساسية'; else if (log.cachedType === 'compensation') { displayType = '<span class="text-primary font-weight-bold">تعويضية</span>'; balance++; } else if (log.cachedType === 'additional') { displayType = 'إضافية'; balance++; } } else { displayType = 'أساسية'; }
         }
         finalTimeline.push({ title: log.title, lessonStatus: displayStatus, studentStatus: studentState, sessionType: displayType || '-', date: log.dateObj.toLocaleDateString('ar-SA'), rawDate: log.dateObj, balanceSnapshot: balance, actions: (log.type === 'event' || log.type === 'auto-absence') ? log.id : null, note: log.note, rowClass: rowClass });
@@ -226,6 +227,7 @@ function loadLessonsTab() {
             }
         } 
         else if (l.status === 'accelerated') { statusBadge = '<span class="badge badge-warning" style="background:#ffc107; color:#000;">⚡ مسرع (تفوق)</span>'; cardStyle = 'border-right: 5px solid #ffc107; background:#fffbf0;'; } 
+        else if (l.status === 'pending_review') { statusBadge = '<span class="badge badge-warning" style="background:#fd7e14; color:#fff; box-shadow:0 0 5px rgba(253,126,20,0.5);">⏳ بانتظار التصحيح</span>'; cardStyle = 'border-right: 5px solid #fd7e14; background:#fffaf6;'; }
         else if (l.status === 'struggling') { statusBadge = '<span class="badge badge-danger" style="box-shadow:0 0 5px rgba(220,53,69,0.5);">🙋‍♂️ يطلب المساعدة</span>'; cardStyle = 'border-right: 5px solid #dc3545; background:#fff5f5;'; }
         else if (isLockedForStudent) { statusBadge = '<span class="badge badge-secondary">🔒 مغلق</span>'; cardStyle = 'border-right: 5px solid #6c757d; opacity:0.8;'; } 
         else { 
@@ -233,10 +235,16 @@ function loadLessonsTab() {
             cardStyle = 'border-right: 5px solid #007bff;'; 
         }
 
-        let controls = (l.status === 'completed' || l.status === 'accelerated') ? 
-            `<button class="btn btn-outline-success btn-sm w-100 mb-2" onclick="openReviewModal(${l.id}, 'lesson')">🔍 مراجعة الإجابات</button>
-             <button class="btn btn-warning btn-sm" onclick="resetLesson(${l.id})">🔄 إعادة فتح</button>` : 
-            `<button class="btn btn-info btn-sm" style="background:#ffc107; border:none; color:#000;" onclick="accelerateLesson(${l.id})">⚡ تسريع (تفوق)</button>`;
+        let controls = '';
+        if (l.status === 'completed' || l.status === 'accelerated') {
+            controls = `<button class="btn btn-outline-success btn-sm w-100 mb-2" onclick="openReviewModal(${l.id}, 'lesson')">🔍 مراجعة الإجابات</button>
+                        <button class="btn btn-warning btn-sm" onclick="resetLesson(${l.id})">🔄 إعادة فتح</button>`;
+        } else if (l.status === 'pending_review') {
+            controls = `<button class="btn btn-warning btn-sm w-100 mb-2" style="color:#000; font-weight:bold;" onclick="openReviewModal(${l.id}, 'lesson')">📝 تصحيح الإجابات ورصد الدرجة</button>
+                        <button class="btn btn-danger btn-sm" onclick="resetLesson(${l.id})">إعادة فتح</button>`;
+        } else {
+            controls = `<button class="btn btn-info btn-sm" style="background:#ffc107; border:none; color:#000;" onclick="accelerateLesson(${l.id})">⚡ تسريع (تفوق)</button>`;
+        }
 
         const isFirst = index === 0; const isLast = index === myList.length - 1;
         let orderBtns = '';
@@ -360,7 +368,6 @@ function showAssignLibraryLessonModal() {
     document.getElementById('assignLibraryLessonModal').classList.add('show');
 }
 
-// 🔥 دالة الإسناد الذكي للدرس الإضافي (الحشر تحت المتعثر) 🔥
 function assignLibraryLesson() {
     const select = document.getElementById('libraryLessonSelect');
     const lessonId = select.value;
@@ -379,7 +386,7 @@ function assignLibraryLesson() {
     let rescueId = null;
 
     if (strugglingIdx !== -1) {
-        insertIndex = strugglingIdx + 1; // حشر الدرس تحته مباشرة
+        insertIndex = strugglingIdx + 1; 
         rescueId = myLessons[strugglingIdx].id;
     }
 
@@ -391,9 +398,9 @@ function assignLibraryLesson() {
         originalLessonId: targetLesson.id, 
         status: 'pending', 
         isAdditional: true,
-        rescueLessonId: rescueId, // زرع الرابط الخفي للشفاء الذاتي
+        rescueLessonId: rescueId, 
         assignedDate: new Date().toISOString(), 
-        orderIndex: 0 // سيتم إعادة الترتيب
+        orderIndex: 0 
     };
 
     myLessons.splice(insertIndex, 0, newStudentLesson);
@@ -447,7 +454,7 @@ function deleteAssignment(id) {
     });
 }
 
-// ---------------- نظام المراجعة الموحد ----------------
+// ---------------- نظام المراجعة والتصحيح (اللحظة الحاسمة) ----------------
 function extractAnswerText(ans) {
     if (ans === null || ans === undefined) return '';
     if (typeof ans === 'string') { if (ans.startsWith('data:') || (ans.length > 200 && !ans.includes(' '))) return ''; return ans; }
@@ -651,6 +658,7 @@ function recalculateScore(qId) {
     }
 }
 
+// 🔥 اللحظة الحاسمة: جمع تقييم المعلم اليدوي ومحاكمة الدرس 🔥
 function saveTestReview() {
     const id = parseInt(document.getElementById('reviewAssignmentId').value);
     const type = document.getElementById('reviewAssignmentId').getAttribute('data-type');
@@ -696,12 +704,42 @@ function saveTestReview() {
         });
         collection[idx].score = maxTotalScore > 0 ? Math.round((totalScore / maxTotalScore) * 100) : 0;
     }
-    collection[idx].status = 'completed';
+    
+    // 🔥 الحكم النهائي للدروس بناءً على تصحيح المعلم 🔥
+    if (type === 'lesson') {
+        const lib = JSON.parse(localStorage.getItem('lessons') || '[]');
+        const orig = lib.find(l => l.id == collection[idx].originalLessonId);
+        const passScore = (orig && orig.exercises && orig.exercises.passScore) ? parseFloat(orig.exercises.passScore) : 80;
+        
+        if (collection[idx].score >= passScore) {
+            collection[idx].status = 'completed';
+            collection[idx].completedDate = new Date().toISOString();
+            
+            // الشفاء الذاتي للدرس الأساسي إن كان هذا درساً علاجياً
+            if (collection[idx].rescueLessonId) {
+                const originalIdx = collection.findIndex(l => l.id == collection[idx].rescueLessonId);
+                if (originalIdx !== -1) {
+                    collection[originalIdx].status = 'completed';
+                    collection[originalIdx].passedByAlternative = true;
+                    collection[originalIdx].historyLog.push({ date: new Date().toISOString(), status: 'passed_by_alternative' });
+                }
+            }
+            showSuccess('تم حفظ التصحيح. الطالب اجتاز المحك واكتمل الدرس بنجاح!');
+        } else {
+            collection[idx].status = 'returned'; 
+            showError(`تم حفظ التقييم. نتيجة الطالب (${collection[idx].score}%) لم تحقق المحك (${passScore}%). أُعيد الدرس للطالب.`);
+        }
+    } else {
+        collection[idx].status = 'completed';
+        showSuccess('تم حفظ التصحيح واعتماد الدرجة بنجاح.');
+    }
+
     localStorage.setItem(storageKey, JSON.stringify(collection));
     closeModal('reviewTestModal');
     
-    if (type === 'assignment') loadAssignmentsTab(); else if (type === 'test') loadDiagnosticTab(); else if (type === 'lesson') loadLessonsTab();
-    showSuccess('تم حفظ التصحيح واعتماد الدرجة بنجاح');
+    if (type === 'assignment') loadAssignmentsTab(); 
+    else if (type === 'test') loadDiagnosticTab(); 
+    else if (type === 'lesson') loadLessonsTab();
 }
 
 function returnTestForResubmission() {

@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب + تقييم القراءة + إصلاح دقيق للتصحيح التلقائي لأسئلة الاختيارات
+// الوصف: إدارة ملف الطالب + التقييم الجزئي + إصلاح النواقص البرمجية
 // ============================================
 
 // =========================================================
@@ -119,6 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
     
+    // حقن النوافذ المخفية والتنسيقات
     injectAdminEventModal();
     injectHomeworkModal(); 
     injectWordTableStyles();
@@ -127,6 +128,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadStudentData();
 });
 
+// 🔥 حقن ستايلات نافذة المراجعة وتقييم القراءة 🔥
 function injectReviewStyles() {
     if (document.getElementById('customReviewStyles')) return;
     const style = document.createElement('style');
@@ -146,6 +148,86 @@ function injectReviewStyles() {
     `;
     document.head.appendChild(style);
 }
+
+// 🔥 حقن ستايلات جدول المتابعة 🔥
+function injectWordTableStyles() {
+    if (document.getElementById('wordTableStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'wordTableStyles';
+    style.innerHTML = `
+        .word-table { width: 100%; border-collapse: collapse; font-family: 'Times New Roman', 'Tajawal', serif; font-size: 1rem; background: white; border: 2px solid #000; }
+        .word-table th, .word-table td { border: 1px solid #000; padding: 8px 12px; vertical-align: middle; }
+        .word-table th { background-color: #f2f2f2; font-weight: bold; text-align: center; border-bottom: 2px solid #000; }
+        .word-table tr:nth-child(even) { background-color: #fafafa; }
+        .bg-success-light { background-color: #e8f5e9 !important; }
+        .bg-danger-light { background-color: #ffebee !important; }
+        .bg-warning-light { background-color: #fff3e0 !important; }
+        .bg-info-light { background-color: #e3f2fd !important; }
+        .btn-icon { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 0 5px; transition: transform 0.2s; }
+        .btn-icon:hover { transform: scale(1.2); }
+        .badge { padding: 5px 10px; border-radius: 12px; color: white; font-size: 0.8rem; }
+        .badge-success { background-color: #28a745; }
+        .badge-danger { background-color: #dc3545; }
+        @media print { .no-print { display: none !important; } }
+    `;
+    document.head.appendChild(style);
+}
+
+// 🔥 حقن نوافذ الأحداث والواجبات 🔥
+function injectAdminEventModal() {
+    if (document.getElementById('adminEventModal')) return;
+    const html = `
+    <div id="adminEventModal" class="modal">
+        <div class="modal-content" style="border: 2px solid #000;">
+            <span class="close-btn" onclick="closeAdminEventModal()">&times;</span>
+            <h3 id="modalTitle">تسجيل حدث إداري</h3>
+            <div class="form-group">
+                <label>نوع الحالة:</label>
+                <select id="manualEventType" class="form-control">
+                    <option value="excused">معفى (يخصم من الرصيد)</option>
+                    <option value="vacation">إجازة (توقف مؤقت)</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>التاريخ:</label>
+                <input type="date" id="manualEventDate" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>ملاحظات:</label>
+                <textarea id="manualEventNote" class="form-control"></textarea>
+            </div>
+            <button class="btn btn-primary w-100" onclick="saveAdminEvent()">حفظ السجل</button>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function injectHomeworkModal() {
+    const oldModal = document.getElementById('assignHomeworkModal');
+    if (oldModal) return; 
+
+    const html = `
+    <div id="assignHomeworkModal" class="modal">
+        <div class="modal-content" style="border: 2px solid #000;">
+            <span class="close-btn" onclick="closeModal('assignHomeworkModal')">&times;</span>
+            <h3>إسناد واجب جديد</h3>
+            <div class="form-group">
+                <label>اختر الواجب من المكتبة:</label>
+                <select id="homeworkSelect" class="form-control">
+                    <option value="">جارِ التحميل...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>تاريخ التسليم:</label>
+                <input type="date" id="homeworkDueDate" class="form-control">
+            </div>
+            <button class="btn btn-primary w-100" onclick="assignHomework()">حفظ الإسناد</button>
+        </div>
+    </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+// ------------------------------------------------------------------
 
 function loadStudentData() {
     const users = JSON.parse(localStorage.getItem('users') || '[]');
@@ -183,6 +265,7 @@ function switchSection(sectionId) {
     if (sectionId === 'progress') loadProgressTab();
 }
 
+// --- قسم سجل التقدم ---
 function loadProgressTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     let adminEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]');
@@ -436,6 +519,77 @@ function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDa
     return myEvents;
 }
 
+// --- دوال الأحداث ---
+function openAdminEventModal() {
+    editingEventId = null;
+    document.getElementById('modalTitle').textContent = "تسجيل حدث إداري";
+    document.getElementById('manualEventDate').valueAsDate = new Date();
+    document.getElementById('manualEventType').value = 'excused';
+    document.getElementById('manualEventNote').value = '';
+    document.getElementById('adminEventModal').classList.add('show');
+}
+
+function closeAdminEventModal() {
+    document.getElementById('adminEventModal').classList.remove('show');
+}
+
+function editAdminEvent(id) {
+    const events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
+    const event = events.find(e => e.id == id);
+    if (!event) return;
+    editingEventId = id;
+    document.getElementById('modalTitle').textContent = "تعديل الحدث";
+    document.getElementById('manualEventType').value = event.type;
+    document.getElementById('manualEventDate').value = event.date.split('T')[0];
+    document.getElementById('manualEventNote').value = event.note || '';
+    document.getElementById('adminEventModal').classList.add('show');
+}
+
+function saveAdminEvent() {
+    const type = document.getElementById('manualEventType').value;
+    const dateInput = document.getElementById('manualEventDate').value;
+    const note = document.getElementById('manualEventNote').value;
+    
+    if (!dateInput) { showError('يرجى اختيار التاريخ'); return; }
+
+    const targetDateStr = new Date(dateInput).toDateString();
+    let events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
+
+    events = events.filter(e => {
+        if (e.studentId != currentStudentId) return true;
+        if (new Date(e.date).toDateString() !== targetDateStr) return true;
+        return false;
+    });
+    
+    events.push({
+        id: Date.now(),
+        studentId: currentStudentId,
+        date: new Date(dateInput).toISOString(),
+        type: type,
+        note: note
+    });
+
+    localStorage.setItem('studentEvents', JSON.stringify(events));
+    closeAdminEventModal();
+    loadProgressTab();
+}
+
+function deleteAdminEvent(id) {
+    showConfirmModal('هل أنت متأكد من حذف هذا السجل؟', function() {
+        let events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
+        events = events.filter(e => e.id != id);
+        localStorage.setItem('studentEvents', JSON.stringify(events));
+        loadProgressTab();
+        showSuccess('تم حذف السجل بنجاح');
+    });
+}
+
+function closeModal(id) { 
+    const modal = document.getElementById(id);
+    if(modal) modal.classList.remove('show'); 
+}
+
+// --- استخراج الإجابات وعرضها (للنافذة المنبثقة) ---
 function extractAnswerText(ans) {
     if (ans === null || ans === undefined) return '';
     if (typeof ans === 'string') {
@@ -459,6 +613,50 @@ function extractAnswerText(ans) {
         return ''; 
     }
     return String(ans);
+}
+
+function formatAnswerDisplay(rawAnswer) {
+    if (rawAnswer === null || rawAnswer === undefined || rawAnswer === '') {
+        return '<span class="text-muted" style="font-style:italic;">(لم يُجب الطالب على هذا السؤال)</span>';
+    }
+
+    if (Array.isArray(rawAnswer)) {
+        let html = rawAnswer.map(item => formatSingleItem(item)).join('<div style="margin-top:8px; border-bottom:1px dashed #eee; padding-bottom:5px;"></div>');
+        return html || '<span class="text-muted">(إجابة فارغة)</span>';
+    }
+
+    if (typeof rawAnswer === 'object') {
+        if (rawAnswer.selected) {
+            let val = Array.isArray(rawAnswer.selected) ? rawAnswer.selected.join(' ، ') : rawAnswer.selected;
+            return formatSingleItem(val);
+        }
+
+        let itemsHtml = [];
+        let keys = Object.keys(rawAnswer).sort(); 
+        
+        for (let k of keys) {
+            let itemVal = rawAnswer[k];
+            if (itemVal !== null && itemVal !== undefined && itemVal !== '') {
+                if (typeof itemVal !== 'object') {
+                    let formatted = formatSingleItem(itemVal);
+                    if (formatted) itemsHtml.push(formatted);
+                }
+            }
+        }
+
+        if (itemsHtml.length > 0) {
+            let isMedia = itemsHtml.some(html => html.includes('<img') || html.includes('<audio') || html.includes('<a '));
+            if (isMedia) {
+                return itemsHtml.join('<div style="margin:15px 0; border-bottom:2px dashed #cbd5e1;"></div>');
+            } else {
+                return itemsHtml.join(' <span style="color:#007bff; font-weight:bold; margin:0 5px;">&larr;</span> ');
+            }
+        } else {
+            return '<span class="text-muted">(إجابة فارغة)</span>';
+        }
+    }
+
+    return formatSingleItem(rawAnswer);
 }
 
 function formatSingleItem(text) {
@@ -507,7 +705,7 @@ function renderDragDropReview(q, rawAnswer) {
     return sentencesHtml;
 }
 
-// 🔥 المُولد الشامل لنوافذ المراجعة 🔥
+// 🔥 المُولد الشامل لنوافذ المراجعة مع التقييم الجزئي 🔥
 function buildTeacherReviewItem(q, index, studentAnsObj) {
     let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
     let evaluations = (studentAnsObj && studentAnsObj.evaluations) ? studentAnsObj.evaluations : {};
@@ -520,8 +718,8 @@ function buildTeacherReviewItem(q, index, studentAnsObj) {
     let html = '';
 
     if (q.type.includes('mcq')) {
-        let sAns = rawAnswer !== null ? parseInt(rawAnswer) : -1;
-        let cAns = q.correctAnswer !== undefined ? parseInt(q.correctAnswer) : -1;
+        let sAns = (rawAnswer !== null && rawAnswer !== undefined && rawAnswer !== '') ? parseInt(rawAnswer) : -1;
+        let cAns = (q.correctAnswer !== undefined && q.correctAnswer !== null && q.correctAnswer !== '') ? parseInt(q.correctAnswer) : -1;
         
         if (currentScore === undefined || currentScore === null) {
             currentScore = (sAns === cAns && sAns !== -1) ? maxScore : 0;
@@ -714,122 +912,7 @@ function recalculateScore(qId) {
     }
 }
 
-// 🔥 دالة التصحيح التلقائي المعدلة لإصلاح مشكلة الخيار الأول (0) 🔥
-function loadDiagnosticTab() {
-    let studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    let assignedTestIndex = studentTests.findIndex(t => t.studentId == currentStudentId && t.type === 'diagnostic');
-    
-    if (assignedTestIndex !== -1) {
-        let assignedTest = studentTests[assignedTestIndex];
-        document.getElementById('noDiagnosticTest').style.display = 'none';
-        const detailsDiv = document.getElementById('diagnosticTestDetails');
-        detailsDiv.style.display = 'block';
-        
-        const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
-        const originalTest = allTests.find(t => t.id == assignedTest.testId);
-        
-        let finalPercentage = assignedTest.score || 0;
-        
-        if (assignedTest.status === 'completed' && originalTest && originalTest.questions) {
-            let totalScore = 0;
-            let maxTotalScore = 0;
-            let needsSave = false;
-            
-            originalTest.questions.forEach(q => {
-                let maxQScore = parseFloat(q.passingScore || q.points || q.score || 1);
-                if (isNaN(maxQScore) || maxQScore <= 0) maxQScore = 1;
-                maxTotalScore += maxQScore;
-                
-                if (assignedTest.answers) {
-                    let ansObj = assignedTest.answers.find(a => a.questionId == q.id);
-                    if (ansObj) {
-                        if (ansObj.score === undefined || ansObj.score === null) {
-                            if (q.type === 'drag-drop') {
-                                let allCorrect = true;
-                                let hasAnswer = false;
-                                (q.paragraphs || []).forEach((p, pIdx) => {
-                                    (p.gaps || []).forEach((g, gIdx) => {
-                                        let w = (ansObj.answer && ansObj.answer[`p_${pIdx}_g_${gIdx}`]) ? ansObj.answer[`p_${pIdx}_g_${gIdx}`] : '';
-                                        if (w) hasAnswer = true;
-                                        if (w.trim() !== g.dragItem.trim()) allCorrect = false;
-                                    });
-                                });
-                                ansObj.score = hasAnswer ? (allCorrect ? maxQScore : 0) : 0;
-                            } else if (q.type.includes('mcq')) {
-                                let sAns = ansObj.answer !== null && ansObj.answer !== undefined ? parseInt(ansObj.answer) : -1;
-                                let cAns = q.correctAnswer !== undefined && q.correctAnswer !== null ? parseInt(q.correctAnswer) : -1;
-                                ansObj.score = (sAns === cAns && sAns !== -1) ? maxQScore : 0;
-                            } else {
-                                let textAns = extractAnswerText(ansObj.answer || ansObj.value);
-                                let studentAns = String(textAns).trim().toLowerCase();
-                                let correctAns = String(q.correctAnswer !== undefined && q.correctAnswer !== null ? q.correctAnswer : '').trim().toLowerCase();
-                                
-                                if (studentAns === correctAns && studentAns !== '') {
-                                    ansObj.score = maxQScore; 
-                                } else {
-                                    ansObj.score = 0; 
-                                }
-                            }
-                            needsSave = true;
-                        }
-                        totalScore += parseFloat(ansObj.score) || 0;
-                    }
-                }
-            });
-            
-            if (maxTotalScore > 0) {
-                let calcPercentage = Math.round((totalScore / maxTotalScore) * 100);
-                if (assignedTest.score !== calcPercentage) {
-                    assignedTest.score = calcPercentage;
-                    needsSave = true;
-                }
-            }
-            
-            if (needsSave) {
-                studentTests[assignedTestIndex] = assignedTest;
-                localStorage.setItem('studentTests', JSON.stringify(studentTests));
-            }
-            finalPercentage = assignedTest.score || 0;
-        }
-
-        let statusBadge = '';
-        let actionContent = '';
-        if(assignedTest.status === 'completed') {
-            statusBadge = '<span class="badge badge-success">مكتمل</span>';
-            actionContent = `
-                <div style="margin-top:15px; padding:15px; background:#f0fff4; border:1px solid #c3e6cb; border-radius:8px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="font-size:1.1rem;">الدرجة الحالية: <span style="font-size:1.4rem; color:#28a745; font-weight:900;">${finalPercentage}%</span></strong>
-                    </div>
-                    <div style="margin-top:15px; display:flex; gap:10px;">
-                        <button class="btn btn-warning" onclick="openReviewModal(${assignedTest.id})">🔍 مراجعة وتعديل التصحيح</button>
-                        <button class="btn btn-primary" onclick="autoGenerateLessons()">⚡ توليد الخطة والدروس</button>
-                    </div>
-                </div>`;
-        } else if (assignedTest.status === 'returned') {
-            statusBadge = '<span class="badge badge-warning">معاد للتعديل</span>';
-            actionContent = `<div class="alert alert-warning mt-2">تم إعادة الاختبار للطالب ليقوم بتعديله.</div>`;
-        } else {
-            statusBadge = '<span class="badge badge-secondary">بانتظار حل الطالب</span>';
-        }
-        detailsDiv.innerHTML = `
-            <div class="card" style="border:1px solid #eee; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h3>${originalTest ? originalTest.title : 'اختبار (محذوف)'}</h3>
-                    <div style="display:flex; gap:5px; align-items:center;">
-                        ${statusBadge}
-                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAssignedTest(${assignedTest.id})" title="حذف الاختبار"><i class="fas fa-trash"></i></button>
-                    </div>
-                </div>
-                <p class="text-muted" style="margin-top:5px;"><i class="fas fa-calendar-alt"></i> تاريخ التعيين: ${new Date(assignedTest.assignedDate).toLocaleDateString('ar-SA')}</p>
-                ${actionContent}
-            </div>`;
-    } else {
-        document.getElementById('noDiagnosticTest').style.display = 'block';
-        document.getElementById('diagnosticTestDetails').style.display = 'none';
-    }
-}
-
+// --- دوال الدروس والواجبات والاختبارات ---
 function loadAssignmentsTab() {
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId == currentStudentId);
     const container = document.getElementById('studentAssignmentsGrid');
@@ -903,6 +986,121 @@ function loadLessonsTab() {
             </div>
         </div>`;
     }).join('');
+}
+
+function loadDiagnosticTab() {
+    let studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+    let assignedTestIndex = studentTests.findIndex(t => t.studentId == currentStudentId && t.type === 'diagnostic');
+    
+    if (assignedTestIndex !== -1) {
+        let assignedTest = studentTests[assignedTestIndex];
+        document.getElementById('noDiagnosticTest').style.display = 'none';
+        const detailsDiv = document.getElementById('diagnosticTestDetails');
+        detailsDiv.style.display = 'block';
+        
+        const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
+        const originalTest = allTests.find(t => t.id == assignedTest.testId);
+        
+        let finalPercentage = assignedTest.score || 0;
+        
+        if (assignedTest.status === 'completed' && originalTest && originalTest.questions) {
+            let totalScore = 0;
+            let maxTotalScore = 0;
+            let needsSave = false;
+            
+            originalTest.questions.forEach(q => {
+                let maxQScore = parseFloat(q.passingScore || q.points || q.score || 1);
+                if (isNaN(maxQScore) || maxQScore <= 0) maxQScore = 1;
+                maxTotalScore += maxQScore;
+                
+                if (assignedTest.answers) {
+                    let ansObj = assignedTest.answers.find(a => a.questionId == q.id);
+                    if (ansObj) {
+                        if (ansObj.score === undefined || ansObj.score === null) {
+                            if (q.type === 'drag-drop') {
+                                let allCorrect = true;
+                                let hasAnswer = false;
+                                (q.paragraphs || []).forEach((p, pIdx) => {
+                                    (p.gaps || []).forEach((g, gIdx) => {
+                                        let w = (ansObj.answer && ansObj.answer[`p_${pIdx}_g_${gIdx}`]) ? ansObj.answer[`p_${pIdx}_g_${gIdx}`] : '';
+                                        if (w) hasAnswer = true;
+                                        if (w.trim() !== g.dragItem.trim()) allCorrect = false;
+                                    });
+                                });
+                                ansObj.score = hasAnswer ? (allCorrect ? maxQScore : 0) : 0;
+                            } else if (q.type.includes('mcq')) {
+                                let sAns = (ansObj.answer !== null && ansObj.answer !== undefined && ansObj.answer !== '') ? parseInt(ansObj.answer) : -1;
+                                let cAns = (q.correctAnswer !== undefined && q.correctAnswer !== null && q.correctAnswer !== '') ? parseInt(q.correctAnswer) : -1;
+                                ansObj.score = (sAns === cAns && sAns !== -1) ? maxQScore : 0;
+                            } else {
+                                let textAns = extractAnswerText(ansObj.answer || ansObj.value);
+                                let studentAns = String(textAns).trim().toLowerCase();
+                                let correctAns = String(q.correctAnswer !== undefined && q.correctAnswer !== null ? q.correctAnswer : '').trim().toLowerCase();
+                                
+                                if (studentAns === correctAns && studentAns !== '') {
+                                    ansObj.score = maxQScore; 
+                                } else {
+                                    ansObj.score = 0; 
+                                }
+                            }
+                            needsSave = true;
+                        }
+                        totalScore += parseFloat(ansObj.score) || 0;
+                    }
+                }
+            });
+            
+            if (maxTotalScore > 0) {
+                let calcPercentage = Math.round((totalScore / maxTotalScore) * 100);
+                if (assignedTest.score !== calcPercentage) {
+                    assignedTest.score = calcPercentage;
+                    needsSave = true;
+                }
+            }
+            
+            if (needsSave) {
+                studentTests[assignedTestIndex] = assignedTest;
+                localStorage.setItem('studentTests', JSON.stringify(studentTests));
+            }
+            finalPercentage = assignedTest.score || 0;
+        }
+
+        let statusBadge = '';
+        let actionContent = '';
+        if(assignedTest.status === 'completed') {
+            statusBadge = '<span class="badge badge-success">مكتمل</span>';
+            actionContent = `
+                <div style="margin-top:15px; padding:15px; background:#f0fff4; border:1px solid #c3e6cb; border-radius:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="font-size:1.1rem;">الدرجة الحالية: <span style="font-size:1.4rem; color:#28a745; font-weight:900;">${finalPercentage}%</span></strong>
+                    </div>
+                    <div style="margin-top:15px; display:flex; gap:10px;">
+                        <button class="btn btn-warning" onclick="openReviewModal(${assignedTest.id})">🔍 مراجعة وتعديل التصحيح</button>
+                        <button class="btn btn-primary" onclick="autoGenerateLessons()">⚡ توليد الخطة والدروس</button>
+                    </div>
+                </div>`;
+        } else if (assignedTest.status === 'returned') {
+            statusBadge = '<span class="badge badge-warning">معاد للتعديل</span>';
+            actionContent = `<div class="alert alert-warning mt-2">تم إعادة الاختبار للطالب ليقوم بتعديله.</div>`;
+        } else {
+            statusBadge = '<span class="badge badge-secondary">بانتظار حل الطالب</span>';
+        }
+        detailsDiv.innerHTML = `
+            <div class="card" style="border:1px solid #eee; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h3>${originalTest ? originalTest.title : 'اختبار (محذوف)'}</h3>
+                    <div style="display:flex; gap:5px; align-items:center;">
+                        ${statusBadge}
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAssignedTest(${assignedTest.id})" title="حذف الاختبار"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+                <p class="text-muted" style="margin-top:5px;"><i class="fas fa-calendar-alt"></i> تاريخ التعيين: ${new Date(assignedTest.assignedDate).toLocaleDateString('ar-SA')}</p>
+                ${actionContent}
+            </div>`;
+    } else {
+        document.getElementById('noDiagnosticTest').style.display = 'block';
+        document.getElementById('diagnosticTestDetails').style.display = 'none';
+    }
 }
 
 function loadIEPTab() {
@@ -999,6 +1197,7 @@ function showAssignTestModal() {
     allTests.forEach(t => select.innerHTML += `<option value="${t.id}">${t.title}</option>`);
     document.getElementById('assignTestModal').classList.add('show');
 }
+
 function assignTest() {
     const testId = parseInt(document.getElementById('testSelect').value);
     if(!testId) return;

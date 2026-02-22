@@ -1,11 +1,8 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة ملف الطالب + التقييم الجزئي + إصلاح النواقص البرمجية + استعادة قسم التقدم
+// الوصف: إدارة ملف الطالب + التقييم الجزئي + مراجعة الدروس التفاعلية
 // ============================================
 
-// =========================================================
-// 🔥 1. محرك التصحيح الآلي المركزي 🔥
-// =========================================================
 function calculateAutoGrade(q, studentAnsObj) {
     let maxScore = parseFloat(q.maxScore || q.passingScore || q.points || q.score || 1);
     if(isNaN(maxScore) || maxScore <= 0) maxScore = 1;
@@ -48,9 +45,6 @@ function calculateAutoGrade(q, studentAnsObj) {
     return 0; 
 }
 
-// =========================================================
-// 🔥 2. نظام النوافذ المنبثقة الاحترافية 🔥
-// =========================================================
 if (!window.showConfirmModal) {
     window.showConfirmModal = function(message, onConfirm) {
         let modal = document.getElementById('globalConfirmModal');
@@ -149,9 +143,6 @@ if (!window.showInfoModal) {
     };
 }
 
-// =========================================================
-// 🔥 3. تهيئة الصفحة والواجهات 🔥
-// =========================================================
 let currentStudentId = null;
 let currentStudent = null;
 let editingEventId = null;
@@ -306,9 +297,6 @@ function switchSection(sectionId) {
     if (sectionId === 'progress') loadProgressTab();
 }
 
-// =========================================================
-// 🔥 4. قسم سجل تقدم الطالب 🔥
-// =========================================================
 function loadProgressTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     let adminEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]');
@@ -450,13 +438,11 @@ function loadProgressTab() {
 
 function printProgressLog() {
     if (!currentStudent) { showError('بيانات الطالب غير جاهزة'); return; }
-
     const studentName = currentStudent.name || 'الطالب';
     const studentGrade = currentStudent.grade || '-';
     const studentSubject = currentStudent.subject || 'صعوبات تعلم'; 
     const tableContent = document.getElementById('printableProgressArea').innerHTML;
     const today = new Date().toLocaleDateString('ar-SA');
-
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
         <html dir="rtl" lang="ar">
@@ -496,16 +482,13 @@ function printProgressLog() {
                     المعلم: أ/ صالح العجلان
                 </div>
             </div>
-
             <div class="student-info-box">
                 <div><strong>اسم الطالب:</strong> ${studentName}</div>
                 <div><strong>الصف الدراسي:</strong> ${studentGrade}</div>
                 <div><strong>المادة:</strong> ${studentSubject}</div>
                 <div><strong>حالة الخطة:</strong> مستمرة</div>
             </div>
-
             ${tableContent}
-
             <div class="footer-signatures">
                 <div>توقيع معلم صعوبات التعلم</div>
                 <div>توقيع مدير المدرسة</div>
@@ -571,9 +554,7 @@ function openAdminEventModal() {
     document.getElementById('adminEventModal').classList.add('show');
 }
 
-function closeAdminEventModal() {
-    document.getElementById('adminEventModal').classList.remove('show');
-}
+function closeAdminEventModal() { document.getElementById('adminEventModal').classList.remove('show'); }
 
 function editAdminEvent(id) {
     const events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
@@ -591,26 +572,15 @@ function saveAdminEvent() {
     const type = document.getElementById('manualEventType').value;
     const dateInput = document.getElementById('manualEventDate').value;
     const note = document.getElementById('manualEventNote').value;
-    
     if (!dateInput) { showError('يرجى اختيار التاريخ'); return; }
-
     const targetDateStr = new Date(dateInput).toDateString();
     let events = JSON.parse(localStorage.getItem('studentEvents') || '[]');
-
     events = events.filter(e => {
         if (e.studentId != currentStudentId) return true;
         if (new Date(e.date).toDateString() !== targetDateStr) return true;
         return false;
     });
-    
-    events.push({
-        id: Date.now(),
-        studentId: currentStudentId,
-        date: new Date(dateInput).toISOString(),
-        type: type,
-        note: note
-    });
-
+    events.push({ id: Date.now(), studentId: currentStudentId, date: new Date(dateInput).toISOString(), type: type, note: note });
     localStorage.setItem('studentEvents', JSON.stringify(events));
     closeAdminEventModal();
     loadProgressTab();
@@ -631,35 +601,24 @@ function closeModal(id) {
     if(modal) modal.classList.remove('show'); 
 }
 
-
-// =========================================================
-// 🔥 5. قسم الاختبار التشخيصي 🔥
-// =========================================================
 function loadDiagnosticTab() {
     let studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
     let assignedTestIndex = studentTests.findIndex(t => t.studentId == currentStudentId && t.type === 'diagnostic');
-    
     if (assignedTestIndex !== -1) {
         let assignedTest = studentTests[assignedTestIndex];
         document.getElementById('noDiagnosticTest').style.display = 'none';
         const detailsDiv = document.getElementById('diagnosticTestDetails');
         detailsDiv.style.display = 'block';
-        
         const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
         const originalTest = allTests.find(t => t.id == assignedTest.testId);
-        
         let finalPercentage = assignedTest.score || 0;
         
         if (assignedTest.status === 'completed' && originalTest && originalTest.questions) {
-            let totalScore = 0;
-            let maxTotalScore = 0;
-            let needsSave = false;
-            
+            let totalScore = 0; let maxTotalScore = 0; let needsSave = false;
             originalTest.questions.forEach(q => {
                 let maxQScore = parseFloat(q.maxScore || q.passingScore || q.points || q.score || 1);
                 if (isNaN(maxQScore) || maxQScore <= 0) maxQScore = 1;
                 maxTotalScore += maxQScore;
-                
                 if (assignedTest.answers) {
                     let ansObj = assignedTest.answers.find(a => a.questionId == q.id);
                     if (ansObj) {
@@ -671,15 +630,10 @@ function loadDiagnosticTab() {
                     }
                 }
             });
-            
             if (maxTotalScore > 0) {
                 let calcPercentage = Math.round((totalScore / maxTotalScore) * 100);
-                if (assignedTest.score !== calcPercentage) {
-                    assignedTest.score = calcPercentage;
-                    needsSave = true;
-                }
+                if (assignedTest.score !== calcPercentage) { assignedTest.score = calcPercentage; needsSave = true; }
             }
-            
             if (needsSave) {
                 studentTests[assignedTestIndex] = assignedTest;
                 localStorage.setItem('studentTests', JSON.stringify(studentTests));
@@ -687,17 +641,15 @@ function loadDiagnosticTab() {
             finalPercentage = assignedTest.score || 0;
         }
 
-        let statusBadge = '';
-        let actionContent = '';
+        let statusBadge = ''; let actionContent = '';
         if(assignedTest.status === 'completed') {
             statusBadge = '<span class="badge badge-success">مكتمل</span>';
-            actionContent = `
-                <div style="margin-top:15px; padding:15px; background:#f0fff4; border:1px solid #c3e6cb; border-radius:8px;">
+            actionContent = `<div style="margin-top:15px; padding:15px; background:#f0fff4; border:1px solid #c3e6cb; border-radius:8px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <strong style="font-size:1.1rem;">الدرجة الحالية: <span style="font-size:1.4rem; color:#28a745; font-weight:900;">${finalPercentage}%</span></strong>
                     </div>
                     <div style="margin-top:15px; display:flex; gap:10px;">
-                        <button class="btn btn-warning" onclick="openReviewModal(${assignedTest.id})">🔍 مراجعة وتعديل التصحيح</button>
+                        <button class="btn btn-warning" onclick="openReviewModal(${assignedTest.id}, 'test')">🔍 مراجعة وتعديل التصحيح</button>
                         <button class="btn btn-primary" onclick="autoGenerateLessons()">⚡ توليد الخطة والدروس</button>
                     </div>
                 </div>`;
@@ -707,8 +659,7 @@ function loadDiagnosticTab() {
         } else {
             statusBadge = '<span class="badge badge-secondary">بانتظار حل الطالب</span>';
         }
-        detailsDiv.innerHTML = `
-            <div class="card" style="border:1px solid #eee; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
+        detailsDiv.innerHTML = `<div class="card" style="border:1px solid #eee; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <h3>${originalTest ? originalTest.title : 'اختبار (محذوف)'}</h3>
                     <div style="display:flex; gap:5px; align-items:center;">
@@ -756,9 +707,6 @@ function deleteAssignedTest(id) {
     });
 }
 
-// =========================================================
-// 🔥 6. قسم الخطة التربوية الفردية (IEP) وحذف النسب المئوية 🔥
-// =========================================================
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent');
     const wordModel = document.querySelector('.iep-word-model');
@@ -799,7 +747,6 @@ function loadIEPTab() {
                     } else {
                         if (!needsObjects.find(o => o.id == obj.id)) {
                             needsObjects.push(obj);
-                            // تم حذف عرض النسبة المئوية لتكون رسمية وأنيقة
                             needsHTML += `<li>${obj.shortTermGoal}</li>`;
                         }
                     }
@@ -851,9 +798,7 @@ function loadIEPTab() {
     if(topPrintBtn) topPrintBtn.setAttribute('onclick', 'window.print()');
 }
 
-// =========================================================
-// 🔥 8. قسم الدروس والتوليد التلقائي الذكي 🔥
-// =========================================================
+// 🔥 تحديث قسم الدروس ليدعم المراجعة كالاختبارات 🔥
 function loadLessonsTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     let myList = studentLessons.filter(l => l.studentId == currentStudentId);
@@ -876,8 +821,10 @@ function loadLessonsTab() {
         else if (isLockedForStudent) { statusBadge = '<span class="badge badge-secondary">🔒 مغلق</span>'; cardStyle = 'border-right: 5px solid #6c757d; opacity:0.8;'; } 
         else { statusBadge = '<span class="badge badge-primary">🔓 نشط حالياً</span>'; cardStyle = 'border-right: 5px solid #007bff;'; }
 
+        // تم ربط زر المراجعة بدالة openReviewModal ليفتح نفس شاشة تصحيح الاختبارات الفخمة
         let controls = (l.status === 'completed' || l.status === 'accelerated') ? 
-            `<button class="btn btn-warning btn-sm" onclick="resetLesson(${l.id})">🔄 إعادة فتح (إلغاء)</button>` : 
+            `<button class="btn btn-outline-success btn-sm w-100 mb-2" onclick="openReviewModal(${l.id}, 'lesson')">🔍 مراجعة الإجابات</button>
+             <button class="btn btn-warning btn-sm" onclick="resetLesson(${l.id})">🔄 إعادة فتح</button>` : 
             `<button class="btn btn-info btn-sm" style="background:#ffc107; border:none; color:#000;" onclick="accelerateLesson(${l.id})">⚡ تسريع (تفوق)</button>`;
 
         const isFirst = index === 0;
@@ -893,7 +840,7 @@ function loadLessonsTab() {
                 <div style="margin-right:20px;"><h4 style="margin:0;">${index+1}. ${l.title}</h4><small class="text-muted">${l.objective}</small></div>
                 <div>${statusBadge}</div>
             </div>
-            <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;">
                 <div class="lesson-actions" style="width:100%; display:flex; gap:5px; margin-top:25px;">${controls}<button class="btn btn-danger btn-sm" onclick="deleteLesson(${l.id})">حذف</button></div>
             </div>
         </div>`;
@@ -904,7 +851,6 @@ function autoGenerateLessons() {
     showConfirmModal('توليد الخطة العلاجية تلقائياً؟<br><small>سيتم حذف الدروس الحالية وتوليد قائمة جديدة بناءً على نتيجة التشخيص ومحك الاجتياز.</small>', function() {
         const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
         const compDiag = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic' && t.status === 'completed');
-        
         if (!compDiag) { showError('يجب إكمال وتصحيح الاختبار التشخيصي أولاً.'); return; }
         
         const allObjectives = JSON.parse(localStorage.getItem('objectives') || '[]');
@@ -912,8 +858,7 @@ function autoGenerateLessons() {
         const allLibraryAssignments = JSON.parse(localStorage.getItem('assignments') || '[]'); 
         const originalTest = JSON.parse(localStorage.getItem('tests') || '[]').find(t => t.id == compDiag.testId);
 
-        let newLessons = [];
-        let newAssignments = []; 
+        let newLessons = []; let newAssignments = []; 
 
         if(originalTest && originalTest.questions) {
             originalTest.questions.forEach(q => {
@@ -921,17 +866,12 @@ function autoGenerateLessons() {
                 const score = ans ? parseFloat(ans.score || 0) : 0;
                 const maxScore = parseFloat(q.maxScore || q.passingScore || q.points || q.score || 1);
                 const criterion = parseFloat(q.passingCriterion || 80);
-                
                 const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
                 
-                // المطابقة الذكية للدروس
                 if(percentage < criterion && q.linkedGoalId) {
                     const obj = allObjectives.find(o => o.id == q.linkedGoalId);
                     if(obj) {
-                        const targetGoals = [obj.shortTermGoal, ...(obj.instructionalGoals || [])]
-                                            .filter(g => g)
-                                            .map(g => String(g).trim());
-
+                        const targetGoals = [obj.shortTermGoal, ...(obj.instructionalGoals || [])].filter(g => g).map(g => String(g).trim());
                         const matches = allLessons.filter(l => {
                             if (!l.linkedInstructionalGoal) return false;
                             const lessonGoal = String(l.linkedInstructionalGoal).trim();
@@ -940,31 +880,11 @@ function autoGenerateLessons() {
                         
                         matches.forEach(m => {
                             if(!newLessons.find(x => x.originalLessonId == m.id)) {
-                                newLessons.push({
-                                    id: Date.now() + Math.floor(Math.random()*10000),
-                                    studentId: currentStudentId, 
-                                    title: m.title, 
-                                    objective: m.linkedInstructionalGoal,
-                                    originalLessonId: m.id, 
-                                    status: 'pending', 
-                                    assignedDate: new Date().toISOString()
-                                });
-                                
+                                newLessons.push({ id: Date.now() + Math.floor(Math.random()*10000), studentId: currentStudentId, title: m.title, objective: m.linkedInstructionalGoal, originalLessonId: m.id, status: 'pending', assignedDate: new Date().toISOString() });
                                 const lessonGoalForHomework = String(m.linkedInstructionalGoal).trim();
-                                const linkedHomework = allLibraryAssignments.find(h => {
-                                    if(!h.linkedInstructionalGoal) return false;
-                                    return String(h.linkedInstructionalGoal).trim() === lessonGoalForHomework;
-                                });
-
+                                const linkedHomework = allLibraryAssignments.find(h => { if(!h.linkedInstructionalGoal) return false; return String(h.linkedInstructionalGoal).trim() === lessonGoalForHomework; });
                                 if (linkedHomework && !newAssignments.find(a => a.title === linkedHomework.title)) {
-                                    newAssignments.push({
-                                        id: Date.now() + Math.floor(Math.random()*10000) + 1,
-                                        studentId: currentStudentId,
-                                        title: linkedHomework.title,
-                                        status: 'pending',
-                                        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                                        assignedDate: new Date().toISOString()
-                                    });
+                                    newAssignments.push({ id: Date.now() + Math.floor(Math.random()*10000) + 1, studentId: currentStudentId, title: linkedHomework.title, status: 'pending', dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], assignedDate: new Date().toISOString() });
                                 } 
                             }
                         });
@@ -972,27 +892,19 @@ function autoGenerateLessons() {
                 }
             });
         }
-
         if(newLessons.length === 0) { showInfoModal('الخطة العلاجية', 'الطالب متفوق! لقد تجاوز محك الاجتياز في جميع المهارات، ولا توجد نقاط ضعف تتطلب خطة علاجية.'); return; }
-        
         saveAndReindexLessons(newLessons, true);
-        
         if (newAssignments.length > 0) {
             let currentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
             currentAssignments = [...currentAssignments.filter(a => a.studentId != currentStudentId), ...newAssignments];
             localStorage.setItem('studentAssignments', JSON.stringify(currentAssignments));
             showSuccess(`تم إسناد ${newLessons.length} درس و ${newAssignments.length} واجب مرتبط للطالب.`);
-        } else {
-            showSuccess(`تم إسناد ${newLessons.length} درس للطالب ضمن الخطة العلاجية.`);
-        }
-
+        } else { showSuccess(`تم إسناد ${newLessons.length} درس للطالب ضمن الخطة العلاجية.`); }
         if (document.getElementById('section-assignments').classList.contains('active')) loadAssignmentsTab();
     });
 }
 
-function regenerateLessons() {
-    autoGenerateLessons(); 
-}
+function regenerateLessons() { autoGenerateLessons(); }
 
 function saveAndReindexLessons(myList, replaceAll, others = []) {
     myList.forEach((l, i) => l.orderIndex = i);
@@ -1008,7 +920,6 @@ function moveLesson(lessonId, direction) {
     myLessons.sort((a, b) => (a.orderIndex||0) - (b.orderIndex||0));
     const idx = myLessons.findIndex(l => l.id == lessonId);
     if (idx === -1) return;
-
     if (direction === 'up' && idx > 0) [myLessons[idx], myLessons[idx-1]] = [myLessons[idx-1], myLessons[idx]];
     else if (direction === 'down' && idx < myLessons.length - 1) [myLessons[idx], myLessons[idx+1]] = [myLessons[idx+1], myLessons[idx]];
     saveAndReindexLessons(myLessons, false, otherLessons);
@@ -1018,16 +929,7 @@ function accelerateLesson(id) {
     showConfirmModal('تسريع هذا الدرس؟<br><small>سيتم اعتباره منجزاً للتميز.</small>', function() {
         const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
         const target = studentLessons.find(l => l.id == id);
-        if(target) {
-            target.status = 'accelerated';
-            target.completedDate = new Date().toISOString();
-            if(!target.historyLog) target.historyLog = [];
-            target.historyLog.push({ date: new Date().toISOString(), status: 'accelerated' });
-            localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
-            loadLessonsTab();
-            if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
-            showSuccess('تم تسريع الدرس بنجاح');
-        }
+        if(target) { target.status = 'accelerated'; target.completedDate = new Date().toISOString(); if(!target.historyLog) target.historyLog = []; target.historyLog.push({ date: new Date().toISOString(), status: 'accelerated' }); localStorage.setItem('studentLessons', JSON.stringify(studentLessons)); loadLessonsTab(); if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab(); showSuccess('تم تسريع الدرس بنجاح'); }
     });
 }
 
@@ -1035,16 +937,7 @@ function resetLesson(id) {
     showConfirmModal('إعادة فتح الدرس؟<br><small>سيتم مسح السجل التاريخي لهذا الدرس بالكامل وإعادته للحالة المعلقة.</small>', function() {
         const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
         const target = studentLessons.find(l => l.id == id);
-        if(target) {
-            target.status = 'pending';
-            delete target.completedDate;
-            delete target.answers;
-            target.historyLog = [];
-            localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
-            loadLessonsTab();
-            if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
-            showSuccess('تم إعادة فتح الدرس');
-        }
+        if(target) { target.status = 'pending'; delete target.completedDate; delete target.answers; target.historyLog = []; localStorage.setItem('studentLessons', JSON.stringify(studentLessons)); loadLessonsTab(); if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab(); showSuccess('تم إعادة فتح الدرس'); }
     });
 }
 
@@ -1063,120 +956,51 @@ function showAssignLibraryLessonModal() {
     if (!select) return;
     const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
     select.innerHTML = '<option value="">اختر درساً من القائمة...</option>';
-    if (allLessons.length === 0) {
-        select.innerHTML += '<option value="" disabled>مكتبة الدروس فارغة</option>';
-    } else {
-        allLessons.forEach(l => {
-            select.innerHTML += `<option value="${l.id}">${l.title} ${l.subject ? `(${l.subject})` : ''}</option>`;
-        });
-    }
+    if (allLessons.length === 0) { select.innerHTML += '<option value="" disabled>مكتبة الدروس فارغة</option>'; } else { allLessons.forEach(l => { select.innerHTML += `<option value="${l.id}">${l.title} ${l.subject ? `(${l.subject})` : ''}</option>`; }); }
     document.getElementById('assignLibraryLessonModal').classList.add('show');
 }
 
 function assignLibraryLesson() {
     const select = document.getElementById('libraryLessonSelect');
     const lessonId = select.value;
-
-    if (!lessonId) {
-        showError('يرجى اختيار درس لإسناده');
-        return;
-    }
-
+    if (!lessonId) return showError('يرجى اختيار درس لإسناده');
     const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
     const targetLesson = allLessons.find(l => l.id == lessonId);
-
-    if (!targetLesson) {
-        showError('الدرس المختار لم يعد موجوداً');
-        return;
-    }
-
+    if (!targetLesson) return showError('الدرس المختار لم يعد موجوداً');
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    const newStudentLesson = {
-        id: Date.now(),
-        studentId: currentStudentId,
-        title: targetLesson.title,
-        objective: targetLesson.linkedInstructionalGoal || 'درس إضافي',
-        originalLessonId: targetLesson.id,
-        status: 'pending',
-        assignedDate: new Date().toISOString(),
-        orderIndex: studentLessons.filter(l => l.studentId == currentStudentId).length 
-    };
-
+    const newStudentLesson = { id: Date.now(), studentId: currentStudentId, title: targetLesson.title, objective: targetLesson.linkedInstructionalGoal || 'درس إضافي', originalLessonId: targetLesson.id, status: 'pending', assignedDate: new Date().toISOString(), orderIndex: studentLessons.filter(l => l.studentId == currentStudentId).length };
     studentLessons.push(newStudentLesson);
     localStorage.setItem('studentLessons', JSON.stringify(studentLessons));
-    
     closeModal('assignLibraryLessonModal');
     loadLessonsTab(); 
     if (document.getElementById('section-iep').classList.contains('active')) loadIEPTab();
     showSuccess('تم إسناد الدرس للطالب بنجاح');
 }
 
-// =========================================================
-// 🔥 9. قسم الواجبات 🔥
-// =========================================================
 function loadAssignmentsTab() {
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]').filter(a => a.studentId == currentStudentId);
     const container = document.getElementById('studentAssignmentsGrid');
-    
-    if (list.length === 0) { 
-        container.innerHTML = `<div style="display: flex; flex-direction: column; align-items: center; padding: 50px; text-align: center; border: 2px dashed #e0e0e0; background-color: #fafafa; margin-top: 20px;"><div style="font-size: 3rem; margin-bottom: 10px; color: #ccc;">📝</div><h3>لا توجد واجبات حالياً</h3><button class="btn btn-primary" onclick="showAssignHomeworkModal()"><i class="fas fa-plus-circle"></i> إسناد واجب جديد</button></div>`; 
-        return; 
-    }
-
-    const cardsHtml = list.map(a => `
-        <div class="content-card">
-            <div style="display:flex; justify-content:space-between;">
-                <h4 style="margin:0;">${a.title}</h4>
-                <span class="badge ${a.status === 'completed' ? 'badge-success' : 'badge-primary'}">${a.status === 'completed' ? 'مكتمل' : 'جديد'}</span>
-            </div>
-            <div class="content-meta" style="margin-top:10px;">
-                <span>📅 التسليم: ${a.dueDate || 'مفتوح'}</span>
-                <span>تاريخ الإسناد: ${new Date(a.assignedDate).toLocaleDateString('ar-SA')}</span>
-            </div>
-            <div style="margin-top:15px; border-top:1px solid #eee; padding-top:10px;">
-                ${a.status === 'completed' ? `<button class="btn btn-sm btn-outline-success" onclick="openReviewModal(${a.id})">🔍 مراجعة الحل</button>` : '<span class="text-muted text-sm">بانتظار الحل...</span>'}
-                <button class="btn btn-sm btn-outline-danger" style="float:left;" onclick="deleteAssignment(${a.id})">حذف</button>
-            </div>
-        </div>`
-    ).join('');
-
+    if (list.length === 0) { container.innerHTML = `<div style="display: flex; flex-direction: column; align-items: center; padding: 50px; text-align: center; border: 2px dashed #e0e0e0; background-color: #fafafa; margin-top: 20px;"><div style="font-size: 3rem; margin-bottom: 10px; color: #ccc;">📝</div><h3>لا توجد واجبات حالياً</h3><button class="btn btn-primary" onclick="showAssignHomeworkModal()"><i class="fas fa-plus-circle"></i> إسناد واجب جديد</button></div>`; return; }
+    const cardsHtml = list.map(a => `<div class="content-card"><div style="display:flex; justify-content:space-between;"><h4 style="margin:0;">${a.title}</h4><span class="badge ${a.status === 'completed' ? 'badge-success' : 'badge-primary'}">${a.status === 'completed' ? 'مكتمل' : 'جديد'}</span></div><div class="content-meta" style="margin-top:10px;"><span>📅 التسليم: ${a.dueDate || 'مفتوح'}</span><span>تاريخ الإسناد: ${new Date(a.assignedDate).toLocaleDateString('ar-SA')}</span></div><div style="margin-top:15px; border-top:1px solid #eee; padding-top:10px;">${a.status === 'completed' ? `<button class="btn btn-sm btn-outline-success" onclick="openReviewModal(${a.id}, 'assignment')">🔍 مراجعة الحل</button>` : '<span class="text-muted text-sm">بانتظار الحل...</span>'}<button class="btn btn-sm btn-outline-danger" style="float:left;" onclick="deleteAssignment(${a.id})">حذف</button></div></div>`).join('');
     container.innerHTML = `<div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:20px;">${cardsHtml}</div>`;
 }
 
 function showAssignHomeworkModal() { 
     const select = document.getElementById('homeworkSelect');
-    if (!select) {
-        injectHomeworkModal();
-        setTimeout(showAssignHomeworkModal, 50);
-        return;
-    }
-
+    if (!select) { injectHomeworkModal(); setTimeout(showAssignHomeworkModal, 50); return; }
     const allAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
     select.innerHTML = '<option value="">اختر من قائمة الواجبات...</option>';
-    if (allAssignments.length > 0) {
-        allAssignments.forEach(a => { select.innerHTML += `<option value="${a.title}">${a.title}</option>`; });
-    } else {
-        select.innerHTML += `<option value="" disabled>لا توجد واجبات في المكتبة</option>`;
-    }
+    if (allAssignments.length > 0) { allAssignments.forEach(a => { select.innerHTML += `<option value="${a.title}">${a.title}</option>`; }); } else { select.innerHTML += `<option value="" disabled>لا توجد واجبات في المكتبة</option>`; }
     document.getElementById('homeworkDueDate').valueAsDate = new Date();
     document.getElementById('assignHomeworkModal').classList.add('show'); 
 }
 
 function assignHomework() { 
     const select = document.getElementById('homeworkSelect'); 
-    if(!select || !select.value) { showError('الرجاء اختيار واجب من القائمة'); return; }
-    
+    if(!select || !select.value) return showError('الرجاء اختيار واجب من القائمة'); 
     const title = select.value; 
     const list = JSON.parse(localStorage.getItem('studentAssignments') || '[]'); 
-    list.push({ 
-        id: Date.now(), 
-        studentId: currentStudentId, 
-        title: title, 
-        status: 'pending', 
-        dueDate: document.getElementById('homeworkDueDate').value, 
-        assignedDate: new Date().toISOString() 
-    }); 
-    
+    list.push({ id: Date.now(), studentId: currentStudentId, title: title, status: 'pending', dueDate: document.getElementById('homeworkDueDate').value, assignedDate: new Date().toISOString() }); 
     localStorage.setItem('studentAssignments', JSON.stringify(list)); 
     closeModal('assignHomeworkModal'); 
     loadAssignmentsTab(); 
@@ -1193,9 +1017,8 @@ function deleteAssignment(id) {
     });
 }
 
-
 // =========================================================
-// 🔥 10. قسم المراجعة والتصحيح الذكي واستخراج الإجابات 🔥
+// 🔥 9. نظام المراجعة الموحد (يُشغل الدروس، الواجبات، والاختبارات) 🔥
 // =========================================================
 
 function extractAnswerText(ans) {
@@ -1304,62 +1127,71 @@ function renderDragDropReview(q, rawAnswer) {
     return sentencesHtml;
 }
 
-function openReviewModal(assignmentId) {
-    const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
-    const assignment = studentAssignments.find(a => a.id == assignmentId);
+// تعديل الدالة لتقبل النوع (lesson, assignment, test) وتوحد طريقة العرض
+function openReviewModal(targetId, type = 'assignment') {
+    document.getElementById('reviewAssignmentId').value = targetId;
+    document.getElementById('reviewAssignmentId').setAttribute('data-type', type);
     
-    if(!assignment) { 
-        const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-        const test = studentTests.find(t => t.id == assignmentId);
-        if (test) { openTestReviewModal(test); return; } 
-        showError('لم يتم العثور على الواجب أو الاختبار.'); return; 
-    }
-
-    const allLibraryAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
-    let originalAssignment = allLibraryAssignments.find(a => a.title === assignment.title);
-    
-    if ((!assignment.questions || assignment.questions.length === 0) && originalAssignment) {
-        assignment.questions = originalAssignment.questions;
-    }
-
-    document.getElementById('reviewAssignmentId').value = assignmentId;
     const container = document.getElementById('reviewQuestionsContainer');
     container.innerHTML = '';
+    
+    let questions = [];
+    let studentAnswers = [];
+    let attachedSolution = null;
 
-    if (assignment.attachedSolution) {
-        container.innerHTML += `
-            <div class="alert alert-info" style="margin-bottom:20px;">
-                <strong>📎 حل ورقي مرفق:</strong><br>
-                <a href="${assignment.attachedSolution}" target="_blank" class="btn btn-primary btn-sm mt-2">عرض ملف الحل</a>
-            </div>
-        `;
+    if (type === 'lesson') {
+        const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+        const targetLesson = studentLessons.find(a => a.id == targetId);
+        if(!targetLesson) return showError('سجل الدرس غير موجود.');
+        
+        const lessonsLib = JSON.parse(localStorage.getItem('lessons') || '[]');
+        const originalLesson = lessonsLib.find(l => l.id == targetLesson.originalLessonId);
+        if (originalLesson) {
+            questions = [
+                ...(originalLesson.exercises?.questions || []),
+                ...(originalLesson.assessment?.questions || [])
+            ];
+        }
+        studentAnswers = targetLesson.answers || [];
+        document.querySelector('#reviewTestModal h3').innerHTML = '🔍 مراجعة الدرس: ' + targetLesson.title;
+        
+    } else if (type === 'assignment') {
+        const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
+        const assignment = studentAssignments.find(a => a.id == targetId);
+        if(!assignment) return showError('سجل الواجب غير موجود.');
+        
+        const lib = JSON.parse(localStorage.getItem('assignments') || '[]');
+        const originalAssignment = lib.find(a => a.title === assignment.title);
+        questions = assignment.questions || (originalAssignment ? originalAssignment.questions : []);
+        studentAnswers = assignment.answers || [];
+        attachedSolution = assignment.attachedSolution;
+        document.querySelector('#reviewTestModal h3').innerHTML = '🔍 مراجعة الواجب: ' + assignment.title;
+        
+    } else if (type === 'test') {
+        const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+        const test = studentTests.find(t => t.id == targetId);
+        if(!test) return showError('سجل الاختبار غير موجود.');
+        
+        const lib = JSON.parse(localStorage.getItem('tests') || '[]');
+        const originalTest = lib.find(t => t.id == test.testId);
+        questions = originalTest ? originalTest.questions : [];
+        studentAnswers = test.answers || [];
+        document.querySelector('#reviewTestModal h3').innerHTML = '🔍 مراجعة الاختبار: ' + (originalTest ? originalTest.title : '');
     }
 
-    if (assignment.questions) {
-        assignment.questions.forEach((q, index) => {
-            const studentAnsObj = assignment.answers ? assignment.answers.find(a => a.questionId == q.id) : null;
+    if (attachedSolution) {
+        container.innerHTML += `<div class="alert alert-info" style="margin-bottom:20px;"><strong>📎 حل ورقي مرفق:</strong><br><a href="${attachedSolution}" target="_blank" class="btn btn-primary btn-sm mt-2">عرض ملف الحل</a></div>`;
+    }
+
+    if (questions && questions.length > 0) {
+        questions.forEach((q, index) => {
+            const studentAnsObj = studentAnswers.find(a => a.questionId == q.id);
             container.innerHTML += buildTeacherReviewItem(q, index, studentAnsObj);
         });
     } else {
-        container.innerHTML += '<div class="text-center p-3">لا توجد أسئلة رقمية لعرضها (قد يكون الواجب ورقياً فقط).</div>';
+        container.innerHTML += '<div class="text-center p-3 text-muted">لا توجد أسئلة أو إجابات مسجلة رقمياً لعرضها.</div>';
     }
     
-    document.getElementById('reviewTestModal').classList.add('show');
-}
-
-function openTestReviewModal(test) {
-    const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
-    const originalTest = allTests.find(t => t.id == test.testId);
-    document.getElementById('reviewAssignmentId').value = test.id;
-    const container = document.getElementById('reviewQuestionsContainer');
-    container.innerHTML = '';
-    
-    if (originalTest && originalTest.questions) {
-        originalTest.questions.forEach((q, index) => {
-            const studentAnsObj = test.answers ? test.answers.find(a => a.questionId == q.id) : null;
-            container.innerHTML += buildTeacherReviewItem(q, index, studentAnsObj);
-        });
-    }
     document.getElementById('reviewTestModal').classList.add('show');
 }
 
@@ -1400,107 +1232,52 @@ function buildTeacherReviewItem(q, index, studentAnsObj) {
     } else if (q.type === 'drag-drop') {
         html += renderDragDropReview(q, rawAnswer);
     } else if (q.paragraphs && q.paragraphs.length > 0) {
-        
         if (q.type === 'manual-reading') {
             html += `<div style="display:flex; flex-direction:column; gap:15px;">`;
             q.paragraphs.forEach((p, pIdx) => {
                 let pKey = `p_${pIdx}`;
                 let words = (p.text || '').trim().split(/\s+/);
-                
                 let wordsHtml = words.map((w, wIdx) => {
                     let wKey = `${pKey}_w_${wIdx}`;
                     let wEval = evaluations[wKey] || '';
                     let wClass = wEval === 'correct' ? 'word-correct' : (wEval === 'wrong' ? 'word-wrong' : 'word-neutral');
                     let icon = wEval === 'correct' ? ' ✔️' : (wEval === 'wrong' ? ' ❌' : '');
-                    return `<span class="reading-word-eval ${wClass}" onclick="toggleReadingWord(this, '${q.id}', '${wKey}')" data-state="${wEval}">
-                        ${w}${icon}
-                        <input type="hidden" name="eval_${q.id}_${wKey}" value="${wEval}">
-                    </span>`;
+                    return `<span class="reading-word-eval ${wClass}" onclick="toggleReadingWord(this, '${q.id}', '${wKey}')" data-state="${wEval}">${w}${icon}<input type="hidden" name="eval_${q.id}_${wKey}" value="${wEval}"></span>`;
                 }).join(' ');
-
-                html += `
-                <div style="border:1px solid #e2e8f0; padding:15px; border-radius:8px; background:#fff; position:relative;">
-                    <div style="font-weight:bold; margin-bottom:10px; color:#007bff; font-size:0.9rem;"><i class="fas fa-hand-pointer"></i> اضغط على الكلمة لتصحيحها (أخضر=صح، أحمر=خطأ):</div>
-                    <div style="background:#f8f9fa; padding:15px; border-radius:5px; line-height:2.8; text-align:justify;">
-                        ${wordsHtml}
-                    </div>
-                </div>`;
+                html += `<div style="border:1px solid #e2e8f0; padding:15px; border-radius:8px; background:#fff; position:relative;"><div style="font-weight:bold; margin-bottom:10px; color:#007bff; font-size:0.9rem;"><i class="fas fa-hand-pointer"></i> اضغط على الكلمة لتصحيحها (أخضر=صح، أحمر=خطأ):</div><div style="background:#f8f9fa; padding:15px; border-radius:5px; line-height:2.8; text-align:justify;">${wordsHtml}</div></div>`;
             });
             html += `</div>`;
-        } 
-        else {
+        } else {
             html += `<div style="display:flex; flex-direction:column; gap:15px;">`;
             q.paragraphs.forEach((p, pIdx) => {
                 let pKey = `p_${pIdx}`;
                 let pAns = (rawAnswer && typeof rawAnswer === 'object') ? rawAnswer[pKey] : null;
                 let displayAns = formatSingleItem(pAns);
                 let evalState = evaluations[pKey] || ''; 
-                
                 let btnCorrect = `<button type="button" class="btn btn-sm ${evalState === 'correct' ? 'btn-success' : 'btn-outline-success'}" onclick="setEvalState(this, '${q.id}', '${pKey}', 'correct')">✔️ صحيح</button>`;
                 let btnWrong = `<button type="button" class="btn btn-sm ${evalState === 'wrong' ? 'btn-danger' : 'btn-outline-danger'}" onclick="setEvalState(this, '${q.id}', '${pKey}', 'wrong')">❌ خاطئ</button>`;
-
-                html += `
-                <div style="border:1px solid #e2e8f0; padding:15px; border-radius:8px; background:#fff; position:relative; overflow:hidden;">
-                    ${evalState === 'correct' ? '<div style="position:absolute; top:0; right:0; bottom:0; width:5px; background:#28a745;"></div>' : ''}
-                    ${evalState === 'wrong' ? '<div style="position:absolute; top:0; right:0; bottom:0; width:5px; background:#dc3545;"></div>' : ''}
-                    
-                    <div style="font-weight:bold; margin-bottom:10px; color:#475569;"><i class="fas fa-caret-left"></i> ${p.text || 'الفقرة ' + (pIdx+1)}</div>
-                    <div style="background:#f8f9fa; padding:10px; border-radius:5px; margin-bottom:10px; text-align:center; min-height:60px; display:flex; align-items:center; justify-content:center;">
-                        ${displayAns || '<span class="text-muted">لم يُجب الطالب</span>'}
-                    </div>
-                    <div class="eval-controls" style="display:flex; gap:10px; justify-content:center; background:#f1f5f9; padding:10px; border-radius:5px; border:1px dashed #cbd5e1;">
-                        <span style="font-size:0.9rem; color:#64748b; margin-top:5px; font-weight:bold;">التقييم:</span>
-                        ${btnCorrect}
-                        ${btnWrong}
-                        <input type="hidden" name="eval_${q.id}_${pKey}" value="${evalState}">
-                    </div>
-                </div>`;
+                html += `<div style="border:1px solid #e2e8f0; padding:15px; border-radius:8px; background:#fff; position:relative; overflow:hidden;">${evalState === 'correct' ? '<div style="position:absolute; top:0; right:0; bottom:0; width:5px; background:#28a745;"></div>' : ''}${evalState === 'wrong' ? '<div style="position:absolute; top:0; right:0; bottom:0; width:5px; background:#dc3545;"></div>' : ''}<div style="font-weight:bold; margin-bottom:10px; color:#475569;"><i class="fas fa-caret-left"></i> ${p.text || 'الفقرة ' + (pIdx+1)}</div><div style="background:#f8f9fa; padding:10px; border-radius:5px; margin-bottom:10px; text-align:center; min-height:60px; display:flex; align-items:center; justify-content:center;">${displayAns || '<span class="text-muted">لم يُجب الطالب</span>'}</div><div class="eval-controls" style="display:flex; gap:10px; justify-content:center; background:#f1f5f9; padding:10px; border-radius:5px; border:1px dashed #cbd5e1;"><span style="font-size:0.9rem; color:#64748b; margin-top:5px; font-weight:bold;">التقييم:</span>${btnCorrect}${btnWrong}<input type="hidden" name="eval_${q.id}_${pKey}" value="${evalState}"></div></div>`;
             });
             html += `</div>`;
         }
-        
     } else {
         html += `<div style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #eee;">${formatSingleItem(rawAnswer)}</div>`;
     }
-
     currentScore = parseFloat(currentScore) || 0;
-
-    return `
-        <div class="review-question-item" id="q-review-item-${q.id}">
-            <div class="review-q-header" style="background:#e3f2fd; border-bottom:2px solid #90caf9;">
-                <div style="flex:1; font-size:1.1rem; color:#1565c0;"><strong>س${index+1}: ${q.text}</strong></div>
-                <div class="score-input-container" style="box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-                    <input type="number" step="0.5" class="score-input" name="score_${q.id}" value="${currentScore}" max="${maxScore}" min="0">
-                    <span class="text-muted" style="font-size:0.9rem;"> / ${maxScore} درجة</span>
-                </div>
-            </div>
-            <div class="student-answer-box" style="background:transparent; border:none; padding:0;">
-                ${html}
-            </div>
-            <div class="teacher-feedback-box mt-3">
-                <label style="font-weight:bold; color:#555; font-size:0.9rem;"><i class="fas fa-comment-medical"></i> ملاحظات المعلم (تظهر للطالب):</label>
-                <textarea class="form-control" name="note_${q.id}" placeholder="اكتب توجيهاً للطالب هنا...">${teacherNote}</textarea>
-            </div>
-        </div>`;
+    return `<div class="review-question-item" id="q-review-item-${q.id}"><div class="review-q-header" style="background:#e3f2fd; border-bottom:2px solid #90caf9;"><div style="flex:1; font-size:1.1rem; color:#1565c0;"><strong>س${index+1}: ${q.text}</strong></div><div class="score-input-container" style="box-shadow:0 2px 5px rgba(0,0,0,0.1);"><input type="number" step="0.5" class="score-input" name="score_${q.id}" value="${currentScore}" max="${maxScore}" min="0"><span class="text-muted" style="font-size:0.9rem;"> / ${maxScore} درجة</span></div></div><div class="student-answer-box" style="background:transparent; border:none; padding:0;">${html}</div><div class="teacher-feedback-box mt-3"><label style="font-weight:bold; color:#555; font-size:0.9rem;"><i class="fas fa-comment-medical"></i> ملاحظات المعلم (تظهر للطالب):</label><textarea class="form-control" name="note_${q.id}" placeholder="اكتب توجيهاً للطالب هنا...">${teacherNote}</textarea></div></div>`;
 }
 
 window.toggleReadingWord = function(span, qId, wKey) {
     let currentState = span.getAttribute('data-state');
     let hiddenInput = span.querySelector('input');
-    let newState = '';
-    let newClass = 'word-neutral';
-    let icon = '';
+    let newState = ''; let newClass = 'word-neutral'; let icon = '';
     let textOnly = span.innerText.replace(/✔️|❌/g, '').trim();
-
     if (currentState === '') { newState = 'correct'; newClass = 'word-correct'; icon = ' ✔️'; }
     else if (currentState === 'correct') { newState = 'wrong'; newClass = 'word-wrong'; icon = ' ❌'; }
     else { newState = ''; newClass = 'word-neutral'; icon = ''; } 
-
-    span.setAttribute('data-state', newState);
-    hiddenInput.value = newState;
+    span.setAttribute('data-state', newState); hiddenInput.value = newState;
     span.className = `reading-word-eval ${newClass}`;
     span.innerHTML = `${textOnly}${icon}<input type="hidden" name="eval_${qId}_${wKey}" value="${newState}">`;
-    
     recalculateScore(qId);
 }
 
@@ -1508,26 +1285,11 @@ window.setEvalState = function(btn, qId, pKey, state) {
     const container = btn.closest('.eval-controls');
     const hiddenInput = container.querySelector(`input[name="eval_${qId}_${pKey}"]`);
     const btns = container.querySelectorAll('button');
-    
-    btns[0].className = 'btn btn-sm btn-outline-success';
-    btns[1].className = 'btn btn-sm btn-outline-danger';
-
-    if (hiddenInput.value === state) {
-        hiddenInput.value = ''; 
-    } else {
-        hiddenInput.value = state;
-        if (state === 'correct') btns[0].className = 'btn btn-sm btn-success';
-        else if (state === 'wrong') btns[1].className = 'btn btn-sm btn-danger';
-    }
-    
+    btns[0].className = 'btn btn-sm btn-outline-success'; btns[1].className = 'btn btn-sm btn-outline-danger';
+    if (hiddenInput.value === state) { hiddenInput.value = ''; } 
+    else { hiddenInput.value = state; if (state === 'correct') btns[0].className = 'btn btn-sm btn-success'; else if (state === 'wrong') btns[1].className = 'btn btn-sm btn-danger'; }
     const wrapper = container.closest('div[style*="position:relative"]');
-    if (wrapper) {
-        let coloredBar = wrapper.querySelector('div[style*="position:absolute"]');
-        if (coloredBar) coloredBar.remove();
-        if (hiddenInput.value === 'correct') wrapper.insertAdjacentHTML('afterbegin', '<div style="position:absolute; top:0; right:0; bottom:0; width:5px; background:#28a745;"></div>');
-        else if (hiddenInput.value === 'wrong') wrapper.insertAdjacentHTML('afterbegin', '<div style="position:absolute; top:0; right:0; bottom:0; width:5px; background:#dc3545;"></div>');
-    }
-
+    if (wrapper) { let coloredBar = wrapper.querySelector('div[style*="position:absolute"]'); if (coloredBar) coloredBar.remove(); if (hiddenInput.value === 'correct') wrapper.insertAdjacentHTML('afterbegin', '<div style="position:absolute; top:0; right:0; bottom:0; width:5px; background:#28a745;"></div>'); else if (hiddenInput.value === 'wrong') wrapper.insertAdjacentHTML('afterbegin', '<div style="position:absolute; top:0; right:0; bottom:0; width:5px; background:#dc3545;"></div>'); }
     recalculateScore(qId);
 }
 
@@ -1537,84 +1299,60 @@ function recalculateScore(qId) {
     const scoreInp = qCard.querySelector('.score-input');
     const maxScore = parseFloat(scoreInp.max);
     const hiddenInputs = qCard.querySelectorAll('input[type="hidden"][name^="eval_"]');
-    
     if(hiddenInputs.length > 0) {
-        let correctCount = 0;
-        let answeredCount = 0;
-        hiddenInputs.forEach(inp => {
-            if(inp.value === 'correct') correctCount++;
-            if(inp.value !== '') answeredCount++;
-        });
-        
-        if (answeredCount > 0) {
-            let calcScore = (correctCount / hiddenInputs.length) * maxScore;
-            scoreInp.value = Math.round(calcScore * 2) / 2;
-            scoreInp.style.backgroundColor = '#fff3cd';
-            setTimeout(() => scoreInp.style.backgroundColor = '#fff', 1000);
-        }
+        let correctCount = 0; let answeredCount = 0;
+        hiddenInputs.forEach(inp => { if(inp.value === 'correct') correctCount++; if(inp.value !== '') answeredCount++; });
+        if (answeredCount > 0) { let calcScore = (correctCount / hiddenInputs.length) * maxScore; scoreInp.value = Math.round(calcScore * 2) / 2; scoreInp.style.backgroundColor = '#fff3cd'; setTimeout(() => scoreInp.style.backgroundColor = '#fff', 1000); }
     }
 }
 
 function saveTestReview() {
     const id = parseInt(document.getElementById('reviewAssignmentId').value);
+    const type = document.getElementById('reviewAssignmentId').getAttribute('data-type');
     
-    let studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
-    let idx = studentAssignments.findIndex(a => a.id == id);
-    let isAssignment = true;
+    let storageKey = 'studentAssignments';
+    if(type === 'test') storageKey = 'studentTests';
+    if(type === 'lesson') storageKey = 'studentLessons';
 
-    if (idx === -1) {
-        const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-        idx = studentTests.findIndex(t => t.id == id);
-        if (idx !== -1) {
-            studentAssignments = studentTests; 
-            isAssignment = false;
-        } else {
-            return;
-        }
-    }
+    let collection = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    let idx = collection.findIndex(a => a.id == id);
+    if (idx === -1) return showError('السجل غير موجود أثناء الحفظ');
 
     const container = document.getElementById('reviewQuestionsContainer');
     let totalScore = 0; 
     let maxTotalScore = 0;
     
-    let questions = studentAssignments[idx].questions;
-    if (!questions && !isAssignment) {
-         const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
-         const originalTest = allTests.find(t => t.id == studentAssignments[idx].testId);
-         if(originalTest) questions = originalTest.questions;
+    let questions = [];
+    if (type === 'assignment') {
+         const lib = JSON.parse(localStorage.getItem('assignments') || '[]');
+         const orig = lib.find(a => a.title === collection[idx].title);
+         questions = collection[idx].questions || (orig ? orig.questions : []);
+    } else if (type === 'test') {
+         const lib = JSON.parse(localStorage.getItem('tests') || '[]');
+         const orig = lib.find(t => t.id == collection[idx].testId);
+         if(orig) questions = orig.questions;
+    } else if (type === 'lesson') {
+         const lib = JSON.parse(localStorage.getItem('lessons') || '[]');
+         const orig = lib.find(l => l.id == collection[idx].originalLessonId);
+         if(orig) questions = [...(orig.exercises?.questions || []), ...(orig.assessment?.questions || [])];
     }
 
     if(questions && questions.length > 0) {
         questions.forEach(q => {
             const scoreInp = container.querySelector(`input[name="score_${q.id}"]`);
             const noteInp = container.querySelector(`textarea[name="note_${q.id}"]`);
-            
-            if (!studentAssignments[idx].answers) studentAssignments[idx].answers = [];
-            
-            let ansIdx = studentAssignments[idx].answers.findIndex(a => a.questionId == q.id);
-            
+            if (!collection[idx].answers) collection[idx].answers = [];
+            let ansIdx = collection[idx].answers.findIndex(a => a.questionId == q.id);
             let newScore = 0;
-            if (scoreInp && scoreInp.value !== '') {
-                newScore = parseFloat(scoreInp.value);
-                if(isNaN(newScore)) newScore = 0;
-            }
+            if (scoreInp && scoreInp.value !== '') { newScore = parseFloat(scoreInp.value); if(isNaN(newScore)) newScore = 0; }
+            if(ansIdx === -1) { collection[idx].answers.push({ questionId: q.id, answer: null }); ansIdx = collection[idx].answers.length - 1; }
             
-            if(ansIdx === -1) {
-                studentAssignments[idx].answers.push({ questionId: q.id, answer: null });
-                ansIdx = studentAssignments[idx].answers.length - 1;
-            }
+            collection[idx].answers[ansIdx].score = newScore;
+            collection[idx].answers[ansIdx].teacherNote = noteInp ? noteInp.value : '';
             
-            studentAssignments[idx].answers[ansIdx].score = newScore;
-            studentAssignments[idx].answers[ansIdx].teacherNote = noteInp ? noteInp.value : '';
-            
-            if (!studentAssignments[idx].answers[ansIdx].evaluations) {
-                studentAssignments[idx].answers[ansIdx].evaluations = {};
-            }
+            if (!collection[idx].answers[ansIdx].evaluations) collection[idx].answers[ansIdx].evaluations = {};
             const evalInputs = container.querySelectorAll(`input[type="hidden"][name^="eval_${q.id}_"]`);
-            evalInputs.forEach(inp => {
-                let pKey = inp.name.replace(`eval_${q.id}_`, '');
-                studentAssignments[idx].answers[ansIdx].evaluations[pKey] = inp.value;
-            });
+            evalInputs.forEach(inp => { let pKey = inp.name.replace(`eval_${q.id}_`, ''); collection[idx].answers[ansIdx].evaluations[pKey] = inp.value; });
 
             totalScore += newScore; 
             let maxQScore = parseFloat(q.maxScore || q.passingScore || q.points || q.score || 1);
@@ -1622,51 +1360,42 @@ function saveTestReview() {
             maxTotalScore += maxQScore;
         });
         
-        studentAssignments[idx].score = maxTotalScore > 0 ? Math.round((totalScore / maxTotalScore) * 100) : 0;
+        collection[idx].score = maxTotalScore > 0 ? Math.round((totalScore / maxTotalScore) * 100) : 0;
     }
     
-    studentAssignments[idx].status = 'completed';
-
-    if (isAssignment) {
-        localStorage.setItem('studentAssignments', JSON.stringify(studentAssignments));
-        closeModal('reviewTestModal');
-        loadAssignmentsTab();
-    } else {
-        localStorage.setItem('studentTests', JSON.stringify(studentAssignments));
-        closeModal('reviewTestModal');
-        loadDiagnosticTab(); 
-    }
+    collection[idx].status = 'completed';
+    localStorage.setItem(storageKey, JSON.stringify(collection));
+    closeModal('reviewTestModal');
+    
+    if (type === 'assignment') loadAssignmentsTab();
+    else if (type === 'test') loadDiagnosticTab();
+    else if (type === 'lesson') loadLessonsTab();
     
     showSuccess('تم حفظ التصحيح واعتماد الدرجة بنجاح');
 }
 
 function returnTestForResubmission() {
     const id = parseInt(document.getElementById('reviewAssignmentId').value);
-    showConfirmModal('إعادة الاختبار للطالب؟<br><small>سيتم إرجاع الاختبار للطالب ليقوم بتعديل إجاباته وإعادة التسليم.</small>', function() {
-        let studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
-        let idx = studentAssignments.findIndex(a => a.id == id);
-        let isAssignment = true;
+    const type = document.getElementById('reviewAssignmentId').getAttribute('data-type');
+    
+    showConfirmModal('إعادة الاختبار/الدرس للطالب؟<br><small>سيتم الإرجاع للطالب ليقوم بتعديل إجاباته وإعادة التسليم.</small>', function() {
+        let storageKey = 'studentAssignments';
+        if(type === 'test') storageKey = 'studentTests';
+        if(type === 'lesson') storageKey = 'studentLessons';
 
-        if (idx === -1) {
-            const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-            idx = studentTests.findIndex(t => t.id == id);
-            if (idx !== -1) {
-                studentAssignments = studentTests;
-                isAssignment = false;
-            } else return;
-        }
+        let collection = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        let idx = collection.findIndex(a => a.id == id);
+        if (idx === -1) return;
 
-        studentAssignments[idx].status = 'returned'; 
-        
-        if (isAssignment) {
-            localStorage.setItem('studentAssignments', JSON.stringify(studentAssignments));
-            loadAssignmentsTab();
-        } else {
-            localStorage.setItem('studentTests', JSON.stringify(studentAssignments));
-            loadDiagnosticTab();
-        }
+        collection[idx].status = 'returned'; 
+        localStorage.setItem(storageKey, JSON.stringify(collection));
         
         closeModal('reviewTestModal');
-        showSuccess('تمت إعادة الاختبار للطالب بنجاح');
+        
+        if (type === 'assignment') loadAssignmentsTab();
+        else if (type === 'test') loadDiagnosticTab();
+        else if (type === 'lesson') loadLessonsTab();
+        
+        showSuccess('تمت الإعادة للطالب بنجاح');
     });
 }

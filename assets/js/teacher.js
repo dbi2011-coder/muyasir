@@ -1,5 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/teacher.js
+// الوصف: إدارة شاشة الطلاب + حساب نسبة التقدم الحقيقية الموحدة في الجدول
 // ============================================
 
 // =========================================================
@@ -54,8 +55,6 @@ if (!window.showSuccess) {
         }
         document.getElementById('globalSuccessMessage').textContent = message;
         toast.style.display = 'flex';
-        
-        // إخفاء الرسالة تلقائياً بعد 3 ثواني
         setTimeout(() => { toast.style.display = 'none'; }, 3000);
     };
 }
@@ -99,6 +98,7 @@ function loadTeacherStats() {
     if (document.getElementById('unreadMessages')) document.getElementById('unreadMessages').innerText = messagesCount;
 }
 
+// 🔥 تم تحديث هذه الدالة بالكامل لحساب نسبة التقدم الحقيقية للطلاب 🔥
 function loadStudentsData() {
     const loadingState = document.getElementById('loadingState');
     const emptyState = document.getElementById('emptyState');
@@ -114,6 +114,9 @@ function loadStudentsData() {
         const currentTeacher = getCurrentUser();
         const students = users.filter(u => u.role === 'student' && u.teacherId === currentTeacher.id);
         
+        // جلب سجلات الدروس مرة واحدة لتسريع الأداء
+        const allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+        
         if(loadingState) loadingState.style.display = 'none';
         
         if (students.length === 0) {
@@ -122,9 +125,42 @@ function loadStudentsData() {
         }
 
         tableBody.innerHTML = students.map((student, index) => {
-            const progress = student.progress || 0;
-            const progressColor = progress >= 80 ? 'success' : progress >= 50 ? 'warning' : 'danger';
-            return `<tr><td>${index + 1}</td><td>${student.name}</td><td>${student.grade}</td><td>${student.subject}</td><td class="progress-cell"><div class="progress-text text-${progressColor}">${progress}%</div><div class="progress-bar"><div class="progress-fill bg-${progressColor}" style="width: ${progress}%"></div></div></td><td><div class="student-actions" style="display: flex; gap: 5px; flex-wrap: wrap;"><button class="btn btn-sm btn-primary" onclick="openStudentFile(${student.id})">ملف</button><button class="btn btn-sm btn-secondary" onclick="showStudentLoginData(${student.id})">بيانات</button><button class="btn btn-sm btn-warning" onclick="editStudent(${student.id})">تعديل</button><button class="btn btn-sm btn-info" onclick="exportStudentData(${student.id})">تصدير</button><button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})">حذف</button></div></td></tr>`;
+            // حساب نسبة التقدم الموحدة
+            const myLessons = allStudentLessons.filter(l => String(l.studentId) === String(student.id));
+            let progressPct = 0;
+            if (myLessons.length > 0) {
+                const completed = myLessons.filter(l => l.status === 'completed' || l.status === 'accelerated' || l.passedByAlternative).length;
+                progressPct = Math.round((completed / myLessons.length) * 100);
+            }
+
+            // تحديد لون شريط التقدم بذكاء
+            const progressColor = progressPct >= 80 ? 'success' : progressPct >= 50 ? 'warning' : 'danger';
+            const hexColor = progressPct >= 80 ? '#28a745' : progressPct >= 50 ? '#ffc107' : '#dc3545';
+
+            return `
+            <tr>
+                <td>${index + 1}</td>
+                <td style="font-weight: bold; color: #2c3e50;">${student.name}</td>
+                <td>${student.grade}</td>
+                <td>${student.subject || 'عام'}</td>
+                <td style="width: 200px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span class="text-${progressColor}" style="font-weight:bold; min-width:35px; text-align:right;">${progressPct}%</span>
+                        <div style="flex-grow:1; background:#e9ecef; height:8px; border-radius:5px; overflow:hidden;">
+                            <div style="width: ${progressPct}%; background-color: ${hexColor}; height:100%; transition: width 0.4s ease;"></div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <div class="student-actions" style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        <button class="btn btn-sm btn-primary" onclick="openStudentFile(${student.id})"><i class="fas fa-folder-open"></i> ملف</button>
+                        <button class="btn btn-sm btn-secondary" onclick="showStudentLoginData(${student.id})"><i class="fas fa-key"></i> بيانات</button>
+                        <button class="btn btn-sm btn-warning" onclick="editStudent(${student.id})"><i class="fas fa-edit"></i> تعديل</button>
+                        <button class="btn btn-sm btn-info" onclick="exportStudentData(${student.id})"><i class="fas fa-file-export"></i> تصدير</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})"><i class="fas fa-trash"></i> حذف</button>
+                    </div>
+                </td>
+            </tr>`;
         }).join('');
     }, 200);
 }
@@ -212,12 +248,15 @@ function updateStudentData() {
     } else { alert('خطأ: الطالب غير موجود.'); }
 }
 
-// 🔥 تحديث الحذف
 function deleteStudent(studentId) {
-    showConfirmModal('⚠️ هل أنت متأكد من حذف هذا الطالب؟', function() {
+    showConfirmModal('⚠️ هل أنت متأكد من حذف هذا الطالب؟ <br><small>سيتم حذف جميع سجلاته ودرجاته نهائياً.</small>', function() {
         let users = JSON.parse(localStorage.getItem('users') || '[]');
         users = users.filter(u => u.id != studentId);
         localStorage.setItem('users', JSON.stringify(users));
+        
+        // تنظيف بيانات الطالب المحذوف من الجداول الأخرى للحفاظ على مساحة التخزين
+        cleanStudentOldData(studentId);
+        
         showSuccess('تم الحذف بنجاح');
         loadStudentsData();
     });
@@ -296,7 +335,7 @@ function processStudentImport() {
 
 function getStudentData(key, id) { return JSON.parse(localStorage.getItem(key) || '[]').filter(x => x.studentId == id); }
 function mergeData(key, newData) { if (!newData || !newData.length) return; let current = JSON.parse(localStorage.getItem(key) || '[]'); current = current.filter(x => x.studentId != newData[0].studentId); localStorage.setItem(key, JSON.stringify([...current, ...newData])); }
-function cleanStudentOldData(id) { ['studentTests', 'studentLessons', 'studentAssignments', 'studentEvents'].forEach(key => { let data = JSON.parse(localStorage.getItem(key) || '[]'); localStorage.setItem(key, JSON.stringify(data.filter(x => x.studentId != id))); }); }
+function cleanStudentOldData(id) { ['studentTests', 'studentLessons', 'studentAssignments', 'studentEvents'].forEach(key => { let data = JSON.parse(localStorage.getItem(key) || '[]'); localStorage.setItem(key, JSON.stringify(data.filter(x => String(x.studentId) !== String(id)))); }); }
 function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser')).user; }
 function openStudentFile(id) { window.location.href = `student-profile.html?id=${id}`; }
 function showStudentLoginData(id) { const users = JSON.parse(localStorage.getItem('users') || '[]'); const s = users.find(u => u.id == id); if(s) { document.getElementById('loginDataUsername').value = s.username; document.getElementById('loginDataPassword').value = s.password; document.getElementById('studentLoginDataModal').classList.add('show'); } }

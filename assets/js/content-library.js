@@ -1,8 +1,34 @@
 // ============================================
 // 📁 المسار: assets/js/content-library.js
-// الوصف: مكتبة المحتوى + إخفاء المحك للدروس + إصلاح تداخل إجابات التمارين والتقييم
+// الوصف: مكتبة المحتوى + إغلاق القوائم المنسدلة ذكياً (Click Outside)
 // ============================================
 
+// =========================================================
+// 🔥 1. إغلاق القوائم المنسدلة عند النقر في أي مكان فارغ 🔥
+// =========================================================
+document.addEventListener('click', function(event) {
+    // التحقق مما إذا كانت النقرة تمت على زر يفتح القائمة (حتى لا نلغي عمل الزر نفسه)
+    const isDropdownButton = event.target.closest('.dropdown-btn, .dropbtn, .dropdown-toggle, [onclick*="toggle"], [onclick*="classList.toggle"]');
+    
+    // إذا لم تكن النقرة على زر القائمة
+    if (!isDropdownButton) {
+        // البحث عن جميع القوائم المفتوحة حالياً (التي تحتوي على كلاس show)
+        const openDropdowns = document.querySelectorAll('.dropdown-content.show, .dropdown-menu.show, .menu-options.show, #addContentMenu.show');
+        
+        openDropdowns.forEach(dropdown => {
+            // التأكد أن النقرة لم تحدث بداخل القائمة نفسها (مثل اختيار خيار منها)
+            if (!dropdown.contains(event.target)) {
+                dropdown.classList.remove('show'); // إخفاء القائمة
+                // دعم إضافي إن كانت القائمة مبرمجة لتعمل بـ display:block
+                if(dropdown.style.display === 'block') dropdown.style.display = 'none';
+            }
+        });
+    }
+});
+
+// =========================================================
+// 🔥 2. نظام النوافذ المنبثقة والإشعارات 🔥
+// =========================================================
 if (!window.showError) {
     window.showError = function(message) {
         let toast = document.getElementById('globalErrorToast');
@@ -46,6 +72,9 @@ if (!window.showConfirmModal) {
     };
 }
 
+// =========================================================
+// 🔥 3. التهيئة وجلب البيانات 🔥
+// =========================================================
 document.addEventListener('DOMContentLoaded', function() {
     injectLinkContentModal(); 
     loadContentLibrary();
@@ -103,11 +132,13 @@ function loadHomeworks() {
     }).join('');
 }
 
+// =========================================================
+// 🔥 4. دوال بناء وإدارة الأسئلة 🔥
+// =========================================================
 function addQuestion() { addQuestionToContainer(document.getElementById('questionsContainer'), 'سؤال'); }
 function addLessonQuestion(id) { addQuestionToContainer(document.getElementById(id), 'سؤال'); }
 function addHomeworkQuestion() { addQuestionToContainer(document.getElementById('homeworkQuestionsContainer'), 'سؤال'); }
 
-// 🔥 استخدام المعرفات الفريدة (Unique IDs) لمنع تداخل الأسئلة 🔥
 function addQuestionToContainer(container, lbl, data = null) {
     const qUniqueId = 'q_' + Date.now() + '_' + Math.floor(Math.random() * 10000); 
     const type = data ? data.type : 'mcq';
@@ -210,7 +241,6 @@ function renderQuestionInputs(selectElem, qUniqueId, data = null) {
             const choices = data?.choices || ['خيار 1', 'خيار 2'];
             const correct = (data && data.correctAnswer !== undefined && data.correctAnswer !== null) ? parseInt(data.correctAnswer) : 0; 
             choices.forEach((c, i) => { 
-                // 🔥 استخدام qUniqueId لضمان عدم تداخل الأزرار 🔥
                 html += `<div class="choice-row"><input type="radio" name="correct-${qUniqueId}" value="${i}" ${i === correct ? 'checked' : ''}><input type="text" class="form-control q-choice" value="${c}" placeholder="الخيار ${i+1}"><button type="button" class="btn-remove-choice" onclick="this.parentElement.remove()">×</button></div>`; 
             });
             html += `</div><button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addChoiceInput('${qUniqueId}')">+ إضافة خيار</button>`;
@@ -299,7 +329,6 @@ async function collectQuestionsFromContainer(id) {
         const card = cards[i];
         const type = card.querySelector('select').value;
         const maxScoreVal = parseFloat(card.querySelector('.max-score').value) || 1;
-        
         const criterionInput = card.querySelector('.passing-criterion');
         const criterionVal = criterionInput ? (parseFloat(criterionInput.value) || 80) : 80;
         
@@ -336,7 +365,7 @@ async function collectQuestionsFromContainer(id) {
 }
 
 // =========================================================
-// 🔥 التنقل والحفظ 🔥
+// 🔥 5. دوال التنقل والحفظ للدروس والاختبارات 🔥
 // =========================================================
 
 function switchLessonStep(step) {
@@ -442,20 +471,95 @@ function saveContentLinks() {
     closeModal('linkContentModal'); showSuccess('تم حفظ الارتباطات بنجاح');
 }
 
-function exportContent() {
-    const data = { tests: JSON.parse(localStorage.getItem('tests') || '[]'), lessons: JSON.parse(localStorage.getItem('lessons') || '[]'), objectives: JSON.parse(localStorage.getItem('objectives') || '[]'), assignments: JSON.parse(localStorage.getItem('assignments') || '[]') };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `muyasir_backup_${new Date().toISOString().split('T')[0]}.json`; a.click(); URL.revokeObjectURL(url);
+// =========================================================
+// 🔥 6. دوال الاستيراد والتصدير 🔥
+// =========================================================
+
+function showExportModal() {
+    exportContent();
 }
+
+function exportContent() {
+    const data = { 
+        tests: JSON.parse(localStorage.getItem('tests') || '[]'), 
+        lessons: JSON.parse(localStorage.getItem('lessons') || '[]'), 
+        objectives: JSON.parse(localStorage.getItem('objectives') || '[]'), 
+        assignments: JSON.parse(localStorage.getItem('assignments') || '[]') 
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); 
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); 
+    a.href = url; 
+    a.download = `muyasir_backup_${new Date().toISOString().split('T')[0]}.json`; 
+    a.click(); 
+    URL.revokeObjectURL(url);
+    showSuccess('تم تحميل النسخة الاحتياطية بنجاح 📥');
+}
+
 function triggerImport() { document.getElementById('importFile').click(); }
+
 function importContent(input) {
-    const file = input.files[0]; if (!file) return; const reader = new FileReader();
+    const file = input.files[0]; if (!file) return; 
+    const reader = new FileReader();
     reader.onload = function(e) {
         try {
-            const data = JSON.parse(e.target.result); const user = getCurrentUser(); let count = 0;
-            const mergeData = (key, newItems) => { if (!newItems || newItems.length === 0) return 0; const currentItems = JSON.parse(localStorage.getItem(key) || '[]'); let added = 0; newItems.forEach(item => { if (!currentItems.some(x => x.id === item.id)) { item.teacherId = user.id; currentItems.push(item); added++; } }); localStorage.setItem(key, JSON.stringify(currentItems)); return added; };
-            count += mergeData('tests', data.tests); count += mergeData('lessons', data.lessons); count += mergeData('objectives', data.objectives); count += mergeData('assignments', data.assignments);
-            showSuccess(`تم استيراد ${count} عنصر بنجاح`); loadContentLibrary(); 
+            const data = JSON.parse(e.target.result); 
+            const user = getCurrentUser(); 
+            let count = 0;
+            const mergeData = (key, newItems) => { 
+                if (!newItems || newItems.length === 0) return 0; 
+                const currentItems = JSON.parse(localStorage.getItem(key) || '[]'); 
+                let added = 0; 
+                newItems.forEach(item => { 
+                    if (!currentItems.some(x => x.id === item.id)) { 
+                        item.teacherId = user.id; 
+                        currentItems.push(item); 
+                        added++; 
+                    } 
+                }); 
+                localStorage.setItem(key, JSON.stringify(currentItems)); 
+                return added; 
+            };
+            count += mergeData('tests', data.tests); 
+            count += mergeData('lessons', data.lessons); 
+            count += mergeData('objectives', data.objectives); 
+            count += mergeData('assignments', data.assignments);
+            showSuccess(`تم استيراد ${count} عنصر بنجاح`); 
+            loadContentLibrary(); 
         } catch (err) { showError('حدث خطأ أثناء قراءة الملف. تأكد أنه ملف JSON صالح.'); }
-    }; reader.readAsText(file);
+    }; 
+    reader.readAsText(file);
 }
+
+// ربط الدوال بالـ Window لتعمل مع HTML
+window.showExportModal = showExportModal;
+window.exportContent = exportContent;
+window.triggerImport = triggerImport;
+window.importContent = importContent;
+
+window.showCreateTestModal = showCreateTestModal;
+window.editTest = editTest;
+window.deleteTest = deleteTest;
+window.saveTest = saveTest;
+
+window.showCreateHomeworkModal = showCreateHomeworkModal;
+window.editHomework = editHomework;
+window.deleteHomework = deleteHomework;
+window.saveHomework = saveHomework;
+
+window.showCreateLessonModal = showCreateLessonModal;
+window.editLesson = editLesson;
+window.deleteLesson = deleteLesson;
+window.saveLesson = saveLesson;
+window.toggleIntroInputs = toggleIntroInputs;
+window.switchLessonStep = switchLessonStep;
+
+window.showCreateObjectiveModal = showCreateObjectiveModal;
+window.editObjective = editObjective;
+window.deleteObjective = deleteObjective;
+window.saveObjective = saveObjective;
+window.addInstructionalGoalInput = addInstructionalGoalInput;
+
+window.showLinkModal = showLinkModal;
+window.saveContentLinks = saveContentLinks;
+window.closeModal = closeModal;

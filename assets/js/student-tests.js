@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-tests.js
-// الوصف: إدارة الاختبارات + النوافذ الاحترافية + إصلاح تداخل حالة التسليم مع الحفظ الصامت
+// الوصف: إدارة الاختبارات + النوافذ الاحترافية + الحفظ الصامت + توحيد بنك كلمات السحب والإفلات
 // ============================================
 
 // =========================================================
@@ -118,19 +118,20 @@ let activeRecordingId = null;
 document.addEventListener('DOMContentLoaded', function() {
     loadMyTests();
 
+    // كود تنظيف أزرار الخروج القديمة
     const focusMode = document.getElementById('testFocusMode');
     if (focusMode) {
         const allButtons = focusMode.querySelectorAll('button, a, i, span, div');
         allButtons.forEach(el => {
             const onclickAttr = el.getAttribute('onclick');
             if (onclickAttr && onclickAttr.includes('closeTestMode') && !el.classList.contains('btn-nav')) {
-                el.remove();
+                el.remove(); 
             }
         });
     }
 });
 
-// 1. عرض قائمة الاختبارات 
+// 1. عرض قائمة الاختبارات
 function loadMyTests() {
     const container = document.getElementById('allTestsList');
     if(!container) return;
@@ -361,26 +362,49 @@ function renderAllQuestions() {
             qHtml += `</div>`;
         }
 
-        // هـ) السحب والإفلات
+        // 🔥 هـ) السحب والإفلات (تم التحديث لتوحيد بنك الكلمات) 🔥
         else if (q.type === 'drag-drop') {
+            let allDraggables = []; // مصفوفة لتجميع كل الكلمات من كل الجمل
+            let sentencesHtml = '<div class="sentences-container" style="display:flex; flex-direction:column; gap:15px;">';
+
             (q.paragraphs || []).forEach((p, pIdx) => {
                 let processedText = p.text;
-                let draggables = [];
                 if (p.gaps) {
                     p.gaps.forEach((g, gIdx) => {
-                        let saved = (ansValue && typeof ansValue === 'object' && ansValue[`p_${pIdx}_g_${gIdx}`]) ? ansValue[`p_${pIdx}_g_${gIdx}`] : '';
+                        let saved = '';
+                        if(ansValue && typeof ansValue === 'object' && ansValue[`p_${pIdx}_g_${gIdx}`]) {
+                            saved = ansValue[`p_${pIdx}_g_${gIdx}`];
+                        }
                         const dropId = `drop-${q.id}-${pIdx}-${gIdx}`;
                         const dropEvts = isReadOnly ? '' : `ondrop="drop(event)" ondragover="allowDrop(event)"`;
                         processedText = processedText.replace(g.dragItem, `<span class="drop-zone" id="${dropId}" ${dropEvts} data-qid="${index}" data-pid="${pIdx}" data-gid="${gIdx}" style="${isReadOnly ? 'background:#e2e8f0; pointer-events:none;' : ''}">${saved}</span>`);
-                        draggables.push(g.dragItem);
+                        
+                        // إضافة الكلمة إلى البنك الموحد فقط إذا لم يكن وضع مراجعة
+                        if (!isReadOnly) {
+                            // استخدام ID فريد جداً لضمان عدم تعارض الكلمات المتشابهة
+                            const uniqueId = `w-${q.id}-${pIdx}-${gIdx}-${Math.random().toString(36).substr(2, 5)}`;
+                            allDraggables.push({ word: g.dragItem, id: uniqueId });
+                        }
                     });
                 }
-                
-                if (!isReadOnly) {
-                    qHtml += `<div class="word-bank">${draggables.sort(()=>Math.random()-0.5).map(w => `<div class="draggable-word" draggable="true" ondragstart="drag(event)" id="w-${Math.random()}">${w}</div>`).join('')}</div>`;
-                }
-                qHtml += `<div class="sentence-area" style="font-size:1.3rem; line-height:2.5;">${processedText}</div>`;
+                sentencesHtml += `<div class="sentence-area" style="font-size:1.3rem; line-height:2.5; padding:20px; background:#fff; border:1px solid #eee; border-radius:10px; box-shadow: inset 0 0 10px rgba(0,0,0,0.02);">${processedText}</div>`;
             });
+            sentencesHtml += '</div>';
+
+            // إذا لم يكن وضع مراجعة، نعرض البنك الموحد
+            if (!isReadOnly && allDraggables.length > 0) {
+                // خلط الكلمات عشوائياً (Shuffle)
+                allDraggables.sort(() => Math.random() - 0.5);
+                
+                qHtml += `<div class="word-bank mb-4" style="background:#f1f8e9; padding:20px; border-radius:10px; border:2px dashed #8bc34a; display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-bottom: 25px;">`;
+                allDraggables.forEach(item => {
+                    qHtml += `<div class="draggable-word" draggable="true" ondragstart="drag(event)" id="${item.id}" style="background:#fff; border:2px solid #c5e1a5; color:#33691e; padding:8px 20px; border-radius:25px; cursor:grab; font-weight:bold; font-size:1.1rem; box-shadow:0 2px 5px rgba(0,0,0,0.05);">${item.word}</div>`;
+                });
+                qHtml += `</div>`;
+            }
+
+            // إضافة جميع الجمل تحت البنك
+            qHtml += sentencesHtml;
         }
         
         // و) نصي
@@ -568,7 +592,7 @@ function resetRecording(qId, pIdx) {
 }
 
 // ==========================================
-// 7. الحفظ والتسليم (تم إصلاح تداخل التسليم مع دالة الإغلاق)
+// 7. الحفظ والتسليم
 // ==========================================
 function selectOption(el, qIdx, choiceIdx) {
     if(currentAssignment.status === 'completed') return;
@@ -619,7 +643,6 @@ function updateUserAnswer(qId, val) {
     else userAnswers.push({ questionId: qId, answer: val });
 }
 
-// 🔥 دالة الحفظ المعدلة لضمان عدم إعادة فتح الاختبار بعد التسليم 🔥
 function saveTestProgress(submit = false, isExiting = false) {
     if(currentAssignment.status === 'completed') return;
     saveCurrentCanvas(); 
@@ -631,7 +654,7 @@ function saveTestProgress(submit = false, isExiting = false) {
         if(submit) {
             allAssignments[idx].status = 'completed'; 
             allAssignments[idx].completedDate = new Date().toISOString();
-            currentAssignment.status = 'completed'; // 🔥 هذا السطر يمنع دالة closeTestMode من تخريب التسليم
+            currentAssignment.status = 'completed'; 
         } else {
             allAssignments[idx].status = 'in-progress';
             currentAssignment.status = 'in-progress';

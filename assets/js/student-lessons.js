@@ -1,15 +1,15 @@
 // ============================================
 // 📁 المسار: assets/js/student-lessons.js
-// الوصف: واجهة الطالب (كاملة: عرض، قفل صارم، سجل تاريخي، نوافذ العرض)
+// الوصف: واجهة الطالب (التعلم للإتقان، بوابات العبور الكلية، والختم التحفيزي للدروس المسرعة)
 // ============================================
 
 let currentAssignmentId = null;
 let currentLessonContent = null;
+let tempLessonAnswers = [];
+let currentLessonStatus = ''; // لمعرفة هل الدرس مسرع أم لا
 
 document.addEventListener('DOMContentLoaded', function() {
-    // حقن كود النافذة المنبثقة أولاً
     injectLessonModalHTML();
-    
     if (document.getElementById('lessonsContainer')) {
         loadStudentLessons();
     }
@@ -18,7 +18,6 @@ document.addEventListener('DOMContentLoaded', function() {
 function loadStudentLessons() {
     const container = document.getElementById('lessonsContainer');
     
-    // 1. التحقق من المستخدم
     let currentStudent = null;
     try {
         if (typeof getCurrentUser === 'function') currentStudent = getCurrentUser();
@@ -31,7 +30,6 @@ function loadStudentLessons() {
         return;
     }
 
-    // 2. جلب البيانات
     let allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const lessonsLib = JSON.parse(localStorage.getItem('lessons') || '[]');
     let myLessons = allStudentLessons.filter(l => String(l.studentId) === String(currentStudent.id));
@@ -41,13 +39,10 @@ function loadStudentLessons() {
         return;
     }
 
-    // 3. الترتيب الحاسم
     myLessons.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0));
 
-    // 4. فحص الغياب الذكي وتسجيله قبل العرض
     let dataChanged = false;
     const todayStr = new Date().toISOString().split('T')[0];
-    
     const activeLessonIndex = myLessons.findIndex(l => l.status !== 'completed' && l.status !== 'accelerated');
     
     if (activeLessonIndex !== -1) {
@@ -57,10 +52,7 @@ function loadStudentLessons() {
             if (lastLogDate !== todayStr) {
                 const diffDays = Math.floor((new Date() - new Date(lastLogDate)) / (1000 * 60 * 60 * 24));
                 if (diffDays > 1) {
-                    activeLesson.historyLog.push({
-                        date: new Date(Date.now() - 86400000).toISOString(),
-                        status: 'absence'
-                    });
+                    activeLesson.historyLog.push({ date: new Date(Date.now() - 86400000).toISOString(), status: 'absence' });
                     dataChanged = true;
                 }
             }
@@ -75,18 +67,12 @@ function loadStudentLessons() {
         localStorage.setItem('studentLessons', JSON.stringify(allStudentLessons));
     }
 
-    // 5. بناء الواجهة
     container.innerHTML = '';
     myLessons.forEach((lesson, index) => {
-        const originalLesson = lessonsLib.find(l => l.id == lesson.originalLessonId) || { title: lesson.title, exercises: { questions: [] } };
-        
-        // منطق القفل الصارم
         let isLocked = false;
         let lockMessage = '';
 
-        if (index === 0) {
-            isLocked = false;
-        } else {
+        if (index > 0) {
             const prevLesson = myLessons[index - 1];
             if (prevLesson.status !== 'completed' && prevLesson.status !== 'accelerated') {
                 isLocked = true;
@@ -94,57 +80,49 @@ function loadStudentLessons() {
             }
         }
 
-        let cardClass = '';
-        let badge = '';
-        let btnAction = '';
+        let cardClass = '', badge = '', btnAction = '';
 
         if (lesson.status === 'completed') {
             cardClass = 'completed';
             badge = '<span class="badge badge-success">✅ مكتمل</span>';
-            btnAction = `<button class="btn btn-outline-primary w-100" onclick="openLessonOverlay(${lesson.id}, ${lesson.originalLessonId})">مراجعة</button>`;
+            btnAction = `<button class="btn btn-outline-primary w-100" onclick="alert('تم إنجاز هذا الدرس وتصحيحه. مراجعته متاحة عبر المعلم.')">مكتمل</button>`;
         } else if (lesson.status === 'accelerated') {
             cardClass = 'accelerated';
-            badge = '<span class="badge badge-warning" style="background:gold; color:black;">⚡ تم التسريع</span>';
-            btnAction = `<button class="btn btn-outline-warning w-100" onclick="openLessonOverlay(${lesson.id}, ${lesson.originalLessonId})">مراجعة (تفوق)</button>`;
+            badge = '<span class="badge badge-warning" style="background:#ffc107; color:#000; box-shadow:0 0 10px rgba(255,193,7,0.5);">🌟 تم التسريع للتفوق</span>';
+            btnAction = `<button class="btn btn-warning w-100" style="font-weight:bold; color:#000;" onclick="openLessonOverlay(${lesson.id}, ${lesson.originalLessonId}, 'accelerated')">استعراض إنجازك 🏆</button>`;
+        } else if (lesson.status === 'returned') {
+            cardClass = 'returned';
+            badge = '<span class="badge badge-danger">↩️ إعادة لعدم الإتقان</span>';
+            btnAction = `<button class="btn btn-danger w-100" onclick="startAndOpenLesson(${lesson.id}, ${lesson.originalLessonId}, 'returned')">إعادة المحاولة</button>`;
         } else if (isLocked) {
             cardClass = 'locked';
             badge = '<span class="badge badge-secondary">🔒 مقفل</span>';
             btnAction = `<button class="btn btn-secondary w-100" disabled>${lockMessage}</button>`;
         } else {
             cardClass = 'active';
-            badge = '<span class="badge badge-primary">🔓 ابدأ الآن</span>';
-            btnAction = `<button class="btn btn-success w-100" onclick="startAndOpenLesson(${lesson.id}, ${lesson.originalLessonId})">ابدأ الدرس</button>`;
+            badge = '<span class="badge badge-primary">🔓 متاح للحل</span>';
+            btnAction = `<button class="btn btn-success w-100" onclick="startAndOpenLesson(${lesson.id}, ${lesson.originalLessonId}, 'pending')">ابدأ الدرس</button>`;
         }
 
         const html = `
-            <div class="test-card ${cardClass}" style="${lesson.status === 'accelerated' ? 'border: 2px solid gold; background: #fffbf0;' : ''}">
-                <div class="card-header">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span class="badge badge-light">#${index + 1}</span>
-                        ${badge}
-                    </div>
-                    <h3 style="margin-top:10px;">${lesson.title}</h3>
-                </div>
+            <div class="test-card ${cardClass}" style="${lesson.status === 'accelerated' ? 'border: 2px solid #ffc107; background: #fffbf0; transform: scale(1.02);' : ''}">
+                <div class="card-header"><div style="display:flex; justify-content:space-between; align-items:center;"><span class="badge badge-light">#${index + 1}</span>${badge}</div><h3 style="margin-top:10px;">${lesson.title}</h3></div>
                 <div style="margin-top:auto;">${btnAction}</div>
-            </div>
-        `;
+            </div>`;
         container.insertAdjacentHTML('beforeend', html);
     });
 }
 
-// دالة تسجيل الدخول (بدأ/تمديد) ثم الفتح
-function startAndOpenLesson(assignmentId, originalLessonId) {
+function startAndOpenLesson(assignmentId, originalLessonId, status) {
     let allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
     const idx = allStudentLessons.findIndex(l => l.id == assignmentId);
     
     if (idx !== -1) {
         const lesson = allStudentLessons[idx];
         if (!lesson.historyLog) lesson.historyLog = [];
-        
         const todayStr = new Date().toISOString();
         const todayDateOnly = todayStr.split('T')[0];
         const hasLogToday = lesson.historyLog.some(log => log.date.startsWith(todayDateOnly));
-        
         if (!hasLogToday) {
             const type = lesson.historyLog.length === 0 ? 'started' : 'extension';
             lesson.historyLog.push({ date: todayStr, status: type });
@@ -152,38 +130,45 @@ function startAndOpenLesson(assignmentId, originalLessonId) {
         }
     }
     
-    openLessonOverlay(assignmentId, originalLessonId);
+    openLessonOverlay(assignmentId, originalLessonId, status);
 }
 
-// ============================================
-// دوال العرض والنافذة (تمت كتابتها بالكامل)
-// ============================================
-
-function openLessonOverlay(assignmentId, originalLessonId) {
+function openLessonOverlay(assignmentId, originalLessonId, status) {
     const lessonsLib = JSON.parse(localStorage.getItem('lessons') || '[]');
     currentLessonContent = lessonsLib.find(l => l.id == originalLessonId);
     currentAssignmentId = assignmentId;
+    currentLessonStatus = status; // حفظ حالة الدرس الحالية (لإدارة الختم)
+    tempLessonAnswers = [];
 
-    if (!currentLessonContent) {
-        alert('عذراً، محتوى هذا الدرس غير متوفر.');
-        return;
-    }
+    if (!currentLessonContent) { alert('عذراً، محتوى هذا الدرس غير متوفر.'); return; }
 
     const modal = document.getElementById('lessonFocusMode');
     if(modal) {
         document.getElementById('lessonFocusTitle').textContent = currentLessonContent.title;
-        const passScore = (currentLessonContent.exercises && currentLessonContent.exercises.passScore) ? currentLessonContent.exercises.passScore : 50;
+        const passScore = (currentLessonContent.exercises && currentLessonContent.exercises.passScore) ? currentLessonContent.exercises.passScore : 80;
         const scoreSpan = document.getElementById('reqScore');
         if(scoreSpan) scoreSpan.textContent = passScore;
 
         renderIntro();
-        renderQuestions((currentLessonContent.exercises ? currentLessonContent.exercises.questions : []), 'exercisesList');
-        renderQuestions((currentLessonContent.assessment ? currentLessonContent.assessment.questions : []), 'assessmentList');
+        
+        // بناء الأسئلة مع تمرير حالة التسريع لإظهار الختم وتعطيل الحل
+        const isAccelerated = (currentLessonStatus === 'accelerated');
+        renderAdvancedQuestions((currentLessonContent.exercises ? currentLessonContent.exercises.questions : []), 'exercisesList', isAccelerated);
+        renderAdvancedQuestions((currentLessonContent.assessment ? currentLessonContent.assessment.questions : []), 'assessmentList', isAccelerated);
+
+        // تغيير نصوص الأزرار إذا كان الدرس مسرعاً
+        const btnEx = document.getElementById('btnSubmitExercises');
+        const btnAs = document.getElementById('btnSubmitAssessment');
+        if (isAccelerated) {
+            if(btnEx) { btnEx.innerHTML = 'تجاوز التمارين (مُعفى) ⬅'; btnEx.className = 'btn btn-warning btn-block mt-4 p-3'; }
+            if(btnAs) { btnAs.innerHTML = 'إغلاق الدرس (مُنجز بتفوق) ✅'; btnAs.className = 'btn btn-warning btn-block mt-4 p-3'; }
+        } else {
+            if(btnEx) { btnEx.innerHTML = 'تحقق وانتقل للتقييم النهائي ⬅'; btnEx.className = 'btn btn-success btn-block mt-4 p-3'; }
+            if(btnAs) { btnAs.innerHTML = '✅ تسليم وإنهاء الدرس'; btnAs.className = 'btn btn-primary btn-block mt-4 p-3'; }
+        }
 
         modal.style.display = 'block';
         showStage('intro');
-    } else {
-        console.error('Modal not found');
     }
 }
 
@@ -191,9 +176,7 @@ function renderIntro() {
     const container = document.getElementById('introContent');
     const intro = currentLessonContent.intro || {};
     container.innerHTML = '';
-    
-    if (intro.text) container.innerHTML += `<div class="alert alert-info" style="font-size:1.1rem; line-height:1.6;">${intro.text}</div>`;
-    
+    if (intro.text) container.innerHTML += `<div class="alert alert-info" style="font-size:1.2rem; line-height:1.8;">${intro.text}</div>`;
     if (intro.type === 'video' && intro.url) {
         let videoId = intro.url.split('v=')[1];
         if (!videoId && intro.url.includes('youtu.be')) videoId = intro.url.split('/').pop();
@@ -204,23 +187,81 @@ function renderIntro() {
     }
 }
 
-function renderQuestions(questions, containerId) {
+// 🔥 محرك عرض الأسئلة مع دعم (الختم التحفيزي) للدروس المسرعة 🔥
+function renderAdvancedQuestions(questions, containerId, isAccelerated) {
     const container = document.getElementById(containerId);
-    if (!questions || questions.length === 0) { container.innerHTML = '<p class="text-muted text-center">لا توجد أسئلة.</p>'; return; }
+    if (!questions || questions.length === 0) { container.innerHTML = '<p class="text-muted text-center p-4">لا توجد أسئلة في هذه المرحلة.</p>'; return; }
     
-    container.innerHTML = questions.map((q, i) => {
-        let inputHtml = '';
-        if (q.type === 'multiple-choice') {
-            inputHtml = (q.choices || []).map((c, idx) => `
-                <div class="form-check" style="margin-bottom:8px; background:white; padding:10px; border-radius:5px; border:1px solid #eee;">
-                    <input class="form-check-input" type="radio" name="${containerId}_q_${i}" id="${containerId}_q_${i}_${idx}" value="${c}">
-                    <label class="form-check-label" for="${containerId}_q_${i}_${idx}" style="margin-right:10px; width:100%; cursor:pointer;">${c}</label>
-                </div>`).join('');
+    let html = '';
+    
+    // إذا كان مسرعاً، نضع طبقة شفافة وختماً فخماً
+    if (isAccelerated) {
+        html += `
+        <div style="position:relative;">
+            <div style="position:absolute; top:0; left:0; right:0; bottom:0; z-index:50; background:rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center; border-radius:10px; backdrop-filter:blur(2px);">
+                <div style="transform: rotate(-10deg); border: 8px solid #28a745; color: #28a745; padding: 25px 40px; font-size: 2.5rem; font-weight: 900; border-radius: 20px; background: rgba(255,255,255,0.95); box-shadow: 0 15px 30px rgba(40,167,69,0.4); text-align:center; text-shadow: 1px 1px 0 #fff;">
+                    🌟 مُجتاز بتفوق 🌟<br>
+                    <span style="font-size:1.2rem; color:#444; font-weight:bold; display:block; margin-top:10px;">منحك المعلم الدرجة كاملة لتميزك!</span>
+                </div>
+            </div>
+            <div style="pointer-events:none; filter: grayscale(30%);">
+        `;
+    }
+
+    questions.forEach((q, index) => {
+        let qHtml = `<div class="question-card active" style="margin-bottom:20px; box-shadow:0 2px 8px rgba(0,0,0,0.05); padding:20px; border-radius:10px; background:#fff; border:1px solid #e2e8f0;">
+            <h4 style="color:#334155; margin-bottom:15px;">${q.text || 'سؤال'}</h4>`;
+
+        if (q.attachment) qHtml += `<div class="text-center mb-3"><img src="${q.attachment}" style="max-height:200px; border-radius:8px; border:1px solid #ddd;"></div>`;
+
+        if (q.type.includes('mcq')) {
+            qHtml += `<div class="options-list">`;
+            (q.choices || []).forEach((choice, i) => {
+                qHtml += `<label class="answer-option" style="padding:10px; border:1px solid #cbd5e1; border-radius:8px; display:block; margin-bottom:10px; cursor:pointer;" onclick="this.parentElement.querySelectorAll('.answer-option').forEach(e=>e.style.background='#fff'); this.style.background='#e3f2fd'; this.querySelector('input').checked=true;">
+                            <input type="radio" name="${containerId}_q_${q.id}" value="${i}" style="margin-left:10px;"> ${choice}
+                          </label>`;
+            });
+            qHtml += `</div>`;
+        } else if (q.type === 'drag-drop') {
+            let allDraggables = []; let sentencesHtml = '<div class="sentences-container" style="display:flex; flex-direction:column; gap:15px;">';
+            (q.paragraphs || []).forEach((p, pIdx) => {
+                let processedText = p.text;
+                if (p.gaps) {
+                    p.gaps.forEach((g, gIdx) => {
+                        const dropId = `drop-${containerId}-${q.id}-${pIdx}-${gIdx}`;
+                        processedText = processedText.replace(g.dragItem, `<span class="drop-zone" id="${dropId}" style="display:inline-block; min-width:100px; height:35px; border-bottom:2px solid #333; background:#f8f9fa; margin:0 5px; text-align:center;"></span>`);
+                        allDraggables.push({ word: g.dragItem });
+                    });
+                }
+                sentencesHtml += `<div style="font-size:1.3rem; line-height:2.6;">${processedText}</div>`;
+            });
+            sentencesHtml += '</div>';
+            if (allDraggables.length > 0) {
+                allDraggables.sort(() => Math.random() - 0.5);
+                qHtml += `<div class="text-center text-muted mb-2 small">💡 اسحب الكلمة للمكان المناسب.</div><div class="word-bank mb-4" style="background:#f1f8e9; padding:15px; border-radius:10px; border:2px dashed #8bc34a; display:flex; flex-wrap:wrap; gap:10px; justify-content:center;">`;
+                allDraggables.forEach(item => { qHtml += `<div style="background:#fff; border:2px solid #c5e1a5; color:#33691e; padding:5px 15px; border-radius:20px; font-weight:bold; cursor:move;" draggable="true" ondragstart="event.dataTransfer.setData('text', event.target.innerText)">${item.word}</div>`; });
+                qHtml += `</div>`;
+            }
+            qHtml += sentencesHtml;
+            // تفعيل الإفلات
+            setTimeout(() => {
+                document.querySelectorAll(`#${containerId} .drop-zone`).forEach(z => {
+                    z.ondragover = e => e.preventDefault();
+                    z.ondrop = e => { e.preventDefault(); z.innerText = e.dataTransfer.getData('text'); z.style.background = '#e3f2fd'; };
+                });
+            }, 100);
         } else {
-            inputHtml = `<input type="text" class="form-control" name="${containerId}_q_${i}" placeholder="الإجابة..." style="padding:10px;">`;
+            qHtml += `<textarea class="form-control" name="${containerId}_q_${q.id}" rows="2" placeholder="اكتب إجابتك هنا..."></textarea>`;
         }
-        return `<div class="question-box" style="background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:20px; border:1px solid #ddd;"><h5 style="margin-bottom:15px;"><strong>س${i+1}:</strong> ${q.text}</h5>${inputHtml}</div>`;
-    }).join('');
+        qHtml += `</div>`;
+        html += qHtml;
+    });
+
+    if (isAccelerated) {
+        html += `</div></div>`; // إغلاق طبقة التعطيل
+    }
+
+    container.innerHTML = html;
 }
 
 function showStage(stageName) {
@@ -237,61 +278,128 @@ function showStage(stageName) {
     });
 }
 
-function submitExercises() { showStage('assessment'); }
+// 🔥 بوابات العبور الكلية (حساب الإجمالي للمرحلة) 🔥
+function calculateStageScore(questions, containerId) {
+    let totalScore = 0; let maxTotalScore = 0; let answersToSave = [];
+    questions.forEach(q => {
+        let maxScore = parseFloat(q.maxScore || q.passingScore || q.points || q.score || 1);
+        maxTotalScore += maxScore;
+        let score = 0; let rawAnswer = null;
 
+        if (q.type.includes('mcq')) {
+            const selected = document.querySelector(`input[name="${containerId}_q_${q.id}"]:checked`);
+            rawAnswer = selected ? selected.value : null;
+            if (rawAnswer !== null && parseInt(rawAnswer) === parseInt(q.correctAnswer)) score = maxScore;
+        } else if (q.type === 'drag-drop') {
+            let totalGaps = 0; let correctGaps = 0; rawAnswer = {};
+            (q.paragraphs || []).forEach((p, pIdx) => {
+                (p.gaps || []).forEach((g, gIdx) => {
+                    totalGaps++;
+                    const dropZone = document.getElementById(`drop-${containerId}-${q.id}-${pIdx}-${gIdx}`);
+                    if (dropZone) {
+                        const w = dropZone.innerText.trim();
+                        rawAnswer[`p_${pIdx}_g_${gIdx}`] = w;
+                        if (w === String(g.dragItem).trim() && w !== '') correctGaps++;
+                    }
+                });
+            });
+            if (totalGaps > 0) score = ((correctGaps / totalGaps) * maxScore);
+        } else {
+            const txt = document.querySelector(`textarea[name="${containerId}_q_${q.id}"]`);
+            if (txt) rawAnswer = txt.value;
+            if (q.correctAnswer && String(rawAnswer).trim().toLowerCase() === String(q.correctAnswer).trim().toLowerCase()) score = maxScore;
+        }
+        totalScore += score;
+        answersToSave.push({ questionId: q.id, answer: rawAnswer, score: score });
+    });
+    
+    // حساب النسبة المئوية لكامل التمارين أو التقييم
+    const percentage = maxTotalScore > 0 ? (totalScore / maxTotalScore) * 100 : 0;
+    return { percentage, answers: answersToSave };
+}
+
+// البوابة الأولى: من التمارين للتقييم (مع تطبيق المحك الكلي)
+function submitExercises() { 
+    // تجاوز الفحص إذا كان الدرس مسرعاً (مكافأة)
+    if (currentLessonStatus === 'accelerated') {
+        return showStage('assessment');
+    }
+
+    const questions = currentLessonContent.exercises?.questions || [];
+    if (questions.length === 0) return showStage('assessment'); 
+
+    const result = calculateStageScore(questions, 'exercisesList');
+    const passScore = currentLessonContent.exercises?.passScore || 80;
+
+    if (result.percentage >= passScore) {
+        alert(`أحسنت! اجتزت التمارين بنجاح (مجموعك: ${Math.round(result.percentage)}%). ننتقل للتقييم النهائي.`);
+        tempLessonAnswers = [...tempLessonAnswers, ...result.answers];
+        showStage('assessment');
+    } else {
+        alert(`لم تصل للمحك المطلوب للتمارين. \nالنسبة الحالية: ${Math.round(result.percentage)}% \nالمطلوب للعبور: ${passScore}% \n\nحاول مراجعة إجاباتك وتصحيحها يا بطل!`);
+    }
+}
+
+// البوابة الثانية: من التقييم لإكمال الدرس (شرط النجاح الكلي)
 function submitAssessment() {
-    const allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    const idx = allStudentLessons.findIndex(l => l.id == currentAssignmentId);
-    if (idx !== -1) {
-        const answers = [];
-        const questions = (currentLessonContent.assessment && currentLessonContent.assessment.questions) ? currentLessonContent.assessment.questions : [];
-        
-        questions.forEach((q, i) => {
-            const txt = document.querySelector(`input[name="assessmentList_q_${i}"][type="text"]`);
-            const rad = document.querySelector(`input[name="assessmentList_q_${i}"]:checked`);
-            let val = '';
-            if (txt) val = txt.value;
-            if (rad) val = rad.value;
-            answers.push({ questionText: q.text, value: val });
-        });
+    // تجاوز الفحص إذا كان الدرس مسرعاً والإغلاق فوراً
+    if (currentLessonStatus === 'accelerated') {
+        return closeLessonMode();
+    }
 
-        allStudentLessons[idx].status = 'completed';
-        allStudentLessons[idx].completedDate = new Date().toISOString();
+    const questions = currentLessonContent.assessment?.questions || [];
+    const result = calculateStageScore(questions, 'assessmentList');
+    const passScore = 80; // محك التقييم النهائي الافتراضي
+
+    if (questions.length === 0 || result.percentage >= passScore) {
+        tempLessonAnswers = [...tempLessonAnswers, ...result.answers];
         
-        if (!allStudentLessons[idx].historyLog) allStudentLessons[idx].historyLog = [];
-        allStudentLessons[idx].historyLog.push({ date: new Date().toISOString(), status: 'completed' });
+        let allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+        const idx = allStudentLessons.findIndex(l => l.id == currentAssignmentId);
         
-        allStudentLessons[idx].answers = answers;
-        localStorage.setItem('studentLessons', JSON.stringify(allStudentLessons));
-        
-        alert('أحسنت! تم إكمال الدرس.');
+        if (idx !== -1) {
+            allStudentLessons[idx].status = 'completed';
+            allStudentLessons[idx].completedDate = new Date().toISOString();
+            allStudentLessons[idx].answers = tempLessonAnswers;
+            allStudentLessons[idx].historyLog.push({ date: new Date().toISOString(), status: 'completed' });
+            localStorage.setItem('studentLessons', JSON.stringify(allStudentLessons));
+        }
+
+        alert(`عمل رائع! لقد أتممت الدرس بنجاح واجتزت التقييم بنسبة ${Math.round(result.percentage)}%. استمر في التفوق!`);
         closeLessonMode();
+    } else {
+        alert(`لم تجتز التقييم النهائي. \nالنسبة الحالية: ${Math.round(result.percentage)}% \nالمطلوب لإنهاء الدرس: ${passScore}% \n\nحاول مجدداً لتثبت مهارتك!`);
     }
 }
 
 function closeLessonMode() {
     document.getElementById('lessonFocusMode').style.display = 'none';
-    loadStudentLessons(); // تحديث القائمة لفتح الدرس التالي
+    loadStudentLessons(); // تحديث القائمة لفتح الدرس التالي إن وجد
 }
 
 function injectLessonModalHTML() {
     if (document.getElementById('lessonFocusMode')) return;
     document.body.insertAdjacentHTML('beforeend', `
-    <div id="lessonFocusMode" class="lesson-focus-mode">
-        <div class="focus-header">
-            <h3 style="margin:0;"><span id="lessonFocusTitle">عنوان الدرس</span></h3>
-            <div class="lesson-progress-bar"><span class="progress-step">1. الشرح</span><span class="progress-step">2. التمارين</span><span class="progress-step">3. التقييم</span></div>
-            <button onclick="closeLessonMode()" class="btn btn-sm btn-danger">خروج ✕</button>
+    <div id="lessonFocusMode" class="lesson-focus-mode" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#f1f5f9; z-index:99999; overflow-y:auto;">
+        <div class="focus-header" style="background:white; padding:15px 30px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:100;">
+            <h3 style="margin:0; color:#1e293b;"><span id="lessonFocusTitle">عنوان الدرس</span></h3>
+            <div class="lesson-progress-bar" style="display:flex; gap:10px;">
+                <span class="progress-step" style="padding:5px 15px; border-radius:20px; font-weight:bold; background:#e2e8f0; color:#64748b;">1. الشرح</span>
+                <span class="progress-step" style="padding:5px 15px; border-radius:20px; font-weight:bold; background:#e2e8f0; color:#64748b;">2. التمارين</span>
+                <span class="progress-step" style="padding:5px 15px; border-radius:20px; font-weight:bold; background:#e2e8f0; color:#64748b;">3. التقييم</span>
+            </div>
+            <button onclick="closeLessonMode()" class="btn btn-sm btn-danger" style="border-radius:20px; padding:5px 20px;">خروج ✕</button>
         </div>
-        <div class="lesson-container">
-            <div id="stage-intro" class="lesson-stage"><div id="introContent"></div><hr style="margin:20px 0;"><button class="btn btn-primary btn-block mt-3" onclick="showStage('exercises')">التالي: التمارين ⬅</button></div>
-            <div id="stage-exercises" class="lesson-stage"><div class="alert alert-warning">المحك: <span id="reqScore"></span>%</div><div id="exercisesList"></div><button class="btn btn-success btn-block mt-3" onclick="submitExercises()">التالي: التقييم النهائي ⬅</button></div>
-            <div id="stage-assessment" class="lesson-stage"><div class="alert alert-info">التقييم النهائي:</div><div id="assessmentList"></div><button class="btn btn-primary btn-block mt-3" onclick="submitAssessment()">✅ تسليم وإنهاء</button></div>
+        <div class="lesson-container" style="max-width:800px; margin:40px auto; padding:20px;">
+            <div id="stage-intro" class="lesson-stage" style="display:none;"><div id="introContent" style="background:white; padding:30px; border-radius:15px; box-shadow:0 5px 20px rgba(0,0,0,0.05);"></div><button class="btn btn-primary btn-block mt-4 p-3" style="font-size:1.2rem; border-radius:10px;" onclick="showStage('exercises')">التالي: التمارين ⬅</button></div>
+            <div id="stage-exercises" class="lesson-stage" style="display:none;"><div class="alert alert-warning mb-4" style="border-right:5px solid #ffc107;"><strong>ملاحظة:</strong> لن تتمكن من الانتقال للتقييم النهائي إلا باجتياز جميع التمارين بنسبة ( <span id="reqScore"></span>% ) على الأقل.</div><div id="exercisesList"></div><button id="btnSubmitExercises" class="btn btn-success btn-block mt-4 p-3" style="font-size:1.2rem; border-radius:10px;" onclick="submitExercises()">تحقق وانتقل للتقييم النهائي ⬅</button></div>
+            <div id="stage-assessment" class="lesson-stage" style="display:none;"><div class="alert alert-info mb-4" style="border-right:5px solid #007bff;"><strong>التقييم النهائي:</strong> أثبت مهارتك واجتز هذا التقييم لإنهاء الدرس بالكامل!</div><div id="assessmentList"></div><button id="btnSubmitAssessment" class="btn btn-primary btn-block mt-4 p-3" style="font-size:1.2rem; border-radius:10px;" onclick="submitAssessment()">✅ تسليم وإنهاء الدرس</button></div>
         </div>
-    </div>`);
+    </div>
+    <style> .progress-step.active { background:#007bff !important; color:white !important; } .progress-step.completed { background:#28a745 !important; color:white !important; } .lesson-stage.active { display:block !important; animation: fadeIn 0.4s ease; } </style>
+    `);
 }
 
-// تصدير الدوال
 window.openLessonOverlay = openLessonOverlay;
 window.startAndOpenLesson = startAndOpenLesson;
 window.submitAssessment = submitAssessment;

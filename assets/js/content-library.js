@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/content-library.js
-// الوصف: مكتبة المحتوى + الشرط التربوي لأسئلة السحب والإفلات
+// الوصف: مكتبة المحتوى + إصلاح واجهة السحب والإفلات (إضافة فقرات متعددة) + الشرط التربوي
 // ============================================
 
 // 🔥 إضافة دالة الخطأ الاحترافية (إذا لم تكن موجودة) 🔥
@@ -127,7 +127,7 @@ function addQuestionToContainer(container, lbl, data = null) {
                     <label style="font-size:0.8rem;">الدرجة:</label>
                     <input type="number" class="passing-score" value="${score}" style="width:50px; border:1px solid #ccc; border-radius:4px; text-align:center;">
                 </div>
-                <button onclick="this.closest('.question-card').remove()" title="حذف السؤال"><i class="fas fa-trash"></i></button>
+                <button type="button" onclick="this.closest('.question-card').remove()" title="حذف السؤال"><i class="fas fa-trash"></i></button>
             </div>
         </div>
         <div class="q-body question-inputs-area"></div>
@@ -138,6 +138,7 @@ function addQuestionToContainer(container, lbl, data = null) {
     renderQuestionInputs(selectElem, idx, data);
 }
 
+// 🔥 تم إعادة بناء هذه الدالة لضمان ظهور زر الإضافة بشكل صحيح وتوليد فقرتين تلقائياً 🔥
 function renderQuestionInputs(selectElem, idx, data = null) {
     const type = selectElem.value;
     const card = selectElem.closest('.question-card');
@@ -150,20 +151,38 @@ function renderQuestionInputs(selectElem, idx, data = null) {
     else if(type.includes('manual')) stripe.classList.add('manual');
     else stripe.classList.add('mcq');
 
-    area.innerHTML = '';
-
     const multiTypes = ['drag-drop', 'ai-reading', 'ai-spelling', 'manual-reading', 'manual-spelling', 'missing-char'];
     
     if (multiTypes.includes(type)) {
-        area.innerHTML += `<div class="form-group mb-3"><label class="q-label">عنوان السؤال الرئيسي</label><input type="text" class="form-control q-text" value="${data?.text || ''}" placeholder="مثال: أكمل الفراغات التالية..."></div>`;
-        area.innerHTML += `<div id="paragraphs-container-${idx}" class="paragraphs-list"></div>`;
-        area.innerHTML += `<button class="btn btn-sm btn-outline-primary mt-2" onclick="addParagraphInput(${idx}, '${type}')"><i class="fas fa-plus"></i> إضافة فقرة</button>`;
+        // بناء الـ HTML كنص كامل أولاً لضمان عدم ضياع العناصر
+        let html = '';
+        let placeholder = type === 'drag-drop' ? 'مثال: رتب الكلمات وضعها في الفراغات...' : 'مثال: أكمل الفراغات التالية...';
         
+        html += `<div class="form-group mb-3">
+                    <label class="q-label">عنوان السؤال الرئيسي</label>
+                    <input type="text" class="form-control q-text" value="${data?.text || ''}" placeholder="${placeholder}">
+                 </div>`;
+        
+        // حاوية الجمل بخلفية مميزة
+        html += `<div id="paragraphs-container-${idx}" class="paragraphs-list" style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:15px;"></div>`;
+        
+        // زر الإضافة العريض والواضح
+        let btnText = type === 'drag-drop' ? '<i class="fas fa-plus"></i> إضافة جملة أخرى' : '<i class="fas fa-plus"></i> إضافة فقرة';
+        html += `<button type="button" class="btn btn-sm btn-primary mt-2 mb-3" onclick="addParagraphInput(${idx}, '${type}')" style="width: 100%; border: 2px dashed #007bff; background: transparent; color: #007bff; font-weight: bold; padding: 10px;">${btnText}</button>`;
+        
+        area.innerHTML = html;
+
         const items = data?.paragraphs || [];
         if (items.length > 0) {
             items.forEach(item => addParagraphInput(idx, type, item));
         } else {
-            addParagraphInput(idx, type);
+            // 🔥 إضافة فقرتين تلقائياً إذا كان سحب وإفلات لضمان الجودة التربوية 🔥
+            if (type === 'drag-drop') {
+                addParagraphInput(idx, type);
+                setTimeout(() => { addParagraphInput(idx, type); }, 50); 
+            } else {
+                addParagraphInput(idx, type);
+            }
         }
 
     } else {
@@ -183,9 +202,9 @@ function renderQuestionInputs(selectElem, idx, data = null) {
             const choices = data?.choices || ['خيار 1', 'خيار 2'];
             const correct = data?.correctAnswer || 0;
             choices.forEach((c, i) => {
-                html += `<div class="choice-row"><input type="radio" name="correct-${idx}" value="${i}" ${i == correct ? 'checked' : ''}><input type="text" class="form-control q-choice" value="${c}" placeholder="الخيار ${i+1}"><button class="btn-remove-choice" onclick="this.parentElement.remove()">×</button></div>`;
+                html += `<div class="choice-row"><input type="radio" name="correct-${idx}" value="${i}" ${i == correct ? 'checked' : ''}><input type="text" class="form-control q-choice" value="${c}" placeholder="الخيار ${i+1}"><button type="button" class="btn-remove-choice" onclick="this.parentElement.remove()">×</button></div>`;
             });
-            html += `</div><button class="btn btn-sm btn-outline-primary mt-2" onclick="addChoiceInput(${idx})">+ إضافة خيار</button>`;
+            html += `</div><button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addChoiceInput(${idx})">+ إضافة خيار</button>`;
         } else if (type === 'open-ended') {
             html += `<div class="form-group"><label class="q-label">السؤال</label><textarea class="form-control q-text" rows="2">${data?.text || ''}</textarea></div><div class="form-group mt-2"><label class="q-label">الإجابة النموذجية (اختياري)</label><textarea class="form-control q-model-answer" rows="2">${data?.modelAnswer || ''}</textarea></div>`;
         }
@@ -195,6 +214,8 @@ function renderQuestionInputs(selectElem, idx, data = null) {
 
 function addParagraphInput(qIdx, type, itemData = null) {
     const container = document.getElementById(`paragraphs-container-${qIdx}`);
+    if(!container) return;
+
     const pIdx = Date.now() + Math.floor(Math.random() * 1000); 
     
     let innerHtml = '';
@@ -202,12 +223,12 @@ function addParagraphInput(qIdx, type, itemData = null) {
     if (type === 'drag-drop') {
         const text = itemData?.text || '';
         innerHtml = `
-            <label class="q-label">الجملة (سحب وإفلات)</label>
+            <label class="q-label" style="color:#007bff;">الجملة أو الفقرة:</label>
             <div class="input-group mb-2">
                 <input type="text" class="form-control p-text" id="drag-source-${qIdx}-${pIdx}" value="${text}" placeholder="مثال: ذهب محمد إلى المدرسة">
                 <div class="input-group-append"><button class="btn btn-warning" type="button" onclick="initDragHighlighter(${qIdx}, ${pIdx})">تجهيز الفراغات</button></div>
             </div>
-            <div id="highlighter-area-${qIdx}-${pIdx}" class="highlight-area" style="display:none;"></div>
+            <div id="highlighter-area-${qIdx}-${pIdx}" class="highlight-area" style="display:none; background:#fff; padding:10px; border-radius:5px; border:1px solid #ddd; margin-bottom:10px;"></div>
             <input type="hidden" class="p-gaps-data" id="gaps-data-${qIdx}-${pIdx}" value='${itemData?.gaps ? JSON.stringify(itemData.gaps) : ''}'>
         `;
         if (text && itemData?.gaps) { setTimeout(() => initDragHighlighter(qIdx, pIdx, itemData.gaps), 100); }
@@ -229,7 +250,8 @@ function addParagraphInput(qIdx, type, itemData = null) {
     const div = document.createElement('div');
     div.className = 'paragraph-item';
     div.id = `p-item-${qIdx}-${pIdx}`;
-    div.innerHTML = innerHtml + `<button class="btn-remove-paragraph" onclick="this.parentElement.remove()">×</button>`;
+    div.style.cssText = "position:relative; background:#fff; border:1px solid #eee; padding:15px; border-radius:8px; margin-bottom:15px; box-shadow:0 2px 5px rgba(0,0,0,0.02);";
+    div.innerHTML = innerHtml + `<button type="button" class="btn-remove-paragraph" onclick="this.parentElement.remove()" style="position:absolute; top:5px; left:5px; background:#ffebee; border:none; color:#dc3545; border-radius:50%; width:25px; height:25px; display:flex; align-items:center; justify-content:center; cursor:pointer;">×</button>`;
     container.appendChild(div);
 }
 
@@ -241,15 +263,15 @@ function initDragHighlighter(qIdx, pIdx, savedGaps = null) {
 
     area.style.display = 'block';
     area.innerHTML = `
-        <div style="margin-bottom:10px;"><p id="sel-text-${qIdx}-${pIdx}" style="font-size:1.3rem; letter-spacing:1px;">${text}</p></div>
-        <button class="btn btn-warning btn-sm" onclick="markGap(${qIdx}, ${pIdx})"><i class="fas fa-highlighter"></i> تحويل المحدد لفراغ</button>
-        <button class="btn btn-secondary btn-sm" onclick="resetGap(${qIdx}, ${pIdx})">إعادة تعيين</button>
-        <div id="gap-prev-${qIdx}-${pIdx}" class="gap-preview"></div>
+        <div style="margin-bottom:10px;"><p id="sel-text-${qIdx}-${pIdx}" style="font-size:1.3rem; letter-spacing:1px; line-height:1.8;">${text}</p></div>
+        <button type="button" class="btn btn-warning btn-sm" onclick="markGap(${qIdx}, ${pIdx})"><i class="fas fa-highlighter"></i> تحويل المحدد لفراغ</button>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="resetGap(${qIdx}, ${pIdx})">إعادة تعيين</button>
+        <div id="gap-prev-${qIdx}-${pIdx}" class="gap-preview mt-2"></div>
     `;
 
     if(savedGaps) {
         const preview = document.getElementById(`gap-prev-${qIdx}-${pIdx}`);
-        preview.innerHTML = '<strong>الفراغات:</strong> ' + savedGaps.map(g => `<span class="badge badge-warning m-1">${g.dragItem}</span>`).join(' ');
+        preview.innerHTML = '<strong>الفراغات:</strong> ' + savedGaps.map(g => `<span class="badge badge-warning m-1" style="font-size:1rem;">${g.dragItem}</span>`).join(' ');
     }
 }
 
@@ -262,7 +284,9 @@ function markGap(qIdx, pIdx) {
     if (selectedText.length === 1 && /[جحخعغفقثصضشسيبلتنمكطظ]/.test(selectedText)) { processed = 'ـ' + selectedText + 'ـ'; }
 
     const preview = document.getElementById(`gap-prev-${qIdx}-${pIdx}`);
-    const span = document.createElement('span'); span.className = 'badge badge-warning m-1'; span.innerText = processed;
+    const span = document.createElement('span'); span.className = 'badge badge-warning m-1'; 
+    span.style.fontSize = '1rem';
+    span.innerText = processed;
     preview.appendChild(span);
 
     const hiddenInput = document.getElementById(`gaps-data-${qIdx}-${pIdx}`);
@@ -281,7 +305,7 @@ function addChoiceInput(idx) {
     const container = document.getElementById(`choices-${idx}`);
     const count = container.children.length;
     const div = document.createElement('div'); div.className = 'choice-row';
-    div.innerHTML = `<input type="radio" name="correct-${idx}" value="${count}"><input type="text" class="form-control q-choice" placeholder="الخيار ${count+1}"><button class="btn-remove-choice" onclick="this.parentElement.remove()">×</button>`;
+    div.innerHTML = `<input type="radio" name="correct-${idx}" value="${count}"><input type="text" class="form-control q-choice" placeholder="الخيار ${count+1}"><button type="button" class="btn-remove-choice" onclick="this.parentElement.remove()">×</button>`;
     container.appendChild(div);
 }
 
@@ -561,7 +585,7 @@ function deleteLesson(id) { showConfirmModal('هل أنت متأكد من حذف
 function toggleIntroInputs() { const t=document.getElementById('introType').value; const u=document.getElementById('introUrl'); u.placeholder=t==='video'?'رابط يوتيوب':(t==='image'?'رابط الصورة':'رابط'); }
 function showCreateObjectiveModal() { document.getElementById('editObjectiveId').value=''; document.getElementById('shortTermGoal').value=''; document.getElementById('instructionalGoalsContainer').innerHTML=''; addInstructionalGoalInput(); document.getElementById('createObjectiveModal').classList.add('show'); }
 function editObjective(id) { const o=JSON.parse(localStorage.getItem('objectives')).find(x=>x.id===id); if(!o)return; document.getElementById('editObjectiveId').value=o.id; document.getElementById('objSubject').value=o.subject; document.getElementById('shortTermGoal').value=o.shortTermGoal; const c=document.getElementById('instructionalGoalsContainer'); c.innerHTML=''; if(o.instructionalGoals?.length>0)o.instructionalGoals.forEach(g=>addInstructionalGoalInput(g)); else addInstructionalGoalInput(); document.getElementById('createObjectiveModal').classList.add('show'); }
-function addInstructionalGoalInput(v='') { const c=document.getElementById('instructionalGoalsContainer'); const d=document.createElement('div'); d.className='d-flex mb-2'; d.innerHTML=`<input type="text" class="form-control instructional-goal-input" value="${v}" placeholder="هدف تدريسي فرعي"><button class="btn btn-outline-danger btn-sm ml-2" onclick="this.parentElement.remove()">×</button>`; c.appendChild(d); }
+function addInstructionalGoalInput(v='') { const c=document.getElementById('instructionalGoalsContainer'); const d=document.createElement('div'); d.className='d-flex mb-2'; d.innerHTML=`<input type="text" class="form-control instructional-goal-input" value="${v}" placeholder="هدف تدريسي فرعي"><button type="button" class="btn btn-outline-danger btn-sm ml-2" onclick="this.parentElement.remove()">×</button>`; c.appendChild(d); }
 function saveObjective() { const id=document.getElementById('editObjectiveId').value; const s=document.getElementById('objSubject').value; const g=document.getElementById('shortTermGoal').value; if(!g)return; const ig=[]; document.querySelectorAll('.instructional-goal-input').forEach(i=>{if(i.value.trim())ig.push(i.value.trim())}); const objs=JSON.parse(localStorage.getItem('objectives')||'[]'); const d={id:id?parseInt(id):Date.now(), teacherId:getCurrentUser().id, subject:s, shortTermGoal:g, instructionalGoals:ig}; if(id){const i=objs.findIndex(x=>x.id==id); if(i!==-1)objs[i]=d;}else objs.push(d); localStorage.setItem('objectives',JSON.stringify(objs)); document.getElementById('createObjectiveModal').classList.remove('show'); loadObjectives(); }
 
 function deleteObjective(id) { showConfirmModal('هل أنت متأكد من حذف هذا الهدف؟', function() { const o = JSON.parse(localStorage.getItem('objectives')).filter(x => x.id !== id); localStorage.setItem('objectives', JSON.stringify(o)); loadObjectives(); showSuccess('تم الحذف'); }); }

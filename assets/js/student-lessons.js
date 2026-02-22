@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-lessons.js
-// الوصف: نظام التعلم للإتقان + الاكتشاف الذكي للتقييم اليدوي وتأجيل النتيجة
+// الوصف: نظام التعلم للإتقان، توثيق الإخفاق في السجل، الشفاء التلقائي
 // ============================================
 
 let currentAssignmentId = null;
@@ -17,6 +17,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function loadStudentLessons() {
     const container = document.getElementById('lessonsContainer');
+    
     let currentStudent = null;
     try {
         if (typeof getCurrentUser === 'function') currentStudent = getCurrentUser();
@@ -72,7 +73,7 @@ function loadStudentLessons() {
             cardClass = 'accelerated';
             badge = '<span class="badge badge-warning" style="background:#ffc107; color:#000; box-shadow:0 0 10px rgba(255,193,7,0.5);">🌟 تم التسريع للتفوق</span>';
             btnAction = `<button class="btn btn-warning w-100" style="font-weight:bold; color:#000;" onclick="openLessonOverlay(${lesson.id}, ${lesson.originalLessonId}, 'accelerated')">استعراض إنجازك 🏆</button>`;
-        } else if (lesson.status === 'pending_review') { // 🔥 الحالة الجديدة 🔥
+        } else if (lesson.status === 'pending_review') { 
             cardClass = 'pending';
             badge = '<span class="badge badge-warning" style="background:#fd7e14; color:#fff;">⏳ بانتظار تصحيح المعلم</span>';
             btnAction = `<button class="btn btn-secondary w-100" disabled>النتيجة معلقة للتقييم اليدوي...</button>`;
@@ -144,6 +145,7 @@ function openLessonOverlay(assignmentId, originalLessonId, status) {
         if(scoreSpan) scoreSpan.textContent = passScore;
 
         renderIntro();
+        
         renderAdvancedQuestions((currentLessonContent.exercises ? currentLessonContent.exercises.questions : []), 'exercisesList', currentLessonStatus);
         renderAdvancedQuestions((currentLessonContent.assessment ? currentLessonContent.assessment.questions : []), 'assessmentList', currentLessonStatus);
 
@@ -181,6 +183,7 @@ function renderIntro() {
 function renderAdvancedQuestions(questions, containerId, status) {
     const container = document.getElementById(containerId);
     if (!questions || questions.length === 0) { container.innerHTML = '<p class="text-muted text-center p-4">لا توجد أسئلة في هذه المرحلة.</p>'; return; }
+    
     let html = '';
     if (status === 'accelerated') {
         html += `<div style="position:relative;"><div style="position:absolute; top:0; left:0; right:0; bottom:0; z-index:50; background:rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center; border-radius:10px; backdrop-filter:blur(2px);"><div style="transform: rotate(-10deg); border: 8px solid #28a745; color: #28a745; padding: 25px 40px; font-size: 2.5rem; font-weight: 900; border-radius: 20px; background: rgba(255,255,255,0.95); box-shadow: 0 15px 30px rgba(40,167,69,0.4); text-align:center; text-shadow: 1px 1px 0 #fff;">🌟 مُجتاز بتفوق 🌟<br><span style="font-size:1.2rem; color:#444; font-weight:bold; display:block; margin-top:10px;">منحك المعلم الدرجة كاملة لتميزك!</span></div></div><div style="pointer-events:none; filter: grayscale(30%); opacity:0.7;">`;
@@ -272,7 +275,6 @@ function calculateStageScore(questions, containerId) {
     return { percentage, answers: answersToSave };
 }
 
-// 🔥 دالة فحص وجود أسئلة تحتاج لتقييم يدوي 🔥
 function hasManualQuestions(questions) {
     return questions.some(q => ['open-ended', 'manual-reading', 'manual-spelling', 'missing-char'].includes(q.type));
 }
@@ -305,9 +307,18 @@ window.handleFailAction = function(action) {
     if (action === 'help') {
         let allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
         const idx = allStudentLessons.findIndex(l => l.id == currentAssignmentId);
-        if (idx !== -1) { allStudentLessons[idx].status = 'struggling'; localStorage.setItem('studentLessons', JSON.stringify(allStudentLessons)); }
-        closeLessonMode(); alert('تم إشعار المعلم بصعوبتك، وسيتم توفير استراتيجية علاجية بديلة لك قريباً.');
-    } else { showStage('intro'); }
+        if (idx !== -1) {
+            allStudentLessons[idx].status = 'struggling';
+            // 🔥 إضافة حالة الإخفاق للسجل التاريخي ليظهر في سجل المتابعة اليومي 🔥
+            if (!allStudentLessons[idx].historyLog) allStudentLessons[idx].historyLog = [];
+            allStudentLessons[idx].historyLog.push({ date: new Date().toISOString(), status: 'struggling' });
+            localStorage.setItem('studentLessons', JSON.stringify(allStudentLessons));
+        }
+        closeLessonMode();
+        alert('تم إشعار المعلم بصعوبتك، وسيتم توفير استراتيجية علاجية بديلة لك قريباً.');
+    } else {
+        showStage('intro');
+    }
 }
 
 window.closePendingAndLesson = function() {
@@ -325,7 +336,6 @@ function submitExercises() {
     const passScore = currentLessonContent.exercises?.passScore || 80;
     const hasManual = hasManualQuestions(questions);
 
-    // إذا كان هناك سؤال يحتاج لتصحيح يدوي، نعبره للتقييم مؤقتاً لتجنب الرسوب الفوري
     if (result.percentage >= passScore || hasManual) {
         tempLessonAnswers = [...tempLessonAnswers, ...result.answers];
         if (hasManual) alert('توجد أسئلة في التمارين تحتاج لتصحيح المعلم. سننتقل الآن للتقييم النهائي، وسيتم الاعتماد لاحقاً.');

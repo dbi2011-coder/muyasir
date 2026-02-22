@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-lessons.js
-// الوصف: نظام التعلم للإتقان، طلب المساعدة، الشفاء التلقائي للدروس، والختم التحفيزي
+// الوصف: نظام التعلم للإتقان + الاكتشاف الذكي للتقييم اليدوي وتأجيل النتيجة
 // ============================================
 
 let currentAssignmentId = null;
@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function loadStudentLessons() {
     const container = document.getElementById('lessonsContainer');
-    
     let currentStudent = null;
     try {
         if (typeof getCurrentUser === 'function') currentStudent = getCurrentUser();
@@ -31,7 +30,6 @@ function loadStudentLessons() {
     }
 
     let allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    const lessonsLib = JSON.parse(localStorage.getItem('lessons') || '[]');
     let myLessons = allStudentLessons.filter(l => String(l.studentId) === String(currentStudent.id));
     
     if (myLessons.length === 0) {
@@ -46,12 +44,11 @@ function loadStudentLessons() {
         let isLocked = false;
         let lockMessage = '';
 
-        // 🔥 نظام القفل الذكي: يسمح بفتح الدرس الإضافي العلاجي حتى لو كان الأساسي متعثراً 🔥
         if (index > 0) {
             const prevLesson = myLessons[index - 1];
             if (prevLesson.status !== 'completed' && prevLesson.status !== 'accelerated') {
                 if (prevLesson.status === 'struggling' && lesson.rescueLessonId === prevLesson.id) {
-                    isLocked = false; // فك القفل عن الدرس العلاجي لإنقاذ الطالب
+                    isLocked = false; 
                 } else {
                     isLocked = true;
                     lockMessage = `أكمل السابق أولاً`;
@@ -75,6 +72,10 @@ function loadStudentLessons() {
             cardClass = 'accelerated';
             badge = '<span class="badge badge-warning" style="background:#ffc107; color:#000; box-shadow:0 0 10px rgba(255,193,7,0.5);">🌟 تم التسريع للتفوق</span>';
             btnAction = `<button class="btn btn-warning w-100" style="font-weight:bold; color:#000;" onclick="openLessonOverlay(${lesson.id}, ${lesson.originalLessonId}, 'accelerated')">استعراض إنجازك 🏆</button>`;
+        } else if (lesson.status === 'pending_review') { // 🔥 الحالة الجديدة 🔥
+            cardClass = 'pending';
+            badge = '<span class="badge badge-warning" style="background:#fd7e14; color:#fff;">⏳ بانتظار تصحيح المعلم</span>';
+            btnAction = `<button class="btn btn-secondary w-100" disabled>النتيجة معلقة للتقييم اليدوي...</button>`;
         } else if (lesson.status === 'struggling') {
             cardClass = 'returned';
             badge = '<span class="badge badge-danger">🙋‍♂️ يطلب مساعدة المعلم</span>';
@@ -96,6 +97,7 @@ function loadStudentLessons() {
         let extraStyle = '';
         if (lesson.status === 'accelerated') extraStyle = 'border: 2px solid #ffc107; background: #fffbf0; transform: scale(1.02);';
         if (lesson.status === 'struggling') extraStyle = 'border: 2px solid #dc3545; background: #fff5f5;';
+        if (lesson.status === 'pending_review') extraStyle = 'border: 2px solid #fd7e14; background: #fffaf6;';
         if (lesson.passedByAlternative) extraStyle = 'border: 2px solid #17a2b8; background: #f0f9fa;';
 
         const html = `
@@ -142,7 +144,6 @@ function openLessonOverlay(assignmentId, originalLessonId, status) {
         if(scoreSpan) scoreSpan.textContent = passScore;
 
         renderIntro();
-        
         renderAdvancedQuestions((currentLessonContent.exercises ? currentLessonContent.exercises.questions : []), 'exercisesList', currentLessonStatus);
         renderAdvancedQuestions((currentLessonContent.assessment ? currentLessonContent.assessment.questions : []), 'assessmentList', currentLessonStatus);
 
@@ -177,13 +178,10 @@ function renderIntro() {
     }
 }
 
-// 🔥 محرك عرض الأسئلة مع دعم أختام التسريع والاستراتيجية البديلة 🔥
 function renderAdvancedQuestions(questions, containerId, status) {
     const container = document.getElementById(containerId);
     if (!questions || questions.length === 0) { container.innerHTML = '<p class="text-muted text-center p-4">لا توجد أسئلة في هذه المرحلة.</p>'; return; }
-    
     let html = '';
-    
     if (status === 'accelerated') {
         html += `<div style="position:relative;"><div style="position:absolute; top:0; left:0; right:0; bottom:0; z-index:50; background:rgba(255,255,255,0.7); display:flex; align-items:center; justify-content:center; border-radius:10px; backdrop-filter:blur(2px);"><div style="transform: rotate(-10deg); border: 8px solid #28a745; color: #28a745; padding: 25px 40px; font-size: 2.5rem; font-weight: 900; border-radius: 20px; background: rgba(255,255,255,0.95); box-shadow: 0 15px 30px rgba(40,167,69,0.4); text-align:center; text-shadow: 1px 1px 0 #fff;">🌟 مُجتاز بتفوق 🌟<br><span style="font-size:1.2rem; color:#444; font-weight:bold; display:block; margin-top:10px;">منحك المعلم الدرجة كاملة لتميزك!</span></div></div><div style="pointer-events:none; filter: grayscale(30%); opacity:0.7;">`;
     } else if (status === 'passedByAlternative') {
@@ -274,24 +272,16 @@ function calculateStageScore(questions, containerId) {
     return { percentage, answers: answersToSave };
 }
 
-// ---------------- نافذة الإخفاق التفاعلية (لطلب المساعدة) ----------------
+// 🔥 دالة فحص وجود أسئلة تحتاج لتقييم يدوي 🔥
+function hasManualQuestions(questions) {
+    return questions.some(q => ['open-ended', 'manual-reading', 'manual-spelling', 'missing-char'].includes(q.type));
+}
+
+// ---------------- نوافذ الإخفاق والتعليق ----------------
 function showLessonFailModal(currentPct, reqPct) {
     let modal = document.getElementById('lessonFailModal');
     if (!modal) {
-        const html = `
-            <div id="lessonFailModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:999999; justify-content:center; align-items:center; backdrop-filter:blur(5px);">
-                <div style="background:white; padding:30px; border-radius:15px; width:90%; max-width:400px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.2); animation:popIn 0.3s ease;">
-                    <div style="font-size:4rem; margin-bottom:10px;">📉</div>
-                    <h3 style="color:#dc3545;">لم تجتز المحك المطلوب</h3>
-                    <p style="font-size:1.1rem; color:#555; line-height:1.6;">لقد حصلت على <strong id="failCurrentPct"></strong> بينما المحك هو <strong id="failReqPct"></strong>.</p>
-                    <p style="margin-bottom:25px;">لا تقلق! التعلم يحتاج إلى تكرار. ماذا تريد أن تفعل الآن؟</p>
-                    <div style="display:flex; flex-direction:column; gap:10px;">
-                        <button class="btn btn-warning p-2" style="font-weight:bold; font-size:1.1rem; border:2px solid #d39e00;" onclick="handleFailAction('help')">🙋‍♂️ أواجه صعوبة.. أطلب مساعدة المعلم</button>
-                        <button class="btn btn-primary p-2" style="font-weight:bold; font-size:1.1rem;" onclick="handleFailAction('retry')">🔄 أريد العودة للتمهيد والمحاولة</button>
-                    </div>
-                </div>
-            </div>
-        `;
+        const html = `<div id="lessonFailModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:999999; justify-content:center; align-items:center; backdrop-filter:blur(5px);"><div style="background:white; padding:30px; border-radius:15px; width:90%; max-width:400px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.2); animation:popIn 0.3s ease;"><div style="font-size:4rem; margin-bottom:10px;">📉</div><h3 style="color:#dc3545;">لم تجتز المحك المطلوب</h3><p style="font-size:1.1rem; color:#555; line-height:1.6;">لقد حصلت على <strong id="failCurrentPct"></strong> بينما المحك هو <strong id="failReqPct"></strong>.</p><p style="margin-bottom:25px;">لا تقلق! التعلم يحتاج إلى تكرار. ماذا تريد أن تفعل الآن؟</p><div style="display:flex; flex-direction:column; gap:10px;"><button class="btn btn-warning p-2" style="font-weight:bold; font-size:1.1rem; border:2px solid #d39e00;" onclick="handleFailAction('help')">🙋‍♂️ أواجه صعوبة.. أطلب مساعدة المعلم</button><button class="btn btn-primary p-2" style="font-weight:bold; font-size:1.1rem;" onclick="handleFailAction('retry')">🔄 أريد العودة للتمهيد والمحاولة</button></div></div></div>`;
         document.body.insertAdjacentHTML('beforeend', html);
         modal = document.getElementById('lessonFailModal');
     }
@@ -300,32 +290,46 @@ function showLessonFailModal(currentPct, reqPct) {
     modal.style.display = 'flex';
 }
 
+function showPendingReviewModal() {
+    let modal = document.getElementById('lessonPendingModal');
+    if (!modal) {
+        const html = `<div id="lessonPendingModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:999999; justify-content:center; align-items:center; backdrop-filter:blur(5px);"><div style="background:white; padding:30px; border-radius:15px; width:90%; max-width:400px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.2); animation:popIn 0.3s ease;"><div style="font-size:4rem; margin-bottom:10px;">⏳</div><h3 style="color:#fd7e14;">بانتظار تصحيح المعلم</h3><p style="font-size:1.1rem; color:#555; line-height:1.6;">عمل رائع يا بطل! 🌟 لقد تم استلام إجاباتك.</p><p style="margin-bottom:25px;">توجد أسئلة تحتاج لتقييم المعلم (قراءة أو كتابة). يرجى الانتظار حتى تُعتمد نتيجتك.</p><button class="btn btn-primary w-100 p-2" style="font-weight:bold; font-size:1.1rem;" onclick="closePendingAndLesson()">حسناً، فهمت</button></div></div>`;
+        document.body.insertAdjacentHTML('beforeend', html);
+        modal = document.getElementById('lessonPendingModal');
+    }
+    modal.style.display = 'flex';
+}
+
 window.handleFailAction = function(action) {
     document.getElementById('lessonFailModal').style.display = 'none';
     if (action === 'help') {
         let allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
         const idx = allStudentLessons.findIndex(l => l.id == currentAssignmentId);
-        if (idx !== -1) {
-            allStudentLessons[idx].status = 'struggling';
-            localStorage.setItem('studentLessons', JSON.stringify(allStudentLessons));
-        }
-        closeLessonMode();
-        alert('تم إشعار المعلم بصعوبتك، وسيتم توفير استراتيجية علاجية بديلة لك قريباً.');
-    } else {
-        showStage('intro');
-    }
+        if (idx !== -1) { allStudentLessons[idx].status = 'struggling'; localStorage.setItem('studentLessons', JSON.stringify(allStudentLessons)); }
+        closeLessonMode(); alert('تم إشعار المعلم بصعوبتك، وسيتم توفير استراتيجية علاجية بديلة لك قريباً.');
+    } else { showStage('intro'); }
 }
 
-// ---------------- البوابات والشفاء الذاتي للدروس ----------------
+window.closePendingAndLesson = function() {
+    document.getElementById('lessonPendingModal').style.display = 'none';
+    closeLessonMode();
+}
+
+// ---------------- البوابات والشفاء الذاتي ----------------
 function submitExercises() { 
     if (currentLessonStatus === 'accelerated' || currentLessonStatus === 'passedByAlternative') return showStage('assessment');
     const questions = currentLessonContent.exercises?.questions || [];
     if (questions.length === 0) return showStage('assessment'); 
+    
     const result = calculateStageScore(questions, 'exercisesList');
     const passScore = currentLessonContent.exercises?.passScore || 80;
+    const hasManual = hasManualQuestions(questions);
 
-    if (result.percentage >= passScore) {
+    // إذا كان هناك سؤال يحتاج لتصحيح يدوي، نعبره للتقييم مؤقتاً لتجنب الرسوب الفوري
+    if (result.percentage >= passScore || hasManual) {
         tempLessonAnswers = [...tempLessonAnswers, ...result.answers];
+        if (hasManual) alert('توجد أسئلة في التمارين تحتاج لتصحيح المعلم. سننتقل الآن للتقييم النهائي، وسيتم الاعتماد لاحقاً.');
+        else alert(`أحسنت! اجتزت التمارين بنجاح (مجموعك: ${Math.round(result.percentage)}%). ننتقل للتقييم النهائي.`);
         showStage('assessment');
     } else {
         showLessonFailModal(Math.round(result.percentage), passScore);
@@ -338,28 +342,36 @@ function submitAssessment() {
     const result = calculateStageScore(questions, 'assessmentList');
     const passScore = currentLessonContent.exercises?.passScore || 80;
 
+    const hasManualAs = hasManualQuestions(questions);
+    const hasManualEx = hasManualQuestions(currentLessonContent.exercises?.questions || []);
+    const needsManualReview = hasManualAs || hasManualEx;
+
+    if (needsManualReview) {
+        tempLessonAnswers = [...tempLessonAnswers, ...result.answers];
+        let allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+        const idx = allStudentLessons.findIndex(l => l.id == currentAssignmentId);
+        if (idx !== -1) {
+            allStudentLessons[idx].status = 'pending_review';
+            allStudentLessons[idx].answers = tempLessonAnswers;
+            allStudentLessons[idx].historyLog.push({ date: new Date().toISOString(), status: 'pending_review' });
+            localStorage.setItem('studentLessons', JSON.stringify(allStudentLessons));
+        }
+        showPendingReviewModal();
+        return;
+    }
+
     if (questions.length === 0 || result.percentage >= passScore) {
         tempLessonAnswers = [...tempLessonAnswers, ...result.answers];
         let allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
         const idx = allStudentLessons.findIndex(l => l.id == currentAssignmentId);
-        
         if (idx !== -1) {
             const finishedLesson = allStudentLessons[idx];
-            finishedLesson.status = 'completed';
-            finishedLesson.completedDate = new Date().toISOString();
-            finishedLesson.answers = tempLessonAnswers;
+            finishedLesson.status = 'completed'; finishedLesson.completedDate = new Date().toISOString(); finishedLesson.answers = tempLessonAnswers;
             finishedLesson.historyLog.push({ date: new Date().toISOString(), status: 'completed' });
-            
-            // 🔥 الذكاء الاصطناعي التربوي: الشفاء التلقائي للدرس الأساسي 🔥
             if (finishedLesson.rescueLessonId) {
                 const originalIdx = allStudentLessons.findIndex(l => l.id == finishedLesson.rescueLessonId);
-                if (originalIdx !== -1) {
-                    allStudentLessons[originalIdx].status = 'completed';
-                    allStudentLessons[originalIdx].passedByAlternative = true;
-                    allStudentLessons[originalIdx].historyLog.push({ date: new Date().toISOString(), status: 'passed_by_alternative' });
-                }
+                if (originalIdx !== -1) { allStudentLessons[originalIdx].status = 'completed'; allStudentLessons[originalIdx].passedByAlternative = true; allStudentLessons[originalIdx].historyLog.push({ date: new Date().toISOString(), status: 'passed_by_alternative' }); }
             }
-            
             localStorage.setItem('studentLessons', JSON.stringify(allStudentLessons));
         }
         alert(`عمل رائع! لقد أتممت الدرس بنجاح.`);

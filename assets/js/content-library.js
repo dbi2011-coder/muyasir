@@ -1,9 +1,11 @@
 // ============================================
 // 📁 المسار: assets/js/content-library.js
-// الوصف: مكتبة المحتوى + مربع محك الاجتياز (%) لتقييم المهارات + الشرط التربوي
+// الوصف: مكتبة المحتوى + تحديد محك الاجتياز (%) للأسئلة + النسخة الكاملة بدون أي نقص
 // ============================================
 
-// 🔥 إضافة دالة الخطأ الاحترافية (إذا لم تكن موجودة) 🔥
+// =========================================================
+// 🔥 نظام النوافذ والإشعارات 🔥
+// =========================================================
 if (!window.showError) {
     window.showError = function(message) {
         let toast = document.getElementById('globalErrorToast');
@@ -22,6 +24,56 @@ if (!window.showError) {
     };
 }
 
+if (!window.showSuccess) {
+    window.showSuccess = function(message) {
+        let toast = document.getElementById('globalSuccessToast');
+        if (!toast) {
+            const toastHtml = `
+                <div id="globalSuccessToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#10b981; color:white; padding:12px 25px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.2); z-index:999999; font-weight:bold; font-family:'Tajawal'; align-items:center; gap:10px;">
+                    <i class="fas fa-check-circle"></i> <span id="globalSuccessMessage"></span>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', toastHtml);
+            toast = document.getElementById('globalSuccessToast');
+        }
+        document.getElementById('globalSuccessMessage').textContent = message;
+        toast.style.display = 'flex';
+        setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    };
+}
+
+if (!window.showConfirmModal) {
+    window.showConfirmModal = function(message, onConfirm) {
+        let modal = document.getElementById('globalConfirmModal');
+        if (!modal) {
+            const modalHtml = `
+                <div id="globalConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999999; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
+                    <div style="background:white; padding:25px; border-radius:15px; width:90%; max-width:350px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.2); animation:popIn 0.3s ease;">
+                        <div style="font-size:3.5rem; color:#dc3545; margin-bottom:15px;"><i class="fas fa-exclamation-circle"></i></div>
+                        <div style="font-size:1.3rem; font-weight:bold; margin-bottom:10px; color:#333;">تأكيد الإجراء</div>
+                        <div id="globalConfirmMessage" style="color:#666; margin-bottom:25px; font-size:0.95rem; line-height:1.6;"></div>
+                        <div style="display:flex; gap:15px; justify-content:center;">
+                            <button id="globalConfirmCancel" style="background:#e2e8f0; color:#333; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; transition:0.2s; font-family:'Tajawal';">إلغاء</button>
+                            <button id="globalConfirmOk" style="background:#dc3545; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; transition:0.2s; font-family:'Tajawal';">نعم، متأكد</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            modal = document.getElementById('globalConfirmModal');
+        }
+        document.getElementById('globalConfirmMessage').innerHTML = message;
+        modal.style.display = 'flex';
+        document.getElementById('globalConfirmOk').onclick = function() {
+            modal.style.display = 'none';
+            if (typeof onConfirm === 'function') onConfirm();
+        };
+        document.getElementById('globalConfirmCancel').onclick = function() {
+            modal.style.display = 'none';
+        };
+    };
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     injectLinkContentModal(); 
     loadContentLibrary();
@@ -34,10 +86,16 @@ function loadContentLibrary() {
     try { loadHomeworks(); } catch(e) { console.error(e); }
 }
 
-// ---------------------------------------------------------
-// دوال العرض (Tests, Lessons, Objectives, Homeworks)
-// ---------------------------------------------------------
+function getCurrentUser() { 
+    return JSON.parse(sessionStorage.getItem('currentUser')).user; 
+}
+function getAllObjectives() { 
+    return JSON.parse(localStorage.getItem('objectives') || '[]').filter(o => o.teacherId === getCurrentUser().id); 
+}
 
+// =========================================================
+// 🔥 دوال العرض والتحميل 🔥
+// =========================================================
 function loadTests() {
     const grid = document.getElementById('testsGrid'); if(!grid) return;
     const tests = JSON.parse(localStorage.getItem('tests') || '[]').filter(t => t.teacherId === getCurrentUser().id);
@@ -80,15 +138,13 @@ function loadHomeworks() {
     }).join('');
 }
 
-// ---------------------------------------------------------
-// دوال إدارة الأسئلة (Questions Logic)
-// ---------------------------------------------------------
-
+// =========================================================
+// 🔥 بناء وتصميم الأسئلة (Questions Logic) 🔥
+// =========================================================
 function addQuestion() { addQuestionToContainer(document.getElementById('questionsContainer'), 'سؤال'); }
 function addLessonQuestion(id) { addQuestionToContainer(document.getElementById(id), 'سؤال'); }
 function addHomeworkQuestion() { addQuestionToContainer(document.getElementById('homeworkQuestionsContainer'), 'سؤال'); }
 
-// 🔥 تم تحديث هذه الدالة لإضافة مربع (المحك %) بجوار مربع الدرجة الكلية 🔥
 function addQuestionToContainer(container, lbl, data = null) {
     const idx = container.children.length; 
     const type = data ? data.type : 'mcq';
@@ -218,7 +274,6 @@ function addParagraphInput(qIdx, type, itemData = null) {
     if(!container) return;
 
     const pIdx = Date.now() + Math.floor(Math.random() * 1000); 
-    
     let innerHtml = '';
 
     if (type === 'drag-drop') {
@@ -319,10 +374,6 @@ function readFileAsBase64(file) {
     });
 }
 
-// ---------------------------------------------------------
-// 🔥 تجميع البيانات للحفظ (مع إضافة المحك) 🔥
-// ---------------------------------------------------------
-
 async function collectQuestionsFromContainer(id) {
     const cards = document.querySelectorAll(`#${id} .question-card`);
     const qs = [];
@@ -337,7 +388,7 @@ async function collectQuestionsFromContainer(id) {
             id: Date.now() + Math.random(), 
             type: type, 
             maxScore: maxScoreVal, 
-            passingScore: maxScoreVal, // لضمان التوافق مع الكود القديم إن وجد
+            passingScore: maxScoreVal, 
             passingCriterion: criterionVal 
         };
         
@@ -346,10 +397,8 @@ async function collectQuestionsFromContainer(id) {
             if (type.includes('mcq')) {
                 qData.choices = Array.from(card.querySelectorAll('.q-choice')).map(c => c.value);
                 card.querySelectorAll('input[type="radio"]').forEach((r, idx) => { if(r.checked) qData.correctAnswer = idx; });
-                
                 const fileInput = card.querySelector('.q-attachment');
                 const existingFile = card.querySelector('.q-existing-attachment')?.value;
-                
                 if (fileInput && fileInput.files[0]) {
                     qData.attachment = await readFileAsBase64(fileInput.files[0]);
                 } else if (existingFile) {
@@ -362,7 +411,6 @@ async function collectQuestionsFromContainer(id) {
         else {
             qData.text = card.querySelector('.q-text')?.value || '';
             qData.paragraphs = [];
-            
             let validDragParagraphs = 0; 
 
             card.querySelectorAll('.paragraph-item').forEach(pItem => {
@@ -371,10 +419,7 @@ async function collectQuestionsFromContainer(id) {
                     pData.text = pItem.querySelector('.p-text').value;
                     const gapsVal = pItem.querySelector('.p-gaps-data').value;
                     pData.gaps = gapsVal ? JSON.parse(gapsVal) : [];
-                    
-                    if (pData.text.trim() !== '' && pData.gaps.length > 0) {
-                        validDragParagraphs++;
-                    }
+                    if (pData.text.trim() !== '' && pData.gaps.length > 0) validDragParagraphs++;
                 } else if (type === 'missing-char') {
                     pData.text = pItem.querySelector('.p-text').value;
                     pData.missing = pItem.querySelector('.p-missing').value;
@@ -385,7 +430,7 @@ async function collectQuestionsFromContainer(id) {
             });
 
             if (type === 'drag-drop' && validDragParagraphs < 2) {
-                showError(`تنبيه تربوي في السؤال رقم ${i + 1}:<br>سؤال السحب والإفلات يجب أن يتكون من <strong>جملتين مختلفتين على الأقل</strong>، مع إخفاء كلمة من كل جملة.<br><small>الهدف: تشتيت الخيارات في بنك الكلمات لضمان قياس مهارة الطالب بدقة.</small>`);
+                showError(`تنبيه تربوي في السؤال رقم ${i + 1}:<br>سؤال السحب والإفلات يجب أن يتكون من <strong>جملتين مختلفتين على الأقل</strong>، مع إخفاء كلمة من كل جملة.`);
                 return null; 
             }
         }
@@ -394,24 +439,21 @@ async function collectQuestionsFromContainer(id) {
     return qs;
 }
 
-function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser')).user; }
-function getAllObjectives() { return JSON.parse(localStorage.getItem('objectives') || '[]').filter(o => o.teacherId === getCurrentUser().id); }
+// =========================================================
+// 🔥 دوال الحفظ والإنشاء 🔥
+// =========================================================
 
 async function saveTest() { 
     const t = document.getElementById('testTitle').value; 
     if(!t) return; 
-    
     const qs = await collectQuestionsFromContainer('questionsContainer'); 
     if (!qs) return; 
-
     const ts = JSON.parse(localStorage.getItem('tests') || '[]'); 
     const id = document.getElementById('editTestId').value; 
     const d = {id: id ? parseInt(id) : Date.now(), teacherId: getCurrentUser().id, title: t, subject: document.getElementById('testSubject').value, description: document.getElementById('testDescription').value, questions: qs, createdAt: new Date().toISOString()}; 
-    
     if(id){const i = ts.findIndex(x => x.id == id); if(i !== -1) ts[i] = d;} else ts.push(d); 
-    
     localStorage.setItem('tests', JSON.stringify(ts)); 
-    document.getElementById('createTestModal').classList.remove('show'); 
+    closeModal('createTestModal'); 
     loadTests(); 
 }
 
@@ -419,17 +461,13 @@ async function saveHomework() {
     const id = document.getElementById('editHomeworkId').value; 
     const t = document.getElementById('homeworkTitle').value; 
     if(!t) return; 
-    
     const qs = await collectQuestionsFromContainer('homeworkQuestionsContainer'); 
     if (!qs) return; 
-
     const hws = JSON.parse(localStorage.getItem('assignments') || '[]'); 
     const d = {id: id ? parseInt(id) : Date.now(), teacherId: getCurrentUser().id, title: t, subject: document.getElementById('homeworkSubject').value, description: document.getElementById('homeworkDescription').value, questions: qs, createdAt: new Date().toISOString()}; 
-    
     if(id){const i = hws.findIndex(x => x.id == id); if(i !== -1) hws[i] = d;} else hws.push(d); 
-    
     localStorage.setItem('assignments', JSON.stringify(hws)); 
-    document.getElementById('createHomeworkModal').classList.remove('show'); 
+    closeModal('createHomeworkModal'); 
     loadHomeworks(); 
 }
 
@@ -453,12 +491,13 @@ async function saveLesson() {
     if(id){const i = ls.findIndex(x => x.id == id); if(i !== -1) ls[i] = d;} else ls.push(d); 
     
     localStorage.setItem('lessons', JSON.stringify(ls)); 
-    document.getElementById('createLessonModal').classList.remove('show'); 
+    closeModal('createLessonModal'); 
     loadLessons(); 
 }
 
 function injectLinkContentModal() {
     if (document.getElementById('linkContentModal')) return;
+    // ... HTML injection if needed for Link Modal (Optional if it exists in HTML)
 }
 
 function showLinkModal(type, id) {
@@ -493,29 +532,21 @@ function showLinkModal(type, id) {
         });
     } else {
         instruction.textContent = 'قم باختيار هدف تدريسي واحد لربط هذا المحتوى به.';
-        
         let currentItem;
         let storageKey = (type === 'lesson') ? 'lessons' : 'assignments';
         currentItem = JSON.parse(localStorage.getItem(storageKey) || '[]').find(x => x.id === id);
-
         if (!currentItem) { alert('العنصر غير موجود!'); return; }
-
         const relevantObjs = objectives.filter(o => o.subject && currentItem.subject && o.subject.trim() === currentItem.subject.trim());
-        
         let selectHtml = '<select class="form-control" id="singleInstructionalLink"><option value="">-- غير مرتبط --</option>';
         relevantObjs.forEach(o => {
             if(o.instructionalGoals && o.instructionalGoals.length > 0) {
                 selectHtml += `<optgroup label="${o.shortTermGoal}">`;
-                o.instructionalGoals.forEach(ig => {
-                    selectHtml += `<option value="${ig}">${ig}</option>`;
-                });
+                o.instructionalGoals.forEach(ig => { selectHtml += `<option value="${ig}">${ig}</option>`; });
                 selectHtml += `</optgroup>`;
             }
         });
         selectHtml += '</select>';
-        
         container.innerHTML = `<div class="p-3"><label>الهدف التدريسي:</label>${selectHtml}</div>`;
-        
         if(currentItem.linkedInstructionalGoal) {
             setTimeout(() => {
                 const el = document.getElementById('singleInstructionalLink');
@@ -546,20 +577,32 @@ function saveContentLinks() {
         }
     } else {
         const key = (type === 'lesson') ? 'lessons' : 'assignments';
-        
         const arr = JSON.parse(localStorage.getItem(key) || '[]');
         const idx = arr.findIndex(x => x.id === id);
-        
         if(idx !== -1) {
             arr[idx].linkedInstructionalGoal = document.getElementById('singleInstructionalLink').value || null;
             localStorage.setItem(key, JSON.stringify(arr));
-            
-            if(type === 'lesson') loadLessons();
-            else loadHomeworks();
+            if(type === 'lesson') loadLessons(); else loadHomeworks();
         }
     }
-    document.getElementById('linkContentModal').classList.remove('show');
+    closeModal('linkContentModal');
     showSuccess('تم حفظ الارتباطات بنجاح');
+}
+
+// =========================================================
+// 🔥 الدوال الحيوية المفقودة (التنقل، الحذف، والاستيراد) 🔥
+// =========================================================
+
+// دالة التنقل بين التمهيد والتمارين والتقييم داخل نافذة إضافة الدرس
+function switchLessonStep(step) {
+    document.querySelectorAll('.lesson-step-content').forEach(el => el.style.display = 'none');
+    document.querySelectorAll('.step-indicator').forEach(el => el.classList.remove('active'));
+    
+    const stepEl = document.getElementById('step-' + step);
+    const indEl = document.getElementById('indicator-' + step);
+    
+    if (stepEl) stepEl.style.display = 'block';
+    if (indEl) indEl.classList.add('active');
 }
 
 function showCreateTestModal() { document.getElementById('editTestId').value=''; document.getElementById('testTitle').value=''; document.getElementById('testSubject').value='لغتي'; document.getElementById('testDescription').value=''; document.getElementById('questionsContainer').innerHTML=''; addQuestion(); document.getElementById('createTestModal').classList.add('show'); }
@@ -575,10 +618,76 @@ function editLesson(id) { const l=JSON.parse(localStorage.getItem('lessons')).fi
 function deleteLesson(id) { showConfirmModal('هل أنت متأكد من حذف هذا الدرس؟', function() { const l = JSON.parse(localStorage.getItem('lessons')).filter(x => x.id !== id); localStorage.setItem('lessons', JSON.stringify(l)); loadLessons(); showSuccess('تم الحذف'); }); }
 
 function toggleIntroInputs() { const t=document.getElementById('introType').value; const u=document.getElementById('introUrl'); u.placeholder=t==='video'?'رابط يوتيوب':(t==='image'?'رابط الصورة':'رابط'); }
+
 function showCreateObjectiveModal() { document.getElementById('editObjectiveId').value=''; document.getElementById('shortTermGoal').value=''; document.getElementById('instructionalGoalsContainer').innerHTML=''; addInstructionalGoalInput(); document.getElementById('createObjectiveModal').classList.add('show'); }
 function editObjective(id) { const o=JSON.parse(localStorage.getItem('objectives')).find(x=>x.id===id); if(!o)return; document.getElementById('editObjectiveId').value=o.id; document.getElementById('objSubject').value=o.subject; document.getElementById('shortTermGoal').value=o.shortTermGoal; const c=document.getElementById('instructionalGoalsContainer'); c.innerHTML=''; if(o.instructionalGoals?.length>0)o.instructionalGoals.forEach(g=>addInstructionalGoalInput(g)); else addInstructionalGoalInput(); document.getElementById('createObjectiveModal').classList.add('show'); }
 function addInstructionalGoalInput(v='') { const c=document.getElementById('instructionalGoalsContainer'); const d=document.createElement('div'); d.className='d-flex mb-2'; d.innerHTML=`<input type="text" class="form-control instructional-goal-input" value="${v}" placeholder="هدف تدريسي فرعي"><button type="button" class="btn btn-outline-danger btn-sm ml-2" onclick="this.parentElement.remove()">×</button>`; c.appendChild(d); }
-function saveObjective() { const id=document.getElementById('editObjectiveId').value; const s=document.getElementById('objSubject').value; const g=document.getElementById('shortTermGoal').value; if(!g)return; const ig=[]; document.querySelectorAll('.instructional-goal-input').forEach(i=>{if(i.value.trim())ig.push(i.value.trim())}); const objs=JSON.parse(localStorage.getItem('objectives')||'[]'); const d={id:id?parseInt(id):Date.now(), teacherId:getCurrentUser().id, subject:s, shortTermGoal:g, instructionalGoals:ig}; if(id){const i=objs.findIndex(x=>x.id==id); if(i!==-1)objs[i]=d;}else objs.push(d); localStorage.setItem('objectives',JSON.stringify(objs)); document.getElementById('createObjectiveModal').classList.remove('show'); loadObjectives(); }
+function saveObjective() { const id=document.getElementById('editObjectiveId').value; const s=document.getElementById('objSubject').value; const g=document.getElementById('shortTermGoal').value; if(!g)return; const ig=[]; document.querySelectorAll('.instructional-goal-input').forEach(i=>{if(i.value.trim())ig.push(i.value.trim())}); const objs=JSON.parse(localStorage.getItem('objectives')||'[]'); const d={id:id?parseInt(id):Date.now(), teacherId:getCurrentUser().id, subject:s, shortTermGoal:g, instructionalGoals:ig}; if(id){const i=objs.findIndex(x=>x.id==id); if(i!==-1)objs[i]=d;}else objs.push(d); localStorage.setItem('objectives',JSON.stringify(objs)); closeModal('createObjectiveModal'); loadObjectives(); }
 function deleteObjective(id) { showConfirmModal('هل أنت متأكد من حذف هذا الهدف؟', function() { const o = JSON.parse(localStorage.getItem('objectives')).filter(x => x.id !== id); localStorage.setItem('objectives', JSON.stringify(o)); loadObjectives(); showSuccess('تم الحذف'); }); }
 
-// دوال التصدير والاستيراد المتبقية تم اختصارها هنا للإيجاز في العرض، تأكد من إبقائها كما هي في ملفك.
+// دالة إغلاق النوافذ
+function closeModal(id) { 
+    const modal = document.getElementById(id);
+    if(modal) modal.classList.remove('show'); 
+}
+
+// دوال الاستيراد والتصدير
+function exportContent() {
+    const data = {
+        tests: JSON.parse(localStorage.getItem('tests') || '[]'),
+        lessons: JSON.parse(localStorage.getItem('lessons') || '[]'),
+        objectives: JSON.parse(localStorage.getItem('objectives') || '[]'),
+        assignments: JSON.parse(localStorage.getItem('assignments') || '[]')
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `muyasir_backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function triggerImport() { document.getElementById('importFile').click(); }
+
+function importContent(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            const user = getCurrentUser();
+            let count = 0;
+
+            const mergeData = (key, newItems) => {
+                if (!newItems || newItems.length === 0) return 0;
+                const currentItems = JSON.parse(localStorage.getItem(key) || '[]');
+                let added = 0;
+                newItems.forEach(item => {
+                    if (!currentItems.some(x => x.id === item.id)) {
+                        item.teacherId = user.id; 
+                        currentItems.push(item);
+                        added++;
+                    }
+                });
+                localStorage.setItem(key, JSON.stringify(currentItems));
+                return added;
+            };
+
+            count += mergeData('tests', data.tests);
+            count += mergeData('lessons', data.lessons);
+            count += mergeData('objectives', data.objectives);
+            count += mergeData('assignments', data.assignments);
+
+            showSuccess(`تم استيراد ${count} عنصر بنجاح`);
+            loadContentLibrary(); 
+
+        } catch (err) {
+            console.error(err);
+            showError('حدث خطأ أثناء قراءة الملف. تأكد أنه ملف JSON صالح.');
+        }
+    };
+    reader.readAsText(file);
+}

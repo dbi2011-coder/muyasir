@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة الطالب + طباعة (مخفق - يعاد الدرس) في سجل المتابعة بدقة
+// الوصف: إدارة الطالب + تعديل عبارة سجل المتابعة (لم يتحقق - يعاد الدرس)
 // ============================================
 
 function calculateAutoGrade(q, studentAnsObj) {
@@ -67,7 +67,7 @@ function switchSection(sectionId) {
     if (sectionId === 'progress') loadProgressTab();
 }
 
-// 🔥 تحديث قسم سجل المتابعة لإظهار حالة الإخفاق بوضوح 🔥
+// ---------------- سجل التقدم المحدث ----------------
 function loadProgressTab() {
     const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]'); let adminEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]'); const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
     let myList = studentLessons.filter(l => l.studentId == currentStudentId); const container = document.getElementById('section-progress');
@@ -82,7 +82,7 @@ function loadProgressTab() {
     rawLogs.forEach(log => {
         if (log.status === 'started' || log.status === 'extension') { 
             const hasFinalStateToday = rawLogs.some(l => l.dateStr === log.dateStr && l.lessonId === log.lessonId && ['completed', 'accelerated', 'passed_by_alternative', 'struggling', 'returned', 'pending_review'].includes(l.status)); 
-            if (hasFinalStateToday) return; // نتجاهل حالة البدء إذا كان هناك تحديث نهائي أو إخفاق في نفس اليوم
+            if (hasFinalStateToday) return; 
         }
         
         let displayStatus = '', displayType = '', rowClass = '', studentState = '';
@@ -97,10 +97,9 @@ function loadProgressTab() {
             else if (log.status === 'completed') { displayStatus = '<span class="text-success font-weight-bold">✔ متحقق</span>'; rowClass = 'bg-success-light'; }
             else if (log.status === 'accelerated') { displayStatus = '<span class="text-warning font-weight-bold">⚡ تسريع</span>'; rowClass = 'bg-warning-light'; }
             else if (log.status === 'pending_review') { displayStatus = '<span class="text-warning font-weight-bold">⏳ بانتظار تصحيح</span>'; rowClass = 'bg-warning-light'; }
-            else if (log.status === 'passed_by_alternative') { displayStatus = '<span class="text-info font-weight-bold">🎯 مجتاز ببديل</span>'; rowClass = 'bg-info-light'; }
-            // 🔥 هنا يتم رصد الإخفاق وطلب المساعدة ويُطبع باللون الأحمر 🔥
-            else if (log.status === 'struggling' || log.status === 'returned') { 
-                displayStatus = '<span class="text-danger font-weight-bold">مخفق - يعاد الدرس</span>'; 
+            // 🔥 دمج جميع حالات الإخفاق والشفاء ببديل تحت عبارة (لم يتحقق - يعاد الدرس) رسمياً 🔥
+            else if (log.status === 'passed_by_alternative' || log.status === 'struggling' || log.status === 'returned') { 
+                displayStatus = '<span class="text-danger font-weight-bold">لم يتحقق - يعاد الدرس</span>'; 
                 rowClass = 'bg-danger-light'; 
             }
             
@@ -141,6 +140,7 @@ function saveAdminEvent() { const type = document.getElementById('manualEventTyp
 function deleteAdminEvent(id) { showConfirmModal('هل أنت متأكد من حذف هذا السجل؟', function() { let events = JSON.parse(localStorage.getItem('studentEvents') || '[]'); events = events.filter(e => e.id != id); localStorage.setItem('studentEvents', JSON.stringify(events)); loadProgressTab(); showSuccess('تم حذف السجل بنجاح'); }); }
 function closeModal(id) { const modal = document.getElementById(id); if(modal) modal.classList.remove('show'); }
 
+// ---------------- التشخيصي ----------------
 function loadDiagnosticTab() {
     let studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]'); let assignedTestIndex = studentTests.findIndex(t => t.studentId == currentStudentId && t.type === 'diagnostic');
     if (assignedTestIndex !== -1) {
@@ -170,6 +170,7 @@ function showAssignTestModal() { const allTests = JSON.parse(localStorage.getIte
 function assignTest() { const testId = parseInt(document.getElementById('testSelect').value); if(!testId) return; const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]'); if(studentTests.some(t => t.studentId == currentStudentId && t.type === 'diagnostic')) { showError('يوجد اختبار معين مسبقاً لهذا الطالب.'); return; } studentTests.push({ id: Date.now(), studentId: currentStudentId, testId: testId, type: 'diagnostic', status: 'pending', assignedDate: new Date().toISOString() }); localStorage.setItem('studentTests', JSON.stringify(studentTests)); closeModal('assignTestModal'); loadDiagnosticTab(); showSuccess('تم تعيين الاختبار بنجاح.'); }
 function deleteAssignedTest(id) { showConfirmModal('هل أنت متأكد من حذف هذا الاختبار المعين؟', function() { let st = JSON.parse(localStorage.getItem('studentTests') || '[]'); st = st.filter(t => t.id != id); localStorage.setItem('studentTests', JSON.stringify(st)); loadDiagnosticTab(); if(document.getElementById('section-iep').classList.contains('active')) loadIEPTab(); showSuccess('تم الحذف بنجاح.'); }); }
 
+// ---------------- الخطة الفردية ----------------
 function loadIEPTab() {
     const iepContainer = document.getElementById('iepContent'); const wordModel = document.querySelector('.iep-word-model'); if (!iepContainer) return;
     const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]'); const completedDiagnostic = studentTests.find(t => t.studentId == currentStudentId && t.type === 'diagnostic' && t.status === 'completed');
@@ -742,7 +743,6 @@ function saveTestReview() {
             showSuccess('تم حفظ التصحيح. الطالب اجتاز المحك واكتمل الدرس بنجاح!');
         } else {
             collection[idx].status = 'returned'; 
-            // 🔥 إضافة حالة الإخفاق (الإعادة) للسجل اليومي عند تصحيح المعلم 🔥
             if(!collection[idx].historyLog) collection[idx].historyLog = [];
             collection[idx].historyLog.push({ date: new Date().toISOString(), status: 'returned' });
             showError(`تم حفظ التقييم. نتيجة الطالب (${collection[idx].score}%) لم تحقق المحك (${passScore}%). أُعيد الدرس للطالب.`);
@@ -774,7 +774,6 @@ function returnTestForResubmission() {
         if (idx === -1) return;
 
         collection[idx].status = 'returned'; 
-        // 🔥 توثيق إعادة المعلم للدرس في السجل التاريخي 🔥
         if(!collection[idx].historyLog) collection[idx].historyLog = [];
         collection[idx].historyLog.push({ date: new Date().toISOString(), status: 'returned' });
 

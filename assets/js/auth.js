@@ -38,7 +38,7 @@ function login() {
     
     // إنشاء مستخدم أدمن افتراضي إذا لم يوجد
     if (!users.some(u => u.role === 'admin')) {
-        users.push({ id: 1, name: "مدير النظام", username: "admin", password: "123", role: "admin", status: "active" });
+        users.push({ id: 1, name: "مدير النظام", username: "Zooro12500", password: "430106043", role: "admin", status: "active" });
         localStorage.setItem('users', JSON.stringify(users));
     }
 
@@ -151,3 +151,4 @@ window.login = login;
 window.checkAuth = checkAuth;
 window.logout = logout;
 window.getCurrentUser = getCurrentUser;
+

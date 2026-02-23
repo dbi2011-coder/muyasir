@@ -411,7 +411,7 @@ function generateAttendanceReport(studentIds, container) {
 
     tableHTML += `</tbody></table>
             <div class="custom-footer">
-                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
             </div>
             
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
@@ -476,7 +476,7 @@ function generateAchievementReport(studentIds, container) {
 
     tableHTML += `</tbody></table>
             <div class="custom-footer">
-                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
             </div>
             
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
@@ -549,7 +549,7 @@ function generateAssignmentsReport(studentIds, container) {
 
     tableHTML += `</tbody></table>
             <div class="custom-footer">
-                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
             </div>
             
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
@@ -705,7 +705,7 @@ function generateIEPReport(studentIds, container) {
             </div>
 
             <div class="custom-footer">
-                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
             </div>
         </div>
         `;
@@ -838,7 +838,7 @@ function generateDiagnosticReport(studentIds, container) {
 
         fullReportHTML += `
             <div class="custom-footer">
-                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
             </div>
         </div>
         `;
@@ -957,7 +957,7 @@ function generateScheduleReport(studentIds, container) {
             ${scheduleHTML}
             
             <div class="custom-footer">
-                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
             </div>
 
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
@@ -1032,7 +1032,7 @@ function generateCreditReport(studentIds, container) {
             </div>
 
             <div class="custom-footer">
-                تم طباعة التقرير من نظام ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/ صالح عبدالعزيز العجلان بتاريخ ${printDate}
             </div>
 
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">

@@ -335,7 +335,7 @@ function showGeneratedReport(reportId) {
             ${generateReportContent(report.reportType, selectedStudents)}
             
             <div class="report-footer">
-                <p>تم إنشاء التقرير من موقع ميسر التعلم للأستاذ / صالح عبد العزيز عبدالله العجلان</p>
+                <p>تم إنشاء التقرير من منصة ميسر التعلم للأستاذ / صالح عبد العزيز عبدالله العجلان</p>
             </div>
         </div>
     `;
@@ -537,7 +537,7 @@ function showGeneratedReportForSingleStudent(student) {
             <p>محتوى تفصيلي عن أداء الطالب...</p>
             
             <div class="report-footer">
-                <p>تم إنشاء التقرير من موقع ميسر التعلم للأستاذ / صالح عبد العزيز عبدالله العجلان</p>
+                <p>تم إنشاء التقرير من منصة ميسر التعلم للأستاذ / صالح عبد العزيز عبدالله العجلان</p>
             </div>
         </div>
     `;
@@ -559,3 +559,4 @@ window.viewStudentReport = viewStudentReport;
 window.generateStudentReport = generateStudentReport;
 window.deleteReport = deleteReport;
 window.filterStudents = filterStudents;
+

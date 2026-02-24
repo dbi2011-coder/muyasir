@@ -2,6 +2,9 @@
 // 📁 الملف: assets/js/teacher.js
 // ============================================
 
+// 🌟 تهيئة الاتصال بقاعدة بيانات PocketBase
+const pb = new PocketBase('http://127.0.0.1:8090');
+
 // =========================================================
 // 🔥 دوال النوافذ المنبثقة الاحترافية (تمت إضافتها لمنع الخطأ) 🔥
 // =========================================================
@@ -59,6 +62,24 @@ if (!window.showSuccess) {
         setTimeout(() => { toast.style.display = 'none'; }, 3000);
     };
 }
+
+if (!window.showError) {
+    window.showError = function(message) {
+        let toast = document.getElementById('globalErrorToast');
+        if (!toast) {
+            const toastHtml = `
+                <div id="globalErrorToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#dc3545; color:white; padding:12px 25px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.2); z-index:999999; font-weight:bold; font-family:'Tajawal'; align-items:center; gap:10px;">
+                    <i class="fas fa-exclamation-triangle"></i> <span id="globalErrorMessage"></span>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', toastHtml);
+            toast = document.getElementById('globalErrorToast');
+        }
+        document.getElementById('globalErrorMessage').innerHTML = message;
+        toast.style.display = 'flex';
+        setTimeout(() => { toast.style.display = 'none'; }, 4000);
+    };
+}
 // =========================================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -99,7 +120,8 @@ function loadTeacherStats() {
     if (document.getElementById('unreadMessages')) document.getElementById('unreadMessages').innerText = messagesCount;
 }
 
-function loadStudentsData() {
+// 🌟 دالة جلب وعرض الطلاب من PocketBase
+async function loadStudentsData() {
     const loadingState = document.getElementById('loadingState');
     const emptyState = document.getElementById('emptyState');
     const tableBody = document.getElementById('studentsTableBody');
@@ -109,41 +131,28 @@ function loadStudentsData() {
     if(emptyState) emptyState.style.display = 'none';
     tableBody.innerHTML = '';
 
-    setTimeout(() => {
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const currentTeacher = getCurrentUser();
-        const students = users.filter(u => u.role === 'student' && u.teacherId === currentTeacher.id);
-        
-        // جلب سجلات الدروس لحساب النسبة ديناميكياً
-        const allStudentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-        
+    try {
+        // جلب البيانات من السيرفر (PocketBase)
+        const records = await pb.collection('students').getFullList({
+            sort: '-created',
+        });
+
         if(loadingState) loadingState.style.display = 'none';
-        
-        if (students.length === 0) {
+
+        if (records.length === 0) {
             if(emptyState) emptyState.style.display = 'block';
             return;
         }
 
-        tableBody.innerHTML = students.map((student, index) => {
-            // حساب نسبة التقدم الموحدة
-            const myLessons = allStudentLessons.filter(l => String(l.studentId) === String(student.id));
-            let progressPct = 0;
-            if (myLessons.length > 0) {
-                const completed = myLessons.filter(l => l.status === 'completed' || l.status === 'accelerated' || l.passedByAlternative).length;
-                progressPct = Math.round((completed / myLessons.length) * 100);
-            }
-
-            // تطبيق الألوان العصرية المطلوبة على تصميمك الأصلي فقط
-            let hexColor = '#3b82f6'; // أزرق (للبداية 0%)
-            if (progressPct >= 80) hexColor = '#10b981'; // أخضر
-            else if (progressPct >= 50) hexColor = '#8b5cf6'; // بنفسجي
-            else if (progressPct > 0) hexColor = '#0ea5e9'; // سماوي
+        tableBody.innerHTML = records.map((student, index) => {
+            let progressPct = 0; 
+            let hexColor = '#0ea5e9'; 
 
             return `<tr>
                 <td>${index + 1}</td>
                 <td>${student.name}</td>
-                <td>${student.grade}</td>
-                <td>${student.subject}</td>
+                <td>الصف ${student.level}</td>
+                <td>${student.difficulty_type}</td>
                 <td class="progress-cell">
                     <div class="progress-text" style="color: ${hexColor}; font-weight: bold;">${progressPct}%</div>
                     <div class="progress-bar">
@@ -152,132 +161,76 @@ function loadStudentsData() {
                 </td>
                 <td>
                     <div class="student-actions" style="display: flex; gap: 5px; flex-wrap: wrap;">
-                        <button class="btn btn-sm btn-primary" onclick="openStudentFile(${student.id})">ملف</button>
-                        <button class="btn btn-sm btn-secondary" onclick="showStudentLoginData(${student.id})">بيانات</button>
-                        <button class="btn btn-sm btn-warning" onclick="editStudent(${student.id})">تعديل</button>
-                        <button class="btn btn-sm btn-info" onclick="exportStudentData(${student.id})">تصدير</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})">حذف</button>
+                        <button class="btn btn-sm btn-primary" onclick="openStudentFile('${student.id}')">ملف</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteStudent('${student.id}')">حذف</button>
                     </div>
                 </td>
             </tr>`;
         }).join('');
-    }, 200);
+
+    } catch (error) {
+        console.error("خطأ في جلب الطلاب:", error);
+        if(loadingState) loadingState.style.display = 'none';
+        showError('حدث خطأ في الاتصال بقاعدة البيانات.');
+    }
 }
 
-function addNewStudent() {
+// 🌟 دالة إضافة طالب جديد إلى PocketBase
+async function addNewStudent() {
     const name = document.getElementById('studentName').value.trim();
     const grade = document.getElementById('studentGrade').value;
     const subject = document.getElementById('studentSubject').value;
 
     if (!name || !grade || !subject) return alert('يرجى ملء جميع الحقول');
 
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    const allAccounts = [...users, ...committeeMembers];
-    const currentTeacher = getCurrentUser();
-
-    let username = '';
-    let password = '123';
-    let isUnique = false;
-
-    while (!isUnique) {
-        username = 's_' + Math.floor(Math.random() * 10000);
-        const exists = allAccounts.some(u => String(u.username) === String(username) && String(u.password) === String(password));
-        if (!exists) isUnique = true;
-    }
-
-    const newStudent = {
-        id: Date.now(), teacherId: currentTeacher.id, role: 'student', name: name, grade: grade, subject: subject, username: username, password: password, progress: 0, createdAt: new Date().toISOString()
+    const data = {
+        "name": name,
+        "difficulty_type": subject,
+        "level": Number(grade)
     };
-    users.push(newStudent);
-    localStorage.setItem('users', JSON.stringify(users));
-    alert('تم إضافة الطالب بنجاح ✅');
-    closeAddStudentModal(); loadStudentsData();
+
+    try {
+        await pb.collection('students').create(data);
+        
+        showSuccess('تم إضافة الطالب بنجاح ✅');
+        
+        // تفريغ الحقول وإغلاق النافذة
+        document.getElementById('addStudentForm').reset();
+        closeAddStudentModal(); 
+        
+        // تحديث الجدول
+        loadStudentsData(); 
+    } catch (error) {
+        console.error("خطأ في إضافة الطالب:", error);
+        showError('حدث خطأ أثناء الإضافة. تأكد من تشغيل سيرفر PocketBase.');
+    }
 }
 
-function editStudent(studentId) {
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const student = users.find(u => u.id == studentId);
-    if (!student) return;
-    document.getElementById('editStudentId').value = student.id;
-    document.getElementById('editStudentName').value = student.name;
-    document.getElementById('editStudentGrade').value = student.grade;
-    document.getElementById('editStudentSubject').value = student.subject;
-    if(document.getElementById('editStudentUsername')) document.getElementById('editStudentUsername').value = student.username || '';
-    if(document.getElementById('editStudentPassword')) document.getElementById('editStudentPassword').value = '';
-    document.getElementById('editStudentModal').classList.add('show');
-}
-
-function updateStudentData() {
-    const idInput = document.getElementById('editStudentId').value;
-    const currentId = String(idInput);
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const index = users.findIndex(u => String(u.id) === currentId);
-
-    if (index !== -1) {
-        const currentUser = users[index];
-        const newName = document.getElementById('editStudentName').value.trim();
-        const newGrade = document.getElementById('editStudentGrade').value;
-        const newSubject = document.getElementById('editStudentSubject').value;
-        
-        let finalUsername = document.getElementById('editStudentUsername').value.trim() || currentUser.username;
-        let finalPassword = document.getElementById('editStudentPassword').value.trim() || currentUser.password;
-
-        const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-        const allAccounts = [...users, ...committeeMembers];
-
-        const duplicateUser = allAccounts.find(u => {
-            if (String(u.id) === currentId) return false;
-            const uName = String(u.username || '').trim();
-            const uPass = String(u.password || '').trim();
-            return uName === String(finalUsername) && uPass === String(finalPassword);
-        });
-        
-        if (duplicateUser) {
-            alert('اسم المستخدم غير متاح . يرجى اختيار اسم آخر');
-            return;
+// 🌟 دالة حذف طالب من PocketBase
+async function deleteStudent(studentId) {
+    showConfirmModal('⚠️ هل أنت متأكد من حذف هذا الطالب نهائياً؟', async function() {
+        try {
+            await pb.collection('students').delete(studentId);
+            showSuccess('تم الحذف بنجاح');
+            loadStudentsData();
+        } catch (error) {
+            console.error("خطأ في حذف الطالب:", error);
+            showError('حدث خطأ أثناء الحذف.');
         }
-
-        users[index].name = newName; users[index].grade = newGrade; users[index].subject = newSubject;
-        users[index].username = finalUsername; users[index].password = finalPassword;
-        localStorage.setItem('users', JSON.stringify(users));
-        alert('تم التحديث بنجاح ✅');
-        document.getElementById('editStudentModal').classList.remove('show');
-        loadStudentsData();
-    } else { alert('خطأ: الطالب غير موجود.'); }
-}
-
-function deleteStudent(studentId) {
-    showConfirmModal('⚠️ هل أنت متأكد من حذف هذا الطالب؟ <br><small>سيتم حذف جميع سجلاته ودرجاته نهائياً.</small>', function() {
-        let users = JSON.parse(localStorage.getItem('users') || '[]');
-        users = users.filter(u => u.id != studentId);
-        localStorage.setItem('users', JSON.stringify(users));
-        
-        cleanStudentOldData(studentId);
-        
-        showSuccess('تم الحذف بنجاح');
-        loadStudentsData();
     });
 }
 
+function editStudent(studentId) {
+    // سيتم تحديثها لاحقاً لربطها بـ PocketBase إذا احتجت ذلك
+    alert('ميزة التعديل سيتم ربطها قريباً');
+}
+
+function updateStudentData() {
+    // سيتم تحديثها لاحقاً لربطها بـ PocketBase إذا احتجت ذلك
+}
+
 function exportStudentData(studentId) {
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const student = users.find(u => u.id == studentId);
-    if (!student) return alert('بيانات الطالب غير موجودة');
-    const exportData = {
-        info: student,
-        data: {
-            tests: getStudentData('studentTests', studentId),
-            lessons: getStudentData('studentLessons', studentId),
-            assignments: getStudentData('studentAssignments', studentId),
-            progress: getStudentData('studentProgress', studentId),
-            events: getStudentData('studentEvents', studentId),
-            activities: getStudentData('studentActivities', studentId)
-        }, meta: { exportedBy: getCurrentUser().name, date: new Date().toISOString() }
-    };
-    const fileName = `student_${student.name}.json`;
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    alert('تصدير الطالب - قيد التطوير للعمل مع النظام الجديد');
 }
 
 function showImportStudentModal() {
@@ -286,49 +239,7 @@ function showImportStudentModal() {
 }
 
 function processStudentImport() {
-    const fileInput = document.getElementById('studentJsonFile');
-    if (!fileInput || !fileInput.files[0]) return alert('يرجى اختيار ملف الطالب أولاً');
-    const currentUser = getCurrentUser();
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const imported = JSON.parse(e.target.result);
-            if (!imported.info || !imported.data) throw new Error('الملف غير صالح');
-            const studentInfo = imported.info;
-            studentInfo.teacherId = currentUser.id; 
-
-            let users = JSON.parse(localStorage.getItem('users') || '[]');
-            const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-            const allAccounts = [...users, ...committeeMembers];
-
-            const collision = allAccounts.find(u => u.username === studentInfo.username && u.password === studentInfo.password && u.id != studentInfo.id);
-
-            if(collision && collision.id != studentInfo.id) {
-                studentInfo.username = studentInfo.username + '_imp';
-                alert('تنبيه: تم تعديل اسم المستخدم تلقائياً لوجود تطابق في البيانات.');
-            }
-
-            const existingIndex = users.findIndex(u => u.username === studentInfo.username);
-            
-            const doImport = () => {
-                users.push(studentInfo);
-                localStorage.setItem('users', JSON.stringify(users));
-                mergeData('studentTests', imported.data.tests); mergeData('studentLessons', imported.data.lessons); mergeData('studentAssignments', imported.data.assignments); mergeData('studentProgress', imported.data.progress); mergeData('studentEvents', imported.data.events); mergeData('studentActivities', imported.data.activities);
-                alert('تم الاستيراد بنجاح'); closeModal('importStudentModal'); loadStudentsData();
-            };
-
-            if (existingIndex !== -1) {
-                showConfirmModal(`الطالب "${studentInfo.name}" موجود. هل تريد تحديث بياناته؟`, function() {
-                    cleanStudentOldData(users[existingIndex].id);
-                    users.splice(existingIndex, 1);
-                    doImport();
-                });
-            } else {
-                doImport();
-            }
-
-        } catch (err) { alert('خطأ: ' + err.message); }
-    }; reader.readAsText(fileInput.files[0]);
+    alert('استيراد الطالب - قيد التطوير للعمل مع النظام الجديد');
 }
 
 function getStudentData(key, id) { return JSON.parse(localStorage.getItem(key) || '[]').filter(x => x.studentId == id); }
@@ -336,7 +247,7 @@ function mergeData(key, newData) { if (!newData || !newData.length) return; let 
 function cleanStudentOldData(id) { ['studentTests', 'studentLessons', 'studentAssignments', 'studentEvents'].forEach(key => { let data = JSON.parse(localStorage.getItem(key) || '[]'); localStorage.setItem(key, JSON.stringify(data.filter(x => String(x.studentId) !== String(id)))); }); }
 function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser')).user; }
 function openStudentFile(id) { window.location.href = `student-profile.html?id=${id}`; }
-function showStudentLoginData(id) { const users = JSON.parse(localStorage.getItem('users') || '[]'); const s = users.find(u => u.id == id); if(s) { document.getElementById('loginDataUsername').value = s.username; document.getElementById('loginDataPassword').value = s.password; document.getElementById('studentLoginDataModal').classList.add('show'); } }
+function showStudentLoginData(id) { alert('ميزة عرض بيانات الدخول سيتم برمجتها قريباً'); }
 function copyToClipboard(id) { const el = document.getElementById(id); el.select(); document.execCommand('copy'); alert('تم النسخ'); }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 function closeAddStudentModal() { document.getElementById('addStudentModal').classList.remove('show'); }

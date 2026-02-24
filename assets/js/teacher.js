@@ -63,28 +63,14 @@ if (!window.showError) {
 }
 
 // ==========================================
-// 2. التهيئة وجلب بيانات المستخدم
+// 2. التهيئة
 // ==========================================
 document.addEventListener('DOMContentLoaded', function() {
     const path = window.location.pathname;
-    if (path.includes('dashboard.html')) initializeTeacherDashboard();
-    else if (path.includes('students.html')) initializeStudentsPage();
+    if (path.includes('students.html')) {
+        loadStudentsData();
+    }
 });
-
-function initializeStudentsPage() {
-    const user = getCurrentUser();
-    if (!user) return;
-    if(document.getElementById('userName')) document.getElementById('userName').textContent = 'أ/ ' + user.name;
-    loadStudentsData();
-}
-
-function initializeTeacherDashboard() {
-    const user = getCurrentUser();
-    if (!user) return;
-    if(document.getElementById('userName')) document.getElementById('userName').textContent = 'أ/ ' + user.name;
-    // الإحصائيات (مؤقتاً سيتم ربطها لاحقاً)
-    if (document.getElementById('studentsCount')) document.getElementById('studentsCount').innerText = '-';
-}
 
 function getCurrentUser() {
     try {
@@ -94,21 +80,20 @@ function getCurrentUser() {
 }
 
 // ==========================================
-// 3. عمليات قاعدة البيانات للطلاب (PocketBase)
+// 3. عمليات قاعدة البيانات (PocketBase)
 // ==========================================
 
-// أ) جلب وعرض الطلاب (تمت إعادة جميع الأزرار)
 async function loadStudentsData() {
     const tableBody = document.getElementById('studentsTableBody');
     if (!tableBody) return;
     
     document.getElementById('loadingState').style.display = 'block';
-    document.getElementById('emptyState').style.display = 'none';
+    if(document.getElementById('emptyState')) document.getElementById('emptyState').style.display = 'none';
     tableBody.innerHTML = '';
 
     try {
         const currentTeacher = getCurrentUser();
-        // جلب طلاب هذا المعلم فقط
+        // جلب الطلاب من قاعدة البيانات
         const records = await pb.collection('students').getFullList({
             filter: `teacherId = "${currentTeacher.id}"`,
             sort: '-created',
@@ -117,19 +102,23 @@ async function loadStudentsData() {
         document.getElementById('loadingState').style.display = 'none';
 
         if (records.length === 0) {
-            document.getElementById('emptyState').style.display = 'block';
+            if(document.getElementById('emptyState')) document.getElementById('emptyState').style.display = 'block';
             return;
         }
 
+        // رسم الجدول بالبيانات الصحيحة
         tableBody.innerHTML = records.map((student, index) => {
             let progressPct = 0; 
             let hexColor = '#0ea5e9'; 
+            
+            // التأكد من جلب حقل الاسم (name) وليس (created)
+            let studentName = student.name ? student.name : 'بدون اسم';
 
             return `<tr>
                 <td>${index + 1}</td>
-                <td style="font-weight:bold;">${student.name || 'بدون اسم'}</td>
-                <td>الصف ${student.level}</td>
-                <td>${student.difficulty_type}</td>
+                <td style="font-weight:bold; color:#333;">${studentName}</td>
+                <td>الصف ${student.level || '-'}</td>
+                <td>${student.difficulty_type || '-'}</td>
                 <td class="progress-cell">
                     <div class="progress-text" style="color: ${hexColor}; font-weight: bold;">${progressPct}%</div>
                     <div class="progress-bar">
@@ -154,26 +143,22 @@ async function loadStudentsData() {
     }
 }
 
-// ب) إضافة طالب جديد (تتضمن توليد اسم مستخدم وكلمة مرور)
 async function addNewStudent() {
-    const name = document.getElementById('studentName').value.trim();
-    const grade = document.getElementById('studentGrade').value;
-    const subject = document.getElementById('studentSubject').value;
+    const nameInput = document.getElementById('studentName').value.trim();
+    const gradeInput = document.getElementById('studentGrade').value;
+    const subjectInput = document.getElementById('studentSubject').value;
 
-    if (!name || !grade || !subject) return showError('يرجى ملء جميع الحقول');
+    if (!nameInput || !gradeInput || !subjectInput) return showError('يرجى ملء جميع الحقول');
 
     const currentTeacher = getCurrentUser();
-    
-    // توليد بيانات الدخول تلقائياً
-    let username = 's_' + Math.floor(Math.random() * 10000);
-    let password = '123';
+    let generatedUsername = 's_' + Math.floor(Math.random() * 10000);
 
     const data = {
-        "name": name,
-        "difficulty_type": subject,
-        "level": Number(grade),
-        "username": username,
-        "password": password,
+        "name": nameInput,
+        "difficulty_type": subjectInput,
+        "level": Number(gradeInput),
+        "username": generatedUsername,
+        "password": "123",
         "teacherId": String(currentTeacher.id)
     };
 
@@ -182,14 +167,13 @@ async function addNewStudent() {
         showSuccess('تم إضافة الطالب بنجاح ✅');
         document.getElementById('addStudentForm').reset();
         closeAddStudentModal();
-        loadStudentsData();
+        loadStudentsData(); // تحديث الجدول فوراً
     } catch (error) {
         console.error("Error:", error);
-        showError('حدث خطأ أثناء الإضافة. تأكد من تطابق الحقول في PocketBase.');
+        showError('حدث خطأ أثناء الإضافة. تأكد من الحقول في PocketBase.');
     }
 }
 
-// ج) حذف طالب
 async function deleteStudent(studentId) {
     showConfirmModal('⚠️ هل أنت متأكد من حذف هذا الطالب نهائياً؟', async function() {
         try {
@@ -202,77 +186,17 @@ async function deleteStudent(studentId) {
     });
 }
 
-// د) عرض بيانات الدخول للطالب
-async function showStudentLoginData(studentId) {
-    try {
-        const student = await pb.collection('students').getOne(studentId);
-        document.getElementById('loginDataUsername').value = student.username || 'غير محدد';
-        document.getElementById('loginDataPassword').value = student.password || 'غير محدد';
-        document.getElementById('studentLoginDataModal').classList.add('show');
-    } catch (error) {
-        showError('تعذر جلب بيانات الدخول');
-    }
-}
-
-// هـ) جلب بيانات الطالب لنموذج التعديل
-async function editStudent(studentId) {
-    try {
-        const student = await pb.collection('students').getOne(studentId);
-        document.getElementById('editStudentId').value = student.id;
-        document.getElementById('editStudentName').value = student.name;
-        document.getElementById('editStudentGrade').value = student.level;
-        document.getElementById('editStudentSubject').value = student.difficulty_type;
-        document.getElementById('editStudentUsername').value = student.username || '';
-        document.getElementById('editStudentPassword').value = student.password || '';
-        
-        document.getElementById('editStudentModal').classList.add('show');
-    } catch (error) {
-        showError('تعذر جلب بيانات الطالب للتعديل');
-    }
-}
-
-// و) حفظ التعديلات على بيانات الطالب
-async function updateStudentData() {
-    const id = document.getElementById('editStudentId').value;
-    const data = {
-        "name": document.getElementById('editStudentName').value.trim(),
-        "level": Number(document.getElementById('editStudentGrade').value),
-        "difficulty_type": document.getElementById('editStudentSubject').value,
-        "username": document.getElementById('editStudentUsername').value.trim(),
-        "password": document.getElementById('editStudentPassword').value.trim()
-    };
-
-    try {
-        await pb.collection('students').update(id, data);
-        showSuccess('تم التحديث بنجاح ✅');
-        document.getElementById('editStudentModal').classList.remove('show');
-        loadStudentsData();
-    } catch (error) {
-        showError('حدث خطأ أثناء التحديث.');
-    }
-}
-
-// ==========================================
-// 4. دوال التحكم بالواجهة الأساسية
-// ==========================================
 function showAddStudentModal() { document.getElementById('addStudentModal').classList.add('show'); }
 function closeAddStudentModal() { document.getElementById('addStudentModal').classList.remove('show'); }
 function openStudentFile(id) { window.location.href = `student-profile.html?id=${id}`; }
-function copyToClipboard(id) { 
-    const el = document.getElementById(id); 
-    el.select(); 
-    document.execCommand('copy'); 
-    showSuccess('تم النسخ'); 
-}
+function showStudentLoginData(id) { alert('سيتم برمجتها قريباً'); }
+function editStudent(id) { alert('سيتم برمجتها قريباً'); }
 
-// تصدير الدوال للاستخدام في الـ HTML
 window.addNewStudent = addNewStudent; 
-window.editStudent = editStudent; 
-window.updateStudentData = updateStudentData;
 window.deleteStudent = deleteStudent; 
 window.openStudentFile = openStudentFile; 
 window.showStudentLoginData = showStudentLoginData;
-window.copyToClipboard = copyToClipboard; 
+window.editStudent = editStudent;
 window.loadStudentsData = loadStudentsData; 
 window.showAddStudentModal = showAddStudentModal;
 window.closeAddStudentModal = closeAddStudentModal;

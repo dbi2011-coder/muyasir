@@ -1,6 +1,56 @@
 // ============================================
-// 📁 الملف: assets/js/admin.js (نسخة Supabase)
+// 📁 الملف: assets/js/admin.js (نسخة Supabase مع إصلاح النوافذ المنبثقة)
 // ============================================
+
+// =========================================================
+// 🔥 دوال النوافذ المنبثقة والإشعارات 🔥
+// =========================================================
+if (!window.showConfirmModal) {
+    window.showConfirmModal = function(message, onConfirm) {
+        let modal = document.getElementById('globalConfirmModal');
+        if (!modal) {
+            const modalHtml = `<div id="globalConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999999; justify-content:center; align-items:center; backdrop-filter:blur(4px);"><div style="background:white; padding:25px; border-radius:15px; width:90%; max-width:350px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.2); animation:popIn 0.3s ease;"><div style="font-size:3.5rem; color:#dc3545; margin-bottom:15px;"><i class="fas fa-trash-alt"></i></div><div style="font-size:1.3rem; font-weight:bold; margin-bottom:10px; color:#333;">تأكيد الإجراء</div><div id="globalConfirmMessage" style="color:#666; margin-bottom:25px; font-size:0.95rem; line-height:1.5;"></div><div style="display:flex; gap:15px; justify-content:center;"><button id="globalConfirmCancel" style="background:#e2e8f0; color:#333; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; transition:0.2s; font-family:'Tajawal';">إلغاء</button><button id="globalConfirmOk" style="background:#dc3545; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; transition:0.2s; font-family:'Tajawal';">نعم، متأكد</button></div></div></div><style>@keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }</style>`;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+            modal = document.getElementById('globalConfirmModal');
+        }
+        document.getElementById('globalConfirmMessage').innerHTML = message;
+        modal.style.display = 'flex';
+        document.getElementById('globalConfirmOk').onclick = function() { modal.style.display = 'none'; if (typeof onConfirm === 'function') onConfirm(); };
+        document.getElementById('globalConfirmCancel').onclick = function() { modal.style.display = 'none'; };
+    };
+}
+
+if (!window.showSuccess) {
+    window.showSuccess = function(message) {
+        let toast = document.getElementById('globalSuccessToast');
+        if (!toast) {
+            const toastHtml = `<div id="globalSuccessToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#10b981; color:white; padding:12px 25px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.2); z-index:999999; font-weight:bold; font-family:'Tajawal'; align-items:center; gap:10px;"><i class="fas fa-check-circle"></i> <span id="globalSuccessMessage"></span></div>`;
+            document.body.insertAdjacentHTML('beforeend', toastHtml);
+            toast = document.getElementById('globalSuccessToast');
+        }
+        document.getElementById('globalSuccessMessage').textContent = message;
+        toast.style.display = 'flex';
+        setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    };
+}
+
+if (!window.showError) {
+    window.showError = function(message) {
+        let toast = document.getElementById('globalErrorToast');
+        if (!toast) {
+            const toastHtml = `<div id="globalErrorToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#dc3545; color:white; padding:12px 25px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.2); z-index:999999; font-weight:bold; font-family:'Tajawal'; align-items:center; gap:10px;"><i class="fas fa-exclamation-triangle"></i> <span id="globalErrorMessage"></span></div>`;
+            document.body.insertAdjacentHTML('beforeend', toastHtml);
+            toast = document.getElementById('globalErrorToast');
+        }
+        document.getElementById('globalErrorMessage').innerHTML = message;
+        toast.style.display = 'flex';
+        setTimeout(() => { toast.style.display = 'none'; }, 4000);
+    };
+}
+
+// =========================================================
+// بداية دوال المدير
+// =========================================================
 
 document.addEventListener('DOMContentLoaded', async function() {
     const user = getAdminSession();
@@ -44,7 +94,7 @@ async function loadTeachersData() {
             return;
         }
 
-        // جلب أعداد الطلاب لكل معلم (لتحسين الأداء، نجلب كل الطلاب ونحسبهم)
+        // جلب أعداد الطلاب لكل معلم
         const { data: students, error: studentsError } = await window.supabase
             .from('users')
             .select('teacherId')
@@ -78,7 +128,7 @@ async function loadTeachersData() {
         }).join('');
     } catch (error) {
         console.error("Error loading teachers:", error);
-        alert("حدث خطأ أثناء جلب بيانات المعلمين");
+        showError("حدث خطأ أثناء جلب بيانات المعلمين");
         if (loading) loading.style.display = 'none';
     }
 }
@@ -113,10 +163,9 @@ async function addNewTeacher() {
     if (!nameVal || !userVal || !passVal) return alert('البيانات الإجبارية ناقصة');
 
     try {
-        // التحقق من أن اسم المستخدم غير مكرر
         const { data: existingUser } = await window.supabase.from('users').select('id').eq('username', userVal);
         if (existingUser && existingUser.length > 0) {
-            return alert('اسم المستخدم مسجل مسبقاً. يرجى اختيار اسم آخر.');
+            return showError('اسم المستخدم مسجل مسبقاً. يرجى اختيار اسم آخر.');
         }
 
         const { error } = await window.supabase.from('users').insert([{
@@ -130,13 +179,13 @@ async function addNewTeacher() {
 
         if (error) throw error;
 
-        alert('تمت الإضافة بنجاح ✅');
+        showSuccess('تمت الإضافة بنجاح ✅');
         closeAddTeacherModal(); 
         loadTeachersData(); 
         loadAdminStats();
     } catch (error) {
         console.error("Add Teacher Error:", error);
-        alert('حدث خطأ أثناء الإضافة');
+        showError('حدث خطأ أثناء الإضافة');
     }
 }
 
@@ -193,7 +242,7 @@ async function editTeacherCredentials() {
         setValue('editCredTeacherId', teacher.id); 
         setValue('editCredTeacherName', teacher.name); 
         setValue('editCredTeacherUsername', teacher.username); 
-        setValue('editCredTeacherPassword', ''); // نترك الباسورد فارغاً
+        setValue('editCredTeacherPassword', ''); 
         
         setTimeout(() => { const editModal = document.getElementById('editCredentialsModal'); if(editModal) editModal.classList.add('show'); }, 200);
     } catch (e) { console.error(e); }
@@ -204,12 +253,11 @@ async function saveTeacherCredentials() {
     const newUser = document.getElementById('editCredTeacherUsername').value.trim();
     const newPass = document.getElementById('editCredTeacherPassword').value.trim();
 
-    if(!newUser) return alert('اسم المستخدم مطلوب');
+    if(!newUser) return showError('اسم المستخدم مطلوب');
 
     try {
-        // التحقق من التكرار (استثناء المعلم نفسه)
         const { data: existingUser } = await window.supabase.from('users').select('id').eq('username', newUser).neq('id', id);
-        if (existingUser && existingUser.length > 0) return alert('اسم المستخدم غير متاح.');
+        if (existingUser && existingUser.length > 0) return showError('اسم المستخدم غير متاح.');
 
         let updateData = { username: newUser };
         if (newPass && newPass.length >= 1) updateData.password = newPass;
@@ -217,12 +265,12 @@ async function saveTeacherCredentials() {
         const { error } = await window.supabase.from('users').update(updateData).eq('id', id);
         if (error) throw error;
 
-        alert('تم التحديث بنجاح');
+        showSuccess('تم التحديث بنجاح');
         closeModalElement('editCredentialsModal');
         loadTeachersData();
     } catch (e) {
         console.error(e);
-        alert('حدث خطأ أثناء التحديث');
+        showError('حدث خطأ أثناء التحديث');
     }
 }
 
@@ -233,7 +281,7 @@ function setText(id, txt) { const el = document.getElementById(id); if(el) el.te
 function clearValue(id) { const el = document.getElementById(id); if(el) el.value = ''; }
 function closeModalElement(id) { const m = document.getElementById(id); if(m) m.classList.remove('show'); }
 function togglePasswordVisibility() { const el = document.getElementById('viewTeacherPassword'); if(el) el.type = (el.type === 'password' ? 'text' : 'password'); }
-function copyToClipboard(txt, type) { navigator.clipboard.writeText(txt).then(() => alert('تم النسخ')); }
+function copyToClipboard(txt, type) { navigator.clipboard.writeText(txt).then(() => showSuccess('تم النسخ للمحفظة')); }
 
 window.showAddTeacherModal = showAddTeacherModal; window.closeAddTeacherModal = closeAddTeacherModal;
 window.addNewTeacher = addNewTeacher;

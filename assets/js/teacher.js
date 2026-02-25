@@ -2,22 +2,12 @@
 // 📁 الملف: assets/js/teacher.js
 // ============================================
 
+// دوال النوافذ المنبثقة
 if (!window.showConfirmModal) {
     window.showConfirmModal = function(message, onConfirm) {
         let modal = document.getElementById('globalConfirmModal');
         if (!modal) {
-            const modalHtml = `
-                <div id="globalConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999999; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
-                    <div style="background:white; padding:25px; border-radius:15px; width:90%; max-width:350px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.2); animation:popIn 0.3s ease;">
-                        <div style="font-size:3.5rem; color:#dc3545; margin-bottom:15px;"><i class="fas fa-exclamation-circle"></i></div>
-                        <div style="font-size:1.3rem; font-weight:bold; margin-bottom:10px; color:#333;">تأكيد الإجراء</div>
-                        <div id="globalConfirmMessage" style="color:#666; margin-bottom:25px; font-size:0.95rem; line-height:1.5;"></div>
-                        <div style="display:flex; gap:15px; justify-content:center;">
-                            <button id="globalConfirmCancel" style="background:#e2e8f0; color:#333; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; transition:0.2s; font-family:'Tajawal';">إلغاء</button>
-                            <button id="globalConfirmOk" style="background:#dc3545; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1; transition:0.2s; font-family:'Tajawal';">نعم، متأكد</button>
-                        </div>
-                    </div>
-                </div>`;
+            const modalHtml = `<div id="globalConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999999; justify-content:center; align-items:center; backdrop-filter:blur(4px);"><div style="background:white; padding:25px; border-radius:15px; width:90%; max-width:350px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.2); animation:popIn 0.3s ease;"><div style="font-size:3.5rem; color:#dc3545; margin-bottom:15px;"><i class="fas fa-exclamation-circle"></i></div><div style="font-size:1.3rem; font-weight:bold; margin-bottom:10px; color:#333;">تأكيد الإجراء</div><div id="globalConfirmMessage" style="color:#666; margin-bottom:25px; font-size:0.95rem; line-height:1.5;"></div><div style="display:flex; gap:15px; justify-content:center;"><button id="globalConfirmCancel" style="background:#e2e8f0; color:#333; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1;">إلغاء</button><button id="globalConfirmOk" style="background:#dc3545; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1;">نعم، متأكد</button></div></div></div>`;
             document.body.insertAdjacentHTML('beforeend', modalHtml);
             modal = document.getElementById('globalConfirmModal');
         }
@@ -27,12 +17,11 @@ if (!window.showConfirmModal) {
         document.getElementById('globalConfirmCancel').onclick = function() { modal.style.display = 'none'; };
     };
 }
-
 if (!window.showSuccess) {
     window.showSuccess = function(message) {
         let toast = document.getElementById('globalSuccessToast');
         if (!toast) {
-            const toastHtml = `<div id="globalSuccessToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#10b981; color:white; padding:12px 25px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.2); z-index:999999; font-weight:bold; font-family:'Tajawal'; align-items:center; gap:10px;"><i class="fas fa-check-circle"></i> <span id="globalSuccessMessage"></span></div>`;
+            const toastHtml = `<div id="globalSuccessToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#10b981; color:white; padding:12px 25px; border-radius:8px; z-index:999999; font-weight:bold;"><i class="fas fa-check-circle"></i> <span id="globalSuccessMessage"></span></div>`;
             document.body.insertAdjacentHTML('beforeend', toastHtml);
             toast = document.getElementById('globalSuccessToast');
         }
@@ -41,12 +30,11 @@ if (!window.showSuccess) {
         setTimeout(() => { toast.style.display = 'none'; }, 3000);
     };
 }
-
 if (!window.showError) {
     window.showError = function(message) {
         let toast = document.getElementById('globalErrorToast');
         if (!toast) {
-            const toastHtml = `<div id="globalErrorToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#dc3545; color:white; padding:12px 25px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.2); z-index:999999; font-weight:bold; font-family:'Tajawal'; align-items:center; gap:10px;"><i class="fas fa-exclamation-triangle"></i> <span id="globalErrorMessage"></span></div>`;
+            const toastHtml = `<div id="globalErrorToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#dc3545; color:white; padding:12px 25px; border-radius:8px; z-index:999999; font-weight:bold;"><i class="fas fa-exclamation-triangle"></i> <span id="globalErrorMessage"></span></div>`;
             document.body.insertAdjacentHTML('beforeend', toastHtml);
             toast = document.getElementById('globalErrorToast');
         }
@@ -73,24 +61,7 @@ function initializeTeacherDashboard() {
     const user = checkAuth();
     if (!user || user.role !== 'teacher') return;
     if(document.getElementById('userName')) document.getElementById('userName').textContent = 'أ/ ' + user.name;
-    loadTeacherStats();
-}
-
-async function loadTeacherStats() {
-    const currentTeacher = getCurrentUser();
-    if (!currentTeacher) return;
-
-    try {
-        const { count: studentsCount } = await supa.from('users').select('*', { count: 'exact', head: true }).eq('role', 'student').eq('teacherId', currentTeacher.id);
-        const { count: lessonsCount } = await supa.from('lessons').select('*', { count: 'exact', head: true }).eq('teacherId', currentTeacher.id);
-        const { count: assignmentsCount } = await supa.from('assignments').select('*', { count: 'exact', head: true }).eq('teacherId', currentTeacher.id);
-        const { count: messagesCount } = await supa.from('messages').select('*', { count: 'exact', head: true }).eq('teacherId', currentTeacher.id).eq('isFromStudent', true).eq('isRead', false);
-
-        if (document.getElementById('studentsCount')) document.getElementById('studentsCount').innerText = studentsCount || 0;
-        if (document.getElementById('lessonsCount')) document.getElementById('lessonsCount').innerText = lessonsCount || 0;
-        if (document.getElementById('assignmentsCount')) document.getElementById('assignmentsCount').innerText = assignmentsCount || 0;
-        if (document.getElementById('unreadMessages')) document.getElementById('unreadMessages').innerText = messagesCount || 0;
-    } catch (error) { console.error("Error loading stats:", error); }
+    if(typeof loadTeacherStats === 'function') loadTeacherStats();
 }
 
 async function loadStudentsData() {
@@ -105,7 +76,7 @@ async function loadStudentsData() {
 
     try {
         const currentTeacher = getCurrentUser();
-        const { data: students, error } = await supa
+        const { data: students, error } = await window.supa
             .from('users')
             .select('*')
             .eq('role', 'student')
@@ -178,7 +149,7 @@ async function addNewStudent() {
     };
 
     try {
-        const { error } = await supa.from('users').insert([newStudentData]);
+        const { error } = await window.supa.from('users').insert([newStudentData]);
         if (error) throw error;
 
         showSuccess('تم إضافة الطالب بنجاح ✅');
@@ -193,7 +164,7 @@ async function addNewStudent() {
 
 async function editStudent(studentId) {
     try {
-        const { data: student, error } = await supa.from('users').select('*').eq('id', studentId).single();
+        const { data: student, error } = await window.supa.from('users').select('*').eq('id', studentId).single();
         if (error || !student) throw error;
 
         document.getElementById('editStudentId').value = student.id;
@@ -222,7 +193,7 @@ async function updateStudentData() {
     if(newPassword) updateData.password = newPassword;
 
     try {
-        const { error } = await supa.from('users').update(updateData).eq('id', studentId);
+        const { error } = await window.supa.from('users').update(updateData).eq('id', studentId);
         if (error) throw error;
 
         showSuccess('تم التحديث بنجاح ✅');
@@ -237,16 +208,17 @@ async function deleteStudent(studentId) {
     if(window.showConfirmModal) {
         showConfirmModal('⚠️ هل أنت متأكد من حذف هذا الطالب نهائياً؟<br><small>سيتم حذف جميع سجلاته ودرجاته.</small>', async function() {
             try {
-                const { error } = await supa.from('users').delete().eq('id', studentId);
+                const { error } = await window.supa.from('users').delete().eq('id', studentId);
                 if (error) throw error;
                 
-                await supa.from('studentTests').delete().eq('studentId', studentId);
-                await supa.from('studentLessons').delete().eq('studentId', studentId);
-                await supa.from('studentAssignments').delete().eq('studentId', studentId);
+                await window.supa.from('studentTests').delete().eq('studentId', studentId);
+                await window.supa.from('studentLessons').delete().eq('studentId', studentId);
+                await window.supa.from('studentAssignments').delete().eq('studentId', studentId);
                 
                 showSuccess('تم الحذف بنجاح');
                 loadStudentsData();
             } catch (error) {
+                console.error("Error deleting:", error);
                 showError('حدث خطأ أثناء الحذف.');
             }
         });
@@ -255,7 +227,7 @@ async function deleteStudent(studentId) {
 
 async function showStudentLoginData(studentId) {
     try {
-        const { data: student, error } = await supa.from('users').select('username, password').eq('id', studentId).single();
+        const { data: student, error } = await window.supa.from('users').select('username, password').eq('id', studentId).single();
         if(error) throw error;
 
         document.getElementById('loginDataUsername').value = student.username;
@@ -269,10 +241,10 @@ async function showStudentLoginData(studentId) {
 async function exportStudentData(studentId) {
     try {
         showSuccess('جاري تجهيز بيانات الطالب للتصدير...');
-        const { data: info } = await supa.from('users').select('*').eq('id', studentId).single();
-        const { data: tests } = await supa.from('studentTests').select('*').eq('studentId', studentId);
-        const { data: lessons } = await supa.from('studentLessons').select('*').eq('studentId', studentId);
-        const { data: assignments } = await supa.from('studentAssignments').select('*').eq('studentId', studentId);
+        const { data: info } = await window.supa.from('users').select('*').eq('id', studentId).single();
+        const { data: tests } = await window.supa.from('studentTests').select('*').eq('studentId', studentId);
+        const { data: lessons } = await window.supa.from('studentLessons').select('*').eq('studentId', studentId);
+        const { data: assignments } = await window.supa.from('studentAssignments').select('*').eq('studentId', studentId);
 
         const exportData = {
             info: info,
@@ -310,8 +282,8 @@ async function processStudentImport() {
             studentInfo.teacherId = currentTeacher.id; 
             studentInfo.username = studentInfo.username + '_imp' + Math.floor(Math.random()*100); 
             
-            const { data: insertedStudent, error: err1 } = await supa.from('users').insert([studentInfo]).select().single();
-            if(err1) throw err1;
+            const { error } = await window.supa.from('users').insert([studentInfo]);
+            if(error) throw error;
 
             showSuccess('تم الاستيراد بنجاح');
             closeModal('importStudentModal');

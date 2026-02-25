@@ -30,8 +30,8 @@ async function login() {
     if(btnText && btnLoading) { btnText.style.display = 'none'; btnLoading.style.display = 'block'; }
 
     try {
-        // البحث عن المستخدم في Supabase
-        const { data: user, error } = await supabase
+        // تم التغيير هنا إلى supa
+        const { data: user, error } = await supa
             .from('users')
             .select('*')
             .eq('username', userInp)
@@ -49,7 +49,7 @@ async function login() {
                     role: "admin",
                     status: "active"
                 };
-                await supabase.from('users').insert([adminData]);
+                await supa.from('users').insert([adminData]);
                 sessionStorage.setItem('currentUser', JSON.stringify({ user: adminData }));
                 window.location.href = '../admin/dashboard.html';
                 return;
@@ -61,12 +61,11 @@ async function login() {
         }
 
         if (user.status === 'suspended' || user.status === 'موقوف') {
-            showAuthNotification("⛔ عذراً، تم إيقاف حسابك. يرجى مراجعة الإدارة.", "error");
+            showAuthNotification("⛔ عذراً، تم إيقاف حسابك.", "error");
             if(btnText && btnLoading) { btnText.style.display = 'block'; btnLoading.style.display = 'none'; }
             return; 
         }
 
-        // تسجيل الدخول ناجح
         sessionStorage.setItem('currentUser', JSON.stringify({ user: user }));
         let prefix = window.location.href.includes('/pages/') ? '../' : 'pages/';
         

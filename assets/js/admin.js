@@ -1,5 +1,5 @@
 // ============================================
-// 📁 الملف: assets/js/admin.js (النسخة السحابية الكاملة + ميزة التصدير)
+// 📁 الملف: assets/js/admin.js (النسخة السحابية الكاملة + الاستيراد والتصدير)
 // ============================================
 
 // =========================================================
@@ -176,7 +176,7 @@ async function addNewTeacher() {
         }
 
         const { error } = await window.supabase.from('users').insert([{
-            id: Date.now(), // الحل الجذري لتجاوز الخطأ
+            id: Date.now(),
             name: nameVal,
             username: userVal,
             password: passVal,
@@ -283,27 +283,23 @@ async function saveTeacherCredentials() {
 }
 
 // ==========================================
-// تصدير بيانات المعلم من السحابة (Supabase)
+// التصدير والاستيراد من وإلى السحابة (Supabase)
 // ==========================================
+
 async function exportTeacherData(teacherId) {
     showConfirmModal('هل تريد تصدير بيانات هذا المعلم وطلابه بالكامل؟', async function() {
         try {
             if(window.showAuthNotification) window.showAuthNotification('جاري تجهيز البيانات للتصدير...', 'info');
 
-            // 1. جلب بيانات المعلم
             const { data: teacherProfile } = await window.supabase.from('users').select('*').eq('id', teacherId).single();
             if (!teacherProfile) return showError('المعلم غير موجود');
 
-            // 2. جلب بيانات الطلاب المرتبطين به
             const { data: students } = await window.supabase.from('users').select('*').eq('role', 'student').eq('teacherId', teacherId);
-            
-            // 3. جلب محتوى المعلم
             const { data: schedule } = await window.supabase.from('teacher_schedule').select('*').eq('teacherId', teacherId);
             const { data: tests } = await window.supabase.from('tests').select('*').eq('teacherId', teacherId);
             const { data: lessons } = await window.supabase.from('lessons').select('*').eq('teacherId', teacherId);
             const { data: assignments } = await window.supabase.from('assignments').select('*').eq('teacherId', teacherId);
 
-            // 4. تجميع البيانات
             const exportData = {
                 meta: { type: 'teacher_backup_supabase', version: '2.0', exportedAt: new Date().toISOString() },
                 profile: teacherProfile,
@@ -316,7 +312,6 @@ async function exportTeacherData(teacherId) {
                 }
             };
 
-            // 5. تحميل الملف
             const fileName = `Teacher_${teacherProfile.name}_${new Date().toISOString().split('T')[0]}.json`;
             const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
             const url = URL.createObjectURL(blob);
@@ -334,6 +329,53 @@ async function exportTeacherData(teacherId) {
             showError("حدث خطأ أثناء التصدير من السحابة");
         }
     });
+}
+
+function importTeacherData() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async function(event) {
+            try {
+                const d = JSON.parse(event.target.result);
+                if (!d.meta || !d.meta.type.includes('teacher_backup')) {
+                    return showError('ملف غير صالح أو لا يخص نسخة المعلم');
+                }
+                
+                showConfirmModal(`استيراد بيانات المعلم: ${d.profile.name}؟\nسيتم رفع حساب المعلم وطلابه والمحتوى الخاص به إلى السحابة.`, async function() {
+                    if(window.showAuthNotification) window.showAuthNotification('جاري الاستيراد للسحابة، يرجى الانتظار...', 'info');
+
+                    // رفع بيانات المعلم (Upsert لتحديثه إذا كان موجوداً أو إضافته إن لم يكن)
+                    const { error: profileErr } = await window.supabase.from('users').upsert([d.profile]);
+                    if(profileErr) throw profileErr;
+
+                    // رفع الطلاب
+                    if(d.data.students && d.data.students.length > 0) {
+                        await window.supabase.from('users').upsert(d.data.students);
+                    }
+
+                    // رفع المحتوى
+                    if(d.data.schedule && d.data.schedule.length > 0) await window.supabase.from('teacher_schedule').upsert(d.data.schedule);
+                    if(d.data.tests && d.data.tests.length > 0) await window.supabase.from('tests').upsert(d.data.tests);
+                    if(d.data.lessons && d.data.lessons.length > 0) await window.supabase.from('lessons').upsert(d.data.lessons);
+                    if(d.data.assignments && d.data.assignments.length > 0) await window.supabase.from('assignments').upsert(d.data.assignments);
+
+                    showSuccess('تم الاستيراد بنجاح ✅');
+                    loadTeachersData();
+                    loadAdminStats();
+                });
+            } catch(er) { 
+                console.error("Import Error:", er);
+                showError('خطأ أثناء قراءة الملف: ' + er.message); 
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
 }
 
 // أدوات مساعدة
@@ -354,3 +396,4 @@ window.closeViewCredentialsModal = () => closeModalElement('viewCredentialsModal
 window.closeEditCredentialsModal = () => closeModalElement('editCredentialsModal');
 window.togglePasswordVisibility = togglePasswordVisibility; window.copyToClipboard = copyToClipboard;
 window.exportTeacherData = exportTeacherData;
+window.importTeacherData = importTeacherData;

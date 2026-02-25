@@ -1,5 +1,5 @@
 // ============================================
-// 📁 الملف: assets/js/teacher.js (النسخة السحابية الكاملة والنهائية)
+// 📁 الملف: assets/js/teacher.js (النسخة السحابية الكاملة + التصدير والاستيراد)
 // ============================================
 
 if (!window.showConfirmModal) {
@@ -45,6 +45,14 @@ if (!window.showError) {
     };
 }
 
+if (!window.showAuthNotification) {
+    window.showAuthNotification = function(message, type = 'info') {
+        if(type === 'success') showSuccess(message);
+        else if(type === 'error') showError(message);
+        else alert(message);
+    };
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const path = window.location.pathname;
     const user = checkAuth();
@@ -71,7 +79,6 @@ async function loadTeacherStats() {
         const { count, error } = await window.supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'student').eq('teacherId', currentTeacher.id);
         if(document.getElementById('studentsCount')) document.getElementById('studentsCount').innerText = count || 0;
         
-        // أرقام فعلية من السحابة للدروس والواجبات والمراسلات
         const { count: lessonsCount } = await window.supabase.from('lessons').select('*', { count: 'exact', head: true }).eq('teacherId', currentTeacher.id);
         if(document.getElementById('lessonsCount')) document.getElementById('lessonsCount').innerText = lessonsCount || 0;
 
@@ -135,6 +142,7 @@ async function loadStudentsData() {
                         <button class="btn btn-sm btn-primary" onclick="openStudentFile(${student.id})">ملف</button>
                         <button class="btn btn-sm btn-secondary" onclick="showStudentLoginData(${student.id}, '${student.username}', '${student.password}')">بيانات</button>
                         <button class="btn btn-sm btn-warning" onclick="editStudent(${student.id})">تعديل</button>
+                        <button class="btn btn-sm btn-info" onclick="exportStudentData(${student.id})">تصدير</button>
                         <button class="btn btn-sm btn-danger" onclick="deleteStudent(${student.id})">حذف</button>
                     </div>
                 </td>
@@ -161,7 +169,7 @@ async function addNewStudent() {
 
     try {
         const { error } = await window.supabase.from('users').insert([{
-            id: Date.now(), // الحل الجذري لتجاوز الخطأ
+            id: Date.now(),
             name: name,
             grade: grade,
             subject: subject,
@@ -179,7 +187,7 @@ async function addNewStudent() {
         loadStudentsData();
     } catch (e) {
         console.error("Add Student Error:", e);
-        alert("تفاصيل الخطأ: " + (e.message || JSON.stringify(e)));
+        alert('تفاصيل الخطأ: ' + (e.message || JSON.stringify(e)));
     }
 }
 
@@ -243,6 +251,108 @@ function deleteStudent(studentId) {
     });
 }
 
+// ==========================================
+// 📥 تصدير واستيراد بيانات الطالب
+// ==========================================
+async function exportStudentData(studentId) {
+    try {
+        if(window.showAuthNotification) window.showAuthNotification('جاري تجهيز بيانات الطالب للتصدير...', 'info');
+
+        const { data: studentInfo } = await window.supabase.from('users').select('*').eq('id', studentId).single();
+        if (!studentInfo) return showError('بيانات الطالب غير موجودة');
+
+        const [tests, lessons, assignments, events] = await Promise.all([
+            window.supabase.from('student_tests').select('*').eq('studentId', studentId),
+            window.supabase.from('student_lessons').select('*').eq('studentId', studentId),
+            window.supabase.from('student_assignments').select('*').eq('studentId', studentId),
+            window.supabase.from('student_events').select('*').eq('studentId', studentId)
+        ]);
+
+        const exportData = {
+            meta: { type: 'student_backup_supabase', version: '2.0', exportedBy: getCurrentUser().name, date: new Date().toISOString() },
+            info: studentInfo,
+            data: {
+                tests: tests.data || [],
+                lessons: lessons.data || [],
+                assignments: assignments.data || [],
+                events: events.data || [],
+                progress: studentInfo.progress || 0 
+            }
+        };
+
+        const fileName = `student_${studentInfo.name}.json`;
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob); 
+        const a = document.createElement('a'); 
+        a.href = url; 
+        a.download = fileName; 
+        document.body.appendChild(a); 
+        a.click(); 
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showSuccess('تم تصدير ملف الطالب بنجاح! 📥');
+    } catch (error) {
+        console.error("Export Student Error:", error);
+        showError("حدث خطأ أثناء التصدير من السحابة");
+    }
+}
+
+function showImportStudentModal() {
+    const fileInput = document.getElementById('studentJsonFile'); 
+    if(fileInput) fileInput.value = '';
+    const modal = document.getElementById('importStudentModal'); 
+    if(modal) modal.classList.add('show');
+}
+
+async function processStudentImport() {
+    const fileInput = document.getElementById('studentJsonFile');
+    if (!fileInput || !fileInput.files[0]) return alert('يرجى اختيار ملف الطالب أولاً');
+    
+    const currentUser = getCurrentUser();
+    const reader = new FileReader();
+    
+    reader.onload = async function(e) {
+        try {
+            if(window.showAuthNotification) window.showAuthNotification('جاري الاستيراد للسحابة، يرجى الانتظار...', 'info');
+            
+            const imported = JSON.parse(e.target.result);
+            if (!imported.info || !imported.data) throw new Error('الملف غير صالح');
+            
+            const studentInfo = imported.info;
+            studentInfo.teacherId = currentUser.id; 
+            
+            // التحقق من تكرار اسم المستخدم وتغييره إن وجد
+            const { data: collision } = await window.supabase.from('users').select('id').eq('username', studentInfo.username).neq('id', studentInfo.id);
+            if(collision && collision.length > 0) {
+                studentInfo.username = studentInfo.username + '_imp' + Math.floor(Math.random() * 100);
+                alert('تنبيه: تم تعديل اسم المستخدم تلقائياً لوجود تطابق في قاعدة البيانات.');
+            }
+            
+            // رفع أو تحديث بيانات الطالب
+            const { error: profileErr } = await window.supabase.from('users').upsert([studentInfo]);
+            if(profileErr) throw profileErr;
+            
+            // رفع محتوى الطالب
+            if(imported.data.tests && imported.data.tests.length > 0) await window.supabase.from('student_tests').upsert(imported.data.tests);
+            if(imported.data.lessons && imported.data.lessons.length > 0) await window.supabase.from('student_lessons').upsert(imported.data.lessons);
+            if(imported.data.assignments && imported.data.assignments.length > 0) await window.supabase.from('student_assignments').upsert(imported.data.assignments);
+            if(imported.data.events && imported.data.events.length > 0) await window.supabase.from('student_events').upsert(imported.data.events);
+            
+            showSuccess('تم الاستيراد بنجاح ✅');
+            document.getElementById('importStudentModal').classList.remove('show');
+            loadStudentsData();
+        } catch (err) {
+            console.error(err);
+            showError('خطأ: ' + err.message); 
+        }
+    }; 
+    reader.readAsText(fileInput.files[0]);
+}
+
+// ---------------------------------------------------------
+// دوال واجهة المستخدم والأدوات المساعدة
+// ---------------------------------------------------------
 function showStudentLoginData(id, username, password) { 
     document.getElementById('loginDataUsername').value = username; 
     document.getElementById('loginDataPassword').value = password; 
@@ -259,6 +369,7 @@ function copyToClipboard(id) {
 function closeAddStudentModal() { document.getElementById('addStudentModal').classList.remove('show'); }
 function showAddStudentModal() { document.getElementById('addStudentModal').classList.add('show'); document.getElementById('addStudentForm').reset(); }
 function openStudentFile(id) { window.location.href = `student-profile.html?id=${id}`; }
+function closeModal(id) { const modal = document.getElementById(id); if(modal) modal.classList.remove('show'); }
 
 window.addNewStudent = addNewStudent; 
 window.editStudent = editStudent; 
@@ -270,3 +381,7 @@ window.copyToClipboard = copyToClipboard;
 window.loadStudentsData = loadStudentsData; 
 window.showAddStudentModal = showAddStudentModal;
 window.closeAddStudentModal = closeAddStudentModal;
+window.exportStudentData = exportStudentData;
+window.showImportStudentModal = showImportStudentModal;
+window.processStudentImport = processStudentImport;
+window.closeModal = closeModal;

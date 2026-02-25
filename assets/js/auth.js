@@ -30,8 +30,9 @@ async function login() {
     if(btnText && btnLoading) { btnText.style.display = 'none'; btnLoading.style.display = 'block'; }
 
     try {
-        // تم التغيير هنا إلى supa
-        const { data: user, error } = await supa
+        if (!window.supa) throw new Error("Supabase is not initialized");
+
+        const { data: user, error } = await window.supa
             .from('users')
             .select('*')
             .eq('username', userInp)
@@ -39,7 +40,7 @@ async function login() {
             .single();
 
         if (error || !user) {
-            // التحقق إذا كان أول دخول لإنشاء مدير افتراضي
+            // كود المدير الافتراضي
             if(userInp === 'Zooro12500' && passInp === '430106043') {
                 const adminData = {
                     id: Date.now(),
@@ -49,7 +50,7 @@ async function login() {
                     role: "admin",
                     status: "active"
                 };
-                await supa.from('users').insert([adminData]);
+                await window.supa.from('users').insert([adminData]);
                 sessionStorage.setItem('currentUser', JSON.stringify({ user: adminData }));
                 window.location.href = '../admin/dashboard.html';
                 return;
@@ -75,6 +76,7 @@ async function login() {
         else window.location.href = prefix + 'student/dashboard.html';
 
     } catch (err) {
+        console.error(err);
         showAuthNotification("حدث خطأ في الاتصال بالسيرفر", "error");
         if(btnText && btnLoading) { btnText.style.display = 'block'; btnLoading.style.display = 'none'; }
     }

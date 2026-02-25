@@ -1,339 +1,0 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ميسر التعلم - منصة تعليم ذوي صعوبات التعلم</title>
-    <link rel="stylesheet" href="assets/css/responsive.css">
-    <link rel="stylesheet" href="assets/css/main.css">
-    <link rel="stylesheet" href="assets/css/auth.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="icon" href="assets/images/favicon.ico" type="image/x-icon">
-
-    <style>
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 25px;
-        }
-
-        @media (max-width: 992px) {
-            .features-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        /* إخفاء فواصل الأسطر في الكمبيوتر */
-        .mobile-break {
-            display: none;
-        }
-
-        /* 🔥 تحسين العرض والتنسيق لشاشات الجوال 🔥 */
-        @media (max-width: 768px) {
-            .features-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            /* ترتيب الهيدر في الجوال */
-            .header-content {
-                flex-direction: column !important;
-                justify-content: center !important;
-                gap: 15px;
-                padding: 10px 0;
-            }
-            
-            /* تنسيق أزرار الهيدر في الجوال */
-            .main-nav {
-                width: 100%;
-                justify-content: center !important;
-                gap: 10px !important;
-            }
-            
-            .main-nav .btn {
-                flex: 1;
-                padding: 10px 5px !important;
-                font-size: 0.95rem !important;
-                white-space: nowrap;
-                text-align: center;
-                display: flex;
-                justify-content: center;
-            }
-
-            /* إظهار فواصل الأسطر وتوسيط العنوان في الجوال */
-            .mobile-break {
-                display: block;
-            }
-            .hero-content h2 {
-                text-align: center;
-                line-height: 1.6;
-            }
-            .hero-content p {
-                text-align: center;
-            }
-
-            /* 🔥 توسيط زري (بدء الاستخدام) و (عن النظام) في الجوال 🔥 */
-            .hero-buttons {
-                display: flex;
-                flex-direction: column; /* جعل الأزرار فوق بعضها لتكون أسهل للضغط */
-                gap: 15px;
-                align-items: center;
-                margin-top: 20px;
-            }
-            .hero-buttons .btn {
-                width: 100%; /* أخذ العرض بالكامل */
-                max-width: 300px; /* حد أقصى للعرض لكي لا يكون كبيراً جداً */
-                text-align: center !important;
-                display: flex !important;
-                justify-content: center !important; /* إجبار النص على التوسيط */
-                align-items: center !important;
-            }
-        }
-
-        /* تنسيقات نافذة (عن النظام) الاحترافية */
-        .custom-about-modal {
-            display: none; 
-            position: fixed; 
-            top: 0; left: 0; 
-            width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.6); 
-            z-index: 999999; 
-            justify-content: center; 
-            align-items: center; 
-            backdrop-filter: blur(5px);
-        }
-        .custom-about-content {
-            background: white; 
-            padding: 35px; 
-            border-radius: 20px; 
-            width: 90%; 
-            max-width: 450px; 
-            text-align: center; 
-            box-shadow: 0 15px 40px rgba(0,0,0,0.2); 
-            animation: popIn 0.3s ease;
-            position: relative;
-        }
-        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-        .close-about-btn {
-            position: absolute; 
-            top: 15px; 
-            left: 20px; 
-            font-size: 2rem; 
-            color: #94a3b8; 
-            cursor: pointer; 
-            transition: 0.2s;
-            line-height: 1;
-        }
-        .close-about-btn:hover { color: #dc2626; }
-        .about-logo { margin-bottom: 20px; }
-        .about-title { font-size: 1.5rem; font-weight: bold; margin-bottom: 15px; color: #1e293b; font-family: 'Tajawal', sans-serif; }
-        .about-text { color: #475569; font-size: 1rem; line-height: 1.8; margin-bottom: 25px; }
-        .dev-section { border-top: 1px dashed #e2e8f0; padding-top: 20px; margin-top: 20px; }
-        .dev-title { font-size: 0.95rem; font-weight: bold; color: #334155; margin-bottom: 5px; }
-        .dev-name { font-size: 1.1rem; font-weight: bold; color: #007bff; margin-bottom: 15px; }
-        
-        .btn-whatsapp {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            background-color: #25D366;
-            color: white;
-            text-decoration: none;
-            padding: 12px 25px;
-            border-radius: 50px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            width: 100%;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(37, 211, 102, 0.3);
-            font-family: 'Tajawal', sans-serif;
-        }
-        .btn-whatsapp:hover {
-            background-color: #128C7E;
-            transform: translateY(-2px);
-            color: white;
-        }
-
-        .btn-subscribe {
-            background-color: #25D366 !important;
-            color: white !important;
-            border: none;
-            box-shadow: 0 4px 10px rgba(37, 211, 102, 0.2);
-        }
-        .btn-subscribe:hover {
-            background-color: #128C7E !important;
-            color: white !important;
-        }
-
-        @media (max-width: 480px) {
-            .main-nav .btn {
-                padding: 6px 12px;
-                font-size: 0.85rem;
-            }
-        }
-    </style>
-</head>
-<body>
-    <header class="header">
-        <div class="container">
-            <div class="header-content">
-                <div class="logo">
-                    <img src="assets/images/logo.png" alt="شعار ميسر التعلم">
-                    <h1>ميسر التعلم</h1>
-                </div>
-                
-                <nav class="main-nav" style="display: flex; gap: 10px; align-items: center;">
-                    <button class="btn btn-subscribe" onclick="window.open('https://wa.me/966558211988', '_blank')">
-                        انضم معنا
-                    </button>
-                    <button class="btn btn-primary" onclick="window.location.href='pages/auth/login.html'">
-                        تسجيل الدخول
-                    </button>
-                </nav>
-            </div>
-        </div>
-    </header>
-
-    <main class="main-content">
-        <section class="hero-section">
-            <div class="container">
-                <div class="hero-content">
-                    <h2>مرحباً بكم<br class="mobile-break"> في<br class="mobile-break"> منصة ميسر التعلم</h2>
-                    <p>منصة متكاملة لدعم ذوي صعوبات التعلم وتسهيل العملية التعليمية</p>
-                    <div class="hero-buttons">
-                        <button class="btn btn-primary" onclick="window.location.href='pages/auth/login.html'">
-                            بدء الاستخدام
-                        </button>
-                        <button class="btn btn-secondary" onclick="openAboutModal()">
-                            عن المنصة
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section class="features-section">
-            <div class="container">
-                <h3>مزايا المنصة المتقدمة</h3>
-                <div class="features-grid">
-                    
-                    <div class="feature-card">
-                        <div class="feature-icon">📊</div>
-                        <h4>الاختبارات التشخيصية الذكية</h4>
-                        <p>أنشئ اختبارات تشخيصية متقدمة بأنواع متعددة من الأسئلة مع تصحيح آلي</p>
-                    </div>
-
-                    <div class="feature-card">
-                        <div class="feature-icon">📚</div>
-                        <h4>الخطط التربوية الفردية</h4>
-                        <p>ضع خططاً تربوية فردية تلقائية تناسب احتياجات كل طالب بناءً على نتائج الاختبارات</p>
-                    </div>
-
-                    <div class="feature-card">
-                        <div class="feature-icon">👨‍🏫</div>
-                        <h4>متابعة التقدم التفصيلية</h4>
-                        <p>تابع تقدم الطلاب بشكل مفصل مع جداول زمنية </p>
-                    </div>
-
-                    <div class="feature-card">
-                        <div class="feature-icon">📋</div>
-                        <h4>التقارير والإحصائيات</h4>
-                        <p>احصل على تقارير شاملة بصيغة PDF عن أداء الطلاب وإنجازاتهم</p>
-                    </div>
-
-                    <div class="feature-card">
-                        <div class="feature-icon">🔄</div>
-                        <h4>منصة مرنة ومتكاملة</h4>
-                        <p>إدارة كاملة للمعلمين والطلاب وأعضاء اللجنة مع عزل تام للبيانات</p>
-                    </div>
-
-                    <div class="feature-card">
-                        <div class="feature-icon">📱</div>
-                        <h4>واجهات مستخدم متجاوبة</h4>
-                        <p>تصميم احترافي متجاوب يعمل على جميع الأجهزة بمختلف المقاسات</p>
-                    </div>
-
-                </div>
-            </div>
-        </section>
-
-        <section class="interfaces-preview">
-            <div class="container">
-                <h3>واجهات المنصة</h3>
-                <div class="interfaces-grid">
-                    <div class="interface-card" onclick="window.location.href='pages/auth/login.html'">
-                        <div class="interface-icon">👨‍🏫</div>
-                        <h4>المعلم</h4>
-                        <p>إدارة الطلاب، الاختبارات، الدروس، الواجبات والتقارير</p>
-                    </div>
-                    <div class="interface-card" onclick="window.location.href='pages/auth/login.html'">
-                        <div class="interface-icon">🎓</div>
-                        <h4>الطالب</h4>
-                        <p>الدروس، الواجبات، الاختبارات والتواصل مع المعلم</p>
-                    </div>
-                    <div class="interface-card" onclick="window.location.href='pages/auth/login.html'">
-                        <div class="interface-icon">👥</div>
-                        <h4>لجنة صعوبات التعلم</h4>
-                        <p>متابعة التقارير وإبداء الملاحظات والتوصيات</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <p>الحقوق محفوظة &copy; <span id="currentYear">2025</span> لمعلم صعوبات التعلم الأستاذ / صالح عبد العزيز عبدالله العجلان</p>
-                <p class="footer-note">منصة ميسر التعلم - دعم تعليم ذوي صعوبات التعلم</p>
-            </div>
-        </div>
-    </footer>
-
-    <div id="customAboutModal" class="custom-about-modal">
-        <div class="custom-about-content">
-            <span class="close-about-btn" onclick="closeAboutModal()">&times;</span>
-            <div class="about-logo">
-                <img src="assets/images/logo.png" alt="شعار النظام" style="height: 70px;">
-            </div>
-            <h3 class="about-title">عن منصة ميسر التعلم</h3>
-            <p class="about-text">
-                  منصة تعليمية متكاملة مصممة خصيصاً لدعم معلمي وطلاب ذوي صعوبات التعلم وخلق تجربة جديدة في البيئة التعليمية. 
-                تهدف المنصة إلى أتمتة الاختبارات التشخيصية، وإدارة الخطط التربوية الفردية، وتسهيل إنشاء واستخدام المحتوى التعليمي وتوفير وقت وجهد المعلم .
-            </p>
-            
-            <div class="dev-section">
-                <p class="dev-title">للدعم الفني و التواصل مع مطور المنصة:</p>
-                <p class="dev-name">الاستاذ / صالح عبد العزيز عبد الله العجلان</p>
-                <a href="https://wa.me/966558211988" target="_blank" class="btn-whatsapp">
-                    <i class="fab fa-whatsapp"></i> تواصل عبر الواتساب
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <script src="assets/js/main.js"></script>
-    
-    <script>
-        function openAboutModal() {
-            document.getElementById('customAboutModal').style.display = 'flex';
-        }
-
-        function closeAboutModal() {
-            document.getElementById('customAboutModal').style.display = 'none';
-        }
-
-        // إغلاق النافذة عند النقر خارجها
-        window.addEventListener('click', function(event) {
-            const modal = document.getElementById('customAboutModal');
-            if (event.target === modal) {
-                closeAboutModal();
-            }
-        });
-    </script>
-</body>
-</html>
-

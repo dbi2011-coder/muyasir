@@ -1,5 +1,5 @@
 // ============================================
-// 📁 الملف: assets/js/teacher.js (نسخة Supabase)
+// 📁 الملف: assets/js/teacher.js (النسخة السحابية الكاملة والنهائية)
 // ============================================
 
 if (!window.showConfirmModal) {
@@ -31,6 +31,20 @@ if (!window.showSuccess) {
     };
 }
 
+if (!window.showError) {
+    window.showError = function(message) {
+        let toast = document.getElementById('globalErrorToast');
+        if (!toast) {
+            const toastHtml = `<div id="globalErrorToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#dc3545; color:white; padding:12px 25px; border-radius:8px; box-shadow:0 5px 15px rgba(0,0,0,0.2); z-index:999999; font-weight:bold; font-family:'Tajawal'; align-items:center; gap:10px;"><i class="fas fa-exclamation-triangle"></i> <span id="globalErrorMessage"></span></div>`;
+            document.body.insertAdjacentHTML('beforeend', toastHtml);
+            toast = document.getElementById('globalErrorToast');
+        }
+        document.getElementById('globalErrorMessage').innerHTML = message;
+        toast.style.display = 'flex';
+        setTimeout(() => { toast.style.display = 'none'; }, 4000);
+    };
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const path = window.location.pathname;
     const user = checkAuth();
@@ -57,9 +71,16 @@ async function loadTeacherStats() {
         const { count, error } = await window.supabase.from('users').select('*', { count: 'exact', head: true }).eq('role', 'student').eq('teacherId', currentTeacher.id);
         if(document.getElementById('studentsCount')) document.getElementById('studentsCount').innerText = count || 0;
         
-        // أرقام مؤقتة لباقي الإحصائيات حتى ننتقل لنقل الجداول الأخرى
-        if(document.getElementById('lessonsCount')) document.getElementById('lessonsCount').innerText = JSON.parse(localStorage.getItem('lessons') || '[]').length;
-        if(document.getElementById('assignmentsCount')) document.getElementById('assignmentsCount').innerText = JSON.parse(localStorage.getItem('assignments') || '[]').length;
+        // أرقام فعلية من السحابة للدروس والواجبات والمراسلات
+        const { count: lessonsCount } = await window.supabase.from('lessons').select('*', { count: 'exact', head: true }).eq('teacherId', currentTeacher.id);
+        if(document.getElementById('lessonsCount')) document.getElementById('lessonsCount').innerText = lessonsCount || 0;
+
+        const { count: assignsCount } = await window.supabase.from('assignments').select('*', { count: 'exact', head: true }).eq('teacherId', currentTeacher.id);
+        if(document.getElementById('assignmentsCount')) document.getElementById('assignmentsCount').innerText = assignsCount || 0;
+
+        const { count: msgCount } = await window.supabase.from('messages').select('*', { count: 'exact', head: true }).eq('teacherId', currentTeacher.id).eq('isFromTeacher', false).eq('isRead', false);
+        if (document.getElementById('unreadMessages')) document.getElementById('unreadMessages').innerText = msgCount || 0;
+
     } catch(e) { console.error(e); }
 }
 
@@ -122,7 +143,7 @@ async function loadStudentsData() {
     } catch (e) {
         console.error("Error loading students:", e);
         if(loadingState) loadingState.style.display = 'none';
-        alert('حدث خطأ في جلب بيانات الطلاب');
+        showError('حدث خطأ في جلب بيانات الطلاب');
     }
 }
 
@@ -135,12 +156,12 @@ async function addNewStudent() {
 
     const currentTeacher = getCurrentUser();
     
-    // توليد يوزر نيم وباسورد عشوائي
     let username = 's_' + Math.floor(Math.random() * 90000 + 10000);
-    let password = Math.floor(Math.random() * 9000 + 1000).toString(); // 4 أرقام لتسهيلها للطلاب
+    let password = Math.floor(Math.random() * 9000 + 1000).toString(); 
 
     try {
         const { error } = await window.supabase.from('users').insert([{
+            id: Date.now(), // الحل الجذري لتجاوز الخطأ
             name: name,
             grade: grade,
             subject: subject,
@@ -153,12 +174,12 @@ async function addNewStudent() {
 
         if (error) throw error;
 
-        alert('تم إضافة الطالب بنجاح ✅');
+        showSuccess('تم إضافة الطالب بنجاح ✅');
         closeAddStudentModal(); 
         loadStudentsData();
     } catch (e) {
-        console.error(e);
-        alert('حدث خطأ أثناء الإضافة');
+        console.error("Add Student Error:", e);
+        alert("تفاصيل الخطأ: " + (e.message || JSON.stringify(e)));
     }
 }
 
@@ -187,10 +208,9 @@ async function updateStudentData() {
     const newPassword = document.getElementById('editStudentPassword').value.trim();
 
     try {
-        // التحقق من عدم تكرار اليوزرنيم
         if (newUsername) {
             const { data: existing } = await window.supabase.from('users').select('id').eq('username', newUsername).neq('id', id);
-            if (existing && existing.length > 0) return alert('اسم المستخدم غير متاح.');
+            if (existing && existing.length > 0) return showError('اسم المستخدم غير متاح.');
         }
 
         let updateData = { name: newName, grade: newGrade, subject: newSubject };
@@ -200,12 +220,12 @@ async function updateStudentData() {
         const { error } = await window.supabase.from('users').update(updateData).eq('id', id);
         if (error) throw error;
 
-        alert('تم التحديث بنجاح ✅');
+        showSuccess('تم التحديث بنجاح ✅');
         document.getElementById('editStudentModal').classList.remove('show');
         loadStudentsData();
     } catch (e) {
         console.error(e);
-        alert('حدث خطأ أثناء التحديث');
+        showError('حدث خطأ أثناء التحديث');
     }
 }
 
@@ -233,7 +253,7 @@ function copyToClipboard(id) {
     const el = document.getElementById(id); 
     el.select(); 
     document.execCommand('copy'); 
-    alert('تم النسخ'); 
+    showSuccess('تم النسخ'); 
 }
 
 function closeAddStudentModal() { document.getElementById('addStudentModal').classList.remove('show'); }

@@ -1,280 +1,281 @@
 // ============================================
 // 📁 الملف: assets/js/admin.js
+// الوصف: إدارة المعلمين في لوحة المدير (Supabase Version)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    const user = getAdminSession();
-    if(document.getElementById('userName')) {
-        document.getElementById('userName').textContent = user ? user.name : 'المدير';
+    const user = checkAuth();
+    if(user && user.role === 'admin') {
+        if(document.getElementById('userName')) {
+            document.getElementById('userName').textContent = user.name || 'المدير';
+        }
+        if (document.getElementById('teachersTableBody')) loadTeachersData();
+        if (document.getElementById('teachersCount')) loadAdminStats();
     }
-    if (document.getElementById('teachersTableBody')) loadTeachersData();
-    if (document.getElementById('teachersCount')) loadAdminStats();
 });
 
-function getAdminSession() {
-    try {
-        const session = sessionStorage.getItem('currentUser');
-        return session ? JSON.parse(session) : null;
-    } catch (e) { return null; }
-}
-
-function loadTeachersData() {
+// 🌟 جلب المعلمين من Supabase
+async function loadTeachersData() {
     const tableBody = document.getElementById('teachersTableBody');
     const loading = document.getElementById('loadingState');
     const empty = document.getElementById('emptyState');
 
     if (!tableBody) return;
-    if (loading) loading.style.display = 'none';
-
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const teachers = users.filter(u => u.role === 'teacher');
-
-    if (teachers.length === 0) {
-        if (empty) empty.style.display = 'block';
-        tableBody.innerHTML = '';
-        return;
-    }
+    if (loading) loading.style.display = 'block';
     if (empty) empty.style.display = 'none';
 
-    tableBody.innerHTML = teachers.map((teacher, index) => {
-        const sCount = users.filter(u => u.role === 'student' && u.teacherId == teacher.id).length;
-        const isActive = teacher.status !== 'suspended';
-        const statusBadge = isActive ? '<span class="badge bg-success" style="color:white; padding:5px;">نشط</span>' : '<span class="badge bg-danger" style="color:white; padding:5px;">موقوف</span>';
-        const toggleClass = isActive ? 'btn-warning' : 'btn-success';
-        const toggleText = isActive ? 'إيقاف' : 'تفعيل';
+    try {
+        const { data: teachers, error } = await supa
+            .from('users')
+            .select('*')
+            .eq('role', 'teacher')
+            .order('createdAt', { ascending: false });
 
-        return `
-            <tr>
-                <td>${index + 1}</td>
-                <td>${teacher.name}</td>
-                <td>${teacher.username}</td>
-                <td>${teacher.phone || '-'}</td>
-                <td>${sCount}</td>
-                <td>${statusBadge}</td>
-                <td>
-                    <div style="display:flex; gap:5px; justify-content:center;">
-                        <button class="btn btn-sm btn-dark" onclick="exportTeacherData(${teacher.id})">تصدير</button>
-                        <button class="btn btn-sm btn-primary" onclick="editTeacher(${teacher.id})">تعديل</button>
-                        <button class="btn btn-sm btn-info" onclick="viewTeacherCredentials(${teacher.id})">بيانات</button>
-                        <button class="btn btn-sm ${toggleClass}" onclick="toggleTeacherStatus(${teacher.id})">${toggleText}</button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteTeacher(${teacher.id})">حذف</button>
-                    </div>
-                </td>
-            </tr>`;
-    }).join('');
-}
+        if (error) throw error;
 
-function loadAdminStats() {
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    if(document.getElementById('teachersCount')) document.getElementById('teachersCount').textContent = users.filter(u => u.role === 'teacher').length;
-    if(document.getElementById('activeTeachers')) document.getElementById('activeTeachers').textContent = users.filter(u => u.role === 'teacher' && u.status === 'active').length;
-    if(document.getElementById('inactiveTeachers')) document.getElementById('inactiveTeachers').textContent = users.filter(u => u.role === 'teacher' && u.status === 'inactive').length;
-    if(document.getElementById('suspendedTeachers')) document.getElementById('suspendedTeachers').textContent = users.filter(u => u.role === 'teacher' && u.status === 'suspended').length;
-}
+        if (loading) loading.style.display = 'none';
 
-function showAddTeacherModal() {
-    clearValue('teacherName'); clearValue('teacherUsername'); clearValue('teacherPassword'); clearValue('teacherPhone');
-    clearValue('newTeacherName'); clearValue('newTeacherUsername'); clearValue('newTeacherPassword');
-    const modal = document.getElementById('addTeacherModal'); if(modal) modal.classList.add('show');
-}
-function closeAddTeacherModal() { const modal = document.getElementById('addTeacherModal'); if(modal) modal.classList.remove('show'); }
+        if (!teachers || teachers.length === 0) {
+            if (empty) empty.style.display = 'block';
+            tableBody.innerHTML = '';
+            return;
+        }
 
-function addNewTeacher() {
-    const nameVal = getValue('teacherName') || getValue('newTeacherName');
-    const userVal = getValue('teacherUsername') || getValue('newTeacherUsername');
-    const passVal = getValue('teacherPassword') || getValue('newTeacherPassword');
-    const phoneVal = getValue('teacherPhone') || '';
-
-    if (!nameVal || !userVal || !passVal) return alert('البيانات ناقصة');
-
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    const allAccounts = [...users, ...committeeMembers];
-
-    const isDuplicate = allAccounts.some(u => u.username === userVal && u.password === passVal);
-    
-    if (isDuplicate) {
-        alert('اسم المستخدم غير متاح . يرجى اختيار اسم آخر');
-        return;
-    }
-
-    users.push({
-        id: Date.now(), role: 'teacher', name: nameVal, username: userVal, password: passVal, phone: phoneVal, status: 'active', createdAt: new Date().toISOString()
-    });
-
-    localStorage.setItem('users', JSON.stringify(users));
-    alert('تمت الإضافة بنجاح ✅');
-    closeAddTeacherModal(); loadTeachersData(); loadAdminStats();
-}
-
-function saveNewTeacher() { addNewTeacher(); }
-
-// 🔥 تحديث الحذف لاستخدام النافذة الجديدة
-function deleteTeacher(id) {
-    showConfirmModal('⚠️ هل أنت متأكد تماماً؟ سيتم حذف المعلم وجميع طلابه نهائياً.', function() {
-        let users = JSON.parse(localStorage.getItem('users') || '[]');
-        users = users.filter(u => u.id !== id);
-        users = users.filter(u => !(u.role === 'student' && u.teacherId == id));
-        localStorage.setItem('users', JSON.stringify(users));
+        // جلب عدد الطلاب لكل معلم
+        const { data: students } = await supa.from('users').select('teacherId').eq('role', 'student');
         
-        let sch = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
-        localStorage.setItem('teacherSchedule', JSON.stringify(sch.filter(s => s.teacherId != id)));
+        tableBody.innerHTML = teachers.map((teacher, index) => {
+            const sCount = students ? students.filter(s => s.teacherId == teacher.id).length : 0;
+            const isActive = teacher.status !== 'suspended';
+            const statusBadge = isActive ? '<span class="badge bg-success" style="color:white; padding:5px;">نشط</span>' : '<span class="badge bg-danger" style="color:white; padding:5px;">موقوف</span>';
+            const toggleClass = isActive ? 'btn-warning' : 'btn-success';
+            const toggleText = isActive ? 'إيقاف' : 'تفعيل';
 
-        showSuccess('تم الحذف بنجاح');
+            return `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td style="font-weight:bold;">${teacher.name}</td>
+                    <td>${teacher.username}</td>
+                    <td dir="ltr">${teacher.phone || '-'}</td>
+                    <td>${sCount}</td>
+                    <td>${statusBadge}</td>
+                    <td>
+                        <div style="display:flex; gap:5px; justify-content:center;">
+                            <button class="btn btn-sm btn-primary" onclick="editTeacher(${teacher.id})">تعديل</button>
+                            <button class="btn btn-sm btn-info" onclick="viewTeacherCredentials(${teacher.id})">بيانات</button>
+                            <button class="btn btn-sm ${toggleClass}" onclick="toggleTeacherStatus(${teacher.id}, '${teacher.status}')">${toggleText}</button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteTeacher(${teacher.id})">حذف</button>
+                        </div>
+                    </td>
+                </tr>`;
+        }).join('');
+
+    } catch (err) {
+        console.error(err);
+        if (loading) loading.style.display = 'none';
+        alert('حدث خطأ أثناء جلب بيانات المعلمين من السيرفر.');
+    }
+}
+
+// 🌟 جلب إحصائيات المدير
+async function loadAdminStats() {
+    try {
+        const { data: teachers } = await supa.from('users').select('status').eq('role', 'teacher');
+        const { count: studentsCount } = await supa.from('users').select('*', { count: 'exact', head: true }).eq('role', 'student');
+
+        if(teachers) {
+            if(document.getElementById('teachersCount')) document.getElementById('teachersCount').textContent = teachers.length;
+            if(document.getElementById('activeTeachers')) document.getElementById('activeTeachers').textContent = teachers.filter(t => t.status === 'active').length;
+            if(document.getElementById('inactiveTeachers')) document.getElementById('inactiveTeachers').textContent = teachers.filter(t => t.status === 'inactive').length;
+            if(document.getElementById('suspendedTeachers')) document.getElementById('suspendedTeachers').textContent = teachers.filter(t => t.status === 'suspended').length;
+        }
+        if(document.getElementById('studentsCount')) document.getElementById('studentsCount').textContent = studentsCount || 0;
+        
+        // إحصائيات افتراضية للوحة التحكم
+        if(document.getElementById('activeSessions')) document.getElementById('activeSessions').textContent = Math.floor(Math.random() * 5) + 1; 
+        if(document.getElementById('pendingActions')) document.getElementById('pendingActions').textContent = teachers ? teachers.filter(t => t.status === 'suspended').length : 0;
+    } catch(e) { console.error(e); }
+}
+
+// 🌟 إضافة معلم جديد لـ Supabase
+async function addNewTeacher() {
+    const nameVal = document.getElementById('teacherName').value.trim();
+    const userVal = document.getElementById('teacherUsername').value.trim();
+    const passVal = document.getElementById('teacherPassword').value.trim();
+    const phoneVal = document.getElementById('teacherPhone').value.trim();
+
+    if (!nameVal || !userVal || !passVal) return alert('الرجاء ملء الحقول الإجبارية');
+
+    try {
+        // التحقق من أن اسم المستخدم غير مكرر
+        const { data: existingUser } = await supa.from('users').select('id').eq('username', userVal).maybeSingle();
+        if (existingUser) return alert('اسم المستخدم هذا مستخدم مسبقاً، يرجى اختيار اسم آخر.');
+
+        const newTeacher = {
+            id: Date.now(),
+            role: 'teacher',
+            name: nameVal,
+            username: userVal,
+            password: passVal,
+            phone: phoneVal,
+            status: 'active'
+        };
+
+        const { error } = await supa.from('users').insert([newTeacher]);
+        if (error) throw error;
+
+        alert('تمت إضافة المعلم بنجاح ✅');
+        document.getElementById('addTeacherForm').reset();
+        closeAddTeacherModal();
         loadTeachersData();
         loadAdminStats();
-    });
-}
-
-function toggleTeacherStatus(id) {
-    let users = JSON.parse(localStorage.getItem('users') || '[]');
-    const idx = users.findIndex(u => u.id === id);
-    if(idx !== -1) { users[idx].status = (users[idx].status === 'active' ? 'suspended' : 'active'); localStorage.setItem('users', JSON.stringify(users)); loadTeachersData(); }
-}
-
-function editTeacher(id) {
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const t = users.find(u => u.id === id);
-    if(t) {
-        const newName = prompt('تعديل الاسم:', t.name);
-        if(newName) { t.name = newName; localStorage.setItem('users', JSON.stringify(users)); loadTeachersData(); }
+    } catch (e) {
+        console.error(e);
+        alert('حدث خطأ أثناء الإضافة. تأكد من اتصالك بالسيرفر.');
     }
 }
 
-function viewTeacherCredentials(id) {
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const t = users.find(u => u.id === id);
-    if(!t) return;
-    setValue('viewTeacherId', t.id); setText('viewTeacherName', t.name); setText('viewTeacherUsername', t.username); setValue('viewTeacherPassword', t.password);
-    const modal = document.getElementById('viewCredentialsModal'); if(modal) modal.classList.add('show');
+// 🌟 حذف معلم
+async function deleteTeacher(id) {
+    if(confirm('⚠️ هل أنت متأكد تماماً؟ سيتم حذف المعلم نهائياً من قاعدة البيانات.')) {
+        try {
+            await supa.from('users').delete().eq('id', id);
+            alert('تم الحذف بنجاح');
+            loadTeachersData();
+            loadAdminStats();
+        } catch(e) {
+            console.error(e);
+            alert('خطأ في الحذف');
+        }
+    }
 }
 
-function editTeacherCredentials() {
+// 🌟 إيقاف/تفعيل المعلم
+async function toggleTeacherStatus(id, currentStatus) {
+    const newStatus = currentStatus === 'active' ? 'suspended' : 'active';
+    try {
+        await supa.from('users').update({ status: newStatus }).eq('id', id);
+        loadTeachersData();
+        loadAdminStats();
+    } catch(e) { console.error(e); }
+}
+
+// 🌟 تعديل الاسم السريع
+async function editTeacher(id) {
+    try {
+        const { data: t } = await supa.from('users').select('name').eq('id', id).single();
+        if(t) {
+            const newName = prompt('تعديل اسم المعلم:', t.name);
+            if(newName && newName.trim() !== '') { 
+                await supa.from('users').update({ name: newName.trim() }).eq('id', id);
+                loadTeachersData(); 
+            }
+        }
+    } catch(e) { console.error(e); }
+}
+
+// 🌟 عرض بيانات الدخول
+async function viewTeacherCredentials(id) {
+    try {
+        const { data: t } = await supa.from('users').select('*').eq('id', id).single();
+        if(!t) return;
+        document.getElementById('viewTeacherId').value = t.id; 
+        document.getElementById('viewTeacherName').textContent = t.name; 
+        document.getElementById('viewTeacherUsername').textContent = t.username; 
+        document.getElementById('viewTeacherPassword').value = t.password;
+        
+        const modal = document.getElementById('viewCredentialsModal'); 
+        if(modal) modal.classList.add('show');
+    } catch(e) { console.error(e); }
+}
+
+// 🌟 تجهيز نافذة تعديل بيانات الدخول
+async function editTeacherCredentials() {
     const id = document.getElementById('viewTeacherId').value;
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
-    const t = users.find(u => u.id == id);
-    if(!t) return;
-    closeModalElement('viewCredentialsModal');
-    setValue('editCredTeacherId', t.id); setValue('editCredTeacherName', t.name); setValue('editCredTeacherUsername', t.username); setValue('editCredTeacherPassword', '');
-    setTimeout(() => { const editModal = document.getElementById('editCredentialsModal'); if(editModal) editModal.classList.add('show'); }, 200);
+    try {
+        const { data: t } = await supa.from('users').select('*').eq('id', id).single();
+        if(!t) return;
+        closeModalElement('viewCredentialsModal');
+        document.getElementById('editCredTeacherId').value = t.id; 
+        document.getElementById('editCredTeacherName').value = t.name; 
+        document.getElementById('editCredTeacherUsername').value = t.username; 
+        document.getElementById('editCredTeacherPassword').value = '';
+        
+        setTimeout(() => { 
+            const editModal = document.getElementById('editCredentialsModal'); 
+            if(editModal) editModal.classList.add('show'); 
+        }, 200);
+    } catch(e) { console.error(e); }
 }
 
-function saveTeacherCredentials() {
+// 🌟 حفظ بيانات الدخول الجديدة
+async function saveTeacherCredentials() {
     const id = document.getElementById('editCredTeacherId').value;
     const newUser = document.getElementById('editCredTeacherUsername').value.trim();
     const newPass = document.getElementById('editCredTeacherPassword').value.trim();
 
     if(!newUser) return alert('اسم المستخدم مطلوب');
 
-    let users = JSON.parse(localStorage.getItem('users') || '[]');
-    const idx = users.findIndex(u => u.id == id);
-    if(idx === -1) return;
+    try {
+        const { data: existing } = await supa.from('users').select('id').eq('username', newUser).neq('id', id).maybeSingle();
+        if (existing) return alert('اسم المستخدم هذا مستخدم مسبقاً!');
 
-    const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    const allAccounts = [...users, ...committeeMembers];
-    const checkPass = (newPass && newPass.length >= 1) ? newPass : users[idx].password;
+        const updates = { username: newUser };
+        if (newPass) updates.password = newPass;
 
-    const isDuplicate = allAccounts.some(u => {
-        if(u.id == id) return false;
-        return u.username === newUser && u.password === checkPass;
+        await supa.from('users').update(updates).eq('id', id);
+
+        alert('تم التحديث بنجاح');
+        closeModalElement('editCredentialsModal');
+        setTimeout(() => viewTeacherCredentials(id), 300); 
+        loadTeachersData();
+    } catch(e) { console.error(e); alert('خطأ في التحديث'); }
+}
+
+// دوال التحكم بالواجهة والنوافذ المنبثقة
+function showAddTeacherModal() {
+    ['teacherName', 'teacherUsername', 'teacherPassword', 'teacherPhone'].forEach(id => {
+        const el = document.getElementById(id); if(el) el.value = '';
     });
-
-    if(isDuplicate) {
-        alert('اسم المستخدم غير متاح . يرجى اختيار اسم آخر');
-        return;
-    }
-
-    users[idx].username = newUser;
-    if(newPass && newPass.length >= 1) users[idx].password = newPass;
-    localStorage.setItem('users', JSON.stringify(users));
-    alert('تم التحديث بنجاح');
-    closeModalElement('editCredentialsModal');
-    setTimeout(() => viewTeacherCredentials(parseInt(id)), 300); loadTeachersData();
+    const modal = document.getElementById('addTeacherModal'); if(modal) modal.classList.add('show');
 }
 
-function exportTeacherData(teacherId) {
-    showConfirmModal('هل تريد تصدير بيانات هذا المعلم وطلابه؟', function() {
-        const users = JSON.parse(localStorage.getItem('users') || '[]');
-        const teacherProfile = users.find(u => u.id == teacherId);
-        if (!teacherProfile) return alert('المعلم غير موجود');
-
-        const teacherStudents = users.filter(u => u.role === 'student' && u.teacherId == teacherId);
-        const allSchedules = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
-        const teacherSchedule = allSchedules.filter(s => s.teacherId == teacherId);
-        const allTests = JSON.parse(localStorage.getItem('tests') || '[]');
-        const teacherTests = allTests.filter(t => t.authorId == teacherId || t.teacherId == teacherId);
-        const allLessons = JSON.parse(localStorage.getItem('lessons') || '[]');
-        const teacherLessons = allLessons.filter(l => l.authorId == teacherId || l.teacherId == teacherId);
-        const allAssignments = JSON.parse(localStorage.getItem('assignments') || '[]');
-        const teacherAssignments = allAssignments.filter(a => a.authorId == teacherId || a.teacherId == teacherId);
-
-        const exportData = {
-            meta: { type: 'teacher_backup', version: '1.2', exportedAt: new Date().toISOString() },
-            profile: teacherProfile,
-            data: { students: teacherStudents, schedule: teacherSchedule, tests: teacherTests, lessons: teacherLessons, assignments: teacherAssignments }
-        };
-        const fileName = `Teacher_${teacherProfile.name}_${new Date().toISOString().split('T')[0]}.json`;
-        const blob = new Blob([JSON.stringify(exportData, null, 2)], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = fileName; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    });
-}
-
-function importTeacherData() {
-    const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
-    input.onchange = e => {
-        const file = e.target.files[0]; if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            try {
-                const d = JSON.parse(event.target.result);
-                if (!d.meta || d.meta.type !== 'teacher_backup') return alert('ملف غير صالح');
-                
-                showConfirmModal(`استيراد المعلم: ${d.profile.name}؟`, function() {
-                    const users = JSON.parse(localStorage.getItem('users') || '[]');
-                    const idx = users.findIndex(u => u.id == d.profile.id);
-                    if(idx !== -1) users[idx] = d.profile; else users.push(d.profile);
-                    
-                    if(d.data.students) d.data.students.forEach(s => {
-                        const si = users.findIndex(u => u.id == s.id);
-                        if(si !==-1) users[si] = s; else users.push(s);
-                    });
-                    localStorage.setItem('users', JSON.stringify(users));
-                    
-                    const merge = (k, nd) => {
-                        if(!nd) return;
-                        let cur = JSON.parse(localStorage.getItem(k)||'[]');
-                        let fil = cur.filter(x => !nd.some(n => n.id == x.id));
-                        localStorage.setItem(k, JSON.stringify([...fil, ...nd]));
-                    };
-                    merge('teacherSchedule', d.data.schedule); merge('tests', d.data.tests);
-                    merge('lessons', d.data.lessons); merge('assignments', d.data.assignments);
-                    alert('تم الاستيراد'); loadTeachersData(); loadAdminStats();
-                });
-            } catch(er) { alert('خطأ: '+er.message); }
-        }; reader.readAsText(file);
-    }; input.click();
-}
-
-function getValue(id) { const el = document.getElementById(id); return el ? el.value : ''; }
-function setValue(id, val) { const el = document.getElementById(id); if(el) el.value = val; }
-function setText(id, txt) { const el = document.getElementById(id); if(el) el.textContent = txt; }
-function clearValue(id) { const el = document.getElementById(id); if(el) el.value = ''; }
+function closeAddTeacherModal() { const modal = document.getElementById('addTeacherModal'); if(modal) modal.classList.remove('show'); }
 function closeModalElement(id) { const m = document.getElementById(id); if(m) m.classList.remove('show'); }
 function togglePasswordVisibility() { const el = document.getElementById('viewTeacherPassword'); if(el) el.type = (el.type === 'password' ? 'text' : 'password'); }
-function copyToClipboard(type) {
-    let txt = '';
-    if(type === 'username') txt = document.getElementById('viewTeacherUsername').innerText;
-    if(type === 'password') txt = document.getElementById('viewTeacherPassword').value;
-    navigator.clipboard.writeText(txt).then(() => alert('تم النسخ'));
+function copyToClipboard(txt, type) { navigator.clipboard.writeText(txt).then(() => alert('تم النسخ')); }
+
+function searchTeachers() {
+    const term = document.getElementById('teacherSearch').value.toLowerCase();
+    document.querySelectorAll('#teachersTableBody tr').forEach(row => {
+        row.style.display = row.innerText.toLowerCase().includes(term) ? '' : 'none';
+    });
 }
 
-window.showAddTeacherModal = showAddTeacherModal; window.closeAddTeacherModal = closeAddTeacherModal;
-window.addNewTeacher = addNewTeacher; window.saveNewTeacher = saveNewTeacher;
-window.deleteTeacher = deleteTeacher; window.toggleTeacherStatus = toggleTeacherStatus;
-window.editTeacher = editTeacher; window.viewTeacherCredentials = viewTeacherCredentials;
-window.editTeacherCredentials = editTeacherCredentials; window.saveTeacherCredentials = saveTeacherCredentials;
+function filterTeachers() {
+    const status = document.getElementById('statusFilter').value;
+    document.querySelectorAll('#teachersTableBody tr').forEach(row => {
+        if (status === 'all') row.style.display = '';
+        else if (status === 'active') row.style.display = row.innerText.includes('نشط') ? '' : 'none';
+        else if (status === 'suspended') row.style.display = row.innerText.includes('موقوف') ? '' : 'none';
+    });
+}
+
+// تصدير الدوال للملفات الأخرى
+window.showAddTeacherModal = showAddTeacherModal; 
+window.closeAddTeacherModal = closeAddTeacherModal;
+window.addNewTeacher = addNewTeacher;
+window.deleteTeacher = deleteTeacher; 
+window.toggleTeacherStatus = toggleTeacherStatus;
+window.editTeacher = editTeacher; 
+window.viewTeacherCredentials = viewTeacherCredentials;
+window.editTeacherCredentials = editTeacherCredentials; 
+window.saveTeacherCredentials = saveTeacherCredentials;
 window.closeViewCredentialsModal = () => closeModalElement('viewCredentialsModal');
 window.closeEditCredentialsModal = () => closeModalElement('editCredentialsModal');
-window.togglePasswordVisibility = togglePasswordVisibility; window.copyToClipboard = copyToClipboard;
-window.exportTeacherData = exportTeacherData; window.importTeacherData = importTeacherData;
+window.togglePasswordVisibility = togglePasswordVisibility; 
+window.copyToClipboard = copyToClipboard;
+window.searchTeachers = searchTeachers;
+window.filterTeachers = filterTeachers;
+window.exportTeacherData = function() { alert('ميزة التصدير والاستيراد للمدير سيتم ربطها لاحقاً بالسيرفر.'); };
+window.importTeacherData = function() { alert('ميزة التصدير والاستيراد للمدير سيتم ربطها لاحقاً بالسيرفر.'); };

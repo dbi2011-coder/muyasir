@@ -1,11 +1,10 @@
 // ============================================
 // 📁 المسار: assets/js/student-profile.js
-// الوصف: إدارة الطالب + حساب نسبة التقدم الفعلية الموحدة + الخطة بدون نسب
+// الوصف: إدارة الطالب + صمامات أمان لمنع أخطاء null
 // ============================================
 
-// 🔥 المحرك الموحد لحساب نسبة التقدم (مطابق لتقرير نسب الإنجاز) 🔥
 function calculateAndSetStudentProgress() {
-    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]') || [];
     const myLessons = studentLessons.filter(l => l.studentId == currentStudentId);
     let progressPct = 0;
 
@@ -71,7 +70,8 @@ function injectAdminEventModal() { if (document.getElementById('adminEventModal'
 function injectHomeworkModal() { if (document.getElementById('assignHomeworkModal')) return; const html = `<div id="assignHomeworkModal" class="modal"><div class="modal-content" style="border: 2px solid #000;"><span class="close-btn" onclick="closeModal('assignHomeworkModal')">&times;</span><h3>إسناد واجب جديد</h3><div class="form-group"><label>اختر الواجب من المكتبة:</label><select id="homeworkSelect" class="form-control"><option value="">جارِ التحميل...</option></select></div><div class="form-group"><label>تاريخ التسليم:</label><input type="date" id="homeworkDueDate" class="form-control"></div><button class="btn btn-primary w-100" onclick="assignHomework()">حفظ الإسناد</button></div></div>`; document.body.insertAdjacentHTML('beforeend', html); }
 
 function loadStudentData() {
-    const users = JSON.parse(localStorage.getItem('users') || '[]'); currentStudent = users.find(u => u.id == currentStudentId);
+    const users = JSON.parse(localStorage.getItem('users') || '[]') || [];
+    currentStudent = users.find(u => u.id == currentStudentId);
     if (!currentStudent) { showError('الطالب غير موجود'); setTimeout(() => { window.location.href = 'students.html'; }, 1500); return; }
     if(document.getElementById('sideName')) document.getElementById('sideName').textContent = currentStudent.name;
     if(document.getElementById('headerStudentName')) document.getElementById('headerStudentName').textContent = currentStudent.name;
@@ -96,15 +96,40 @@ function switchSection(sectionId) {
     if (sectionId === 'progress') loadProgressTab();
 }
 
+// 🔥 إضافة صمامات أمان كاملة لدالة التقدم لمنع أي أخطاء null 🔥
 function loadProgressTab() {
-    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]'); let adminEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]'); const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]');
-    let myList = studentLessons.filter(l => l.studentId == currentStudentId); const container = document.getElementById('section-progress');
+    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]') || []; 
+    let adminEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]') || []; 
+    const teacherSchedule = JSON.parse(localStorage.getItem('teacherSchedule') || '[]') || [];
+    
+    let myList = studentLessons.filter(l => l.studentId == currentStudentId); 
+    const container = document.getElementById('section-progress');
+    
     if (myList.length === 0) { container.innerHTML = `<div class="content-header"><h1>سجل المتابعة</h1></div><div class="empty-state"><h3>لم تبدأ الخطة بعد</h3></div>`; return; }
-    myList.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0)); const sortedByDate = [...myList].sort((a, b) => new Date(a.assignedDate) - new Date(b.assignedDate)); let planStartDate = sortedByDate.length > 0 ? new Date(sortedByDate[0].assignedDate) : new Date();
+    
+    myList.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0)); 
+    const sortedByDate = [...myList].sort((a, b) => new Date(a.assignedDate) - new Date(b.assignedDate)); 
+    let planStartDate = sortedByDate.length > 0 ? new Date(sortedByDate[0].assignedDate) : new Date();
+    
     let myEvents = syncMissingDaysToArchive(myList, adminEvents.filter(e => e.studentId == currentStudentId), teacherSchedule, planStartDate);
+    
     let rawLogs = [];
-    myList.forEach(l => { if (l.historyLog) { l.historyLog.forEach(log => { rawLogs.push({ dateObj: new Date(log.date), dateStr: new Date(log.date).toDateString(), type: 'lesson', status: log.status, title: l.title, lessonId: l.id, cachedType: log.cachedSessionType || null }); }); } });
-    myEvents.forEach(e => { rawLogs.push({ dateObj: new Date(e.date), dateStr: new Date(e.date).toDateString(), type: e.type === 'auto-absence' ? 'auto-absence' : 'event', status: e.type, title: e.title || (e.type === 'auto-absence' ? 'درس غير محدد' : 'حدث إداري'), id: e.id, note: e.note }); });
+    myList.forEach(l => { 
+        if (l.historyLog && Array.isArray(l.historyLog)) { 
+            l.historyLog.forEach(log => { 
+                if(log && log.date) {
+                    rawLogs.push({ dateObj: new Date(log.date), dateStr: new Date(log.date).toDateString(), type: 'lesson', status: log.status, title: l.title, lessonId: l.id, cachedType: log.cachedSessionType || null }); 
+                }
+            }); 
+        } 
+    });
+    
+    myEvents.forEach(e => { 
+        if(e && e.date) {
+            rawLogs.push({ dateObj: new Date(e.date), dateStr: new Date(e.date).toDateString(), type: e.type === 'auto-absence' ? 'auto-absence' : 'event', status: e.type, title: e.title || (e.type === 'auto-absence' ? 'درس غير محدد' : 'حدث إداري'), id: e.id, note: e.note }); 
+        }
+    });
+    
     let finalTimeline = []; let balance = 0; rawLogs.sort((a, b) => a.dateObj - b.dateObj);
     
     rawLogs.forEach(log => {
@@ -146,26 +171,73 @@ function printProgressLog() {
     printWindow.document.close();
 }
 
+// 🔥 دالة مزامنة الغياب مع إضافة صمامات أمان صارمة للقوائم 🔥
 function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDate) {
-    if (!planStartDate) return myEvents; const today = new Date(); today.setHours(23, 59, 59, 999); const dayMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']; const holidays = JSON.parse(localStorage.getItem('academicCalendar') || '[]'); let newEvents = []; let hasChanges = false; let pendingLesson = myList.find(l => l.status === 'pending'); let lessonTitleForAbsence = pendingLesson ? pendingLesson.title : 'درس غير محدد';
+    if (!planStartDate) return myEvents || []; 
+    
+    // التأكد من أن المتغيرات هي مصفوفات (Arrays) حقيقية لتجنب خطأ some و filter
+    myList = Array.isArray(myList) ? myList : [];
+    myEvents = Array.isArray(myEvents) ? myEvents : [];
+    teacherSchedule = Array.isArray(teacherSchedule) ? teacherSchedule : [];
+    
+    let holidays = JSON.parse(localStorage.getItem('academicCalendar') || '[]') || [];
+    holidays = Array.isArray(holidays) ? holidays : [];
+    
+    const today = new Date(); today.setHours(23, 59, 59, 999); 
+    const dayMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']; 
+    let newEvents = []; let hasChanges = false; 
+    let pendingLesson = myList.find(l => l.status === 'pending'); 
+    let lessonTitleForAbsence = pendingLesson ? pendingLesson.title : 'درس غير محدد';
+    
     for (let d = new Date(planStartDate); d < today; d.setDate(d.getDate() + 1)) {
         if (d.toDateString() === new Date().toDateString()) continue;
-        const isHoliday = holidays.some(h => { const start = new Date(h.startDate); const end = new Date(h.endDate); start.setHours(0, 0, 0, 0); end.setHours(23, 59, 59, 999); const checkDate = new Date(d); checkDate.setHours(12, 0, 0, 0); return checkDate >= start && checkDate <= end; }); if (isHoliday) continue;
-        const dateStr = d.toDateString(); const hasLesson = myList.some(l => l.historyLog && l.historyLog.some(log => new Date(log.date).toDateString() === dateStr)); const hasEvent = myEvents.some(e => new Date(e.date).toDateString() === dateStr); if (hasLesson || hasEvent) continue; const dayKey = dayMap[d.getDay()]; const isScheduledDay = teacherSchedule.some(s => s.day === dayKey && (s.students && s.students.includes(currentStudentId)));
-        if (isScheduledDay) { newEvents.push({ id: Date.now() + Math.random(), studentId: currentStudentId, date: new Date(d).toISOString(), type: 'auto-absence', title: lessonTitleForAbsence, note: `غياب عن درس: ${lessonTitleForAbsence}` }); hasChanges = true; }
+        
+        const isHoliday = holidays.some(h => { 
+            if(!h.startDate || !h.endDate) return false;
+            const start = new Date(h.startDate); const end = new Date(h.endDate); 
+            start.setHours(0, 0, 0, 0); end.setHours(23, 59, 59, 999); 
+            const checkDate = new Date(d); checkDate.setHours(12, 0, 0, 0); 
+            return checkDate >= start && checkDate <= end; 
+        }); 
+        
+        if (isHoliday) continue;
+        
+        const dateStr = d.toDateString(); 
+        const hasLesson = myList.some(l => l.historyLog && Array.isArray(l.historyLog) && l.historyLog.some(log => log.date && new Date(log.date).toDateString() === dateStr)); 
+        const hasEvent = myEvents.some(e => e.date && new Date(e.date).toDateString() === dateStr); 
+        
+        if (hasLesson || hasEvent) continue; 
+        
+        const dayKey = dayMap[d.getDay()]; 
+        const isScheduledDay = teacherSchedule.some(s => s.day === dayKey && (s.students && Array.isArray(s.students) && s.students.includes(currentStudentId)));
+        
+        if (isScheduledDay) { 
+            newEvents.push({ id: Date.now() + Math.random(), studentId: currentStudentId, date: new Date(d).toISOString(), type: 'auto-absence', title: lessonTitleForAbsence, note: `غياب عن درس: ${lessonTitleForAbsence}` }); 
+            hasChanges = true; 
+        }
     }
-    if (hasChanges) { let allEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]'); allEvents = [...allEvents, ...newEvents]; localStorage.setItem('studentEvents', JSON.stringify(allEvents)); return allEvents.filter(e => e.studentId == currentStudentId); } return myEvents;
+    
+    if (hasChanges) { 
+        let allEvents = JSON.parse(localStorage.getItem('studentEvents') || '[]') || []; 
+        allEvents = Array.isArray(allEvents) ? allEvents : [];
+        allEvents = [...allEvents, ...newEvents]; 
+        localStorage.setItem('studentEvents', JSON.stringify(allEvents)); 
+        return allEvents.filter(e => e.studentId == currentStudentId); 
+    } 
+    return myEvents;
 }
 
 function openAdminEventModal() { editingEventId = null; document.getElementById('modalTitle').textContent = "تسجيل حدث إداري"; document.getElementById('manualEventDate').valueAsDate = new Date(); document.getElementById('manualEventType').value = 'excused'; document.getElementById('manualEventNote').value = ''; document.getElementById('adminEventModal').classList.add('show'); }
 function closeAdminEventModal() { document.getElementById('adminEventModal').classList.remove('show'); }
-function editAdminEvent(id) { const events = JSON.parse(localStorage.getItem('studentEvents') || '[]'); const event = events.find(e => e.id == id); if (!event) return; editingEventId = id; document.getElementById('modalTitle').textContent = "تعديل الحدث"; document.getElementById('manualEventType').value = event.type; document.getElementById('manualEventDate').value = event.date.split('T')[0]; document.getElementById('manualEventNote').value = event.note || ''; document.getElementById('adminEventModal').classList.add('show'); }
-function saveAdminEvent() { const type = document.getElementById('manualEventType').value; const dateInput = document.getElementById('manualEventDate').value; const note = document.getElementById('manualEventNote').value; if (!dateInput) { showError('يرجى اختيار التاريخ'); return; } const targetDateStr = new Date(dateInput).toDateString(); let events = JSON.parse(localStorage.getItem('studentEvents') || '[]'); events = events.filter(e => { if (e.studentId != currentStudentId) return true; if (new Date(e.date).toDateString() !== targetDateStr) return true; return false; }); events.push({ id: Date.now(), studentId: currentStudentId, date: new Date(dateInput).toISOString(), type: type, note: note }); localStorage.setItem('studentEvents', JSON.stringify(events)); closeAdminEventModal(); loadProgressTab(); }
-function deleteAdminEvent(id) { showConfirmModal('هل أنت متأكد من حذف هذا السجل؟', function() { let events = JSON.parse(localStorage.getItem('studentEvents') || '[]'); events = events.filter(e => e.id != id); localStorage.setItem('studentEvents', JSON.stringify(events)); loadProgressTab(); showSuccess('تم حذف السجل بنجاح'); }); }
+function editAdminEvent(id) { const events = JSON.parse(localStorage.getItem('studentEvents') || '[]') || []; const event = Array.isArray(events) ? events.find(e => e.id == id) : null; if (!event) return; editingEventId = id; document.getElementById('modalTitle').textContent = "تعديل الحدث"; document.getElementById('manualEventType').value = event.type; document.getElementById('manualEventDate').value = event.date.split('T')[0]; document.getElementById('manualEventNote').value = event.note || ''; document.getElementById('adminEventModal').classList.add('show'); }
+function saveAdminEvent() { const type = document.getElementById('manualEventType').value; const dateInput = document.getElementById('manualEventDate').value; const note = document.getElementById('manualEventNote').value; if (!dateInput) { showError('يرجى اختيار التاريخ'); return; } const targetDateStr = new Date(dateInput).toDateString(); let events = JSON.parse(localStorage.getItem('studentEvents') || '[]') || []; events = Array.isArray(events) ? events : []; events = events.filter(e => { if (e.studentId != currentStudentId) return true; if (new Date(e.date).toDateString() !== targetDateStr) return true; return false; }); events.push({ id: Date.now(), studentId: currentStudentId, date: new Date(dateInput).toISOString(), type: type, note: note }); localStorage.setItem('studentEvents', JSON.stringify(events)); closeAdminEventModal(); loadProgressTab(); }
+function deleteAdminEvent(id) { showConfirmModal('هل أنت متأكد من حذف هذا السجل؟', function() { let events = JSON.parse(localStorage.getItem('studentEvents') || '[]') || []; events = Array.isArray(events) ? events : []; events = events.filter(e => e.id != id); localStorage.setItem('studentEvents', JSON.stringify(events)); loadProgressTab(); showSuccess('تم حذف السجل بنجاح'); }); }
 function closeModal(id) { const modal = document.getElementById(id); if(modal) modal.classList.remove('show'); }
 
 function loadDiagnosticTab() {
-    let studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]'); let assignedTestIndex = studentTests.findIndex(t => t.studentId == currentStudentId && t.type === 'diagnostic');
+    let studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]') || []; 
+    studentTests = Array.isArray(studentTests) ? studentTests : [];
+    let assignedTestIndex = studentTests.findIndex(t => t.studentId == currentStudentId && t.type === 'diagnostic');
     if (assignedTestIndex !== -1) {
         let assignedTest = studentTests[assignedTestIndex]; document.getElementById('noDiagnosticTest').style.display = 'none'; const detailsDiv = document.getElementById('diagnosticTestDetails'); detailsDiv.style.display = 'block'; const allTests = JSON.parse(localStorage.getItem('tests') || '[]'); const originalTest = allTests.find(t => t.id == assignedTest.testId); let finalPercentage = assignedTest.score || 0;
         
@@ -243,6 +315,8 @@ function loadIEPTab() {
 
     iepContainer.innerHTML = `<style>@media print { body * { visibility: hidden; } .iep-printable, .iep-printable * { visibility: visible; } .iep-printable { position: absolute; left: 0; top: 0; width: 100%; padding: 20px; border:none; } .no-print { display: none !important; } .print-footer-container { margin-top: 50px; text-align: center; border-top: 1px solid #ccc; padding-top: 10px; display: block !important; } }</style><div class="iep-printable" style="background:#fff; padding:20px; border:1px solid #ccc;"><div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #333;"><h3>الخطة التربوية الفردية</h3></div><table class="table table-bordered mb-4"><tr><td style="background:#f5f5f5; width:15%;">اسم الطالب:</td><td style="width:35%;">${currentStudent.name}</td><td style="background:#f5f5f5; width:15%;">الصف:</td><td>${currentStudent.grade}</td></tr><tr><td style="background:#f5f5f5;">المادة:</td><td>${subjectName}</td><td style="background:#f5f5f5;">التاريخ:</td><td>${new Date().toLocaleDateString('ar-SA')}</td></tr></table><h5>جدول الحصص:</h5><table class="table table-bordered text-center mb-4"><thead><tr style="background:#f5f5f5;"><th>الأحد</th><th>الاثنين</th><th>الثلاثاء</th><th>الأربعاء</th><th>الخميس</th></tr></thead><tbody><tr>${scheduleCells}</tr></tbody></table><div style="display:flex; gap:20px; margin-bottom:20px;"><div style="flex:1; border:1px solid #ddd; padding:10px;"><h6 style="background:#28a745; color:white; padding:5px; text-align:center;">نقاط القوة</h6><ul>${strengthHTML}</ul></div><div style="flex:1; border:1px solid #ddd; padding:10px;"><h6 style="background:#dc3545; color:white; padding:5px; text-align:center;">نقاط الاحتياج</h6><ul>${needsHTML}</ul></div></div><div class="alert alert-secondary text-center mb-4">الهدف بعيد المدى: أن يتقن التلميذ مهارات مادة <strong>${subjectName}</strong> بنسبة 80%</div><h5>الأهداف التدريسية:</h5><table class="table table-bordered"><thead style="background:#333; color:white;"><tr><th>#</th><th>الهدف</th><th>التحقق</th></tr></thead><tbody>${objectivesRows}</tbody></table><div class="print-footer-container"><p class="print-footer-text">تم طباعة الخطة من نظام ميسر التعلم - معلم: أ/ صالح عبد العزيز العجلان</p></div></div>`;
     const topPrintBtn = document.querySelector('#section-iep .content-header button'); if(topPrintBtn) topPrintBtn.setAttribute('onclick', 'window.print()');
+    
+    calculateAndSetStudentProgress(); 
 }
 
 function loadLessonsTab() {
@@ -295,8 +369,7 @@ function loadLessonsTab() {
         return `<div class="content-card" style="${cardStyle} position:relative;"><div style="position:absolute; top:50px; left:10px; display:flex; z-index:5;">${orderBtns}</div><div style="display:flex; justify-content:space-between;"><div style="margin-right:20px;"><h4 style="margin:0;">${index+1}. ${l.title}</h4><small class="text-muted">${l.objective}</small></div><div>${statusBadge}</div></div><div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;"><div class="lesson-actions" style="width:100%; display:flex; gap:5px; margin-top:25px;">${controls}<button class="btn btn-danger btn-sm" onclick="deleteLesson(${l.id})">حذف</button></div></div></div>`;
     }).join('');
     
-    // تحديث النسبة المئوية عند عرض الدروس
-    calculateAndSetStudentProgress();
+    calculateAndSetStudentProgress(); 
 }
 
 function autoGenerateLessons() {
@@ -564,10 +637,10 @@ function openReviewModal(targetId, type = 'assignment') {
     let questions = []; let studentAnswers = []; let attachedSolution = null;
 
     if (type === 'lesson') {
-        const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
+        const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]') || [];
         const targetLesson = studentLessons.find(a => a.id == targetId);
         if(!targetLesson) return showError('سجل الدرس غير موجود.');
-        const lessonsLib = JSON.parse(localStorage.getItem('lessons') || '[]');
+        const lessonsLib = JSON.parse(localStorage.getItem('lessons') || '[]') || [];
         const originalLesson = lessonsLib.find(l => l.id == targetLesson.originalLessonId);
         if (originalLesson) questions = [...(originalLesson.exercises?.questions || []), ...(originalLesson.assessment?.questions || [])];
         studentAnswers = targetLesson.answers || [];
@@ -579,19 +652,19 @@ function openReviewModal(targetId, type = 'assignment') {
             container.innerHTML += `<div class="alert alert-info" style="text-align:center; font-size:1.2rem; font-weight:bold;">🎯 تم اجتياز هذا الدرس باستراتيجية بديلة 🎯</div>`;
         }
     } else if (type === 'assignment') {
-        const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
+        const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]') || [];
         const assignment = studentAssignments.find(a => a.id == targetId);
         if(!assignment) return showError('سجل الواجب غير موجود.');
-        const lib = JSON.parse(localStorage.getItem('assignments') || '[]');
+        const lib = JSON.parse(localStorage.getItem('assignments') || '[]') || [];
         const originalAssignment = lib.find(a => a.title === assignment.title);
         questions = assignment.questions || (originalAssignment ? originalAssignment.questions : []);
         studentAnswers = assignment.answers || []; attachedSolution = assignment.attachedSolution;
         document.querySelector('#reviewTestModal h3').innerHTML = '🔍 مراجعة الواجب: ' + assignment.title;
     } else if (type === 'test') {
-        const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
+        const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]') || [];
         const test = studentTests.find(t => t.id == targetId);
         if(!test) return showError('سجل الاختبار غير موجود.');
-        const lib = JSON.parse(localStorage.getItem('tests') || '[]');
+        const lib = JSON.parse(localStorage.getItem('tests') || '[]') || [];
         const originalTest = lib.find(t => t.id == test.testId);
         questions = originalTest ? originalTest.questions : [];
         studentAnswers = test.answers || [];
@@ -710,7 +783,7 @@ function saveTestReview() {
     if(type === 'test') storageKey = 'studentTests';
     if(type === 'lesson') storageKey = 'studentLessons';
 
-    let collection = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    let collection = JSON.parse(localStorage.getItem(storageKey) || '[]') || [];
     let idx = collection.findIndex(a => a.id == id);
     if (idx === -1) return showError('السجل غير موجود أثناء الحفظ');
 
@@ -718,11 +791,11 @@ function saveTestReview() {
     let totalScore = 0; let maxTotalScore = 0; let questions = [];
     
     if (type === 'assignment') {
-         const lib = JSON.parse(localStorage.getItem('assignments') || '[]'); const orig = lib.find(a => a.title === collection[idx].title); questions = collection[idx].questions || (orig ? orig.questions : []);
+         const lib = JSON.parse(localStorage.getItem('assignments') || '[]') || []; const orig = lib.find(a => a.title === collection[idx].title); questions = collection[idx].questions || (orig ? orig.questions : []);
     } else if (type === 'test') {
-         const lib = JSON.parse(localStorage.getItem('tests') || '[]'); const orig = lib.find(t => t.id == collection[idx].testId); if(orig) questions = orig.questions;
+         const lib = JSON.parse(localStorage.getItem('tests') || '[]') || []; const orig = lib.find(t => t.id == collection[idx].testId); if(orig) questions = orig.questions;
     } else if (type === 'lesson') {
-         const lib = JSON.parse(localStorage.getItem('lessons') || '[]'); const orig = lib.find(l => l.id == collection[idx].originalLessonId); if(orig) questions = [...(orig.exercises?.questions || []), ...(orig.assessment?.questions || [])];
+         const lib = JSON.parse(localStorage.getItem('lessons') || '[]') || []; const orig = lib.find(l => l.id == collection[idx].originalLessonId); if(orig) questions = [...(orig.exercises?.questions || []), ...(orig.assessment?.questions || [])];
     }
 
     if(questions && questions.length > 0) {
@@ -749,7 +822,7 @@ function saveTestReview() {
     }
     
     if (type === 'lesson') {
-        const lib = JSON.parse(localStorage.getItem('lessons') || '[]');
+        const lib = JSON.parse(localStorage.getItem('lessons') || '[]') || [];
         const orig = lib.find(l => l.id == collection[idx].originalLessonId);
         const passScore = (orig && orig.exercises && orig.exercises.passScore) ? parseFloat(orig.exercises.passScore) : 80;
         
@@ -793,7 +866,7 @@ function returnTestForResubmission() {
         if(type === 'test') storageKey = 'studentTests';
         if(type === 'lesson') storageKey = 'studentLessons';
 
-        let collection = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        let collection = JSON.parse(localStorage.getItem(storageKey) || '[]') || [];
         let idx = collection.findIndex(a => a.id == id);
         if (idx === -1) return;
 

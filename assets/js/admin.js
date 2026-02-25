@@ -1,5 +1,5 @@
 // ============================================
-// 📁 الملف: assets/js/admin.js (نسخة Supabase مع إصلاح النوافذ المنبثقة)
+// 📁 الملف: assets/js/admin.js (النسخة السحابية الكاملة والنهائية)
 // ============================================
 
 // =========================================================
@@ -49,7 +49,7 @@ if (!window.showError) {
 }
 
 // =========================================================
-// بداية دوال المدير
+// العمليات الأساسية للمدير
 // =========================================================
 
 document.addEventListener('DOMContentLoaded', async function() {
@@ -79,7 +79,6 @@ async function loadTeachersData() {
     tableBody.innerHTML = '';
 
     try {
-        // جلب المعلمين من Supabase
         const { data: teachers, error: teachersError } = await window.supabase
             .from('users')
             .select('*')
@@ -94,7 +93,6 @@ async function loadTeachersData() {
             return;
         }
 
-        // جلب أعداد الطلاب لكل معلم
         const { data: students, error: studentsError } = await window.supabase
             .from('users')
             .select('teacherId')
@@ -169,6 +167,7 @@ async function addNewTeacher() {
         }
 
         const { error } = await window.supabase.from('users').insert([{
+            id: Date.now(), // الحل الجذري لتجاوز الخطأ
             name: nameVal,
             username: userVal,
             password: passVal,
@@ -185,7 +184,7 @@ async function addNewTeacher() {
         loadAdminStats();
     } catch (error) {
         console.error("Add Teacher Error:", error);
-        showError('حدث خطأ أثناء الإضافة');
+        alert("تفاصيل الخطأ: " + (error.message || JSON.stringify(error)));
     }
 }
 

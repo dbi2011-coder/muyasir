@@ -1,11 +1,7 @@
 // ============================================
 // 📁 الملف: assets/js/teacher.js
-// الوصف: إدارة الطلاب وإحصائيات المعلم (نسخة Supabase الكاملة)
 // ============================================
 
-// =========================================================
-// 🔥 دوال النوافذ المنبثقة والإشعارات 🔥
-// =========================================================
 if (!window.showConfirmModal) {
     window.showConfirmModal = function(message, onConfirm) {
         let modal = document.getElementById('globalConfirmModal');
@@ -60,9 +56,6 @@ if (!window.showError) {
     };
 }
 
-// =========================================================
-// 🚀 التهيئة العامة (Initialization)
-// =========================================================
 document.addEventListener('DOMContentLoaded', function() {
     const path = window.location.pathname;
     if (path.includes('dashboard.html')) initializeTeacherDashboard();
@@ -83,56 +76,23 @@ function initializeTeacherDashboard() {
     loadTeacherStats();
 }
 
-// =========================================================
-// 📊 جلب إحصائيات المعلم من Supabase
-// =========================================================
 async function loadTeacherStats() {
     const currentTeacher = getCurrentUser();
     if (!currentTeacher) return;
 
     try {
-        // حساب عدد الطلاب
-        const { count: studentsCount } = await supabase
-            .from('users')
-            .select('*', { count: 'exact', head: true })
-            .eq('role', 'student')
-            .eq('teacherId', currentTeacher.id);
-
-        // حساب عدد الدروس
-        const { count: lessonsCount } = await supabase
-            .from('lessons')
-            .select('*', { count: 'exact', head: true })
-            .eq('teacherId', currentTeacher.id);
-
-        // حساب عدد الواجبات
-        const { count: assignmentsCount } = await supabase
-            .from('assignments')
-            .select('*', { count: 'exact', head: true })
-            .eq('teacherId', currentTeacher.id);
-
-        // حساب الرسائل غير المقروءة
-        const { count: messagesCount } = await supabase
-            .from('messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('teacherId', currentTeacher.id)
-            .eq('isFromStudent', true)
-            .eq('isRead', false);
+        const { count: studentsCount } = await supa.from('users').select('*', { count: 'exact', head: true }).eq('role', 'student').eq('teacherId', currentTeacher.id);
+        const { count: lessonsCount } = await supa.from('lessons').select('*', { count: 'exact', head: true }).eq('teacherId', currentTeacher.id);
+        const { count: assignmentsCount } = await supa.from('assignments').select('*', { count: 'exact', head: true }).eq('teacherId', currentTeacher.id);
+        const { count: messagesCount } = await supa.from('messages').select('*', { count: 'exact', head: true }).eq('teacherId', currentTeacher.id).eq('isFromStudent', true).eq('isRead', false);
 
         if (document.getElementById('studentsCount')) document.getElementById('studentsCount').innerText = studentsCount || 0;
         if (document.getElementById('lessonsCount')) document.getElementById('lessonsCount').innerText = lessonsCount || 0;
         if (document.getElementById('assignmentsCount')) document.getElementById('assignmentsCount').innerText = assignmentsCount || 0;
         if (document.getElementById('unreadMessages')) document.getElementById('unreadMessages').innerText = messagesCount || 0;
-
-    } catch (error) {
-        console.error("Error loading stats:", error);
-    }
+    } catch (error) { console.error("Error loading stats:", error); }
 }
 
-// =========================================================
-// 👨‍🎓 عمليات إدارة الطلاب (CRUD) عبر Supabase
-// =========================================================
-
-// 1. جلب وعرض الطلاب
 async function loadStudentsData() {
     const loadingState = document.getElementById('loadingState');
     const emptyState = document.getElementById('emptyState');
@@ -145,8 +105,7 @@ async function loadStudentsData() {
 
     try {
         const currentTeacher = getCurrentUser();
-        
-        const { data: students, error } = await supabase
+        const { data: students, error } = await supa
             .from('users')
             .select('*')
             .eq('role', 'student')
@@ -195,7 +154,6 @@ async function loadStudentsData() {
     }
 }
 
-// 2. إضافة طالب جديد
 async function addNewStudent() {
     const name = document.getElementById('studentName').value.trim();
     const grade = document.getElementById('studentGrade').value;
@@ -220,7 +178,7 @@ async function addNewStudent() {
     };
 
     try {
-        const { error } = await supabase.from('users').insert([newStudentData]);
+        const { error } = await supa.from('users').insert([newStudentData]);
         if (error) throw error;
 
         showSuccess('تم إضافة الطالب بنجاح ✅');
@@ -233,15 +191,9 @@ async function addNewStudent() {
     }
 }
 
-// 3. جلب بيانات الطالب للتعديل
 async function editStudent(studentId) {
     try {
-        const { data: student, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', studentId)
-            .single();
-
+        const { data: student, error } = await supa.from('users').select('*').eq('id', studentId).single();
         if (error || !student) throw error;
 
         document.getElementById('editStudentId').value = student.id;
@@ -257,10 +209,8 @@ async function editStudent(studentId) {
     }
 }
 
-// 4. حفظ التعديلات
 async function updateStudentData() {
     const studentId = document.getElementById('editStudentId').value;
-    
     const updateData = {
         name: document.getElementById('editStudentName').value.trim(),
         grade: document.getElementById('editStudentGrade').value,
@@ -269,55 +219,43 @@ async function updateStudentData() {
     };
 
     const newPassword = document.getElementById('editStudentPassword').value.trim();
-    if(newPassword) {
-        updateData.password = newPassword;
-    }
+    if(newPassword) updateData.password = newPassword;
 
     try {
-        const { error } = await supabase
-            .from('users')
-            .update(updateData)
-            .eq('id', studentId);
-
+        const { error } = await supa.from('users').update(updateData).eq('id', studentId);
         if (error) throw error;
 
         showSuccess('تم التحديث بنجاح ✅');
         document.getElementById('editStudentModal').classList.remove('show');
         loadStudentsData();
     } catch (error) {
-        showError('اسم المستخدم غير متاح أو حدث خطأ في الاتصال.');
+        showError('حدث خطأ في الاتصال.');
     }
 }
 
-// 5. حذف طالب
 async function deleteStudent(studentId) {
-    showConfirmModal('⚠️ هل أنت متأكد من حذف هذا الطالب نهائياً؟<br><small>سيتم حذف جميع سجلاته ودرجاته.</small>', async function() {
-        try {
-            // حذف الطالب من السيرفر
-            const { error } = await supabase.from('users').delete().eq('id', studentId);
-            if (error) throw error;
-
-            // حذف سجلاته المرتبطة (اختياري، يفضل تفعيل Cascade في Supabase)
-            await supabase.from('studentTests').delete().eq('studentId', studentId);
-            await supabase.from('studentLessons').delete().eq('studentId', studentId);
-            await supabase.from('studentAssignments').delete().eq('studentId', studentId);
-            
-            showSuccess('تم الحذف بنجاح');
-            loadStudentsData();
-        } catch (error) {
-            console.error("Error deleting:", error);
-            showError('حدث خطأ أثناء الحذف.');
-        }
-    });
+    if(window.showConfirmModal) {
+        showConfirmModal('⚠️ هل أنت متأكد من حذف هذا الطالب نهائياً؟<br><small>سيتم حذف جميع سجلاته ودرجاته.</small>', async function() {
+            try {
+                const { error } = await supa.from('users').delete().eq('id', studentId);
+                if (error) throw error;
+                
+                await supa.from('studentTests').delete().eq('studentId', studentId);
+                await supa.from('studentLessons').delete().eq('studentId', studentId);
+                await supa.from('studentAssignments').delete().eq('studentId', studentId);
+                
+                showSuccess('تم الحذف بنجاح');
+                loadStudentsData();
+            } catch (error) {
+                showError('حدث خطأ أثناء الحذف.');
+            }
+        });
+    }
 }
-
-// =========================================================
-// 📂 التصدير، الاستيراد، وبيانات الدخول
-// =========================================================
 
 async function showStudentLoginData(studentId) {
     try {
-        const { data: student, error } = await supabase.from('users').select('username, password').eq('id', studentId).single();
+        const { data: student, error } = await supa.from('users').select('username, password').eq('id', studentId).single();
         if(error) throw error;
 
         document.getElementById('loginDataUsername').value = student.username;
@@ -331,10 +269,10 @@ async function showStudentLoginData(studentId) {
 async function exportStudentData(studentId) {
     try {
         showSuccess('جاري تجهيز بيانات الطالب للتصدير...');
-        const { data: info } = await supabase.from('users').select('*').eq('id', studentId).single();
-        const { data: tests } = await supabase.from('studentTests').select('*').eq('studentId', studentId);
-        const { data: lessons } = await supabase.from('studentLessons').select('*').eq('studentId', studentId);
-        const { data: assignments } = await supabase.from('studentAssignments').select('*').eq('studentId', studentId);
+        const { data: info } = await supa.from('users').select('*').eq('id', studentId).single();
+        const { data: tests } = await supa.from('studentTests').select('*').eq('studentId', studentId);
+        const { data: lessons } = await supa.from('studentLessons').select('*').eq('studentId', studentId);
+        const { data: assignments } = await supa.from('studentAssignments').select('*').eq('studentId', studentId);
 
         const exportData = {
             info: info,
@@ -368,12 +306,11 @@ async function processStudentImport() {
             if (!imported.info || !imported.data) throw new Error('الملف غير صالح');
             
             let studentInfo = imported.info;
-            studentInfo.id = Date.now(); // إعطاء ID جديد لتجنب التعارض
+            studentInfo.id = Date.now(); 
             studentInfo.teacherId = currentTeacher.id; 
-            studentInfo.username = studentInfo.username + '_imp' + Math.floor(Math.random()*100); // تغيير اليوزر لتجنب التعارض
+            studentInfo.username = studentInfo.username + '_imp' + Math.floor(Math.random()*100); 
             
-            // إدخال الطالب الجديد
-            const { data: insertedStudent, error: err1 } = await supabase.from('users').insert([studentInfo]).select().single();
+            const { data: insertedStudent, error: err1 } = await supa.from('users').insert([studentInfo]).select().single();
             if(err1) throw err1;
 
             showSuccess('تم الاستيراد بنجاح');
@@ -387,9 +324,6 @@ async function processStudentImport() {
     reader.readAsText(fileInput.files[0]);
 }
 
-// =========================================================
-// 🔍 الفلترة والبحث والواجهة
-// =========================================================
 function searchStudents() { 
     const term = document.getElementById('studentSearch').value.toLowerCase(); 
     document.querySelectorAll('#studentsTableBody tr').forEach(row => { 
@@ -414,7 +348,6 @@ function showAddStudentModal() { document.getElementById('addStudentModal').clas
 function closeAddStudentModal() { document.getElementById('addStudentModal').classList.remove('show'); }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
-// تصدير الدوال
 window.addNewStudent = addNewStudent; window.editStudent = editStudent; window.updateStudentData = updateStudentData;
 window.deleteStudent = deleteStudent; window.openStudentFile = openStudentFile; window.showStudentLoginData = showStudentLoginData;
 window.copyToClipboard = copyToClipboard; window.loadStudentsData = loadStudentsData; window.showAddStudentModal = showAddStudentModal;

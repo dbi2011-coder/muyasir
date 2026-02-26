@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/auth.js
-// الوصف: نظام الدخول المتوافق تماماً مع الذاكرة المحلية (تم تصحيح توجيه اللجنة)
+// الوصف: نظام الدخول السحابي (Supabase) مع التوجيه الصحيح
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -25,7 +25,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-window.login = function() {
+// ============================================
+// 🔐 دالة تسجيل الدخول السحابية (Supabase)
+// ============================================
+window.login = async function() {
     const userEl = document.getElementById('username');
     const passEl = document.getElementById('password');
 
@@ -46,53 +49,69 @@ window.login = function() {
         btnLoading.style.display = 'inline-block';
     }
 
-    setTimeout(() => {
-        let users = JSON.parse(localStorage.getItem('users') || '[]');
-        
-        if (!users.some(u => u.role === 'admin')) {
-            users.push({ id: 1, name: "مدير النظام", username: "Zooro12500", password: "430106043", role: "admin", status: "active" });
-            localStorage.setItem('users', JSON.stringify(users));
-        }
+    try {
+        // 1. البحث في جدول المستخدمين (المدير، المعلم، الطالب)
+        const { data: users, error: err1 } = await window.supabase
+            .from('users')
+            .select('*')
+            .ilike('username', userInp) // تجاهل حالة الأحرف
+            .eq('password', passInp);
 
-        let user = users.find(u => String(u.username).toLowerCase() === String(userInp).toLowerCase() && String(u.password) === String(passInp));
-
-        if (user && (user.status === 'suspended' || user.status === 'موقوف')) {
-            showAuthNotification("⛔ عذراً، تم إيقاف حسابك.", "error");
-            resetLoginButton(btnText, btnLoading);
-            return; 
-        }
-
-        if (!user) {
-            const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-            const member = committeeMembers.find(m => String(m.username).toLowerCase() === String(userInp).toLowerCase() && String(m.password) === String(passInp));
+        if (users && users.length > 0) {
+            const user = users[0];
             
-            if (member) {
-                user = {
-                    id: member.id, 
-                    name: member.name, 
-                    username: member.username, 
-                    role: 'committee_member', 
-                    title: member.role || 'عضو لجنة', 
-                    status: 'active', 
-                    ownerId: member.ownerId 
-                };
+            if (user.status === 'suspended' || user.status === 'موقوف') {
+                showAuthNotification("⛔ عذراً، تم إيقاف حسابك. يرجى مراجعة الإدارة.", "error");
+                resetLoginButton(btnText, btnLoading);
+                return;
             }
-        }
 
-        if (user) {
             sessionStorage.setItem('currentUser', JSON.stringify(user));
             let prefix = window.location.href.includes('/pages/') ? '../' : 'pages/';
             
             if (user.role === 'admin') window.location.href = prefix + 'admin/dashboard.html';
             else if (user.role === 'teacher') window.location.href = prefix + 'teacher/dashboard.html';
-            // 🔥 هنا تم التوجيه للنموذج الحديث (member) بدلاً من القديم 🔥
-            else if (user.role === 'committee_member') window.location.href = prefix + 'member/dashboard.html';
             else window.location.href = prefix + 'student/dashboard.html';
-        } else {
-            showAuthNotification("بيانات الدخول غير صحيحة!", "error");
-            resetLoginButton(btnText, btnLoading);
+            return;
         }
-    }, 300);
+
+        // 2. البحث في جدول أعضاء اللجنة في السحابة
+        const { data: committee, error: err2 } = await window.supabase
+            .from('committee_members')
+            .select('*')
+            .ilike('username', userInp) // تجاهل حالة الأحرف
+            .eq('password', passInp);
+
+        if (committee && committee.length > 0) {
+            const commUser = committee[0];
+            
+            const sessionUser = {
+                id: commUser.id, 
+                name: commUser.name, 
+                username: commUser.username, 
+                role: 'committee_member', 
+                title: commUser.role || 'عضو لجنة',
+                status: 'active', 
+                ownerId: commUser.ownerId 
+            };
+            
+            sessionStorage.setItem('currentUser', JSON.stringify(sessionUser));
+            
+            let prefix = window.location.href.includes('/pages/') ? '../' : 'pages/';
+            // 🔥 التوجيه للوحة التحكم الحديثة الخاصة باللجنة (المرئيات) 🔥
+            window.location.href = prefix + 'member/dashboard.html'; 
+            return;
+        }
+
+        // 3. إذا لم يتم العثور عليه
+        showAuthNotification("بيانات الدخول غير صحيحة!", "error");
+        resetLoginButton(btnText, btnLoading);
+
+    } catch (error) {
+        console.error('Login Error:', error);
+        showAuthNotification("حدث خطأ في الاتصال بقاعدة البيانات", "error");
+        resetLoginButton(btnText, btnLoading);
+    }
 };
 
 function resetLoginButton(btnText, btnLoading) {

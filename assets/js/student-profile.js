@@ -1,5 +1,5 @@
 // ============================================
-// 📁 المسار: assets/js/student-profile.js (نسخة Supabase النهائية والشاملة)
+// 📁 المسار: assets/js/student-profile.js (نسخة Supabase النهائية والمصححة)
 // ============================================
 
 let currentStudentId = null; 
@@ -51,7 +51,7 @@ function switchSection(sectionId) {
     if (sectionId === 'iep') loadIEPTab();
     if (sectionId === 'lessons') loadLessonsTab();
     if (sectionId === 'assignments') loadAssignmentsTab();
-    if (sectionId === 'progress') loadProgressTab(); // 🌟 تفعيل سجل المتابعة
+    if (sectionId === 'progress') loadProgressTab();
 }
 
 async function calculateAndSetStudentProgress() {
@@ -237,8 +237,12 @@ async function loadIEPTab() {
 }
 
 // ============================================
-// 3. إدارة الدروس وتوليد الخطة التلقائي (Auto Generate)
+// 3. إدارة الدروس وتوليد الخطة التلقائي
 // ============================================
+function regenerateLessons() {
+    autoGenerateLessons();
+}
+
 async function loadLessonsTab() {
     try {
         const { data: myLessons } = await window.supabase.from('student_lessons').select('*').eq('studentId', currentStudentId).order('orderIndex', { ascending: true });
@@ -408,7 +412,243 @@ async function deleteAssignment(id) {
 }
 
 // ============================================
-// 5. المراجعة والتصحيح (Review Modal)
+// 5. سجل المتابعة والتقدم (Progress Tab) 
+// ============================================
+
+function injectAdminEventModal() {
+    if (document.getElementById('adminEventModal')) return; 
+    const html = `<div id="adminEventModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>تسجيل حدث إداري</h3><button class="modal-close" onclick="closeAdminEventModal()">×</button></div><div class="modal-body"><input type="hidden" id="editingEventId"><div class="form-group"><label>نوع الحالة:</label><select id="manualEventType" class="form-control"><option value="excused">معفى (يخصم من الرصيد)</option><option value="vacation">إجازة (توقف مؤقت)</option></select></div><div class="form-group"><label>التاريخ:</label><input type="date" id="manualEventDate" class="form-control"></div><div class="form-group"><label>ملاحظات:</label><textarea id="manualEventNote" class="form-control"></textarea></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeAdminEventModal()">إلغاء</button><button class="btn btn-primary" onclick="saveAdminEvent()">حفظ السجل</button></div></div></div>`; 
+    document.body.insertAdjacentHTML('beforeend', html); 
+}
+
+async function loadProgressTab() {
+    injectAdminEventModal();
+    const container = document.getElementById('progressTableBody');
+    const sectionHeader = document.getElementById('section-progress');
+    
+    if(!container) {
+        sectionHeader.innerHTML = `
+            <div class="content-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <h1>سجل المتابعة اليومي</h1>
+                <div>
+                    <span id="progressBalanceBadge" class="badge badge-success" style="font-size:1.1rem; padding:8px 15px; border-radius:8px;">الرصيد: جاري الحساب...</span>
+                    <button class="btn btn-primary" onclick="openAdminEventModal()" style="margin-right:10px;"><i class="fas fa-plus-circle"></i> تسجيل حدث</button>
+                    <button class="btn btn-secondary" onclick="printProgressLog()" style="margin-right:5px;"><i class="fas fa-print"></i> طباعة</button>
+                </div>
+            </div>
+            <div class="card" style="padding: 20px; overflow-x: auto;">
+                <table class="table table-bordered">
+                    <thead><tr style="background:#f1f5f9;"><th>الهدف (الدرس)</th><th>حالة الدرس</th><th>حالة الطالب</th><th>نوع الحصة</th><th>التاريخ</th><th class="no-print">إجراءات</th></tr></thead>
+                    <tbody id="progressTableBody"><tr><td colspan="6" class="text-center p-4">جاري التحميل...</td></tr></tbody>
+                </table>
+            </div>`;
+    }
+
+    try {
+        const [lessonsRes, eventsRes, scheduleRes] = await Promise.all([
+            window.supabase.from('student_lessons').select('*').eq('studentId', currentStudentId),
+            window.supabase.from('student_events').select('*').eq('studentId', currentStudentId),
+            window.supabase.from('teacher_schedule').select('*').eq('teacherId', currentStudent.teacherId)
+        ]);
+
+        let myList = lessonsRes.data || [];
+        let adminEvents = eventsRes.data || [];
+        let teacherSchedule = scheduleRes.data || [];
+        let holidays = JSON.parse(localStorage.getItem('academicCalendar') || '[]') || [];
+
+        const tbody = document.getElementById('progressTableBody');
+
+        if (myList.length === 0) { 
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4 text-muted">لم تبدأ الخطة بعد أو لا توجد دروس مسندة.</td></tr>';
+            document.getElementById('progressBalanceBadge').textContent = 'الرصيد: 0 حصة';
+            document.getElementById('progressBalanceBadge').className = 'badge badge-secondary';
+            return; 
+        }
+
+        myList.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0)); 
+        const sortedByDate = [...myList].sort((a, b) => new Date(a.assignedDate) - new Date(b.assignedDate)); 
+        let planStartDate = sortedByDate.length > 0 ? new Date(sortedByDate[0].assignedDate) : new Date();
+        
+        let myEvents = await syncMissingDays(myList, adminEvents, teacherSchedule, planStartDate, holidays);
+
+        let rawLogs = [];
+        myList.forEach(l => { 
+            if (l.historyLog) { 
+                l.historyLog.forEach(log => { 
+                    rawLogs.push({ dateObj: new Date(log.date), dateStr: new Date(log.date).toDateString(), type: 'lesson', status: log.status, title: l.title, lessonId: l.id, cachedType: log.cachedSessionType || null }); 
+                }); 
+            } 
+        });
+        myEvents.forEach(e => { 
+            rawLogs.push({ dateObj: new Date(e.date), dateStr: new Date(e.date).toDateString(), type: e.type === 'auto-absence' ? 'auto-absence' : 'event', status: e.type, title: e.title || (e.type === 'auto-absence' ? 'درس غير محدد' : 'حدث إداري'), id: e.id, note: e.note }); 
+        });
+
+        let finalTimeline = []; 
+        let balance = 0; 
+        rawLogs.sort((a, b) => a.dateObj - b.dateObj);
+        
+        rawLogs.forEach(log => {
+            if (log.status === 'started' || log.status === 'extension') { 
+                const hasFinalStateToday = rawLogs.some(l => l.dateStr === log.dateStr && l.lessonId === log.lessonId && ['completed', 'accelerated', 'passed_by_alternative', 'struggling', 'returned', 'pending_review'].includes(l.status)); 
+                if (hasFinalStateToday) return; 
+            }
+            
+            let displayStatus = '', displayType = '', rowClass = '', studentState = '';
+            if (log.type === 'event' || log.type === 'auto-absence') {
+                if (log.status === 'vacation') { studentState = 'إجازة'; displayStatus = 'توقف مؤقت'; rowClass = 'bg-info-light'; }
+                else if (log.status === 'excused') { studentState = 'معفى'; displayStatus = 'مؤجل'; rowClass = 'bg-warning-light'; balance--; }
+                else if (log.type === 'auto-absence' || log.status === 'absence') { studentState = '<span class="text-danger font-weight-bold">غائب</span>'; displayStatus = 'لم ينفذ'; displayType = 'أساسية'; rowClass = 'bg-danger-light'; balance--; }
+            } else {
+                studentState = 'حاضر';
+                if (log.status === 'started') displayStatus = 'بدأ';
+                else if (log.status === 'extension') displayStatus = 'تمديد';
+                else if (log.status === 'completed') { displayStatus = '<span class="text-success font-weight-bold">✔ متحقق</span>'; rowClass = 'bg-success-light'; }
+                else if (log.status === 'accelerated') { displayStatus = '<span class="text-warning font-weight-bold">⚡ تسريع</span>'; rowClass = 'bg-warning-light'; }
+                else if (log.status === 'pending_review') { displayStatus = '<span class="text-warning font-weight-bold">⏳ بانتظار تصحيح</span>'; rowClass = 'bg-warning-light'; }
+                else if (log.status === 'passed_by_alternative' || log.status === 'struggling' || log.status === 'returned') { displayStatus = '<span class="text-danger font-weight-bold">لم يتحقق - يعاد الدرس</span>'; rowClass = 'bg-danger-light'; }
+                
+                if (log.cachedType) { 
+                    if (log.cachedType === 'basic') displayType = 'أساسية'; 
+                    else if (log.cachedType === 'compensation') { displayType = '<span class="text-primary font-weight-bold">تعويضية</span>'; balance++; } 
+                    else if (log.cachedType === 'additional') { displayType = 'إضافية'; balance++; } 
+                } else { displayType = 'أساسية'; }
+            }
+            finalTimeline.push({ title: log.title, lessonStatus: displayStatus, studentStatus: studentState, sessionType: displayType || '-', date: log.dateObj.toLocaleDateString('ar-SA'), rawDate: log.dateObj, actions: (log.type === 'event' || log.type === 'auto-absence') ? log.id : null, note: log.note, rowClass: rowClass });
+        });
+        
+        let rowsHtml = finalTimeline.map(item => {
+            let actionsHtml = '-'; 
+            if (item.actions) { 
+                actionsHtml = `<button class="btn btn-sm btn-danger no-print" onclick="deleteAdminEvent(${item.actions})"><i class="fas fa-trash"></i></button>`; 
+                if (item.rowClass !== 'bg-danger-light') { 
+                    actionsHtml = `<button class="btn btn-sm btn-primary no-print" onclick="editAdminEvent(${item.actions})"><i class="fas fa-edit"></i></button> ` + actionsHtml; 
+                } 
+            }
+            let noteHtml = item.note ? `<br><small class="text-muted">[${item.note}]</small>` : ''; 
+            return `<tr class="${item.rowClass || ''}"><td><strong>${item.title}</strong>${noteHtml}</td><td class="text-center">${item.lessonStatus}</td><td class="text-center">${item.studentStatus}</td><td class="text-center">${item.sessionType}</td><td class="text-center">${item.date}</td><td class="text-center no-print">${actionsHtml}</td></tr>`;
+        }).join('');
+
+        tbody.innerHTML = rowsHtml;
+        
+        const badge = document.getElementById('progressBalanceBadge');
+        if(badge) {
+            badge.className = `badge ${balance < 0 ? 'badge-danger' : 'badge-success'}`;
+            badge.style.cssText = 'font-size:1.1rem; padding:8px 15px; border-radius:8px;';
+            badge.textContent = `الرصيد الحالي: ${balance > 0 ? '+' + balance : balance} حصة`;
+        }
+
+    } catch(e) {
+        console.error(e);
+        document.getElementById('progressTableBody').innerHTML = '<tr><td colspan="6" class="text-center text-danger">حدث خطأ أثناء تحميل سجل المتابعة</td></tr>';
+    }
+}
+
+async function syncMissingDays(myList, myEvents, teacherSchedule, planStartDate, holidays) {
+    myList = myList || [];
+    myEvents = myEvents || [];
+    teacherSchedule = teacherSchedule || [];
+    holidays = holidays || [];
+
+    if (!planStartDate) return myEvents; 
+    const today = new Date(); today.setHours(23, 59, 59, 999); 
+    const dayMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']; 
+    
+    let newEvents = []; 
+    let pendingLesson = myList.find(l => l.status === 'pending'); 
+    let lessonTitleForAbsence = pendingLesson ? pendingLesson.title : 'درس غير محدد';
+    
+    for (let d = new Date(planStartDate); d < today; d.setDate(d.getDate() + 1)) {
+        if (d.toDateString() === new Date().toDateString()) continue;
+        
+        const isHoliday = holidays.some(h => { 
+            if(!h.startDate || !h.endDate) return false;
+            const start = new Date(h.startDate); const end = new Date(h.endDate); 
+            start.setHours(0, 0, 0, 0); end.setHours(23, 59, 59, 999); 
+            const checkDate = new Date(d); checkDate.setHours(12, 0, 0, 0); 
+            return checkDate >= start && checkDate <= end; 
+        }); 
+        if (isHoliday) continue;
+        
+        const dateStr = d.toDateString(); 
+        const hasLesson = myList.some(l => l.historyLog && l.historyLog.some(log => new Date(log.date).toDateString() === dateStr)); 
+        const hasEvent = myEvents.some(e => new Date(e.date).toDateString() === dateStr); 
+        if (hasLesson || hasEvent) continue; 
+        
+        const dayKey = dayMap[d.getDay()]; 
+        const isScheduledDay = teacherSchedule.some(s => s.day === dayKey && (s.students && s.students.includes(currentStudentId)));
+        
+        if (isScheduledDay) { 
+            newEvents.push({ id: Date.now() + Math.floor(Math.random()*10000), studentId: currentStudentId, date: new Date(d).toISOString(), type: 'auto-absence', title: lessonTitleForAbsence, note: `غياب تلقائي: ${lessonTitleForAbsence}` }); 
+        }
+    }
+    
+    if (newEvents.length > 0) { 
+        await window.supabase.from('student_events').insert(newEvents);
+        return [...myEvents, ...newEvents];
+    } 
+    return myEvents;
+}
+
+function openAdminEventModal() { 
+    document.getElementById('editingEventId').value = ''; 
+    document.getElementById('manualEventDate').valueAsDate = new Date(); 
+    document.getElementById('manualEventType').value = 'excused'; 
+    document.getElementById('manualEventNote').value = ''; 
+    document.getElementById('adminEventModal').classList.add('show'); 
+}
+
+function closeAdminEventModal() { document.getElementById('adminEventModal').classList.remove('show'); }
+
+async function editAdminEvent(id) { 
+    const { data: event } = await window.supabase.from('student_events').select('*').eq('id', id).single();
+    if (!event) return; 
+    document.getElementById('editingEventId').value = id; 
+    document.getElementById('manualEventType').value = event.type; 
+    document.getElementById('manualEventDate').value = event.date.split('T')[0]; 
+    document.getElementById('manualEventNote').value = event.note || ''; 
+    document.getElementById('adminEventModal').classList.add('show'); 
+}
+
+async function saveAdminEvent() { 
+    const id = document.getElementById('editingEventId').value;
+    const type = document.getElementById('manualEventType').value; 
+    const dateInput = document.getElementById('manualEventDate').value; 
+    const note = document.getElementById('manualEventNote').value; 
+    
+    if (!dateInput) return alert('يرجى اختيار التاريخ'); 
+    
+    const eventData = { studentId: currentStudentId, date: new Date(dateInput).toISOString(), type: type, note: note };
+    
+    try {
+        if (id) {
+            await window.supabase.from('student_events').update(eventData).eq('id', id);
+        } else {
+            eventData.id = Date.now();
+            await window.supabase.from('student_events').insert([eventData]);
+        }
+        closeAdminEventModal(); 
+        loadProgressTab(); 
+    } catch(e) { console.error(e); }
+}
+
+async function deleteAdminEvent(id) { 
+    if(confirm('هل أنت متأكد من حذف هذا السجل؟')) { 
+        await window.supabase.from('student_events').delete().eq('id', id);
+        loadProgressTab(); 
+    } 
+}
+
+function printProgressLog() {
+    if (!currentStudent) { alert('بيانات الطالب غير جاهزة'); return; }
+    const tableContent = document.getElementById('progressTableBody').parentElement.outerHTML; 
+    const today = new Date().toLocaleDateString('ar-SA'); 
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`<html dir="rtl" lang="ar"><head><title>سجل متابعة - ${currentStudent.name}</title><style>@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');body { font-family: 'Tajawal', serif; padding: 40px; color: #333; }.print-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }.header-side { width: 30%; font-size: 13px; line-height: 1.6; }.header-mid { width: 40%; text-align: center; }.header-mid h2 { margin: 0; font-size: 22px; }.student-info-box { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f9f9f9; padding: 15px; border: 1px solid #000; margin-bottom: 20px; border-radius: 5px; }.student-info-box div { font-size: 14px; }table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 2px solid #000; }th, td { border: 1px solid #000; padding: 10px; text-align: center; font-size: 13px; }th { background-color: #eee !important; font-weight: bold; }.no-print { display: none !important; }.footer-signatures { margin-top: 50px; display: flex; justify-content: space-between; text-align: center; font-weight: bold; }.footer-signatures div { width: 30%; border-top: 1px solid #000; padding-top: 10px; }</style></head><body><div class="print-header"><div class="header-side">المملكة العربية السعودية<br>برنامج صعوبات التعلم<br>نظام ميسر التعلم</div><div class="header-mid"><h2>سجل المتابعة اليومي</h2><p>تقرير التقدم الدراسي</p></div><div class="header-side" style="text-align: left;">التاريخ: ${today}<br>المعلم: أ/ صالح العجلان</div></div><div class="student-info-box"><div><strong>اسم الطالب:</strong> ${currentStudent.name}</div><div><strong>الصف الدراسي:</strong> ${currentStudent.grade}</div><div><strong>المادة:</strong> ${currentStudent.subject}</div><div><strong>حالة الخطة:</strong> مستمرة</div></div>${tableContent}<div class="footer-signatures"><div>توقيع معلم صعوبات التعلم</div><div>توقيع مدير المدرسة</div></div><script>window.onload = function() { window.print(); window.close(); }<\/script></body></html>`);
+    printWindow.document.close();
+}
+
+// ============================================
+// 6. المراجعة والتصحيح (Review Modal)
 // ============================================
 async function openReviewModal(targetId, type = 'assignment') {
     document.getElementById('reviewAssignmentId').value = targetId;
@@ -544,230 +784,7 @@ async function returnTestForResubmission() {
     }
 }
 
-// ----------------------------------------------------------------------------------
-// 6. سجل المتابعة اليومي والتقدم (القسم الجديد المضاف بالكامل)
-// ----------------------------------------------------------------------------------
-function injectAdminEventModal() {
-    if (document.getElementById('adminEventModal')) return; 
-    const html = `<div id="adminEventModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>تسجيل حدث إداري</h3><button class="modal-close" onclick="closeAdminEventModal()">×</button></div><div class="modal-body"><input type="hidden" id="editingEventId"><div class="form-group"><label>نوع الحالة:</label><select id="manualEventType" class="form-control"><option value="excused">معفى (يخصم من الرصيد)</option><option value="vacation">إجازة (توقف مؤقت)</option></select></div><div class="form-group"><label>التاريخ:</label><input type="date" id="manualEventDate" class="form-control"></div><div class="form-group"><label>ملاحظات:</label><textarea id="manualEventNote" class="form-control"></textarea></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeAdminEventModal()">إلغاء</button><button class="btn btn-primary" onclick="saveAdminEvent()">حفظ السجل</button></div></div></div>`; 
-    document.body.insertAdjacentHTML('beforeend', html); 
-}
-
-async function loadProgressTab() {
-    injectAdminEventModal();
-    const container = document.getElementById('progressTableBody');
-    const sectionHeader = document.getElementById('section-progress');
-    
-    if(!container) {
-        sectionHeader.innerHTML = `
-            <div class="content-header" style="display:flex; justify-content:space-between; align-items:center;">
-                <h1>سجل المتابعة اليومي</h1>
-                <div>
-                    <span id="progressBalanceBadge" class="badge badge-success" style="font-size:1.1rem; padding:8px 15px; border-radius:8px;">الرصيد: جاري الحساب...</span>
-                    <button class="btn btn-primary" onclick="openAdminEventModal()" style="margin-right:10px;"><i class="fas fa-plus-circle"></i> تسجيل حدث</button>
-                    <button class="btn btn-secondary" onclick="printProgressLog()" style="margin-right:5px;"><i class="fas fa-print"></i> طباعة</button>
-                </div>
-            </div>
-            <div class="card" style="padding: 20px; overflow-x: auto;">
-                <table class="table table-bordered">
-                    <thead><tr style="background:#f1f5f9;"><th>الهدف (الدرس)</th><th>حالة الدرس</th><th>حالة الطالب</th><th>نوع الحصة</th><th>التاريخ</th><th class="no-print">إجراءات</th></tr></thead>
-                    <tbody id="progressTableBody"><tr><td colspan="6" class="text-center p-4">جاري التحميل...</td></tr></tbody>
-                </table>
-            </div>`;
-    }
-
-    try {
-        const [lessonsRes, eventsRes, scheduleRes] = await Promise.all([
-            window.supabase.from('student_lessons').select('*').eq('studentId', currentStudentId),
-            window.supabase.from('student_events').select('*').eq('studentId', currentStudentId),
-            window.supabase.from('teacher_schedule').select('*').eq('teacherId', currentStudent.teacherId)
-        ]);
-
-        let myList = lessonsRes.data || [];
-        let adminEvents = eventsRes.data || [];
-        let teacherSchedule = scheduleRes.data || [];
-        let holidays = JSON.parse(localStorage.getItem('academicCalendar') || '[]');
-
-        const tbody = document.getElementById('progressTableBody');
-
-        if (myList.length === 0) { 
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4 text-muted">لم تبدأ الخطة بعد أو لا توجد دروس مسندة.</td></tr>';
-            document.getElementById('progressBalanceBadge').textContent = 'الرصيد: 0 حصة';
-            document.getElementById('progressBalanceBadge').className = 'badge badge-secondary';
-            return; 
-        }
-
-        myList.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0)); 
-        const sortedByDate = [...myList].sort((a, b) => new Date(a.assignedDate) - new Date(b.assignedDate)); 
-        let planStartDate = sortedByDate.length > 0 ? new Date(sortedByDate[0].assignedDate) : new Date();
-        
-        // حساب الغياب التلقائي
-        let myEvents = await syncMissingDays(myList, adminEvents, teacherSchedule, planStartDate, holidays);
-
-        let rawLogs = [];
-        myList.forEach(l => { 
-            if (l.historyLog) { 
-                l.historyLog.forEach(log => { 
-                    rawLogs.push({ dateObj: new Date(log.date), dateStr: new Date(log.date).toDateString(), type: 'lesson', status: log.status, title: l.title, lessonId: l.id, cachedType: log.cachedSessionType || null }); 
-                }); 
-            } 
-        });
-        myEvents.forEach(e => { 
-            rawLogs.push({ dateObj: new Date(e.date), dateStr: new Date(e.date).toDateString(), type: e.type === 'auto-absence' ? 'auto-absence' : 'event', status: e.type, title: e.title || (e.type === 'auto-absence' ? 'درس غير محدد' : 'حدث إداري'), id: e.id, note: e.note }); 
-        });
-
-        let finalTimeline = []; 
-        let balance = 0; 
-        rawLogs.sort((a, b) => a.dateObj - b.dateObj);
-        
-        rawLogs.forEach(log => {
-            if (log.status === 'started' || log.status === 'extension') { 
-                const hasFinalStateToday = rawLogs.some(l => l.dateStr === log.dateStr && l.lessonId === log.lessonId && ['completed', 'accelerated', 'passed_by_alternative', 'struggling', 'returned', 'pending_review'].includes(l.status)); 
-                if (hasFinalStateToday) return; 
-            }
-            
-            let displayStatus = '', displayType = '', rowClass = '', studentState = '';
-            if (log.type === 'event' || log.type === 'auto-absence') {
-                if (log.status === 'vacation') { studentState = 'إجازة'; displayStatus = 'توقف مؤقت'; rowClass = 'bg-info-light'; }
-                else if (log.status === 'excused') { studentState = 'معفى'; displayStatus = 'مؤجل'; rowClass = 'bg-warning-light'; balance--; }
-                else if (log.type === 'auto-absence' || log.status === 'absence') { studentState = '<span class="text-danger font-weight-bold">غائب</span>'; displayStatus = 'لم ينفذ'; displayType = 'أساسية'; rowClass = 'bg-danger-light'; balance--; }
-            } else {
-                studentState = 'حاضر';
-                if (log.status === 'started') displayStatus = 'بدأ';
-                else if (log.status === 'extension') displayStatus = 'تمديد';
-                else if (log.status === 'completed') { displayStatus = '<span class="text-success font-weight-bold">✔ متحقق</span>'; rowClass = 'bg-success-light'; }
-                else if (log.status === 'accelerated') { displayStatus = '<span class="text-warning font-weight-bold">⚡ تسريع</span>'; rowClass = 'bg-warning-light'; }
-                else if (log.status === 'pending_review') { displayStatus = '<span class="text-warning font-weight-bold">⏳ بانتظار تصحيح</span>'; rowClass = 'bg-warning-light'; }
-                else if (log.status === 'passed_by_alternative' || log.status === 'struggling' || log.status === 'returned') { displayStatus = '<span class="text-danger font-weight-bold">لم يتحقق - يعاد الدرس</span>'; rowClass = 'bg-danger-light'; }
-                
-                if (log.cachedType) { 
-                    if (log.cachedType === 'basic') displayType = 'أساسية'; 
-                    else if (log.cachedType === 'compensation') { displayType = '<span class="text-primary font-weight-bold">تعويضية</span>'; balance++; } 
-                    else if (log.cachedType === 'additional') { displayType = 'إضافية'; balance++; } 
-                } else { displayType = 'أساسية'; }
-            }
-            finalTimeline.push({ title: log.title, lessonStatus: displayStatus, studentStatus: studentState, sessionType: displayType || '-', date: log.dateObj.toLocaleDateString('ar-SA'), rawDate: log.dateObj, actions: (log.type === 'event' || log.type === 'auto-absence') ? log.id : null, note: log.note, rowClass: rowClass });
-        });
-        
-        let rowsHtml = finalTimeline.map(item => {
-            let actionsHtml = '-'; 
-            if (item.actions) { 
-                actionsHtml = `<button class="btn btn-sm btn-danger no-print" onclick="deleteAdminEvent(${item.actions})"><i class="fas fa-trash"></i></button>`; 
-                if (item.rowClass !== 'bg-danger-light') { 
-                    actionsHtml = `<button class="btn btn-sm btn-primary no-print" onclick="editAdminEvent(${item.actions})"><i class="fas fa-edit"></i></button> ` + actionsHtml; 
-                } 
-            }
-            let noteHtml = item.note ? `<br><small class="text-muted">[${item.note}]</small>` : ''; 
-            return `<tr class="${item.rowClass || ''}"><td><strong>${item.title}</strong>${noteHtml}</td><td class="text-center">${item.lessonStatus}</td><td class="text-center">${item.studentStatus}</td><td class="text-center">${item.sessionType}</td><td class="text-center">${item.date}</td><td class="text-center no-print">${actionsHtml}</td></tr>`;
-        }).join('');
-
-        tbody.innerHTML = rowsHtml;
-        
-        const badge = document.getElementById('progressBalanceBadge');
-        if(badge) {
-            badge.className = `badge ${balance < 0 ? 'badge-danger' : 'badge-success'}`;
-            badge.style.cssText = 'font-size:1.1rem; padding:8px 15px; border-radius:8px;';
-            badge.textContent = `الرصيد الحالي: ${balance > 0 ? '+' + balance : balance} حصة`;
-        }
-
-    } catch(e) {
-        console.error(e);
-        document.getElementById('progressTableBody').innerHTML = '<tr><td colspan="6" class="text-center text-danger">حدث خطأ أثناء تحميل سجل المتابعة</td></tr>';
-    }
-}
-
-async function syncMissingDays(myList, myEvents, teacherSchedule, planStartDate, holidays) {
-    if (!planStartDate) return myEvents; 
-    const today = new Date(); today.setHours(23, 59, 59, 999); 
-    const dayMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']; 
-    
-    let newEvents = []; 
-    let pendingLesson = myList.find(l => l.status === 'pending'); 
-    let lessonTitleForAbsence = pendingLesson ? pendingLesson.title : 'درس غير محدد';
-    
-    for (let d = new Date(planStartDate); d < today; d.setDate(d.getDate() + 1)) {
-        if (d.toDateString() === new Date().toDateString()) continue;
-        
-        const isHoliday = holidays.some(h => { const start = new Date(h.startDate); const end = new Date(h.endDate); start.setHours(0, 0, 0, 0); end.setHours(23, 59, 59, 999); const checkDate = new Date(d); checkDate.setHours(12, 0, 0, 0); return checkDate >= start && checkDate <= end; }); 
-        if (isHoliday) continue;
-        
-        const dateStr = d.toDateString(); 
-        const hasLesson = myList.some(l => l.historyLog && l.historyLog.some(log => new Date(log.date).toDateString() === dateStr)); 
-        const hasEvent = myEvents.some(e => new Date(e.date).toDateString() === dateStr); 
-        if (hasLesson || hasEvent) continue; 
-        
-        const dayKey = dayMap[d.getDay()]; 
-        const isScheduledDay = teacherSchedule.some(s => s.day === dayKey && (s.students && s.students.includes(currentStudentId)));
-        
-        if (isScheduledDay) { 
-            newEvents.push({ id: Date.now() + Math.floor(Math.random()*10000), studentId: currentStudentId, date: new Date(d).toISOString(), type: 'auto-absence', title: lessonTitleForAbsence, note: `غياب تلقائي: ${lessonTitleForAbsence}` }); 
-        }
-    }
-    
-    if (newEvents.length > 0) { 
-        await window.supabase.from('student_events').insert(newEvents);
-        return [...myEvents, ...newEvents];
-    } 
-    return myEvents;
-}
-
-function openAdminEventModal() { 
-    document.getElementById('editingEventId').value = ''; 
-    document.getElementById('manualEventDate').valueAsDate = new Date(); 
-    document.getElementById('manualEventType').value = 'excused'; 
-    document.getElementById('manualEventNote').value = ''; 
-    document.getElementById('adminEventModal').classList.add('show'); 
-}
-
-function closeAdminEventModal() { document.getElementById('adminEventModal').classList.remove('show'); }
-
-async function editAdminEvent(id) { 
-    const { data: event } = await window.supabase.from('student_events').select('*').eq('id', id).single();
-    if (!event) return; 
-    document.getElementById('editingEventId').value = id; 
-    document.getElementById('manualEventType').value = event.type; 
-    document.getElementById('manualEventDate').value = event.date.split('T')[0]; 
-    document.getElementById('manualEventNote').value = event.note || ''; 
-    document.getElementById('adminEventModal').classList.add('show'); 
-}
-
-async function saveAdminEvent() { 
-    const id = document.getElementById('editingEventId').value;
-    const type = document.getElementById('manualEventType').value; 
-    const dateInput = document.getElementById('manualEventDate').value; 
-    const note = document.getElementById('manualEventNote').value; 
-    
-    if (!dateInput) return alert('يرجى اختيار التاريخ'); 
-    
-    const eventData = { studentId: currentStudentId, date: new Date(dateInput).toISOString(), type: type, note: note };
-    
-    try {
-        if (id) {
-            await window.supabase.from('student_events').update(eventData).eq('id', id);
-        } else {
-            eventData.id = Date.now();
-            await window.supabase.from('student_events').insert([eventData]);
-        }
-        closeAdminEventModal(); 
-        loadProgressTab(); 
-    } catch(e) { console.error(e); }
-}
-
-async function deleteAdminEvent(id) { 
-    if(confirm('هل أنت متأكد من حذف هذا السجل؟')) { 
-        await window.supabase.from('student_events').delete().eq('id', id);
-        loadProgressTab(); 
-    } 
-}
-
-function printProgressLog() {
-    if (!currentStudent) { alert('بيانات الطالب غير جاهزة'); return; }
-    const tableContent = document.getElementById('progressTableBody').parentElement.outerHTML; 
-    const today = new Date().toLocaleDateString('ar-SA'); 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`<html dir="rtl" lang="ar"><head><title>سجل متابعة - ${currentStudent.name}</title><style>@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');body { font-family: 'Tajawal', serif; padding: 40px; color: #333; }.print-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }.header-side { width: 30%; font-size: 13px; line-height: 1.6; }.header-mid { width: 40%; text-align: center; }.header-mid h2 { margin: 0; font-size: 22px; }.student-info-box { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f9f9f9; padding: 15px; border: 1px solid #000; margin-bottom: 20px; border-radius: 5px; }.student-info-box div { font-size: 14px; }table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 2px solid #000; }th, td { border: 1px solid #000; padding: 10px; text-align: center; font-size: 13px; }th { background-color: #eee !important; font-weight: bold; }.no-print { display: none !important; }.footer-signatures { margin-top: 50px; display: flex; justify-content: space-between; text-align: center; font-weight: bold; }.footer-signatures div { width: 30%; border-top: 1px solid #000; padding-top: 10px; }</style></head><body><div class="print-header"><div class="header-side">المملكة العربية السعودية<br>برنامج صعوبات التعلم<br>نظام ميسر التعلم</div><div class="header-mid"><h2>سجل المتابعة اليومي</h2><p>تقرير التقدم الدراسي</p></div><div class="header-side" style="text-align: left;">التاريخ: ${today}<br>المعلم: أ/ صالح العجلان</div></div><div class="student-info-box"><div><strong>اسم الطالب:</strong> ${currentStudent.name}</div><div><strong>الصف الدراسي:</strong> ${currentStudent.grade}</div><div><strong>المادة:</strong> ${currentStudent.subject}</div><div><strong>حالة الخطة:</strong> مستمرة</div></div>${tableContent}<div class="footer-signatures"><div>توقيع معلم صعوبات التعلم</div><div>توقيع مدير المدرسة</div></div><script>window.onload = function() { window.print(); window.close(); }<\/script></body></html>`);
-    printWindow.document.close();
-}
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
 // ----------------------------------------------------------------------------------
 // دوال رسم واجهة المراجعة (DOM Builders)
@@ -875,3 +892,4 @@ window.saveAdminEvent = saveAdminEvent;
 window.closeAdminEventModal = closeAdminEventModal;
 window.openAdminEventModal = openAdminEventModal;
 window.printProgressLog = printProgressLog;
+window.regenerateLessons = regenerateLessons;

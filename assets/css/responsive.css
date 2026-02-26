@@ -1,0 +1,209 @@
+/* =========================================
+   📱 الحل النهائي والشامل للتجاوب (Responsive)
+========================================= */
+
+html, body {
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+* { box-sizing: border-box !important; }
+
+/* تعديل هام: إضافة "screen and" 
+  هذا يعني: طبق هذه التنسيقات فقط إذا كان العرض على شاشة، وتجاهلها تماماً عند الطباعة!
+*/
+@media screen and (max-width: 992px) {
+    .dashboard-container { display: block !important; width: 100% !important; }
+    /* تم التعديل هنا: رفع z-index وإضافة التمرير فقط بدون المساس بالألوان */
+    .sidebar { position: fixed !important; right: -300px !important; top: 0 !important; height: 100vh !important; z-index: 999999 !important; transition: right 0.3s ease !important; overflow-y: auto !important; }
+    .sidebar.active { right: 0 !important; }
+    .main-content-dashboard, .main-content { width: 100% !important; max-width: 100vw !important; margin-right: 0 !important; margin-left: 0 !important; padding: 0 !important; }
+    .dashboard-header { display: flex !important; justify-content: flex-start !important; align-items: center !important; gap: 15px !important; padding: 15px !important; width: 100% !important; }
+    .mobile-menu-btn { display: block !important; }
+    .user-info { margin: 0 !important; } 
+}
+
+/* تعديل هام: إضافة "screen and" هنا أيضاً
+*/
+@media screen and (max-width: 768px) {
+    .content-header { display: flex !important; flex-direction: column !important; align-items: flex-start !important; gap: 10px !important; }
+    .header-actions { width: 100% !important; display: flex !important; flex-direction: column !important; gap: 10px !important; }
+    .header-actions button, .header-actions .btn-group { width: 100% !important; }
+    .filters-section { display: flex !important; flex-direction: column !important; gap: 10px !important; }
+    .search-box, .filter-options, .filter-options select { width: 100% !important; }
+    .stats-grid { grid-template-columns: 1fr !important; gap: 15px !important; }
+    .dashboard-content { padding: 10px !important; overflow-x: hidden !important; }
+
+    /* 6. جدول الطلاب */
+    .table-container { width: 100% !important; display: block !important; padding: 0 !important; border: none !important; overflow: hidden !important; }
+    #studentsTable thead { display: none !important; }
+    #studentsTable, #studentsTable tbody, #studentsTable tr, #studentsTable td { display: block !important; width: 100% !important; min-width: 0 !important; }
+    #studentsTable tr { background-color: #fff !important; border: 1px solid #e0e0e0 !important; border-radius: 10px !important; margin-bottom: 20px !important; padding: 15px !important; box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important; }
+    #studentsTable td { border: none !important; padding: 10px 5px !important; text-align: right !important; border-bottom: 1px solid #f5f5f5 !important; display: flex !important; justify-content: space-between !important; align-items: center !important; }
+    #studentsTable td:nth-last-child(2) { border-bottom: none !important; }
+    #studentsTable td:nth-child(1)::before { content: "رقم الطالب:"; font-weight: bold !important; color: #666 !important; }
+    #studentsTable td:nth-child(2)::before { content: "اسم الطالب:"; font-weight: bold !important; color: #666 !important; }
+    #studentsTable td:nth-child(3)::before { content: "الصف:"; font-weight: bold !important; color: #666 !important; }
+    #studentsTable td:nth-child(4)::before { content: "المادة:"; font-weight: bold !important; color: #666 !important; }
+    #studentsTable td:nth-child(5)::before { content: "نسبة التقدم:"; font-weight: bold !important; color: #666 !important; }
+    #studentsTable td:last-child { display: flex !important; flex-direction: column !important; gap: 10px !important; margin-top: 10px !important; padding-top: 15px !important; border-top: 2px dashed #ddd !important; }
+    #studentsTable td:last-child::before { content: none !important; }
+    #studentsTable td:last-child button, #studentsTable td:last-child .btn { width: 100% !important; font-size: 14px !important; padding: 10px !important; text-align: center !important; display: flex !important; justify-content: center !important; align-items: center !important; margin: 0 !important; }
+
+    /* 7. الجدول الدراسي */
+    .schedule-container { padding: 5px !important; background: transparent !important; box-shadow: none !important; overflow-x: hidden !important; }
+    .schedule-table thead { display: none !important; }
+    .schedule-table, .schedule-table tbody, .schedule-table tr, .schedule-table td { display: block !important; width: 100% !important; min-width: 0 !important; }
+    .schedule-table tr { background-color: #fff !important; border: 1px solid #e0e0e0 !important; border-radius: 12px !important; margin-bottom: 25px !important; overflow: hidden !important; box-shadow: 0 4px 8px rgba(0,0,0,0.06) !important; }
+    .schedule-table td:first-child { background-color: #e8f5e9 !important; color: #1b5e20 !important; font-size: 1.2rem !important; text-align: center !important; padding: 15px !important; border-bottom: 2px solid #c8e6c9 !important; width: 100% !important; }
+    .schedule-table td:not(:first-child) { border: none !important; border-bottom: 1px solid #f0f0f0 !important; padding: 15px !important; text-align: right !important; display: flex !important; flex-direction: column !important; align-items: flex-start !important; min-height: 80px !important; }
+    .schedule-table td:last-child { border-bottom: none !important; }
+    .schedule-table td:nth-child(2)::before { content: "الحصة الأولى"; font-weight: bold !important; color: #555 !important; margin-bottom: 8px !important; font-size: 0.95rem !important; }
+    .schedule-table td:nth-child(3)::before { content: "الحصة الثانية"; font-weight: bold !important; color: #555 !important; margin-bottom: 8px !important; font-size: 0.95rem !important; }
+    .schedule-table td:nth-child(4)::before { content: "الحصة الثالثة"; font-weight: bold !important; color: #555 !important; margin-bottom: 8px !important; font-size: 0.95rem !important; }
+    .schedule-table td:nth-child(5)::before { content: "الحصة الرابعة"; font-weight: bold !important; color: #555 !important; margin-bottom: 8px !important; font-size: 0.95rem !important; }
+    .schedule-table td:nth-child(6)::before { content: "الحصة الخامسة"; font-weight: bold !important; color: #555 !important; margin-bottom: 8px !important; font-size: 0.95rem !important; }
+    .schedule-table td:nth-child(7)::before { content: "الحصة السادسة"; font-weight: bold !important; color: #555 !important; margin-bottom: 8px !important; font-size: 0.95rem !important; }
+    .schedule-table td:nth-child(8)::before { content: "الحصة السابعة"; font-weight: bold !important; color: #555 !important; margin-bottom: 8px !important; font-size: 0.95rem !important; }
+    .student-chip { font-size: 13px !important; padding: 6px 12px !important; margin: 4px 2px !important; display: inline-block !important; background-color: #f8f9fa !important; border: 1px solid #ddd !important; }
+
+    /* 8. النوافذ المنبثقة (Modals) */
+    .modal-content { width: 95% !important; margin: 10px auto !important; max-height: 90vh !important; display: flex; flex-direction: column !important; min-width: 0 !important; }
+    .students-selection-list { grid-template-columns: 1fr !important; gap: 12px !important; padding: 5px !important; max-height: 50vh !important; }
+    .student-checkbox-item { padding: 12px !important; font-size: 1.1rem !important; }
+    .student-checkbox-item input { transform: scale(1.5) !important; margin-left: 15px !important; }
+    .modal-footer { flex-direction: column !important; gap: 10px !important; }
+    .modal-footer button { width: 100% !important; margin: 0 !important; }
+
+    /* =======================================================
+       9. تحسين صفحة المراسلة (messages.html) - تم الإصلاح النهائي 🚀
+    ======================================================= */
+    .messages-container {
+        position: relative !important;
+        height: calc(100vh - 180px) !important; 
+        overflow: hidden !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    .chat-container {
+        display: flex !important;
+        height: 100% !important;
+        width: 100% !important;
+        position: relative !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+    }
+
+    .chat-sidebar {
+        position: absolute !important;
+        right: -100% !important;
+        top: 0 !important;
+        height: 100% !important;
+        width: 280px !important;
+        max-width: 85% !important;
+        background: #fff !important;
+        z-index: 1000 !important;
+        transition: right 0.3s ease-in-out !important;
+        box-shadow: -4px 0 15px rgba(0,0,0,0.1) !important;
+        border-radius: 10px 0 0 10px !important;
+    }
+
+    .chat-sidebar.show-contacts {
+        right: 0 !important;
+    }
+
+    .chat-main {
+        width: 100% !important;
+        flex: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+
+    .mobile-contacts-toggle {
+        display: block !important;
+        background: var(--primary-color, #2196f3);
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        cursor: pointer;
+        width: fit-content;
+        font-family: 'Tajawal', sans-serif;
+    }
+
+    .chat-input-area {
+        padding: 10px !important;
+        gap: 5px !important;
+        flex-wrap: wrap !important;
+    }
+    .chat-input {
+        width: 100% !important;
+        order: -1 !important;
+        margin-bottom: 10px !important;
+    }
+}
+
+/* =========================================
+   🖨️ إعدادات الطباعة (إجبار نسخة الكمبيوتر دائماً)
+========================================= */
+@media print {
+    /* تحديد حجم الصفحة للطباعة بالعرض لضمان استيعاب الجداول */
+    @page { size: A4 landscape; margin: 1cm; }
+    
+    html, body {
+        /* إجبار المتصفح على اعتبار عرض الشاشة 1024 بكسل ليعرض نسخة الكمبيوتر */
+        min-width: 1024px !important; 
+        overflow: visible !important;
+        background: #fff !important;
+    }
+
+    /* إخفاء القائمة الجانبية في الطباعة للحصول على مساحة نظيفة (يمكنك إزالتها إذا أردت طباعة القائمة) */
+    .sidebar { display: none !important; }
+    .main-content-dashboard, .main-content {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* إخفاء الأزرار التي لا فائدة منها في الورق المطبوع */
+    .mobile-menu-btn, .mobile-contacts-toggle, .header-actions button, .btn, .chat-input-area {
+        display: none !important;
+    }
+
+    /* إجبار الجداول على العودة لتنسيقها الأصلي كأعمدة وصفوف */
+    table, #studentsTable, .schedule-table { 
+        display: table !important; 
+        width: 100% !important; 
+        border-collapse: collapse !important;
+    }
+    thead, #studentsTable thead, .schedule-table thead { 
+        display: table-header-group !important; /* ضمان طباعة الهيدر في كل صفحة */
+    }
+    tbody, #studentsTable tbody, .schedule-table tbody { 
+        display: table-row-group !important; 
+    }
+    tr, #studentsTable tr, .schedule-table tr { 
+        display: table-row !important; 
+        page-break-inside: avoid !important; /* منع انقسام الصف بين صفحتين */
+        border: 1px solid #000 !important;
+        box-shadow: none !important;
+    }
+    th, td, #studentsTable td, .schedule-table td { 
+        display: table-cell !important; 
+        border: 1px solid #000 !important; 
+        padding: 8px !important; 
+        text-align: right !important;
+    }
+
+    /* إخفاء العناوين الوهمية التي وضعناها لنسخة الجوال */
+    td::before { content: none !important; }
+    
+    /* منع الروابط من إظهار مسار الـ URL بجانبها في الطباعة */
+    a[href]::after { content: "" !important; }
+}

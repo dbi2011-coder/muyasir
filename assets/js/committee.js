@@ -1,12 +1,14 @@
 // ============================================
-// 📁 الملف: assets/js/committee.js (نسختك الأصلية + إصلاح الأزرار)
+// 📁 الملف: assets/js/committee.js
+// الوصف: نظام اللجنة (نسختك الأصلية للاجتماعات + ربط الأعضاء بـ Supabase)
 // ============================================
 
-// 🔥 إضافة النوافذ المنبثقة لمنع خطأ showConfirmModal 🔥
+// 🔥 إضافة النوافذ المنبثقة لمنع أخطاء الحذف والإشعارات 🔥
 if (!window.showConfirmModal) { window.showConfirmModal = function(message, onConfirm) { let modal = document.getElementById('globalConfirmModal'); if (!modal) { const modalHtml = `<div id="globalConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999999; justify-content:center; align-items:center; backdrop-filter:blur(4px);"><div style="background:white; padding:25px; border-radius:15px; width:90%; max-width:350px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.2);"><div style="font-size:3.5rem; color:#dc3545; margin-bottom:15px;"><i class="fas fa-exclamation-circle"></i></div><div style="font-size:1.3rem; font-weight:bold; margin-bottom:10px; color:#333;">تأكيد الإجراء</div><div id="globalConfirmMessage" style="color:#666; margin-bottom:25px; font-size:0.95rem;"></div><div style="display:flex; gap:15px; justify-content:center;"><button id="globalConfirmCancel" style="background:#e2e8f0; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1;">إلغاء</button><button id="globalConfirmOk" style="background:#dc3545; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1;">نعم، متأكد</button></div></div></div>`; document.body.insertAdjacentHTML('beforeend', modalHtml); modal = document.getElementById('globalConfirmModal'); } document.getElementById('globalConfirmMessage').innerHTML = message; modal.style.display = 'flex'; document.getElementById('globalConfirmOk').onclick = function() { modal.style.display = 'none'; if (typeof onConfirm === 'function') onConfirm(); }; document.getElementById('globalConfirmCancel').onclick = function() { modal.style.display = 'none'; }; }; }
 if (!window.showSuccess) { window.showSuccess = function(message) { let toast = document.getElementById('globalSuccessToast'); if (!toast) { const toastHtml = `<div id="globalSuccessToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#10b981; color:white; padding:12px 25px; border-radius:8px; z-index:999999; font-weight:bold; align-items:center; gap:10px;"><i class="fas fa-check-circle"></i> <span id="globalSuccessMessage"></span></div>`; document.body.insertAdjacentHTML('beforeend', toastHtml); toast = document.getElementById('globalSuccessToast'); } document.getElementById('globalSuccessMessage').textContent = message; toast.style.display = 'flex'; setTimeout(() => { toast.style.display = 'none'; }, 3000); }; }
+if (!window.showError) { window.showError = function(message) { let toast = document.getElementById('globalErrorToast'); if (!toast) { const toastHtml = `<div id="globalErrorToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#dc3545; color:white; padding:12px 25px; border-radius:8px; z-index:999999; font-weight:bold; align-items:center; gap:10px;"><i class="fas fa-exclamation-triangle"></i> <span id="globalErrorMessage"></span></div>`; document.body.insertAdjacentHTML('beforeend', toastHtml); toast = document.getElementById('globalErrorToast'); } document.getElementById('globalErrorMessage').innerHTML = message; toast.style.display = 'flex'; setTimeout(() => { toast.style.display = 'none'; }, 4000); }; }
 
-// --- إعدادات قاعدة البيانات (IndexedDB) للاجتماعات ---
+// --- إعدادات قاعدة البيانات (IndexedDB) للاجتماعات (نسختك الأصلية) ---
 const DB_NAME = 'CommitteeAppDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'meetings';
@@ -42,7 +44,6 @@ document.addEventListener('DOMContentLoaded', async function() {
     const user = getCurrentUser();
     if (user) {
         if(document.getElementById('userName')) document.getElementById('userName').textContent = user.name;
-        autoFixMembers(user);
     }
 
     await openDB();
@@ -50,37 +51,61 @@ document.addEventListener('DOMContentLoaded', async function() {
     loadMeetings();
 });
 
-function autoFixMembers(user) {
-    let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    let modified = false;
-    members = members.map(m => {
-        if (!m.ownerId) { m.ownerId = user.id; modified = true; }
-        return m;
-    });
-    if (modified) localStorage.setItem('committeeMembers', JSON.stringify(members));
+// 🔥 دالة التبديل بين التبويبات المفقودة 🔥
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content, .content-section').forEach(t => t.style.display = 'none');
+    document.querySelectorAll('.tab-btn, .nav-link').forEach(b => b.classList.remove('active', 'btn-primary'));
+    
+    const target = document.getElementById(`${tabId}-view`) || document.getElementById(tabId);
+    if (target) target.style.display = 'block';
+    
+    const btn = document.getElementById(`tab-${tabId}`) || document.querySelector(`[onclick*="switchTab('${tabId}')"]`);
+    if (btn) btn.classList.add('active', 'btn-primary');
 }
 
-function switchTab(tab) {
-    document.getElementById('members-view').classList.remove('active');
-    document.getElementById('meetings-view').classList.remove('active');
-    document.getElementById('tab-members').classList.remove('active');
-    document.getElementById('tab-meetings').classList.remove('active');
-    document.getElementById(`${tab}-view`).classList.add('active');
-    document.getElementById(`tab-${tab}`).classList.add('active');
-}
+// =======================================================
+// 👥 إدارة الأعضاء (تم تحويلها لتقرأ/تكتب في السحابة)
+// =======================================================
 
-function loadMembers() {
+async function loadMembers() {
     const user = getCurrentUser();
-    const allMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    const myMembers = allMembers.filter(m => m.ownerId == user.id);
-    
     const container = document.getElementById('membersListContainer');
-    if (myMembers.length === 0) { container.innerHTML = '<div class="alert alert-info">لا يوجد أعضاء.</div>'; return; }
+    if (!container) return;
     
-    let html = '<table class="table table-bordered bg-white"><thead><tr><th>الاسم</th><th>الصفة</th><th>المستخدم</th><th>المرور</th><th>إجراءات</th></tr></thead><tbody>';
-    myMembers.forEach(m => { html += `<tr><td>${m.name}</td><td>${m.role}</td><td>${m.username}</td><td>${m.password}</td><td><button class="btn btn-sm btn-primary" onclick="editMember(${m.id})">تعديل</button> <button class="btn btn-sm btn-danger" onclick="deleteMember(${m.id})">حذف</button></td></tr>`; });
-    html += '</tbody></table>';
-    container.innerHTML = html;
+    container.innerHTML = '<div class="alert alert-info">جاري جلب الأعضاء من السحابة...</div>';
+    
+    try {
+        const { data: myMembers, error } = await window.supabase
+            .from('committee_members')
+            .select('*')
+            .eq('ownerId', user.id);
+
+        if (error) throw error;
+
+        if (!myMembers || myMembers.length === 0) { 
+            container.innerHTML = '<div class="alert alert-info">لا يوجد أعضاء.</div>'; 
+            return; 
+        }
+        
+        let html = '<table class="table table-bordered bg-white"><thead><tr><th>الاسم</th><th>الصفة</th><th>المستخدم</th><th>المرور</th><th>إجراءات</th></tr></thead><tbody>';
+        myMembers.forEach(m => { 
+            html += `<tr>
+                <td>${m.name}</td>
+                <td>${m.role || 'عضو'}</td>
+                <td>${m.username}</td>
+                <td>${m.password}</td>
+                <td>
+                    <button class="btn btn-sm btn-primary" onclick="editMember(${m.id})">تعديل</button> 
+                    <button class="btn btn-sm btn-danger" onclick="deleteMember(${m.id})">حذف</button>
+                </td>
+            </tr>`; 
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    } catch (e) {
+        console.error(e);
+        container.innerHTML = '<div class="alert alert-danger">خطأ في جلب البيانات</div>';
+    }
 }
 
 function showAddMemberModal() {
@@ -91,7 +116,7 @@ function showAddMemberModal() {
     document.getElementById('memPass').value='';
 }
 
-function saveMember() {
+async function saveMember() {
     const user = getCurrentUser();
     const id = document.getElementById('editMemId').value;
     const name = document.getElementById('memName').value.trim();
@@ -99,60 +124,63 @@ function saveMember() {
     const username = document.getElementById('memUser').value.trim();
     const pass = document.getElementById('memPass').value.trim();
     
-    if(!name || !username || !pass) return alert('البيانات ناقصة');
+    if(!name || !username || !pass) return showError('البيانات ناقصة');
     
-    const mainUsers = JSON.parse(localStorage.getItem('users') || '[]');
-    const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    const allAccounts = [...mainUsers, ...committeeMembers];
+    try {
+        let query = window.supabase.from('committee_members').select('id').eq('username', username);
+        if (id) query = query.neq('id', id);
+        
+        const { data: existing } = await query;
+        if (existing && existing.length > 0) return showError('اسم المستخدم غير متاح. يرجى اختيار اسم آخر.');
 
-    const isDuplicate = allAccounts.some(account => {
-        if (id && account.id == id) return false;
-        return account.username === username;
-    });
+        const memberData = { name: name, role: role, username: username, password: pass, ownerId: user.id };
 
-    if (isDuplicate) {
-        alert('اسم المستخدم غير متاح . يرجى اختيار اسم آخر');
-        return; 
-    }
-    
-    let members = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    
-    if(id) {
-        const idx = members.findIndex(x => x.id == id);
-        if(idx !== -1) members[idx] = { id: parseInt(id), ownerId: members[idx].ownerId, name, role, username, password: pass };
-    } else {
-        members.push({ id: Date.now(), ownerId: user.id, name, role, username, password: pass });
-    }
-    
-    localStorage.setItem('committeeMembers', JSON.stringify(members));
-    closeModal('addMemberModal');
-    loadMembers();
-    alert('تم حفظ العضو بنجاح ✅');
-}
-
-function editMember(id) {
-    const members = JSON.parse(localStorage.getItem('committeeMembers')||'[]');
-    const m = members.find(x => x.id === id);
-    if(m) {
-        document.getElementById('editMemId').value = m.id;
-        document.getElementById('memName').value = m.name;
-        document.getElementById('memRole').value = m.role;
-        document.getElementById('memUser').value = m.username;
-        document.getElementById('memPass').value = m.password;
-        document.getElementById('addMemberModal').classList.add('show');
-    }
-}
-
-// 🔥 تحديث حذف العضو ليعمل بدون أخطاء
-function deleteMember(id) {
-    showConfirmModal('هل أنت متأكد من حذف هذا العضو؟', function() {
-        let members = JSON.parse(localStorage.getItem('committeeMembers')||'[]');
-        members = members.filter(x => x.id !== id);
-        localStorage.setItem('committeeMembers', JSON.stringify(members));
+        if(id) {
+            await window.supabase.from('committee_members').update(memberData).eq('id', id);
+        } else {
+            memberData.id = Date.now();
+            await window.supabase.from('committee_members').insert([memberData]);
+        }
+        
+        closeModal('addMemberModal');
         loadMembers();
-        showSuccess('تم الحذف بنجاح');
+        showSuccess('تم حفظ العضو بنجاح ✅');
+    } catch (e) {
+        console.error(e);
+        showError('حدث خطأ أثناء الحفظ');
+    }
+}
+
+async function editMember(id) {
+    try {
+        const { data: m, error } = await window.supabase.from('committee_members').select('*').eq('id', id).single();
+        if(m) {
+            document.getElementById('editMemId').value = m.id;
+            document.getElementById('memName').value = m.name;
+            document.getElementById('memRole').value = m.role || 'عضو';
+            document.getElementById('memUser').value = m.username;
+            document.getElementById('memPass').value = m.password;
+            document.getElementById('addMemberModal').classList.add('show');
+        }
+    } catch (e) { console.error(e); }
+}
+
+function deleteMember(id) {
+    showConfirmModal('هل أنت متأكد من حذف هذا العضو؟', async function() {
+        try {
+            await window.supabase.from('committee_members').delete().eq('id', id);
+            loadMembers();
+            showSuccess('تم الحذف بنجاح');
+        } catch (e) {
+            console.error(e);
+            showError('خطأ أثناء الحذف');
+        }
     });
 }
+
+// =======================================================
+// 📝 إدارة الاجتماعات (IndexedDB - نسختك الأصلية)
+// =======================================================
 
 function addPollTool() {
     const container = document.getElementById('dynamicToolsContainer');
@@ -176,52 +204,57 @@ function addPollOption(btn) {
     container.insertAdjacentHTML('beforeend', `<input type="text" class="form-control mb-1 poll-option" placeholder="خيار جديد">`);
 }
 
-function addStudentFeedbackTool() {
+async function addStudentFeedbackTool() {
     const container = document.getElementById('dynamicToolsContainer');
     const id = Date.now();
-    
-    const users = JSON.parse(localStorage.getItem('users') || '[]');
     const teacherUser = getCurrentUser();
-    const students = users.filter(u => u.role === 'student' && u.teacherId == teacherUser.id);
     
-    let options = '';
-    students.forEach(s => options += `<option value="${s.id}">${s.name}</option>`);
+    // جلب الطلاب من السحابة بدلاً من LocalStorage
+    try {
+        const { data: students } = await window.supabase.from('users').select('*').eq('role', 'student').eq('teacherId', teacherUser.id);
+        
+        let options = '';
+        if (students) students.forEach(s => options += `<option value="${s.id}">${s.name}</option>`);
 
-    const html = `
-    <div class="dynamic-item feedback-tool" id="tool_${id}">
-        <span class="remove-item-btn" onclick="removeTool('tool_${id}')">×</span>
-        <h5 style="margin:0 0 10px 0; color:#28a745;">👨‍🎓 طلب مرئيات عن طلاب</h5>
-        <p style="font-size:0.85em; color:#666;">اختر الطلاب:</p>
-        <select multiple class="form-control student-select" style="height:100px;">
-            ${options}
-        </select>
-        <small style="color:#888;">Ctrl لتحديد أكثر من طالب</small>
-    </div>`;
-    container.insertAdjacentHTML('beforeend', html);
+        const html = `
+        <div class="dynamic-item feedback-tool" id="tool_${id}">
+            <span class="remove-item-btn" onclick="removeTool('tool_${id}')">×</span>
+            <h5 style="margin:0 0 10px 0; color:#28a745;">👨‍🎓 طلب مرئيات عن طلاب</h5>
+            <p style="font-size:0.85em; color:#666;">اختر الطلاب:</p>
+            <select multiple class="form-control student-select" style="height:100px;">
+                ${options}
+            </select>
+            <small style="color:#888;">Ctrl لتحديد أكثر من طالب</small>
+        </div>`;
+        container.insertAdjacentHTML('beforeend', html);
+    } catch (e) { console.error(e); }
 }
 
 function removeTool(id) { document.getElementById(id).remove(); }
 
-function showNewMeetingModal() {
+async function showNewMeetingModal() {
     ['meetTitle', 'meetDate', 'meetContent', 'meetPdf', 'meetImg'].forEach(id => {
         if(document.getElementById(id)) document.getElementById(id).value = '';
     });
     document.getElementById('dynamicToolsContainer').innerHTML = '';
 
     const user = getCurrentUser();
-    const allMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    const myMembers = allMembers.filter(m => m.ownerId == user.id);
-
     const list = document.getElementById('attendeesList');
-    list.innerHTML = '';
+    list.innerHTML = 'جاري التحميل...';
     
-    if (myMembers.length === 0) {
-        list.innerHTML = '<small class="text-danger">لا يوجد أعضاء. أضف أعضاء أولاً.</small>';
-    } else {
-        myMembers.forEach(m => {
-            list.innerHTML += `<div><label style="cursor:pointer"><input type="checkbox" value="${m.id}" checked> ${m.name}</label></div>`;
-        });
-    }
+    try {
+        // جلب الأعضاء من السحابة لعرضهم في قائمة الحضور
+        const { data: myMembers } = await window.supabase.from('committee_members').select('*').eq('ownerId', user.id);
+        
+        list.innerHTML = '';
+        if (!myMembers || myMembers.length === 0) {
+            list.innerHTML = '<small class="text-danger">لا يوجد أعضاء. أضف أعضاء أولاً.</small>';
+        } else {
+            myMembers.forEach(m => {
+                list.innerHTML += `<div><label style="cursor:pointer"><input type="checkbox" value="${m.id}" checked> ${m.name}</label></div>`;
+            });
+        }
+    } catch (e) { console.error(e); }
 
     document.getElementById('meetingModal').classList.add('show');
 }
@@ -232,7 +265,7 @@ async function saveMeeting() {
     const date = document.getElementById('meetDate').value;
     const content = document.getElementById('meetContent').value;
 
-    if(!title || !date || !content) return alert('البيانات الإلزامية: العنوان، التاريخ، المحضر.');
+    if(!title || !date || !content) return showError('البيانات الإلزامية: العنوان، التاريخ، المحضر.');
 
     const polls = [];
     document.querySelectorAll('.poll-tool').forEach(div => {
@@ -274,8 +307,8 @@ async function saveMeeting() {
         await dbPut(newMeeting);
         closeModal('meetingModal');
         loadMeetings();
-        alert('تم حفظ الاجتماع بنجاح ✅');
-    } catch(e) { console.error(e); alert('خطأ في الحفظ'); }
+        showSuccess('تم حفظ الاجتماع بنجاح ✅');
+    } catch(e) { console.error(e); showError('خطأ في الحفظ'); }
 }
 
 async function loadMeetings() {
@@ -374,25 +407,30 @@ async function viewMeetingDetails(id) {
     } else { attachSection.style.display = 'none'; }
 
     const tableBody = document.getElementById('signaturesTableBody');
-    tableBody.innerHTML = '';
+    tableBody.innerHTML = '<tr><td colspan="3">جاري جلب التوقيعات...</td></tr>';
     
     const user = getCurrentUser();
-    const allMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-    const myMembers = allMembers.filter(m => m.ownerId == user.id);
-    const attendeesList = myMembers.filter(m => (meeting.attendees||[]).includes(m.id));
+    
+    // جلب الأعضاء من السحابة لمطابقة التوقيعات
+    try {
+        const { data: myMembers } = await window.supabase.from('committee_members').select('*').eq('ownerId', user.id);
+        const attendeesList = (myMembers || []).filter(m => (meeting.attendees||[]).includes(m.id));
 
-    if(attendeesList.length === 0) tableBody.innerHTML = '<tr><td colspan="3">لا يوجد مدعوون.</td></tr>';
-    else {
-        attendeesList.forEach(member => {
-            const sig = (meeting.signatures && meeting.signatures[member.id]) ? meeting.signatures[member.id] : null;
-            let sigHtml = sig 
-                ? (sig.image ? `<img src="${sig.image}" class="sig-img-display"><br><small>${new Date(sig.date).toLocaleDateString('ar-SA')}</small>` 
-                             : `<b>${sig.name}</b><br><small>(اعتماد)</small>`)
-                : `<span style="color:red">بانتظار التوقيع</span>`;
-            
-            tableBody.innerHTML += `<tr><td style="text-align:right;">أ/ ${member.name}</td><td>${member.role}</td><td>${sigHtml}</td></tr>`;
-        });
-    }
+        tableBody.innerHTML = '';
+        if(attendeesList.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="3">لا يوجد مدعوون.</td></tr>';
+        } else {
+            attendeesList.forEach(member => {
+                const sig = (meeting.signatures && meeting.signatures[member.id]) ? meeting.signatures[member.id] : null;
+                let sigHtml = sig 
+                    ? (sig.image ? `<img src="${sig.image}" class="sig-img-display"><br><small>${new Date(sig.date).toLocaleDateString('ar-SA')}</small>` 
+                                 : `<b>${sig.name}</b><br><small>(اعتماد)</small>`)
+                    : `<span style="color:red">بانتظار التوقيع</span>`;
+                
+                tableBody.innerHTML += `<tr><td style="text-align:right;">أ/ ${member.name}</td><td>${member.role || 'عضو'}</td><td>${sigHtml}</td></tr>`;
+            });
+        }
+    } catch (e) { console.error(e); }
 
     document.getElementById('viewMeetingModal').classList.add('show');
 }
@@ -401,13 +439,13 @@ async function deleteMeeting(id) {
     showConfirmModal('هل أنت متأكد من حذف هذا الاجتماع نهائياً؟', async function() {
         await dbDelete(id); 
         loadMeetings(); 
-        showSuccess('تم الحذف بنجاح');
+        showSuccess('تم الحذف');
     });
 }
 
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
-// 🔥 تم تصدير جميع الدوال لتعمل الأزرار في HTML 🔥
+// تصدير جميع الدوال للعمل في HTML
 window.addPollTool = addPollTool;
 window.addPollOption = addPollOption;
 window.addStudentFeedbackTool = addStudentFeedbackTool;

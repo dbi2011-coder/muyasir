@@ -1,21 +1,10 @@
 // ============================================
-// 📁 المسار: assets/js/student-profile.js (نسخة Supabase النهائية والمصححة)
-// الوصف: إدارة الطالب، الخطة، التقدم، سجل المتابعة اليومي مع دعم التجاوب
+// 📁 المسار: assets/js/student-profile.js (نسخة Supabase النهائية مع التصميم المرفق)
 // ============================================
 
 let currentStudentId = null; 
 let currentStudent = null; 
-
-document.addEventListener('DOMContentLoaded', function() {
-    const params = new URLSearchParams(window.location.search); 
-    currentStudentId = parseInt(params.get('id'));
-    if (!currentStudentId) { 
-        showError('لم يتم تحديد طالب'); 
-        setTimeout(() => { window.location.href = 'students.html'; }, 1000); 
-        return; 
-    }
-    loadStudentData();
-});
+let editingEventId = null;
 
 // =========================================================
 // 🔥 دوال النوافذ المنبثقة والإشعارات 🔥
@@ -26,6 +15,53 @@ if (!window.showError) { window.showError = function(message) { let toast = docu
 if (!window.showInfoModal) { window.showInfoModal = function(title, message, onClose) { let modal = document.getElementById('globalInfoModal'); if (!modal) { const modalHtml = `<div id="globalInfoModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999999; justify-content:center; align-items:center; backdrop-filter:blur(4px);"><div style="background:white; padding:25px; border-radius:15px; width:90%; max-width:350px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.2); animation:popIn 0.3s ease;"><div style="font-size:3.5rem; color:#007bff; margin-bottom:15px;"><i class="fas fa-info-circle"></i></div><div id="globalInfoTitle" style="font-size:1.3rem; font-weight:bold; margin-bottom:10px; color:#333;"></div><div id="globalInfoMessage" style="color:#666; margin-bottom:25px; font-size:0.95rem; line-height:1.6;"></div><div style="display:flex; justify-content:center;"><button id="globalInfoOk" style="background:#007bff; color:white; border:none; padding:12px 30px; border-radius:8px; cursor:pointer; font-weight:bold; transition:0.2s; font-family:'Tajawal'; width:100%;">حسناً، فهمت</button></div></div></div>`; document.body.insertAdjacentHTML('beforeend', modalHtml); modal = document.getElementById('globalInfoModal'); } document.getElementById('globalInfoTitle').innerHTML = title; document.getElementById('globalInfoMessage').innerHTML = message; modal.style.display = 'flex'; document.getElementById('globalInfoOk').onclick = function() { modal.style.display = 'none'; if (typeof onClose === 'function') onClose(); }; }; }
 
 // =========================================================
+// حقن التنسيقات والنوافذ
+// =========================================================
+function injectReviewStyles() {
+    if (document.getElementById('customReviewStyles')) return;
+    const style = document.createElement('style'); style.id = 'customReviewStyles';
+    style.innerHTML = `.student-answer-box { padding: 15px; background: #f8f9fa; border-radius: 8px; margin-bottom: 10px; border-right: 4px solid #007bff; white-space: pre-wrap; word-break: break-word; font-size: 1.05rem; line-height: 1.6; overflow-x: hidden; } .review-question-item { border: 1px solid #e2e8f0; padding: 20px; margin-bottom: 20px; border-radius: 12px; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,0.02); } .review-q-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; background: #f1f5f9; padding: 12px 15px; border-radius: 8px; } .score-input-container { display: flex; align-items: center; gap: 5px; background: #fff; padding: 5px 10px; border-radius: 6px; border: 1px solid #cbd5e1; } .score-input { width: 70px; text-align: center; font-weight: bold; border: 1px solid #ccc; border-radius: 4px; padding: 4px; font-size:1.1rem; color:#007bff; } .teacher-feedback-box textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; min-height: 80px; margin-top: 10px; font-family: inherit; } .reading-word-eval { display:inline-block; font-size:1.2rem; margin:5px; cursor:pointer; padding:8px 15px; border-radius:8px; transition:0.2s; border:2px solid transparent; user-select:none; } .reading-word-eval:hover { transform:scale(1.05); } .word-neutral { background:#f1f5f9; color:#475569; border-color:#cbd5e1; } .word-correct { background:#d4edda; color:#155724; border-color:#c3e6cb; } .word-wrong { background:#f8d7da; color:#721c24; border-color:#f5c6cb; }`;
+    document.head.appendChild(style);
+}
+
+function injectWordTableStyles() {
+    if (document.getElementById('wordTableStyles')) return;
+    const style = document.createElement('style'); style.id = 'wordTableStyles';
+    style.innerHTML = `.word-table { width: 100%; border-collapse: collapse; font-family: 'Times New Roman', 'Tajawal', serif; font-size: 1rem; background: white; border: 2px solid #000; } .word-table th, .word-table td { border: 1px solid #000; padding: 8px 12px; vertical-align: middle; } .word-table th { background-color: #f2f2f2; font-weight: bold; text-align: center; border-bottom: 2px solid #000; } .word-table tr:nth-child(even) { background-color: #fafafa; } .bg-success-light { background-color: #e8f5e9 !important; } .bg-danger-light { background-color: #ffebee !important; } .bg-warning-light { background-color: #fff3e0 !important; } .bg-info-light { background-color: #e3f2fd !important; } .btn-icon { background: none; border: none; cursor: pointer; font-size: 1.1rem; padding: 0 5px; transition: transform 0.2s; } .btn-icon:hover { transform: scale(1.2); } .badge { padding: 5px 10px; border-radius: 12px; color: white; font-size: 0.8rem; } .badge-success { background-color: #28a745; } .badge-danger { background-color: #dc3545; } @media print { .no-print { display: none !important; } }`;
+    document.head.appendChild(style);
+}
+
+function injectAdminEventModal() { 
+    if (document.getElementById('adminEventModal')) return; 
+    // تم إصلاح وضع الـ ID الخاص بالعنوان (modalTitle) هنا
+    const html = `<div id="adminEventModal" class="modal"><div class="modal-content"><div class="modal-header"><h3 id="modalTitle">تسجيل حدث إداري</h3><button class="modal-close" onclick="closeAdminEventModal()">×</button></div><div class="modal-body"><input type="hidden" id="editingEventId"><div class="form-group"><label>نوع الحالة:</label><select id="manualEventType" class="form-control"><option value="excused">معفى (يخصم من الرصيد)</option><option value="vacation">إجازة (توقف مؤقت)</option></select></div><div class="form-group"><label>التاريخ:</label><input type="date" id="manualEventDate" class="form-control"></div><div class="form-group"><label>ملاحظات:</label><textarea id="manualEventNote" class="form-control"></textarea></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeAdminEventModal()">إلغاء</button><button class="btn btn-primary" onclick="saveAdminEvent()">حفظ السجل</button></div></div></div>`; 
+    document.body.insertAdjacentHTML('beforeend', html); 
+}
+
+function injectHomeworkModal() { 
+    if (document.getElementById('assignHomeworkModal')) return; 
+    const html = `<div id="assignHomeworkModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>إسناد واجب جديد</h3><button class="modal-close" onclick="closeModal('assignHomeworkModal')">×</button></div><div class="modal-body"><div class="form-group"><label>اختر الواجب من المكتبة:</label><select id="homeworkSelect" class="form-control"><option value="">جارِ التحميل...</option></select></div><div class="form-group"><label>تاريخ التسليم:</label><input type="date" id="homeworkDueDate" class="form-control"></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeModal('assignHomeworkModal')">إلغاء</button><button class="btn btn-primary" onclick="assignHomework()">حفظ الإسناد</button></div></div></div>`; 
+    document.body.insertAdjacentHTML('beforeend', html); 
+}
+
+// =========================================================
+// التحميل الأساسي
+// =========================================================
+document.addEventListener('DOMContentLoaded', function() {
+    injectAdminEventModal(); 
+    injectHomeworkModal(); 
+    injectWordTableStyles(); 
+    injectReviewStyles(); 
+    
+    const params = new URLSearchParams(window.location.search); 
+    currentStudentId = parseInt(params.get('id'));
+    if (!currentStudentId) { 
+        showError('لم يتم تحديد طالب'); 
+        setTimeout(() => { window.location.href = 'students.html'; }, 1000); 
+        return; 
+    }
+    loadStudentData();
+});
 
 function getCurrentUser() { 
     return JSON.parse(sessionStorage.getItem('currentUser')); 
@@ -121,7 +157,7 @@ async function loadDiagnosticTab() {
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <strong style="font-size:1.1rem;">الدرجة الحالية: <span style="font-size:1.4rem; color:#28a745; font-weight:900;">${finalPercentage}%</span></strong>
                     </div>
-                    <div style="margin-top:15px; display:flex; gap:10px; flex-wrap:wrap;">
+                    <div style="margin-top:15px; display:flex; gap:10px;">
                         <button class="btn btn-warning" onclick="openReviewModal(${assignedTest.id}, 'test')">🔍 مراجعة وتصحيح</button>
                         <button class="btn btn-primary" onclick="autoGenerateLessons()">⚡ توليد الخطة والدروس</button>
                     </div>
@@ -166,21 +202,21 @@ async function assignTest() {
     if(!testId) return; 
     try {
         const { data: existing } = await window.supabase.from('student_tests').select('id').eq('studentId', currentStudentId).eq('type', 'diagnostic');
-        if(existing && existing.length > 0) return showError('يوجد اختبار معين مسبقاً لهذا الطالب.'); 
+        if(existing && existing.length > 0) return alert('يوجد اختبار معين مسبقاً لهذا الطالب.'); 
 
         await window.supabase.from('student_tests').insert([{ id: Date.now(), studentId: currentStudentId, testId: testId, type: 'diagnostic', status: 'pending' }]);
         closeModal('assignTestModal'); 
         loadDiagnosticTab(); 
         showSuccess('تم تعيين الاختبار بنجاح.');
-    } catch(e) { console.error(e); showError('حدث خطأ'); }
+    } catch(e) { console.error(e); alert('حدث خطأ'); }
 }
 
-function deleteAssignedTest(id) { 
-    showConfirmModal('هل أنت متأكد من حذف هذا الاختبار المعين؟', async function() { 
+async function deleteAssignedTest(id) { 
+    if(confirm('هل أنت متأكد من حذف هذا الاختبار المعين؟')) { 
         await window.supabase.from('student_tests').delete().eq('id', id);
         loadDiagnosticTab(); 
         showSuccess('تم الحذف بنجاح.'); 
-    });
+    } 
 }
 
 // ============================================
@@ -506,7 +542,7 @@ async function showAssignHomeworkModal() {
 
 async function assignHomework() { 
     const select = document.getElementById('homeworkSelect'); 
-    if(!select || !select.value) return showError('الرجاء اختيار واجب من القائمة'); 
+    if(!select || !select.value) return showError('الرجاء اختيار واجب'); 
     try {
         await window.supabase.from('student_assignments').insert([{ id: Date.now(), studentId: currentStudentId, title: select.value, status: 'pending', dueDate: document.getElementById('homeworkDueDate').value }]);
         closeModal('assignHomeworkModal'); 
@@ -526,43 +562,39 @@ function deleteAssignment(id) {
 }
 
 // ============================================
-// 5. سجل المتابعة والتقدم (Progress Tab) 
+// 5. سجل المتابعة والتقدم (Progress Tab)
 // ============================================
-
-function injectAdminEventModal() {
-    if (document.getElementById('adminEventModal')) return; 
-    const html = `<div id="adminEventModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>تسجيل حدث إداري</h3><button class="modal-close" onclick="closeAdminEventModal()">×</button></div><div class="modal-body"><input type="hidden" id="editingEventId"><div class="form-group"><label>نوع الحالة:</label><select id="manualEventType" class="form-control"><option value="excused">معفى (يخصم من الرصيد)</option><option value="vacation">إجازة (توقف مؤقت)</option></select></div><div class="form-group"><label>التاريخ:</label><input type="date" id="manualEventDate" class="form-control"></div><div class="form-group"><label>ملاحظات:</label><textarea id="manualEventNote" class="form-control"></textarea></div></div><div class="modal-footer"><button class="btn btn-secondary" onclick="closeAdminEventModal()">إلغاء</button><button class="btn btn-primary" onclick="saveAdminEvent()">حفظ السجل</button></div></div></div>`; 
-    document.body.insertAdjacentHTML('beforeend', html); 
-}
 
 async function loadProgressTab() {
     injectAdminEventModal();
     const container = document.getElementById('section-progress');
     
-    // الهيكل الخارجي (الشريط العلوي وحاوية الجدول المتجاوبة)
     container.innerHTML = `
-        <div class="content-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 15px; margin-bottom: 20px;">
-            <h1 style="margin: 0;">سجل المتابعة اليومي</h1>
-            <div style="display:flex; gap:10px; flex-wrap: wrap; align-items: center;">
-                <span id="progressBalanceBadge" class="badge badge-success" style="font-size:1.1rem; padding:8px 15px; border-radius:8px; white-space: nowrap;">الرصيد: جاري الحساب...</span>
-                <button class="btn btn-primary" onclick="openAdminEventModal()" style="white-space: nowrap;"><i class="fas fa-plus-circle"></i> تسجيل حدث</button>
-                <button class="btn btn-secondary" onclick="printProgressLog()" style="white-space: nowrap;"><i class="fas fa-print"></i> طباعة السجل</button>
+        <div class="content-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+            <div>
+                <h2 style="margin:0;">سجل المتابعة اليومي</h2>
+                <span id="progressBalanceBadge" class="badge badge-success" style="font-size:1.1rem; padding:8px 15px; border-radius:8px;">الرصيد: جاري الحساب...</span>
+            </div>
+            <div class="no-print" style="display:flex; gap:10px;">
+                <button class="btn btn-secondary" onclick="printProgressLog()" style="background: #475569;"><i class="fas fa-print"></i> طباعة السجل</button>
+                <button class="btn btn-primary" onclick="openAdminEventModal()"><i class="fas fa-plus-circle"></i> تسجيل حدث</button>
             </div>
         </div>
-        
-        <div class="card" style="padding: 0; overflow-x: auto; border-radius: 10px; border: 1px solid #eee; box-shadow: 0 4px 10px rgba(0,0,0,0.03); -webkit-overflow-scrolling: touch;">
-            <table class="table table-bordered" style="min-width: 900px; width: 100%; margin: 0;">
+        <div class="table-responsive" id="printableProgressArea" style="overflow-x: auto; -webkit-overflow-scrolling: touch; background: white; padding: 15px; border-radius: 10px; border: 1px solid #eee; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
+            <table class="word-table" style="min-width: 850px; width: 100%;">
                 <thead>
-                    <tr style="background:#f8f9fa; color:#333;">
-                        <th style="padding: 15px; white-space: nowrap; width: 35%;">الهدف (الدرس)</th>
-                        <th style="padding: 15px; white-space: nowrap; width: 15%;">حالة الدرس</th>
-                        <th style="padding: 15px; white-space: nowrap; width: 15%;">حالة الطالب</th>
-                        <th style="padding: 15px; white-space: nowrap; width: 10%;">نوع الحصة</th>
-                        <th style="padding: 15px; white-space: nowrap; width: 15%;">التاريخ</th>
-                        <th style="padding: 15px; white-space: nowrap; width: 10%;" class="no-print">إجراءات</th>
+                    <tr>
+                        <th style="width: 30%;">اسم الدرس (الهدف)</th>
+                        <th style="width: 15%;">حالة الدرس</th>
+                        <th style="width: 15%;">حالة الطالب</th>
+                        <th style="width: 15%;">نوع الحصة</th>
+                        <th style="width: 15%;">التاريخ</th>
+                        <th style="width: 10%;" class="no-print">إجراءات</th>
                     </tr>
                 </thead>
-                <tbody id="progressTableBody"><tr><td colspan="6" class="text-center p-4">جاري التحميل من السحابة...</td></tr></tbody>
+                <tbody id="progressTableBody">
+                    <tr><td colspan="6" class="text-center p-4">جاري التحميل من السحابة...</td></tr>
+                </tbody>
             </table>
         </div>`;
 
@@ -610,7 +642,9 @@ async function loadProgressTab() {
             }
         });
 
-        let finalTimeline = []; let balance = 0; rawLogs.sort((a, b) => a.dateObj - b.dateObj);
+        let finalTimeline = []; 
+        let balance = 0; 
+        rawLogs.sort((a, b) => a.dateObj - b.dateObj);
         
         rawLogs.forEach(log => {
             if (log.status === 'started' || log.status === 'extension') { 
@@ -650,14 +684,15 @@ async function loadProgressTab() {
                 } 
             }
             let noteHtml = item.note ? `<br><small class="text-muted" style="font-size:0.85rem;">[${item.note}]</small>` : ''; 
-            return `<tr class="${item.rowClass || ''}">
-                        <td style="padding: 12px; vertical-align: middle;"><strong>${item.title}</strong>${noteHtml}</td>
-                        <td class="text-center" style="vertical-align: middle;">${item.lessonStatus}</td>
-                        <td class="text-center" style="vertical-align: middle;">${item.studentStatus}</td>
-                        <td class="text-center" style="vertical-align: middle;">${item.sessionType}</td>
-                        <td class="text-center" style="vertical-align: middle;">${item.date}</td>
-                        <td class="text-center no-print" style="vertical-align: middle;">${actionsHtml}</td>
-                    </tr>`;
+            return `
+            <tr class="${item.rowClass || ''}">
+                <td style="padding: 12px; vertical-align: middle;"><strong>${item.title}</strong>${noteHtml}</td>
+                <td class="text-center" style="vertical-align: middle;">${item.lessonStatus}</td>
+                <td class="text-center" style="vertical-align: middle;">${item.studentStatus}</td>
+                <td class="text-center" style="vertical-align: middle;">${item.sessionType}</td>
+                <td class="text-center" style="vertical-align: middle;">${item.date}</td>
+                <td class="text-center no-print" style="vertical-align: middle;">${actionsHtml}</td>
+            </tr>`;
         }).join('');
 
         tbody.innerHTML = rowsHtml;
@@ -689,7 +724,7 @@ async function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planS
     let lessonTitleForAbsence = pendingLesson ? pendingLesson.title : 'درس غير محدد';
     
     for (let d = new Date(planStartDate); d < today; d.setDate(d.getDate() + 1)) {
-        if (d.toDateString() === new Date().toDateString()) continue;
+        if (d.toDateString() === new Date().toDateString()) continue; 
         
         const isHoliday = holidays.some(h => { 
             if(!h.startDate || !h.endDate) return false;
@@ -728,9 +763,28 @@ async function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planS
     return myEvents;
 }
 
-function openAdminEventModal() { editingEventId = null; document.getElementById('modalTitle').textContent = "تسجيل حدث إداري"; document.getElementById('manualEventDate').valueAsDate = new Date(); document.getElementById('manualEventType').value = 'excused'; document.getElementById('manualEventNote').value = ''; document.getElementById('adminEventModal').classList.add('show'); }
+function openAdminEventModal() { 
+    document.getElementById('editingEventId').value = ''; 
+    document.getElementById('manualEventDate').valueAsDate = new Date(); 
+    document.getElementById('manualEventType').value = 'excused'; 
+    document.getElementById('manualEventNote').value = ''; 
+    document.getElementById('adminEventModal').classList.add('show'); 
+}
+
 function closeAdminEventModal() { document.getElementById('adminEventModal').classList.remove('show'); }
-async function editAdminEvent(id) { const { data: event } = await window.supabase.from('student_events').select('*').eq('id', id).single(); if (!event) return; editingEventId = id; document.getElementById('modalTitle').textContent = "تعديل الحدث"; document.getElementById('manualEventType').value = event.type; document.getElementById('manualEventDate').value = event.date.split('T')[0]; document.getElementById('manualEventNote').value = event.note || ''; document.getElementById('adminEventModal').classList.add('show'); }
+
+async function editAdminEvent(id) { 
+    try {
+        const { data: event } = await window.supabase.from('student_events').select('*').eq('id', id).single();
+        if (!event) return; 
+        document.getElementById('editingEventId').value = id; 
+        document.getElementById('manualEventType').value = event.type; 
+        document.getElementById('manualEventDate').value = event.date.split('T')[0]; 
+        document.getElementById('manualEventNote').value = event.note || ''; 
+        document.getElementById('adminEventModal').classList.add('show');
+    } catch(e) { console.error(e); } 
+}
+
 async function saveAdminEvent() { 
     const id = document.getElementById('editingEventId').value;
     const type = document.getElementById('manualEventType').value; 
@@ -746,18 +800,69 @@ async function saveAdminEvent() {
         closeAdminEventModal(); loadProgressTab(); showSuccess('تم حفظ الحدث بنجاح');
     } catch(e) { console.error(e); }
 }
+
 async function deleteAdminEvent(id) { 
     showConfirmModal('هل أنت متأكد من حذف هذا السجل؟', async function() {
-        await window.supabase.from('student_events').delete().eq('id', id);
-        loadProgressTab(); showSuccess('تم الحذف بنجاح');
+        try {
+            await window.supabase.from('student_events').delete().eq('id', id);
+            loadProgressTab(); showSuccess('تم الحذف بنجاح');
+        } catch(e) { console.error(e); }
     });
 }
+
 function printProgressLog() {
-    if (!currentStudent) { showError('بيانات الطالب غير جاهزة'); return; }
-    const tableContent = document.getElementById('printableProgressArea').innerHTML; 
+    const area = document.getElementById('printableProgressArea');
+    if (!currentStudent || !area) { showError('بيانات الطالب غير جاهزة أو الجدول غير موجود'); return; }
+    
+    const tableContent = area.outerHTML; 
     const today = new Date().toLocaleDateString('ar-SA'); 
     const printWindow = window.open('', '_blank');
-    printWindow.document.write(`<html dir="rtl" lang="ar"><head><title>سجل متابعة - ${currentStudent.name}</title><style>@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');body { font-family: 'Tajawal', serif; padding: 40px; color: #333; }.print-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }.header-side { width: 30%; font-size: 13px; line-height: 1.6; }.header-mid { width: 40%; text-align: center; }.header-mid h2 { margin: 0; font-size: 22px; }.student-info-box { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f9f9f9; padding: 15px; border: 1px solid #000; margin-bottom: 20px; border-radius: 5px; }.student-info-box div { font-size: 14px; }table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 2px solid #000; }th, td { border: 1px solid #000; padding: 10px; text-align: center; font-size: 13px; }th { background-color: #eee !important; font-weight: bold; }.no-print { display: none !important; }.footer-signatures { margin-top: 50px; display: flex; justify-content: space-between; text-align: center; font-weight: bold; }.footer-signatures div { width: 30%; border-top: 1px solid #000; padding-top: 10px; }</style></head><body><div class="print-header"><div class="header-side">المملكة العربية السعودية<br>برنامج صعوبات التعلم<br>نظام ميسر التعلم</div><div class="header-mid"><h2>سجل المتابعة اليومي</h2><p>تقرير التقدم الدراسي للعام 1447هـ</p></div><div class="header-side" style="text-align: left;">التاريخ: ${today}<br>المعلم: أ/ صالح العجلان</div></div><div class="student-info-box"><div><strong>اسم الطالب:</strong> ${currentStudent.name}</div><div><strong>الصف الدراسي:</strong> ${currentStudent.grade}</div><div><strong>المادة:</strong> ${currentStudent.subject}</div><div><strong>حالة الخطة:</strong> مستمرة</div></div>${tableContent}<div class="footer-signatures"><div>توقيع معلم صعوبات التعلم</div><div>توقيع مدير المدرسة</div></div><script>window.onload = function() { window.print(); window.close(); }<\/script></body></html>`);
+    printWindow.document.write(`
+        <html dir="rtl" lang="ar">
+        <head>
+            <title>سجل متابعة - ${currentStudent.name}</title>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
+                body { font-family: 'Tajawal', serif; padding: 40px; color: #333; }
+                .print-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+                .header-side { width: 30%; font-size: 13px; line-height: 1.6; }
+                .header-mid { width: 40%; text-align: center; }
+                .header-mid h2 { margin: 0; font-size: 22px; }
+                .student-info-box { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f9f9f9; padding: 15px; border: 1px solid #000; margin-bottom: 20px; border-radius: 5px; }
+                .student-info-box div { font-size: 14px; }
+                .word-table { width: 100%; border-collapse: collapse; border: 2px solid #000; }
+                .word-table th, .word-table td { border: 1px solid #000; padding: 10px; text-align: center; font-size: 13px; }
+                .word-table th { background-color: #eee !important; font-weight: bold; -webkit-print-color-adjust: exact; }
+                .bg-success-light { background-color: #e8f5e9 !important; -webkit-print-color-adjust: exact; }
+                .bg-danger-light { background-color: #ffebee !important; -webkit-print-color-adjust: exact; }
+                .bg-warning-light { background-color: #fff3e0 !important; -webkit-print-color-adjust: exact; }
+                .bg-info-light { background-color: #e3f2fd !important; -webkit-print-color-adjust: exact; }
+                .no-print { display: none !important; }
+                .footer-signatures { margin-top: 50px; display: flex; justify-content: space-between; text-align: center; font-weight: bold; }
+                .footer-signatures div { width: 30%; border-top: 1px solid #000; padding-top: 10px; }
+            </style>
+        </head>
+        <body>
+            <div class="print-header">
+                <div class="header-side">المملكة العربية السعودية<br>برنامج صعوبات التعلم<br>نظام ميسر التعلم</div>
+                <div class="header-mid"><h2>سجل المتابعة اليومي</h2><p>تقرير التقدم الدراسي للعام 1447هـ</p></div>
+                <div class="header-side" style="text-align: left;">التاريخ: ${today}<br>المعلم: أ/ صالح العجلان</div>
+            </div>
+            <div class="student-info-box">
+                <div><strong>اسم الطالب:</strong> ${currentStudent.name}</div>
+                <div><strong>الصف الدراسي:</strong> ${currentStudent.grade}</div>
+                <div><strong>المادة:</strong> ${currentStudent.subject}</div>
+                <div><strong>حالة الخطة:</strong> مستمرة</div>
+            </div>
+            ${tableContent}
+            <div class="footer-signatures">
+                <div>توقيع معلم صعوبات التعلم</div>
+                <div>توقيع مدير المدرسة</div>
+            </div>
+            <script>window.onload = function() { window.print(); window.close(); }<\/script>
+        </body>
+        </html>
+    `);
     printWindow.document.close();
 }
 
@@ -900,6 +1005,9 @@ async function returnTestForResubmission() {
 
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
+// ----------------------------------------------------------------------------------
+// دوال رسم واجهة المراجعة (DOM Builders)
+// ----------------------------------------------------------------------------------
 function buildTeacherReviewItem(q, index, studentAnsObj) {
     let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
     let evaluations = (studentAnsObj && studentAnsObj.evaluations) ? studentAnsObj.evaluations : {};
@@ -1003,4 +1111,3 @@ window.saveAdminEvent = saveAdminEvent;
 window.closeAdminEventModal = closeAdminEventModal;
 window.openAdminEventModal = openAdminEventModal;
 window.printProgressLog = printProgressLog;
-window.regenerateLessons = regenerateLessons;

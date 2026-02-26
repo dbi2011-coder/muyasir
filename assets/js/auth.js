@@ -1,103 +1,123 @@
+// ============================================
+// 📁 الملف: assets/js/auth.js
+// الوصف: نظام الدخول وإدارة الجلسات السحابي (Supabase)
+// ============================================
+
 document.addEventListener('DOMContentLoaded', function() {
-    const loginBtn = document.querySelector('button[type="submit"]') || document.querySelector('.auth-btn');
-    if(loginBtn) {
+    // 1. ربط زر الدخول
+    const loginBtn = document.querySelector('button');
+    if(loginBtn && (loginBtn.innerText.includes('دخول') || loginBtn.innerText.includes('Login'))) {
         const newBtn = loginBtn.cloneNode(true);
         loginBtn.parentNode.replaceChild(newBtn, loginBtn);
-        newBtn.type = 'button'; 
+        newBtn.type = 'button'; // تحويله لزر عادي لمنع إعادة تحميل الصفحة
         newBtn.addEventListener('click', login);
     }
     
+    // 2. التحقق من الجلسة (باستثناء صفحات الدخول والرئيسية)
     if (!window.location.href.includes('index.html') && !window.location.href.includes('login.html')) {
         checkAuth();
     }
 });
 
-// تحويل الدالة إلى async لتتعامل مع Supabase
-async function login() {
+// ============================================
+// 🔐 دالة تسجيل الدخول السحابية (Supabase)
+// ============================================
+async function login(event) {
+    if(event) event.preventDefault();
+
     const userInp = document.getElementById('username').value.trim();
     const passInp = document.getElementById('password').value.trim();
-    const btnLoading = document.querySelector('.btn-loading');
-    const btnText = document.querySelector('.btn-text');
 
+    // التحقق من إدخال البيانات
     if (!userInp || !passInp) {
-        showAuthNotification("الرجاء إدخال البيانات", "error");
+        showAuthNotification("الرجاء إدخال اسم المستخدم وكلمة المرور", "error");
         return;
     }
 
-    if(btnText) btnText.style.display = 'none';
-    if(btnLoading) btnLoading.style.display = 'inline-block';
+    // إظهار رسالة تحميل
+    const btn = event ? event.target : document.querySelector('button');
+    const originalText = btn.innerText;
+    btn.innerText = "جاري التحقق...";
+    btn.disabled = true;
 
     try {
-        // البحث عن المستخدم في جدول المستخدمين في Supabase
-        const { data: users, error } = await window.supabase
+        // 1. البحث في جدول المستخدمين (المدير، المعلم، الطالب)
+        const { data: users, error: err1 } = await window.supabase
             .from('users')
             .select('*')
             .eq('username', userInp)
             .eq('password', passInp);
 
-        if (error) throw error;
-
-        let user = users.length > 0 ? users[0] : null;
-
-        // التحقق من حالة الحساب
-        if (user && (user.status === 'suspended' || user.status === 'موقوف')) {
-            showAuthNotification("⛔ عذراً، تم إيقاف حسابك. يرجى مراجعة الإدارة.", "error");
-            resetLoginButton(btnText, btnLoading);
-            return; 
-        }
-
-        // إذا لم يكن مستخدماً عادياً، نبحث في جدول أعضاء اللجنة
-        if (!user) {
-            const { data: committeeMembers, err } = await window.supabase
-                .from('committee_members')
-                .select('*')
-                .eq('username', userInp)
-                .eq('password', passInp);
-
-            if (committeeMembers && committeeMembers.length > 0) {
-                const member = committeeMembers[0];
-                user = {
-                    id: member.id, 
-                    name: member.name, 
-                    username: member.username, 
-                    role: 'committee_member', 
-                    title: member.role, 
-                    status: 'active', 
-                    ownerId: member.ownerId 
-                };
+        if (users && users.length > 0) {
+            const user = users[0];
+            
+            // التحقق من حالة الحساب
+            if (user.status === 'suspended' || user.status === 'موقوف') {
+                showAuthNotification("⛔ عذراً، تم إيقاف حسابك. يرجى مراجعة الإدارة.", "error");
+                btn.innerText = originalText;
+                btn.disabled = false;
+                return;
             }
-        }
 
-        // التوجيه حسب الدور
-        if (user) {
             sessionStorage.setItem('currentUser', JSON.stringify(user));
             let prefix = window.location.href.includes('/pages/') ? '../' : 'pages/';
             
             if (user.role === 'admin') window.location.href = prefix + 'admin/dashboard.html';
             else if (user.role === 'teacher') window.location.href = prefix + 'teacher/dashboard.html';
-            else if (user.role === 'committee_member') window.location.href = prefix + 'member/dashboard.html'; 
             else window.location.href = prefix + 'student/dashboard.html';
-        } else {
-            showAuthNotification("بيانات الدخول غير صحيحة!", "error");
+            return;
         }
+
+        // 2. إذا لم نجده، البحث في جدول أعضاء اللجنة
+        const { data: committee, error: err2 } = await window.supabase
+            .from('committee_members')
+            .select('*')
+            .eq('username', userInp)
+            .eq('password', passInp);
+
+        if (committee && committee.length > 0) {
+            const commUser = committee[0];
+            
+            // تجهيز بيانات الجلسة لعضو اللجنة
+            const sessionUser = {
+                id: commUser.id, 
+                name: commUser.name, 
+                username: commUser.username, 
+                role: 'committee_member', // توحيد اسم الصلاحية
+                status: 'active', 
+                ownerId: commUser.ownerId 
+            };
+            
+            sessionStorage.setItem('currentUser', JSON.stringify(sessionUser));
+            
+            let prefix = window.location.href.includes('/pages/') ? '../' : 'pages/';
+            window.location.href = prefix + 'member/dashboard.html'; 
+            return;
+        }
+
+        // 3. إذا لم يتم العثور عليه في أي جدول
+        showAuthNotification("بيانات الدخول غير صحيحة!", "error");
+        btn.innerText = originalText;
+        btn.disabled = false;
+
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('Login Error:', error);
         showAuthNotification("حدث خطأ في الاتصال بقاعدة البيانات", "error");
-    } finally {
-        resetLoginButton(btnText, btnLoading);
+        btn.innerText = originalText;
+        btn.disabled = false;
     }
 }
 
-function resetLoginButton(btnText, btnLoading) {
-    if(btnText) btnText.style.display = 'inline-block';
-    if(btnLoading) btnLoading.style.display = 'none';
-}
+// ============================================
+// 🔔 نظام الإشعارات (Toast Notifications)
+// ============================================
 
 function showToast(message, type = 'info') {
     const toast = document.createElement('div');
     toast.className = `toast-notification toast-${type}`;
     toast.innerText = message;
     
+    // تنسيق الإشعار
     toast.style.position = 'fixed';
     toast.style.top = '20px';
     toast.style.left = '50%';
@@ -107,6 +127,8 @@ function showToast(message, type = 'info') {
     toast.style.color = '#fff';
     toast.style.zIndex = '10000';
     toast.style.transition = 'all 0.3s ease';
+    toast.style.fontFamily = "'Tajawal', sans-serif";
+    toast.style.fontWeight = "bold";
     
     if (type === 'success') toast.style.backgroundColor = '#28a745';
     else if (type === 'error') toast.style.backgroundColor = '#dc3545';
@@ -114,6 +136,7 @@ function showToast(message, type = 'info') {
 
     document.body.appendChild(toast);
     
+    // إخفاء الإشعار بعد 3 ثواني
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transform = 'translate(-50%, -20px)';
@@ -123,12 +146,17 @@ function showToast(message, type = 'info') {
     }, 3000);
 }
 
+// دوال مساعدة للإشعارات
 window.alert = function(message) { showToast(message, 'info'); };
 window.showSuccess = (msg) => showToast(msg, 'success');
 window.showError = (msg) => showToast(msg, 'error');
 window.showAuthNotification = function(message, type) { 
     showToast(message, type === 'success' ? 'success' : 'error'); 
 };
+
+// ============================================
+// 🛠️ دوال مساعدة (Helpers)
+// ============================================
 
 function checkAuth() {
     const session = sessionStorage.getItem('currentUser');
@@ -139,6 +167,7 @@ function checkAuth() {
     return JSON.parse(session);
 }
 
+// تسجيل الخروج
 function logout() {
     sessionStorage.removeItem('currentUser');
     window.location.href = '../../index.html';
@@ -148,6 +177,7 @@ function getCurrentUser() {
     return JSON.parse(sessionStorage.getItem('currentUser') || 'null'); 
 }
 
+// تصدير الدوال للنطاق العام (Global Scope)
 window.login = login;
 window.checkAuth = checkAuth;
 window.logout = logout;

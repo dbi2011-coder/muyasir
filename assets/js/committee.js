@@ -1,26 +1,21 @@
 // ============================================
 // 📁 الملف: assets/js/committee.js
-// الوصف: نظام اللجنة (نسخة Supabase المتكاملة)
+// الوصف: إدارة الأعضاء السحابية (Supabase) والاجتماعات المحلية
 // ============================================
 
-// 🔥 إضافة النوافذ المنبثقة لمنع أخطاء الحذف والإشعارات 🔥
+// 🔥 النوافذ المنبثقة 🔥
 if (!window.showConfirmModal) { window.showConfirmModal = function(message, onConfirm) { let modal = document.getElementById('globalConfirmModal'); if (!modal) { const modalHtml = `<div id="globalConfirmModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); z-index:999999; justify-content:center; align-items:center; backdrop-filter:blur(4px);"><div style="background:white; padding:25px; border-radius:15px; width:90%; max-width:350px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,0.2);"><div style="font-size:3.5rem; color:#dc3545; margin-bottom:15px;"><i class="fas fa-exclamation-circle"></i></div><div style="font-size:1.3rem; font-weight:bold; margin-bottom:10px; color:#333;">تأكيد الإجراء</div><div id="globalConfirmMessage" style="color:#666; margin-bottom:25px; font-size:0.95rem;"></div><div style="display:flex; gap:15px; justify-content:center;"><button id="globalConfirmCancel" style="background:#e2e8f0; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1;">إلغاء</button><button id="globalConfirmOk" style="background:#dc3545; color:white; border:none; padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:bold; flex:1;">نعم، متأكد</button></div></div></div>`; document.body.insertAdjacentHTML('beforeend', modalHtml); modal = document.getElementById('globalConfirmModal'); } document.getElementById('globalConfirmMessage').innerHTML = message; modal.style.display = 'flex'; document.getElementById('globalConfirmOk').onclick = function() { modal.style.display = 'none'; if (typeof onConfirm === 'function') onConfirm(); }; document.getElementById('globalConfirmCancel').onclick = function() { modal.style.display = 'none'; }; }; }
 if (!window.showSuccess) { window.showSuccess = function(message) { let toast = document.getElementById('globalSuccessToast'); if (!toast) { const toastHtml = `<div id="globalSuccessToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#10b981; color:white; padding:12px 25px; border-radius:8px; z-index:999999; font-weight:bold; align-items:center; gap:10px;"><i class="fas fa-check-circle"></i> <span id="globalSuccessMessage"></span></div>`; document.body.insertAdjacentHTML('beforeend', toastHtml); toast = document.getElementById('globalSuccessToast'); } document.getElementById('globalSuccessMessage').textContent = message; toast.style.display = 'flex'; setTimeout(() => { toast.style.display = 'none'; }, 3000); }; }
 if (!window.showError) { window.showError = function(message) { let toast = document.getElementById('globalErrorToast'); if (!toast) { const toastHtml = `<div id="globalErrorToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#dc3545; color:white; padding:12px 25px; border-radius:8px; z-index:999999; font-weight:bold; align-items:center; gap:10px;"><i class="fas fa-exclamation-triangle"></i> <span id="globalErrorMessage"></span></div>`; document.body.insertAdjacentHTML('beforeend', toastHtml); toast = document.getElementById('globalErrorToast'); } document.getElementById('globalErrorMessage').innerHTML = message; toast.style.display = 'flex'; setTimeout(() => { toast.style.display = 'none'; }, 4000); }; }
 
-// --- إعدادات قاعدة البيانات (IndexedDB) للاجتماعات (المحاضر الكبيرة تُحفظ محلياً لسرعة الأداء كما طلبت سابقاً) ---
+// --- إعدادات قاعدة البيانات (IndexedDB) للاجتماعات (لأنها ثقيلة تحتوي على Canvas و PDF) ---
 const DB_NAME = 'CommitteeAppDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'meetings';
 let db;
 
 function getCurrentUser() {
-    try {
-        const session = sessionStorage.getItem('currentUser');
-        if (!session) return null;
-        const data = JSON.parse(session);
-        return data.user || data;
-    } catch (e) { return null; }
+    try { const session = sessionStorage.getItem('currentUser'); return session ? JSON.parse(session) : null; } catch (e) { return null; }
 }
 
 function openDB() {
@@ -42,10 +37,9 @@ function dbDelete(id) { return new Promise((res, rej) => { const tx = db.transac
 
 document.addEventListener('DOMContentLoaded', async function() {
     const user = getCurrentUser();
-    if (user) {
-        if(document.getElementById('userName')) document.getElementById('userName').textContent = user.name;
+    if (user && document.getElementById('userName')) {
+        document.getElementById('userName').textContent = user.name;
     }
-
     await openDB();
     loadMembers();
     loadMeetings();
@@ -62,9 +56,8 @@ function switchTab(tab) {
 }
 
 // =======================================================
-// 👥 إدارة الأعضاء (سوبا بيس - Supabase)
+// 👥 إدارة الأعضاء السحابية (Supabase)
 // =======================================================
-
 async function loadMembers() {
     const user = getCurrentUser();
     const container = document.getElementById('membersListContainer');
@@ -125,12 +118,12 @@ async function saveMember() {
     if(!name || !username || !pass) return showError('البيانات ناقصة');
     
     try {
-        // التحقق من تكرار اسم المستخدم في سوبا بيس
+        // التحقق من السحابة إذا كان اسم المستخدم موجود
         let query = window.supabase.from('committee_members').select('id').eq('username', username);
         if (id) query = query.neq('id', id);
         
         const { data: existing } = await query;
-        if (existing && existing.length > 0) return showError('اسم المستخدم غير متاح. يرجى اختيار اسم آخر.');
+        if (existing && existing.length > 0) return showError('اسم المستخدم مسجل مسبقاً. يرجى اختيار اسم آخر.');
 
         const memberData = { name: name, role: role, username: username, password: pass, ownerId: user.id };
 
@@ -143,10 +136,10 @@ async function saveMember() {
         
         closeModal('addMemberModal');
         loadMembers();
-        showSuccess('تم حفظ العضو بنجاح في السحابة ✅');
+        showSuccess('تم حفظ العضو في السحابة بنجاح ✅');
     } catch (e) {
         console.error(e);
-        showError('حدث خطأ أثناء الحفظ');
+        showError('حدث خطأ أثناء الحفظ في السحابة');
     }
 }
 
@@ -165,11 +158,11 @@ async function editMember(id) {
 }
 
 function deleteMember(id) {
-    showConfirmModal('هل أنت متأكد من حذف هذا العضو من السحابة؟', async function() {
+    showConfirmModal('هل أنت متأكد من حذف هذا العضو نهائياً؟', async function() {
         try {
             await window.supabase.from('committee_members').delete().eq('id', id);
             loadMembers();
-            showSuccess('تم الحذف بنجاح');
+            showSuccess('تم الحذف من السحابة بنجاح');
         } catch (e) {
             console.error(e);
             showError('خطأ أثناء الحذف');
@@ -178,7 +171,7 @@ function deleteMember(id) {
 }
 
 // =======================================================
-// 📝 إدارة الاجتماعات (IndexedDB)
+// 📝 إدارة الاجتماعات (المحلي IndexedDB) كما طلبنا
 // =======================================================
 
 function addPollTool() {
@@ -441,7 +434,6 @@ async function deleteMeeting(id) {
 
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
-// تصدير جميع الدوال للعمل في HTML
 window.addPollTool = addPollTool;
 window.addPollOption = addPollOption;
 window.addStudentFeedbackTool = addStudentFeedbackTool;
@@ -457,4 +449,3 @@ window.showAddMemberModal = showAddMemberModal;
 window.saveMember = saveMember;
 window.editMember = editMember;
 window.deleteMember = deleteMember;
-window.loadMembers = loadMembers;

@@ -1,5 +1,5 @@
 // ============================================
-// 📁 المسار: assets/js/reports.js (النسخة السحابية الشاملة والمحمية)
+// 📁 المسار: assets/js/reports.js (النسخة السحابية الذكية والمحمية)
 // ============================================
 
 // 1. جلب بيانات المعلم الحالي من الجلسة
@@ -12,6 +12,25 @@ function getCurrentUser() {
     }
 }
 
+// 🌟 دوال ذكية للبحث عن القوائم المنسدلة مهما كان اسمها (ID) في الـ HTML
+function getStudentDropdown() {
+    let el = document.getElementById('reportStudentSelect') || document.getElementById('studentSelect') || document.getElementById('student');
+    if (!el) {
+        const selects = document.getElementsByTagName('select');
+        if(selects.length > 0) el = selects[0]; // عادةً القائمة الأولى تكون للطلاب
+    }
+    return el;
+}
+
+function getReportTypeDropdown() {
+    let el = document.getElementById('reportTypeSelect') || document.getElementById('reportType') || document.getElementById('type');
+    if (!el) {
+        const selects = document.getElementsByTagName('select');
+        if(selects.length > 1) el = selects[1]; // عادةً القائمة الثانية تكون لنوع التقرير
+    }
+    return el;
+}
+
 // 2. التهيئة عند تحميل الصفحة
 document.addEventListener('DOMContentLoaded', function() {
     const user = getCurrentUser();
@@ -21,7 +40,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
-    // عرض اسم المعلم إذا كان هناك عنصر مخصص له في واجهة التقارير
     const teacherNameDisplay = document.getElementById('teacherNameDisplay') || document.getElementById('userName');
     if (teacherNameDisplay) teacherNameDisplay.textContent = "أ/ " + user.name;
 
@@ -41,10 +59,9 @@ async function loadStudentsList(teacherId) {
 
         if (error) throw error;
 
-        // البحث عن القائمة المنسدلة للطلاب بأكثر من اسم محتمل
-        const select = document.getElementById('reportStudentSelect') || document.getElementById('studentSelect');
+        const select = getStudentDropdown();
         if (!select) {
-            console.error("لم يتم العثور على قائمة اختيار الطلاب في HTML");
+            console.error("لم يتم العثور على أي قائمة منسدلة (select) في صفحة HTML");
             return;
         }
 
@@ -64,9 +81,8 @@ async function loadStudentsList(teacherId) {
 
 // 4. الدالة الرئيسية لتوليد التقرير
 window.initiateReport = async function() {
-    // جلب العناصر بأمان
-    const studentEl = document.getElementById('reportStudentSelect') || document.getElementById('studentSelect');
-    const typeEl = document.getElementById('reportTypeSelect') || document.getElementById('reportType');
+    const studentEl = getStudentDropdown();
+    const typeEl = getReportTypeDropdown();
     
     if (!studentEl || !typeEl) {
         alert('خطأ في واجهة HTML: لم يتم العثور على قوائم اختيار الطالب أو نوع التقرير.');
@@ -77,24 +93,25 @@ window.initiateReport = async function() {
     const type = typeEl.value;
     
     if (!studentId || !type) {
-        alert('الرجاء تحديد الطالب ونوع التقرير أولاً.');
+        alert('الرجاء تحديد الطالب ونوع التقرير أولاً من القوائم.');
         return;
     }
 
     // البحث عن حاويات التحميل والنتائج
     const loadingArea = document.getElementById('reportLoading') || document.getElementById('loadingArea');
-    const resultArea = document.getElementById('reportResultArea') || document.getElementById('resultArea');
-    const contentArea = document.getElementById('generatedReportContent') || document.getElementById('reportContent');
+    const resultArea = document.getElementById('reportResultArea') || document.getElementById('resultArea') || document.querySelector('.result-container');
+    const contentArea = document.getElementById('generatedReportContent') || document.getElementById('reportContent') || document.getElementById('reportResultArea');
     
     if (loadingArea) loadingArea.style.display = 'block';
     if (resultArea) resultArea.style.display = 'none';
     if (contentArea) contentArea.innerHTML = '';
 
     try {
-        if (type === 'diagnostic') await generateDiagnosticReport(studentId);
-        else if (type === 'iep') await generateIEPReport(studentId);
-        else if (type === 'progress') await generateProgressReport(studentId);
-        else if (type === 'comprehensive') await generateComprehensiveReport(studentId);
+        if (type === 'diagnostic' || type.includes('diag')) await generateDiagnosticReport(studentId);
+        else if (type === 'iep' || type.includes('iep')) await generateIEPReport(studentId);
+        else if (type === 'progress' || type.includes('prog')) await generateProgressReport(studentId);
+        else if (type === 'comprehensive' || type.includes('comp')) await generateComprehensiveReport(studentId);
+        else await generateComprehensiveReport(studentId); // افتراضي في حال كان الاسم مختلفاً
     } catch (e) {
         console.error("Report Generation Error:", e);
         alert('حدث خطأ أثناء بناء التقرير. تأكد من اتصالك بالإنترنت وتوفر البيانات.');
@@ -389,7 +406,7 @@ function buildReportHeader(title, student) {
 }
 
 function displayReport(htmlContent) {
-    const resultArea = document.getElementById('reportResultArea') || document.getElementById('resultArea');
+    const resultArea = document.getElementById('reportResultArea') || document.getElementById('resultArea') || document.querySelector('.result-container');
     const contentArea = document.getElementById('generatedReportContent') || document.getElementById('reportContent') || document.getElementById('reportResultArea');
     
     if (contentArea) contentArea.innerHTML = htmlContent;
@@ -397,7 +414,7 @@ function displayReport(htmlContent) {
 }
 
 window.printReport = function() {
-    const contentArea = document.getElementById('generatedReportContent') || document.getElementById('reportContent');
+    const contentArea = document.getElementById('generatedReportContent') || document.getElementById('reportContent') || document.getElementById('reportResultArea');
     const reportContent = contentArea ? contentArea.innerHTML : '';
     
     if (!reportContent) {

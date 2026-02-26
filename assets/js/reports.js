@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير الشامل (نسخة Supabase بنفس التصميم الأصلي المرفق)
+// الوصف: نظام التقارير الشامل (نسخة Supabase مع إصلاح تاريخ تحقق الأهداف في الخطة)
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -126,7 +126,6 @@ document.addEventListener('DOMContentLoaded', function() {
         loadStudentsForSelection();
     }
     
-    // إزالة الخيارات المكررة
     const select = document.getElementById('reportType');
     if (select) {
         Array.from(select.options).forEach(opt => {
@@ -134,7 +133,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // التأكد من توفر جميع أنواع التقارير
     ensureOptionExists('iep', 'تقرير الخطط التربوية الفردية', '📄');
     ensureOptionExists('diagnostic', 'تقرير الاختبار التشخيصي', '📝');
     ensureOptionExists('schedule', 'تقرير الجدول الدراسي', '📅');
@@ -163,7 +161,6 @@ function updateTeacherName() {
     } catch (e) { }
 }
 
-// 🌟 جلب الطلاب من السحابة وعرضهم كصناديق اختيار (Checkboxes)
 async function loadStudentsForSelection() {
     const container = document.getElementById('studentsListContainer');
     if (!container) return;
@@ -205,7 +202,6 @@ async function loadStudentsForSelection() {
     }
 }
 
-// 🌟 زر الانطلاق الرئيسي (توليد التقرير المختار)
 window.initiateReport = async function() {
     const reportType = document.getElementById('reportType').value;
     const selectedCheckboxes = document.querySelectorAll('input[name="selectedStudents"]:checked');
@@ -496,6 +492,7 @@ async function generateAssignmentsReport(studentIds, container) {
     container.innerHTML = tableHTML;
 }
 
+// 🌟 تقرير الخطة التربوية مع إصلاح ظهور التواريخ 🌟
 async function generateIEPReport(studentIds, container) {
     const teacherId = getReportUser().id;
     const teacherName = getReportUser()?.name || '';
@@ -523,7 +520,11 @@ async function generateIEPReport(studentIds, container) {
         const student = (allUsers || []).find(u => u.id == studentId);
         if (!student) return;
 
-        const completedDiagnostic = (studentTests || []).find(t => t.studentId == studentId && t.status === 'completed');
+        // جلب آخر تشخيص مكتمل
+        const completedDiagnostic = (studentTests || [])
+            .filter(t => t.studentId == studentId && t.status === 'completed')
+            .sort((a, b) => new Date(b.completedDate || b.assignedDate) - new Date(a.completedDate || a.assignedDate))[0];
+
         const originalTest = completedDiagnostic ? (allTests || []).find(t => t.id == completedDiagnostic.testId) : null;
 
         let strengthHTML = '';
@@ -618,12 +619,30 @@ async function generateIEPReport(studentIds, container) {
             needsObjects.forEach(obj => {
                 if (obj.instructionalGoals) {
                     obj.instructionalGoals.forEach((iGoal, idx) => {
-                        const lesson = (studentLessons || []).find(l => l.studentId == studentId && l.objective === iGoal);
+                        // 🌟 فلتر ذكي لمطابقة الهدف بغض النظر عن المسافات
+                        const lesson = (studentLessons || []).find(l => 
+                            l.studentId == studentId && 
+                            l.objective && 
+                            l.objective.trim() === iGoal.trim()
+                        );
+                        
                         let statusText = '-';
                         if (lesson) {
-                            if (lesson.status === 'completed' || lesson.passedByAlternative) statusText = `<span style="color:green; font-weight:bold;">${new Date(lesson.completedDate).toLocaleDateString('ar-SA')}</span>`;
-                            else if (lesson.status === 'accelerated') statusText = `<span style="color:#856404; font-weight:bold;">تجاوز (تفوق)</span>`;
-                            else statusText = '<span style="color:#475569;">جاري العمل</span>';
+                            let dStr = 'مكتمل';
+                            if (lesson.completedDate) {
+                                const d = new Date(lesson.completedDate);
+                                if (!isNaN(d)) dStr = d.toLocaleDateString('ar-SA');
+                            }
+
+                            if (lesson.status === 'completed' || lesson.passedByAlternative) {
+                                statusText = `<span style="color:green; font-weight:bold;">${dStr}</span>`;
+                            }
+                            else if (lesson.status === 'accelerated') {
+                                statusText = `<span style="color:#856404; font-weight:bold;">${dStr} (تسريع)</span>`;
+                            }
+                            else {
+                                statusText = '<span style="color:#475569;">جاري العمل</span>';
+                            }
                         }
                         
                         fullReportHTML += `
@@ -694,7 +713,7 @@ async function generateDiagnosticReport(studentIds, container) {
 
         const completedDiagnostic = (studentTests || [])
             .filter(t => t.studentId == studentId && t.status === 'completed')
-            .sort((a, b) => new Date(b.completedDate) - new Date(a.completedDate))[0];
+            .sort((a, b) => new Date(b.completedDate || b.assignedDate) - new Date(a.completedDate || a.assignedDate))[0];
         
         const originalTest = completedDiagnostic ? (allTests || []).find(t => t.id == completedDiagnostic.testId) : null;
 
@@ -724,7 +743,7 @@ async function generateDiagnosticReport(studentIds, container) {
             let totalMax = 0;
             originalTest.questions.forEach(q => totalMax += parseFloat(q.maxScore || q.passingScore || 1));
             const total = totalMax || originalTest.questions.length || 1;
-            const percent = Math.round((score / total) * 100) || score; // الاعتماد على النسبة المئوية المخزنة
+            const percent = Math.round((score / total) * 100) || score; 
 
             fullReportHTML += `
                 <div style="border:2px solid #333; padding:15px; margin:20px 0; text-align:center; background:#f0f0f0;">
@@ -733,7 +752,7 @@ async function generateDiagnosticReport(studentIds, container) {
                         الدرجة الموزونة: <span style="color:${percent >= 50 ? 'green' : 'red'}; font-weight:bold;">${percent}%</span>
                     </div>
                     <div style="font-size:0.9em; color:#555; margin-top:5px;">
-                        تاريخ الاختبار: ${new Date(completedDiagnostic.completedDate).toLocaleDateString('ar-SA')}
+                        تاريخ الاختبار: ${new Date(completedDiagnostic.completedDate || completedDiagnostic.assignedDate).toLocaleDateString('ar-SA')}
                     </div>
                 </div>
 

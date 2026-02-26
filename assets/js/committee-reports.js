@@ -1,176 +1,196 @@
-// إدارة التقارير والإحصائيات للجنة
+// ============================================
+// 📁 الملف: assets/js/committee-reports.js
+// الوصف: إدارة تقارير اللجنة مع العزل التام للبيانات (Supabase)
+// ============================================
+
 let selectedStudents = new Set();
 let currentReportStudentIds = [];
+let allFetchedStudents = []; // للاحتفاظ بالطلاب محلياً من أجل الفلترة
 
 document.addEventListener('DOMContentLoaded', function() {
     if (window.location.pathname.includes('reports.html')) {
-        initializeReportsPage();
         loadStudentsForReports();
         loadGeneratedReports();
     }
 });
 
-function initializeReportsPage() {
-    populateTeacherFilter();
-    populateGradeFilter();
+function getCurrentUser() {
+    try {
+        const session = sessionStorage.getItem('currentUser');
+        return session ? JSON.parse(session) : null;
+    } catch (e) {
+        return null;
+    }
 }
 
-function populateTeacherFilter() {
-    const teacherFilter = document.getElementById('teacherFilter');
-    const currentUser = getCurrentUser();
-    const assignedTeachers = getAssignedTeachers(currentUser.id);
-    
-    teacherFilter.innerHTML = '<option value="all">جميع المعلمين</option>';
-    
-    assignedTeachers.forEach(teacher => {
-        const option = document.createElement('option');
-        option.value = teacher.id;
-        option.textContent = teacher.name;
-        teacherFilter.appendChild(option);
-    });
-}
-
-function populateGradeFilter() {
-    const gradeFilter = document.getElementById('gradeFilter');
-    const grades = ['الصف الأول', 'الصف الثاني', 'الصف الثالث', 'الصف الرابع', 'الصف الخامس', 'الصف السادس'];
-    
-    gradeFilter.innerHTML = '<option value="all">جميع الصفوف</option>';
-    
-    grades.forEach(grade => {
-        const option = document.createElement('option');
-        option.value = grade;
-        option.textContent = grade;
-        gradeFilter.appendChild(option);
-    });
-}
-
-function loadStudentsForReports() {
+// ========================================================
+// 🛡️ 1. جلب الطلاب مع تطبيق العزل التام للبيانات
+// ========================================================
+async function loadStudentsForReports() {
     const tableBody = document.getElementById('studentsTableBody');
     const currentUser = getCurrentUser();
-    const assignedTeacherIds = getAssignedTeacherIds(currentUser.id);
     
-    // جلب جميع طلاب المعلمين المتابعين
-    const allStudents = JSON.parse(localStorage.getItem('students') || '[]');
-    const teachers = JSON.parse(localStorage.getItem('teachers') || '[]');
-    
-    const filteredStudents = allStudents.filter(student => 
-        assignedTeacherIds.includes(student.teacherId)
-    );
-    
-    if (filteredStudents.length === 0) {
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="8" style="text-align: center; padding: 40px;">
-                    <div class="empty-state">
-                        <div class="empty-icon">👨‍🎓</div>
-                        <h3>لا توجد طلاب</h3>
-                        <p>لا توجد طلاب مسجلين للمعلمين المتابعين</p>
-                    </div>
-                </td>
-            </tr>
-        `;
+    if (!tableBody || !currentUser) return;
+
+    tableBody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 20px;">جاري جلب بيانات الطلاب من السحابة...</td></tr>';
+
+    try {
+        // 🔥 العزل: المعلم المالك لهذا العضو
+        const targetTeacherId = currentUser.ownerId;
+
+        if (!targetTeacherId) {
+            tableBody.innerHTML = '<tr><td colspan="8" class="text-danger text-center">عذراً، لا يوجد معلم مرتبط بحسابك.</td></tr>';
+            return;
+        }
+
+        // جلب اسم المعلم
+        const { data: teacherData } = await window.supabase
+            .from('users')
+            .select('name')
+            .eq('id', targetTeacherId)
+            .single();
+            
+        const teacherName = teacherData ? teacherData.name : 'المعلم';
+
+        // جلب طلاب هذا المعلم فقط
+        const { data: students, error } = await window.supabase
+            .from('users')
+            .select('*')
+            .eq('role', 'student')
+            .eq('teacherId', targetTeacherId)
+            .order('id', { ascending: false });
+
+        if (error) throw error;
+
+        allFetchedStudents = students || [];
+
+        if (allFetchedStudents.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align: center; padding: 40px;">
+                        <div class="empty-state">
+                            <div class="empty-icon">👨‍🎓</div>
+                            <h3>لا يوجد طلاب</h3>
+                            <p>لم يقم المعلم (${teacherName}) بإضافة أي طلاب حتى الآن.</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        renderStudentsTable(allFetchedStudents, teacherName);
+        
+        // إخفاء فلتر المعلم لأنه لا داعي له (العضو يرى معلم واحد فقط)
+        const teacherFilterGroup = document.getElementById('teacherFilter');
+        if(teacherFilterGroup) {
+            teacherFilterGroup.innerHTML = `<option value="all">أ. ${teacherName}</option>`;
+            teacherFilterGroup.disabled = true;
+        }
+
+    } catch (e) {
+        console.error("Error loading isolated students:", e);
+        tableBody.innerHTML = '<tr><td colspan="8" class="text-danger text-center">حدث خطأ أثناء جلب الطلاب</td></tr>';
+    }
+}
+
+// رسم الجدول
+function renderStudentsTable(studentsArray, teacherName = 'المعلم') {
+    const tableBody = document.getElementById('studentsTableBody');
+    if (!tableBody) return;
+
+    if(studentsArray.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="8" class="text-center p-3 text-muted">لا يوجد طلاب يطابقون الفلتر الحالي</td></tr>';
         return;
     }
-    
-    tableBody.innerHTML = filteredStudents.map(student => {
-        const teacher = teachers.find(t => t.id === student.teacherId);
+
+    tableBody.innerHTML = studentsArray.map(student => {
         const progress = student.progress || 0;
         const progressClass = progress < 30 ? 'danger' : progress < 60 ? 'warning' : 'success';
         
         return `
-            <tr data-student-id="${student.id}" 
-                data-teacher-id="${student.teacherId}"
-                data-grade="${student.grade || ''}"
-                data-subject="${student.subject || ''}"
-                data-progress="${progress}">
+            <tr data-student-id="${student.id}">
                 <td>
                     <input type="checkbox" class="student-checkbox" 
                            value="${student.id}" 
                            onchange="toggleStudentSelection(${student.id})">
                 </td>
-                <td>${student.name}</td>
+                <td style="font-weight:bold;">${student.name}</td>
                 <td>${student.grade || 'غير محدد'}</td>
                 <td>${student.subject || 'غير محدد'}</td>
-                <td>${teacher ? teacher.name : 'غير محدد'}</td>
+                <td>${teacherName}</td>
                 <td>
-                    <div class="progress-container">
-                        <div class="progress-bar" style="width: ${progress}%; background-color: var(--${progressClass}-color);"></div>
-                        <span class="progress-text">${progress}%</span>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <span style="font-weight:bold; min-width:35px;">${progress}%</span>
+                        <div style="flex-grow:1; background:#eee; height:10px; border-radius:5px; overflow:hidden;">
+                            <div style="height:100%; width:${progress}%; background-color:var(--${progressClass}-color);"></div>
+                        </div>
                     </div>
                 </td>
-                <td>${student.lastTestDate ? formatDateShort(student.lastTestDate) : 'لا يوجد'}</td>
+                <td>${student.createdAt ? new Date(student.createdAt).toLocaleDateString('ar-SA') : '-'}</td>
                 <td>
-                    <div class="action-buttons">
-                        <button class="btn btn-sm btn-primary" onclick="viewStudentReport(${student.id})">
-                            <span class="btn-icon">👁️</span>
-                        </button>
-                        <button class="btn btn-sm btn-success" onclick="generateStudentReport(${student.id})">
-                            <span class="btn-icon">📄</span>
-                        </button>
-                    </div>
+                    <button class="btn btn-sm btn-success" onclick="generateStudentReport(${student.id})">
+                        <i class="fas fa-file-alt"></i> تقرير
+                    </button>
                 </td>
             </tr>
         `;
     }).join('');
+    
+    // تصفير التحديد
+    selectedStudents.clear();
+    updateSelectedCount();
+    const selectAllCb = document.getElementById('selectAllCheckbox');
+    if(selectAllCb) selectAllCb.checked = false;
 }
 
+// الفلترة المحلية
 function filterStudents() {
-    const teacherFilter = document.getElementById('teacherFilter').value;
     const gradeFilter = document.getElementById('gradeFilter').value;
     const subjectFilter = document.getElementById('subjectFilter').value;
     const progressFilter = document.getElementById('progressFilter').value;
     
-    const rows = document.querySelectorAll('#studentsTableBody tr[data-student-id]');
-    
-    rows.forEach(row => {
-        const teacherId = row.getAttribute('data-teacher-id');
-        const grade = row.getAttribute('data-grade');
-        const subject = row.getAttribute('data-subject');
-        const progress = parseInt(row.getAttribute('data-progress'));
+    const filtered = allFetchedStudents.filter(student => {
+        let match = true;
         
-        let showRow = true;
+        if (gradeFilter !== 'all' && student.grade !== gradeFilter) match = false;
+        if (subjectFilter !== 'all' && student.subject !== subjectFilter) match = false;
         
-        // فلترة حسب المعلم
-        if (teacherFilter !== 'all' && teacherFilter !== teacherId) {
-            showRow = false;
-        }
-        
-        // فلترة حسب الصف
-        if (gradeFilter !== 'all' && gradeFilter !== grade) {
-            showRow = false;
-        }
-        
-        // فلترة حسب المادة
-        if (subjectFilter !== 'all' && subjectFilter !== subject) {
-            showRow = false;
-        }
-        
-        // فلترة حسب نسبة التقدم
         if (progressFilter !== 'all') {
+            const progress = student.progress || 0;
             const [min, max] = progressFilter.split('-').map(Number);
-            if (progress < min || progress > max) {
-                showRow = false;
-            }
+            if (progress < min || progress > max) match = false;
         }
         
-        row.style.display = showRow ? '' : 'none';
+        return match;
     });
+
+    renderStudentsTable(filtered, document.getElementById('teacherFilter').options[0].text.replace('أ. ', ''));
 }
 
-function toggleSelectAll() {
+// ========================================================
+// 🔄 2. دوال التحديد
+// ========================================================
+
+function toggleSelectAll(forceState = null) {
     const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-    const checkboxes = document.querySelectorAll('.student-checkbox:visible');
+    let isChecked = forceState !== null ? forceState : (selectAllCheckbox ? selectAllCheckbox.checked : true);
+    
+    if(selectAllCheckbox && forceState !== null) selectAllCheckbox.checked = forceState;
+
+    const checkboxes = document.querySelectorAll('.student-checkbox');
     
     checkboxes.forEach(checkbox => {
-        checkbox.checked = selectAllCheckbox.checked;
+        checkbox.checked = isChecked;
         const studentId = parseInt(checkbox.value);
+        const row = checkbox.closest('tr');
         
-        if (checkbox.checked) {
+        if (isChecked) {
             selectedStudents.add(studentId);
-            checkbox.closest('tr').classList.add('selected');
+            if(row) row.classList.add('selected');
         } else {
             selectedStudents.delete(studentId);
-            checkbox.closest('tr').classList.remove('selected');
+            if(row) row.classList.remove('selected');
         }
     });
     
@@ -179,208 +199,139 @@ function toggleSelectAll() {
 
 function toggleStudentSelection(studentId) {
     const checkbox = document.querySelector(`.student-checkbox[value="${studentId}"]`);
-    const row = checkbox.closest('tr');
+    const row = checkbox ? checkbox.closest('tr') : null;
     
-    if (checkbox.checked) {
+    if (checkbox && checkbox.checked) {
         selectedStudents.add(studentId);
-        row.classList.add('selected');
+        if(row) row.classList.add('selected');
     } else {
         selectedStudents.delete(studentId);
-        row.classList.remove('selected');
+        if(row) row.classList.remove('selected');
     }
     
     updateSelectedCount();
-    updateSelectAllCheckbox();
+    
+    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+    const allVisible = document.querySelectorAll('.student-checkbox').length;
+    const allChecked = document.querySelectorAll('.student-checkbox:checked').length;
+    
+    if(selectAllCheckbox) {
+        selectAllCheckbox.checked = (allVisible > 0 && allVisible === allChecked);
+    }
 }
 
 function selectAllStudents() {
-    const checkboxes = document.querySelectorAll('.student-checkbox:visible');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = true;
-        const studentId = parseInt(checkbox.value);
-        selectedStudents.add(studentId);
-        checkbox.closest('tr').classList.add('selected');
-    });
-    
-    updateSelectedCount();
-    updateSelectAllCheckbox();
+    toggleSelectAll(true);
 }
 
 function updateSelectedCount() {
     const count = selectedStudents.size;
-    const generateBtn = document.querySelector('.btn-success');
+    const generateBtn = document.querySelector('.btn-generate') || document.querySelector('.btn-success[onclick*="generateReportForSelected"]');
     
     if (generateBtn) {
-        generateBtn.textContent = count > 0 ? 
-            `توليد تقرير (${count} طالب)` : 
-            'توليد تقرير للمحددين';
+        generateBtn.innerHTML = count > 0 ? 
+            `<i class="fas fa-print"></i> توليد تقرير (${count} طالب)` : 
+            `<i class="fas fa-print"></i> توليد تقرير للمحددين`;
     }
 }
 
-function updateSelectAllCheckbox() {
-    const selectAllCheckbox = document.getElementById('selectAllCheckbox');
-    const visibleCheckboxes = document.querySelectorAll('.student-checkbox:visible');
-    const checkedVisibleCheckboxes = document.querySelectorAll('.student-checkbox:visible:checked');
-    
-    selectAllCheckbox.checked = visibleCheckboxes.length > 0 && 
-                               visibleCheckboxes.length === checkedVisibleCheckboxes.length;
-    selectAllCheckbox.indeterminate = checkedVisibleCheckboxes.length > 0 && 
-                                     checkedVisibleCheckboxes.length < visibleCheckboxes.length;
-}
+// ========================================================
+// 📊 3. توليد التقارير
+// ========================================================
 
 function generateReportForSelected() {
     if (selectedStudents.size === 0) {
-        showAuthNotification('يرجى تحديد طلاب لإنشاء تقرير لهم', 'warning');
-        return;
+        return window.showAuthNotification ? showAuthNotification('يرجى تحديد طالب واحد على الأقل', 'error') : alert('يرجى تحديد طلاب');
     }
-    
     currentReportStudentIds = Array.from(selectedStudents);
     showReportOptions();
-}
-
-function showReportOptions() {
-    document.getElementById('reportOptionsSection').style.display = 'block';
-    document.getElementById('reportOptionsSection').scrollIntoView({ behavior: 'smooth' });
-}
-
-function hideReportOptions() {
-    document.getElementById('reportOptionsSection').style.display = 'none';
-    currentReportStudentIds = [];
-}
-
-function generateReport() {
-    const reportType = document.querySelector('input[name="reportType"]:checked').value;
-    const reportFormat = document.querySelector('input[name="reportFormat"]:checked').value;
-    const reportNotes = document.getElementById('reportNotes').value;
-    
-    if (currentReportStudentIds.length === 0) {
-        showAuthNotification('لم يتم تحديد طلاب', 'error');
-        return;
-    }
-    
-    showAuthNotification('جاري إنشاء التقرير...', 'info');
-    
-    setTimeout(() => {
-        const currentUser = getCurrentUser();
-        
-        // حفظ التقرير في قاعدة البيانات
-        const committeeReports = JSON.parse(localStorage.getItem('committeeReports') || '[]');
-        const reportId = generateId();
-        
-        const newReport = {
-            id: reportId,
-            committeeId: currentUser.id,
-            studentIds: currentReportStudentIds,
-            reportType: reportType,
-            format: reportFormat,
-            notes: reportNotes,
-            createdAt: new Date().toISOString(),
-            status: 'generated'
-        };
-        
-        committeeReports.push(newReport);
-        localStorage.setItem('committeeReports', JSON.stringify(committeeReports));
-        
-        // إضافة نشاط
-        addCommitteeActivity({
-            type: 'report',
-            title: 'أنشأت تقريراً',
-            description: `تقرير ${getReportTypeName(reportType)} لـ ${currentReportStudentIds.length} طالب`
-        });
-        
-        // عرض التقرير
-        showGeneratedReport(reportId);
-        
-        showAuthNotification('تم إنشاء التقرير بنجاح', 'success');
-        hideReportOptions();
-        selectedStudents.clear();
-        resetCheckboxes();
-        loadGeneratedReports();
-        updateCommitteeStats();
-    }, 2000);
-}
-
-function showGeneratedReport(reportId) {
-    const reports = JSON.parse(localStorage.getItem('committeeReports') || '[]');
-    const report = reports.find(r => r.id === reportId);
-    
-    if (!report) {
-        showAuthNotification('التقرير غير موجود', 'error');
-        return;
-    }
-    
-    document.getElementById('reportModalTitle').textContent = `تقرير ${getReportTypeName(report.reportType)}`;
-    
-    // بناء معاينة التقرير
-    const students = JSON.parse(localStorage.getItem('students') || '[]');
-    const selectedStudents = students.filter(s => report.studentIds.includes(s.id));
-    
-    document.getElementById('reportPreview').innerHTML = `
-        <div class="report-preview-content">
-            <h4>معلومات التقرير:</h4>
-            <p><strong>نوع التقرير:</strong> ${getReportTypeName(report.reportType)}</p>
-            <p><strong>عدد الطلاب:</strong> ${selectedStudents.length} طالب</p>
-            <p><strong>تاريخ الإنشاء:</strong> ${formatDate(report.createdAt)}</p>
-            <p><strong>التنسيق:</strong> ${report.format.toUpperCase()}</p>
-            ${report.notes ? `<p><strong>ملاحظات:</strong> ${report.notes}</p>` : ''}
-            
-            <h4>الطلاب المشمولين:</h4>
-            <ul>
-                ${selectedStudents.map(student => `
-                    <li>${student.name} - ${student.grade || 'غير محدد'} - ${student.subject || 'غير محدد'}</li>
-                `).join('')}
-            </ul>
-            
-            <h4>محتوى التقرير:</h4>
-            ${generateReportContent(report.reportType, selectedStudents)}
-            
-            <div class="report-footer">
-                <p>تم إنشاء التقرير من منصة ميسر التعلم للأستاذ / صالح عبد العزيز عبدالله العجلان</p>
-            </div>
-        </div>
-    `;
-    
-    document.getElementById('viewReportModal').classList.add('show');
-}
-
-function closeReportModal() {
-    document.getElementById('viewReportModal').classList.remove('show');
-}
-
-function printReport() {
-    window.print();
-}
-
-function downloadReport() {
-    showAuthNotification('جاري تحميل التقرير...', 'info');
-    
-    setTimeout(() => {
-        showAuthNotification('تم تحميل التقرير بنجاح', 'success');
-        // في تطبيق حقيقي، سيتم تنزيل ملف PDF أو Excel
-    }, 1500);
-}
-
-function viewStudentReport(studentId) {
-    const student = getStudentById(studentId);
-    
-    if (!student) {
-        showAuthNotification('الطالب غير موجود', 'error');
-        return;
-    }
-    
-    // توجيه إلى نموذج عرض تقرير الطالب المفرد
-    showGeneratedReportForSingleStudent(student);
 }
 
 function generateStudentReport(studentId) {
     selectedStudents.clear();
     selectedStudents.add(studentId);
     currentReportStudentIds = [studentId];
+    
+    const checkboxes = document.querySelectorAll('.student-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = parseInt(cb.value) === studentId;
+        const row = cb.closest('tr');
+        if(cb.checked) row.classList.add('selected'); else row.classList.remove('selected');
+    });
+    
+    updateSelectedCount();
     showReportOptions();
+}
+
+function showReportOptions() {
+    const optionsSection = document.getElementById('reportOptionsSection');
+    if(optionsSection) {
+        optionsSection.style.display = 'block';
+        optionsSection.scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+function hideReportOptions() {
+    const optionsSection = document.getElementById('reportOptionsSection');
+    if(optionsSection) optionsSection.style.display = 'none';
+}
+
+// 🌟 الدالة التي تستدعي محرك التقارير الرئيسي من (reports.js)
+window.initiateReport = window.memberGenerateReport = async function() {
+    const reportType = document.querySelector('input[name="reportType"]:checked')?.value || document.getElementById('reportType')?.value || document.getElementById('memberReportType')?.value;
+    
+    let studentIdsToProcess = currentReportStudentIds;
+    if(studentIdsToProcess.length === 0) {
+        const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+        studentIdsToProcess = Array.from(checkboxes).map(cb => cb.value);
+    }
+
+    if (!reportType) return alert("الرجاء اختيار نوع التقرير.");
+    if (studentIdsToProcess.length === 0) return alert("الرجاء اختيار طالب واحد على الأقل.");
+
+    const previewArea = document.getElementById('reportPreviewArea');
+    if(!previewArea) return;
+    
+    previewArea.innerHTML = '<div class="text-center p-5"><h3><i class="fas fa-spinner fa-spin"></i> جاري استخراج البيانات من السحابة...</h3></div>'; 
+    
+    try {
+        // يتم استدعاء دوال التوليد من ملف reports.js المحمل في نفس الصفحة
+        if (reportType === 'attendance' && typeof generateAttendanceReport === 'function') await generateAttendanceReport(studentIdsToProcess, previewArea);
+        else if (reportType === 'achievement' && typeof generateAchievementReport === 'function') await generateAchievementReport(studentIdsToProcess, previewArea);
+        else if (reportType === 'assignments' && typeof generateAssignmentsReport === 'function') await generateAssignmentsReport(studentIdsToProcess, previewArea);
+        else if (reportType === 'iep' && typeof generateIEPReport === 'function') await generateIEPReport(studentIdsToProcess, previewArea);
+        else if (reportType === 'diagnostic' && typeof generateDiagnosticReport === 'function') await generateDiagnosticReport(studentIdsToProcess, previewArea);
+        else if (reportType === 'schedule' && typeof generateScheduleReport === 'function') await generateScheduleReport(studentIdsToProcess, previewArea);
+        else if (reportType === 'balance' && typeof generateCreditReport === 'function') await generateCreditReport(studentIdsToProcess, previewArea);
+        else previewArea.innerHTML = `<div class="alert alert-warning">نظام التقارير غير متصل بشكل صحيح. يرجى التأكد من توفر ملف reports.js</div>`;
+        
+        // حفظ سجل التقرير
+        saveReportLog(reportType, studentIdsToProcess.length);
+        loadGeneratedReports();
+        
+    } catch (e) {
+        console.error(e);
+        previewArea.innerHTML = `<div class="alert alert-danger">حدث خطأ أثناء بناء التقرير.</div>`;
+    }
+};
+
+function saveReportLog(type, count) {
+    const currentUser = getCurrentUser();
+    const committeeReports = JSON.parse(localStorage.getItem('committeeReports') || '[]');
+    committeeReports.push({
+        id: Date.now(),
+        committeeId: currentUser.id,
+        reportType: type,
+        studentCount: count,
+        createdAt: new Date().toISOString()
+    });
+    localStorage.setItem('committeeReports', JSON.stringify(committeeReports));
 }
 
 function loadGeneratedReports() {
     const reportsList = document.getElementById('generatedReportsList');
+    if(!reportsList) return;
+    
     const currentUser = getCurrentUser();
     const committeeReports = JSON.parse(localStorage.getItem('committeeReports') || '[]');
     
@@ -391,172 +342,35 @@ function loadGeneratedReports() {
     
     if (userReports.length === 0) {
         reportsList.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-icon">📋</div>
-                <h3>لا توجد تقارير منشأة</h3>
-                <p>سيظهر هنا تاريخ تقاريرك بعد إنشائها</p>
+            <div class="empty-state" style="text-align:center; padding:20px; color:#777;">
+                <div style="font-size:2rem; margin-bottom:10px;">📋</div>
+                <p>لا توجد تقارير منشأة مسبقاً</p>
             </div>
         `;
         return;
     }
     
+    const typeNames = { 'attendance':'الغياب', 'achievement':'الإنجاز', 'assignments':'الواجبات', 'iep':'الخطط الفردية', 'diagnostic':'الاختبار التشخيصي', 'schedule':'الجدول الدراسي', 'balance': 'رصيد الحصص' };
+
     reportsList.innerHTML = userReports.map(report => {
-        const students = JSON.parse(localStorage.getItem('students') || '[]');
-        const reportStudents = students.filter(s => report.studentIds.includes(s.id));
-        const isUrgent = report.notes && report.notes.toLowerCase().includes('عاجل');
-        
         return `
-            <div class="report-item ${isUrgent ? 'urgent' : ''}">
-                <div class="report-info">
-                    <div class="report-title">تقرير ${getReportTypeName(report.reportType)}</div>
-                    <div class="report-meta">
-                        <span>${reportStudents.length} طالب</span>
-                        <span>${formatDate(report.createdAt)}</span>
-                        <span>${report.format.toUpperCase()}</span>
-                        ${isUrgent ? '<span class="status-badge status-urgent">عاجل</span>' : ''}
+            <div style="background: #f8f9fa; border: 1px solid #eee; border-radius: 8px; padding: 15px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <div style="font-weight: bold; color: #2c3e50; margin-bottom: 5px;">تقرير ${typeNames[report.reportType] || 'عام'}</div>
+                    <div style="font-size: 0.85rem; color: #666;">
+                        <span style="margin-left: 15px;"><i class="fas fa-users"></i> ${report.studentCount} طلاب</span>
+                        <span><i class="far fa-clock"></i> ${new Date(report.createdAt).toLocaleDateString('ar-SA')} - ${new Date(report.createdAt).toLocaleTimeString('ar-SA')}</span>
                     </div>
                 </div>
-                <div class="report-actions">
-                    <button class="btn btn-sm btn-primary" onclick="showGeneratedReport(${report.id})">
-                        عرض
-                    </button>
-                    <button class="btn btn-sm btn-secondary" onclick="deleteReport(${report.id})">
-                        حذف
-                    </button>
-                </div>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteReportLog(${report.id})"><i class="fas fa-trash"></i></button>
             </div>
         `;
     }).join('');
 }
 
-function deleteReport(reportId) {
-    if (!confirm('هل أنت متأكد من حذف هذا التقرير؟')) {
-        return;
-    }
-    
-    const committeeReports = JSON.parse(localStorage.getItem('committeeReports') || '[]');
-    const updatedReports = committeeReports.filter(r => r.id !== reportId);
-    
-    localStorage.setItem('committeeReports', JSON.stringify(updatedReports));
-    
-    showAuthNotification('تم حذف التقرير بنجاح', 'success');
+window.deleteReportLog = function(id) {
+    let committeeReports = JSON.parse(localStorage.getItem('committeeReports') || '[]');
+    committeeReports = committeeReports.filter(cr => cr.id !== id);
+    localStorage.setItem('committeeReports', JSON.stringify(committeeReports));
     loadGeneratedReports();
-    updateCommitteeStats();
-}
-
-function resetCheckboxes() {
-    document.getElementById('selectAllCheckbox').checked = false;
-    const checkboxes = document.querySelectorAll('.student-checkbox');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = false;
-        checkbox.closest('tr').classList.remove('selected');
-    });
-    updateSelectedCount();
-}
-
-// دوال مساعدة
-function getAssignedTeacherIds(committeeId) {
-    const committeeTeachers = JSON.parse(localStorage.getItem('committeeTeachers') || '[]');
-    return committeeTeachers
-        .filter(ct => ct.committeeId === committeeId)
-        .map(ct => ct.teacherId);
-}
-
-function getStudentById(studentId) {
-    const students = JSON.parse(localStorage.getItem('students') || '[]');
-    return students.find(s => s.id === studentId);
-}
-
-function getReportTypeName(reportType) {
-    const types = {
-        'studentData': 'بيانات الطالب',
-        'diagnosticTest': 'الاختبار التشخيصي',
-        'iep': 'الخطة التربوية الفردية',
-        'assignments': 'الواجبات'
-    };
-    return types[reportType] || 'غير محدد';
-}
-
-function generateReportContent(reportType, students) {
-    switch (reportType) {
-        case 'studentData':
-            return `
-                <table class="preview-table">
-                    <thead>
-                        <tr>
-                            <th>اسم الطالب</th>
-                            <th>الصف</th>
-                            <th>المادة</th>
-                            <th>نسبة التقدم</th>
-                            <th>آخر دخول</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${students.map(student => `
-                            <tr>
-                                <td>${student.name}</td>
-                                <td>${student.grade || 'غير محدد'}</td>
-                                <td>${student.subject || 'غير محدد'}</td>
-                                <td>${student.progress || 0}%</td>
-                                <td>${student.lastLogin ? formatDateShort(student.lastLogin) : 'لا يوجد'}</td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
-            `;
-            
-        case 'diagnosticTest':
-            return `<p>تقرير يحتوي على نتائج الاختبارات التشخيصية للطلاب المحددين.</p>`;
-            
-        case 'iep':
-            return `<p>تقرير يحتوي على الخطط التربوية الفردية للطلاب المحددين.</p>`;
-            
-        case 'assignments':
-            return `<p>تقرير يحتوي على أداء الطلاب في الواجبات المطلوبة.</p>`;
-            
-        default:
-            return `<p>تقرير عام عن أداء الطلاب.</p>`;
-    }
-}
-
-function showGeneratedReportForSingleStudent(student) {
-    document.getElementById('reportModalTitle').textContent = `تقرير ${student.name}`;
-    
-    document.getElementById('reportPreview').innerHTML = `
-        <div class="report-preview-content">
-            <h4>بيانات الطالب:</h4>
-            <table class="preview-table">
-                <tr><td>الاسم</td><td>${student.name}</td></tr>
-                <tr><td>الصف</td><td>${student.grade || 'غير محدد'}</td></tr>
-                <tr><td>المادة</td><td>${student.subject || 'غير محدد'}</td></tr>
-                <tr><td>نسبة التقدم</td><td>${student.progress || 0}%</td></tr>
-                <tr><td>تاريخ التسجيل</td><td>${student.createdAt ? formatDate(student.createdAt) : 'غير محدد'}</td></tr>
-            </table>
-            
-            <h4>الأداء الدراسي:</h4>
-            <p>محتوى تفصيلي عن أداء الطالب...</p>
-            
-            <div class="report-footer">
-                <p>تم إنشاء التقرير من منصة ميسر التعلم للأستاذ / صالح عبد العزيز عبدالله العجلان</p>
-            </div>
-        </div>
-    `;
-    
-    document.getElementById('viewReportModal').classList.add('show');
-}
-
-// تصدير الدوال للاستخدام العالمي
-window.toggleSelectAll = toggleSelectAll;
-window.toggleStudentSelection = toggleStudentSelection;
-window.selectAllStudents = selectAllStudents;
-window.generateReportForSelected = generateReportForSelected;
-window.hideReportOptions = hideReportOptions;
-window.generateReport = generateReport;
-window.closeReportModal = closeReportModal;
-window.printReport = printReport;
-window.downloadReport = downloadReport;
-window.viewStudentReport = viewStudentReport;
-window.generateStudentReport = generateStudentReport;
-window.deleteReport = deleteReport;
-window.filterStudents = filterStudents;
-
+};

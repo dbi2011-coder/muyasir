@@ -1,39 +1,47 @@
 // ============================================
 // 📁 الملف: assets/js/auth.js
-// الوصف: نظام الدخول وإدارة الجلسات (نسختك المحلية الأصلية)
+// الوصف: نظام الدخول وإدارة الجلسات (نسختك المحلية الآمنة 100%)
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
+    // 1. التقاط نموذج الإرسال (Form) لمنع تحديث الصفحة
     const form = document.querySelector('form');
-    
-    // 1. إصلاح زر الدخول لمنع تحديث الصفحة عند الضغط على زر (دخول) أو مفتاح Enter
     if (form) {
         form.addEventListener('submit', function(e) {
             e.preventDefault(); 
-            login();
+            window.login();
         });
-    } else {
-        const loginBtn = document.querySelector('button');
-        if(loginBtn && (loginBtn.innerText.includes('دخول') || loginBtn.innerText.includes('Login'))) {
-            const newBtn = loginBtn.cloneNode(true);
-            loginBtn.parentNode.replaceChild(newBtn, loginBtn);
-            newBtn.type = 'button';
-            newBtn.addEventListener('click', login);
-        }
     }
+
+    // 2. التقاط زر الدخول بشكل مباشر كإجراء احتياطي
+    const buttons = document.querySelectorAll('button');
+    buttons.forEach(btn => {
+        if (btn.innerText.includes('دخول') || btn.innerText.includes('تسجيل')) {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.login();
+            });
+        }
+    });
     
-    // 2. التحقق من الجلسة
+    // 3. التحقق من الجلسة في الصفحات الداخلية
     if (!window.location.href.includes('index.html') && !window.location.href.includes('login.html')) {
         checkAuth();
     }
 });
 
 // ============================================
-// 🔐 دالة تسجيل الدخول
+// 🔐 دالة تسجيل الدخول الموحدة
 // ============================================
-function login() {
-    const userInp = document.getElementById('username').value.trim();
-    const passInp = document.getElementById('password').value.trim();
+window.login = function() {
+    const userEl = document.getElementById('username');
+    const passEl = document.getElementById('password');
+
+    // التأكد من أننا في صفحة الدخول لتجنب الأخطاء
+    if (!userEl || !passEl) return;
+
+    const userInp = userEl.value.trim();
+    const passInp = passEl.value.trim();
 
     // التحقق من إدخال البيانات
     if (!userInp || !passInp) {
@@ -44,16 +52,16 @@ function login() {
     // جلب المستخدمين من التخزين المحلي
     let users = JSON.parse(localStorage.getItem('users') || '[]');
     
-    // إنشاء مستخدم أدمن افتراضي إذا لم يوجد
+    // إنشاء حساب المدير (المالك) الافتراضي إذا لم يكن موجوداً
     if (!users.some(u => u.role === 'admin')) {
         users.push({ id: 1, name: "مدير النظام", username: "Zooro12500", password: "430106043", role: "admin", status: "active" });
         localStorage.setItem('users', JSON.stringify(users));
     }
 
-    // 🔥 البحث مع تجاهل حالة الأحرف في اسم المستخدم (لحل مشكلة دخول المدير والمعلمين)
-    let user = users.find(u => u.username.toLowerCase() === userInp.toLowerCase() && u.password === passInp);
+    // 🔥 البحث مع تجاهل حالة الأحرف في اسم المستخدم (دعم حروف كبيرة/صغيرة)
+    let user = users.find(u => String(u.username).toLowerCase() === String(userInp).toLowerCase() && String(u.password) === String(passInp));
 
-    // التحقق من حالة الحساب
+    // التحقق من حالة حساب المدير أو المعلم أو الطالب
     if (user) {
         if (user.status === 'suspended' || user.status === 'موقوف') {
             showAuthNotification("⛔ عذراً، تم إيقاف حسابك. يرجى مراجعة الإدارة.", "error");
@@ -61,31 +69,37 @@ function login() {
         }
     }
 
-    // البحث في أعضاء اللجنة إذا لم يتم العثور عليه في المستخدمين الأساسيين
+    // 🔥 البحث في أعضاء اللجنة إذا لم يتم العثور عليه في المستخدمين الأساسيين
     if (!user) {
         const committeeMembers = JSON.parse(localStorage.getItem('committeeMembers') || '[]');
-        const member = committeeMembers.find(m => m.username.toLowerCase() === userInp.toLowerCase() && m.password === passInp);
+        const member = committeeMembers.find(m => String(m.username).toLowerCase() === String(userInp).toLowerCase() && String(m.password) === String(passInp));
         
         if (member) {
             user = {
-                id: member.id, name: member.name, username: member.username, role: 'committee_member', title: member.role, status: 'active', ownerId: member.ownerId 
+                id: member.id, 
+                name: member.name, 
+                username: member.username, 
+                role: 'committee_member', 
+                title: member.role, 
+                status: 'active', 
+                ownerId: member.ownerId 
             };
         }
     }
 
-    // 🔥 التوجيه السليم لكل مستخدم للمسار الخاص به
+    // التوجيه السليم لكل مستخدم للمسار الخاص به
     if (user) {
         sessionStorage.setItem('currentUser', JSON.stringify(user));
         let prefix = window.location.href.includes('/pages/') ? '../' : 'pages/';
         
         if (user.role === 'admin') window.location.href = prefix + 'admin/dashboard.html';
         else if (user.role === 'teacher') window.location.href = prefix + 'teacher/dashboard.html';
-        else if (user.role === 'committee_member') window.location.href = prefix + 'member/dashboard.html'; // التوجيه الصحيح لمجلد اللجنة الخاص بك
+        else if (user.role === 'committee_member') window.location.href = prefix + 'member/dashboard.html'; // التوجيه للنموذج الصحيح للجنة
         else window.location.href = prefix + 'student/dashboard.html';
     } else {
         showAuthNotification("بيانات الدخول غير صحيحة!", "error");
     }
-}
+};
 
 // ============================================
 // 🔔 نظام الإشعارات (Toast Notifications)
@@ -133,26 +147,20 @@ window.showAuthNotification = function(message, type) {
 // ============================================
 // 🛠️ دوال مساعدة (Helpers)
 // ============================================
-function checkAuth() {
+window.checkAuth = function() {
     const session = sessionStorage.getItem('currentUser');
     if (!session) { 
         window.location.href = '../../index.html'; 
         return null; 
     }
     return JSON.parse(session);
-}
+};
 
-function logout() {
+window.logout = function() {
     sessionStorage.removeItem('currentUser');
     window.location.href = '../../index.html';
-}
+};
 
-function getCurrentUser() { 
+window.getCurrentUser = function() { 
     return JSON.parse(sessionStorage.getItem('currentUser') || 'null'); 
-}
-
-// تصدير الدوال للنطاق العام (Global Scope)
-window.login = login;
-window.checkAuth = checkAuth;
-window.logout = logout;
-window.getCurrentUser = getCurrentUser;
+};

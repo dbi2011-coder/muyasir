@@ -1,9 +1,13 @@
 // ============================================
-// 📁 المسار: assets/js/member.js (نسخة Supabase)
-// الوصف: لوحة عضو اللجنة (الاجتماعات والمحاضر)
+// 📁 المسار: assets/js/member.js
+// الوصف: لوحة عضو اللجنة الحديثة (مع المرئيات والتوقيع - تعمل على IndexedDB المحلي)
 // ============================================
 
-let canvas, ctx, isDrawing=false, hasSigned=false, lastX=0, lastY=0;
+const DB_NAME = 'CommitteeAppDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'meetings';
+let db;
+let canvas, ctx, isDrawing = false, hasSigned = false, lastX = 0, lastY = 0;
 let currentMeetingId = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
@@ -13,6 +17,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     if(document.getElementById('memberNameDisplay')) document.getElementById('memberNameDisplay').textContent = 'أ/ ' + user.name;
     if(document.getElementById('memberRoleDisplay')) document.getElementById('memberRoleDisplay').textContent = user.title || user.role;
 
+    await openDB();
     await loadMyMeetings();
     loadMemberStudentsMultiSelect(); 
     setupSignaturePadEvents();
@@ -24,26 +29,49 @@ document.addEventListener('DOMContentLoaded', async function() {
     });
 });
 
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        };
+        request.onsuccess = (e) => { db = e.target.result; resolve(db); };
+        request.onerror = (e) => reject('خطأ DB');
+    });
+}
+function dbGetAll() { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readonly'); const r = tx.objectStore(STORE_NAME).getAll(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+function dbGet(id) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readonly'); const r = tx.objectStore(STORE_NAME).get(id); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
+function dbPut(item) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readwrite'); const r = tx.objectStore(STORE_NAME).put(item); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
+
 function getCurrentUser() { try { return JSON.parse(sessionStorage.getItem('currentUser')); } catch (e) { return null; } }
 
 function switchMemberTab(tabName) {
     ['meetings', 'reports'].forEach(sec => {
-        document.getElementById(`section-${sec}`).classList.remove('active');
-        document.getElementById(`link-${sec}`).classList.remove('active');
+        const section = document.getElementById(`section-${sec}`);
+        const link = document.getElementById(`link-${sec}`);
+        if(section) section.classList.remove('active');
+        if(link) link.classList.remove('active');
     });
-    document.getElementById(`section-${tabName}`).classList.add('active');
-    document.getElementById(`link-${tabName}`).classList.add('active');
+    const targetSec = document.getElementById(`section-${tabName}`);
+    const targetLink = document.getElementById(`link-${tabName}`);
+    if(targetSec) targetSec.classList.add('active');
+    if(targetLink) targetLink.classList.add('active');
 }
 
+// ============================================
+// 📅 عرض الاجتماعات والمحاضر
+// ============================================
 async function loadMyMeetings() {
     const user = getCurrentUser();
     const container = document.getElementById('myMeetingsContainer');
-    try {
-        // جلب الاجتماعات التي تحتوي رقم عضو اللجنة في مصفوفة المدعوين
-        const { data: meetings, error } = await window.supabase.from('meetings').select('*');
-        if (error) throw error;
+    if (!container) return;
 
-        const myMeetings = (meetings || []).filter(m => m.attendees && m.attendees.includes(user.id));
+    try {
+        const meetings = await dbGetAll();
+        // تصفية الاجتماعات لتظهر فقط التي دُعي إليها هذا العضو
+        const myMeetings = meetings.filter(m => m.attendees && m.attendees.includes(user.id));
+        
         if (myMeetings.length === 0) { container.innerHTML = '<div class="alert alert-info">لا توجد اجتماعات مجدولة لك حالياً.</div>'; return; }
         
         myMeetings.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -59,12 +87,13 @@ async function loadMyMeetings() {
     } catch(e) { console.error(e); container.innerHTML = '<div class="alert alert-danger">خطأ في التحميل</div>'; }
 }
 
+// 🔥 النافذة الحديثة (فيها المرئيات والتوقيع) 🔥
 async function openSigningModal(id) {
     currentMeetingId = id;
     const user = getCurrentUser();
     try {
-        const { data: meeting, error } = await window.supabase.from('meetings').select('*').eq('id', id).single();
-        if (error || !meeting) return;
+        const meeting = await dbGet(id);
+        if (!meeting) return;
 
         document.getElementById('signModalTitle').textContent = meeting.title;
         
@@ -81,6 +110,7 @@ async function openSigningModal(id) {
         const isSigned = meeting.signatures && meeting.signatures[user.id];
 
         if (!isSigned) {
+            // التصويتات
             if(meeting.polls && meeting.polls.length > 0) {
                 html += `<hr><h5 style="color:#007bff;">📊 يرجى التصويت:</h5>`;
                 meeting.polls.forEach(poll => {
@@ -90,8 +120,9 @@ async function openSigningModal(id) {
                 });
             }
 
+            // 🌟 المرئيات المطلوبة عن الطلاب (الميزة الحديثة) 🌟
             if(meeting.requestedFeedback && meeting.requestedFeedback.length > 0) {
-                html += `<hr><h5 style="color:#28a745;">👨‍🎓 مرئياتك عن الطلاب:</h5>`;
+                html += `<hr><h5 style="color:#28a745;">👨‍🎓 مرئياتك وتوصياتك عن الطلاب:</h5>`;
                 meeting.requestedFeedback.forEach(req => {
                     html += `
                     <div class="student-feedback-card">
@@ -133,7 +164,7 @@ async function submitSignature() {
     const user = getCurrentUser();
     
     try {
-        const { data: meeting } = await window.supabase.from('meetings').select('*').eq('id', currentMeetingId).single();
+        const meeting = await dbGet(currentMeetingId);
         if(!meeting) return;
 
         const pollResponses = {};
@@ -157,12 +188,13 @@ async function submitSignature() {
         }
 
         const note = document.getElementById('memberNoteInput').value;
-        const signatureImage = canvas.toDataURL('image/png'); // حفظ التوقيع كصورة نصية
+        const signatureImage = canvas.toDataURL('image/png'); 
 
         let sigs = meeting.signatures || {};
         sigs[user.id] = { name: user.name, date: new Date().toISOString(), image: signatureImage, note: note, pollResponses: pollResponses, feedbackResponses: feedbackResponses };
 
-        await window.supabase.from('meetings').update({ signatures: sigs }).eq('id', currentMeetingId);
+        meeting.signatures = sigs;
+        await dbPut(meeting);
         
         document.getElementById('signMeetingModal').classList.remove('show'); 
         loadMyMeetings(); 
@@ -181,13 +213,17 @@ function stopDrawing() { isDrawing=false; }
 function clearSignaturePad() { ctx.clearRect(0,0,canvas.width,canvas.height); hasSigned=false; }
 function getPos(e) { const r=canvas.getBoundingClientRect(); return {x:(e.touches?e.touches[0].clientX:e.clientX)-r.left, y:(e.touches?e.touches[0].clientY:e.clientY)-r.top}; }
 
-async function loadMemberStudentsMultiSelect() { 
+// ============================================
+// 📊 قسم التقارير داخل حساب اللجنة
+// ============================================
+function loadMemberStudentsMultiSelect() { 
     const list = document.getElementById('studentOptionsList'); 
     if(!list) return; 
     
     const user = getCurrentUser(); 
     try {
-        const { data: st } = await window.supabase.from('users').select('*').eq('role', 'student').eq('teacherId', user.ownerId);
+        const allUsers = JSON.parse(localStorage.getItem('users') || '[]');
+        const st = allUsers.filter(u => u.role === 'student' && u.teacherId == user.ownerId);
         
         if(!st || st.length===0){
             list.innerHTML='<div style="padding:10px; color:#666;">لا يوجد طلاب مرتبطين بمعلمك حالياً.</div>';
@@ -205,7 +241,32 @@ function toggleSelectAllStudents(d) { const v=d.querySelector('input').checked; 
 function toggleStudentCheckbox(d) { setTimeout(()=>{updateMultiSelectLabel();},0); }
 function updateMultiSelectLabel() { const c=document.querySelectorAll('.student-checkbox:checked').length; document.getElementById('multiSelectLabel').textContent = c>0 ? `✅ تم تحديد ${c}` : '-- اختر --'; }
 
-// الربط
+window.memberGenerateReport = async function() {
+    const reportType = document.getElementById('memberReportType').value;
+    const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+    const selectedStudentIds = Array.from(checkboxes).map(cb => cb.value);
+
+    if (selectedStudentIds.length === 0) return alert('الرجاء اختيار طالب واحد على الأقل من القائمة.');
+    
+    const previewArea = document.getElementById('reportPreviewArea');
+    previewArea.innerHTML = '<div class="text-center p-5"><h3><i class="fas fa-spinner fa-spin"></i> جاري استخراج البيانات...</h3></div>'; 
+    
+    try {
+        // يتم استدعاء دوال التوليد من ملف reports.js الموجود في الصفحة
+        if (reportType === 'attendance') await generateAttendanceReport(selectedStudentIds, previewArea);
+        else if (reportType === 'achievement') await generateAchievementReport(selectedStudentIds, previewArea);
+        else if (reportType === 'assignments') await generateAssignmentsReport(selectedStudentIds, previewArea);
+        else if (reportType === 'iep') await generateIEPReport(selectedStudentIds, previewArea);
+        else if (reportType === 'diagnostic') await generateDiagnosticReport(selectedStudentIds, previewArea);
+        else if (reportType === 'schedule') await generateScheduleReport(selectedStudentIds, previewArea);
+        else previewArea.innerHTML = `<div class="alert alert-warning">قيد التطوير</div>`;
+    } catch (e) {
+        console.error(e);
+        previewArea.innerHTML = `<div class="alert alert-danger">حدث خطأ أثناء بناء التقرير. تأكد من تحميل ملف reports.js</div>`;
+    }
+};
+
+// التصدير
 window.switchMemberTab = switchMemberTab;
 window.openSigningModal = openSigningModal;
 window.submitSignature = submitSignature;

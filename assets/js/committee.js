@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/committee.js
-// الوصف: إدارة الأعضاء السحابية (Supabase) والاجتماعات المحلية
+// الوصف: إدارة الأعضاء السحابية والاجتماعات (Supabase) بالكامل
 // ============================================
 
 // 🔥 النوافذ المنبثقة 🔥
@@ -8,39 +8,38 @@ if (!window.showConfirmModal) { window.showConfirmModal = function(message, onCo
 if (!window.showSuccess) { window.showSuccess = function(message) { let toast = document.getElementById('globalSuccessToast'); if (!toast) { const toastHtml = `<div id="globalSuccessToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#10b981; color:white; padding:12px 25px; border-radius:8px; z-index:999999; font-weight:bold; align-items:center; gap:10px;"><i class="fas fa-check-circle"></i> <span id="globalSuccessMessage"></span></div>`; document.body.insertAdjacentHTML('beforeend', toastHtml); toast = document.getElementById('globalSuccessToast'); } document.getElementById('globalSuccessMessage').textContent = message; toast.style.display = 'flex'; setTimeout(() => { toast.style.display = 'none'; }, 3000); }; }
 if (!window.showError) { window.showError = function(message) { let toast = document.getElementById('globalErrorToast'); if (!toast) { const toastHtml = `<div id="globalErrorToast" style="display:none; position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:#dc3545; color:white; padding:12px 25px; border-radius:8px; z-index:999999; font-weight:bold; align-items:center; gap:10px;"><i class="fas fa-exclamation-triangle"></i> <span id="globalErrorMessage"></span></div>`; document.body.insertAdjacentHTML('beforeend', toastHtml); toast = document.getElementById('globalErrorToast'); } document.getElementById('globalErrorMessage').innerHTML = message; toast.style.display = 'flex'; setTimeout(() => { toast.style.display = 'none'; }, 4000); }; }
 
-// --- إعدادات قاعدة البيانات (IndexedDB) للاجتماعات (لأنها ثقيلة تحتوي على Canvas و PDF) ---
-const DB_NAME = 'CommitteeAppDB';
-const DB_VERSION = 1;
-const STORE_NAME = 'meetings';
-let db;
-
 function getCurrentUser() {
     try { const session = sessionStorage.getItem('currentUser'); return session ? JSON.parse(session) : null; } catch (e) { return null; }
 }
 
-function openDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-        request.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-        };
-        request.onsuccess = (e) => { db = e.target.result; resolve(db); };
-        request.onerror = (e) => reject('خطأ DB');
-    });
+// --- دوال الاتصال المباشر بالسحابة (Supabase) للاجتماعات ---
+async function dbGetAll() {
+    const { data, error } = await window.supabase.from('meetings').select('*');
+    if (error) { console.error(error); return []; }
+    return data || [];
 }
 
-function dbGetAll() { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readonly'); const r = tx.objectStore(STORE_NAME).getAll(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
-function dbPut(item) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readwrite'); const r = tx.objectStore(STORE_NAME).put(item); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
-function dbGet(id) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readonly'); const r = tx.objectStore(STORE_NAME).get(id); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
-function dbDelete(id) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readwrite'); const r = tx.objectStore(STORE_NAME).delete(id); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
+async function dbGet(id) {
+    const { data, error } = await window.supabase.from('meetings').select('*').eq('id', id).single();
+    if (error) { console.error(error); return null; }
+    return data;
+}
+
+async function dbPut(item) {
+    const { error } = await window.supabase.from('meetings').upsert([item]);
+    if (error) throw error;
+}
+
+async function dbDelete(id) {
+    const { error } = await window.supabase.from('meetings').delete().eq('id', id);
+    if (error) throw error;
+}
 
 document.addEventListener('DOMContentLoaded', async function() {
     const user = getCurrentUser();
     if (user && document.getElementById('userName')) {
         document.getElementById('userName').textContent = user.name;
     }
-    await openDB();
     loadMembers();
     loadMeetings();
 });
@@ -118,7 +117,6 @@ async function saveMember() {
     if(!name || !username || !pass) return showError('البيانات ناقصة');
     
     try {
-        // التحقق من السحابة إذا كان اسم المستخدم موجود
         let query = window.supabase.from('committee_members').select('id').eq('username', username);
         if (id) query = query.neq('id', id);
         
@@ -171,7 +169,7 @@ function deleteMember(id) {
 }
 
 // =======================================================
-// 📝 إدارة الاجتماعات (المحلي IndexedDB) كما طلبنا
+// 📝 إدارة الاجتماعات
 // =======================================================
 
 function addPollTool() {

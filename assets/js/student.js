@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student.js
-// الوصف: الدوال الرئيسية لواجهة الطالب + جلب نسبة التقدم الموحدة
+// الوصف: الدوال الرئيسية لواجهة الطالب + جلب الإحصائيات من Supabase
 // ============================================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -49,56 +49,54 @@ function setupStudentTabs() {
     });
 }
 
-function updateStudentStats() {
-    const currentStudent = getCurrentUser();
+// 🔥 دالة إحصائيات الطالب محدثة لتعمل مع Supabase
+async function updateStudentStats() {
+    const currentStudent = JSON.parse(sessionStorage.getItem('currentUser'))?.user || JSON.parse(sessionStorage.getItem('currentUser'));
     if(!currentStudent) return;
 
-    const pendingTests = getPendingTestsCount(currentStudent.id);
-    const currentLessons = getCurrentLessonsCount(currentStudent.id);
-    const pendingAssignments = getPendingAssignmentsCount(currentStudent.id);
-    
-    // حساب النسبة الموحدة
-    const progressPercentage = getStudentProgress(currentStudent.id);
-    
-    if(document.getElementById('pendingTests')) document.getElementById('pendingTests').textContent = pendingTests;
-    if(document.getElementById('currentLessons')) document.getElementById('currentLessons').textContent = currentLessons;
-    if(document.getElementById('pendingAssignments')) document.getElementById('pendingAssignments').textContent = pendingAssignments;
-    
-    // تحديث النسبة المئوية نصياً
-    if(document.getElementById('progressPercentage')) document.getElementById('progressPercentage').textContent = `${progressPercentage}%`;
-    
-    // تحديث الشريط البصري للتقدم
-    const progressBar = document.getElementById('studentProgressBar') || document.querySelector('.progress-bar-fill');
-    if (progressBar) {
-        progressBar.style.width = progressPercentage + '%';
-        if (progressPercentage >= 80) progressBar.style.backgroundColor = '#28a745';
-        else if (progressPercentage >= 50) progressBar.style.backgroundColor = '#17a2b8';
-        else progressBar.style.backgroundColor = '#ffc107';
+    try {
+        const [testsRes, lessonsRes, assignmentsRes] = await Promise.all([
+            window.supabase.from('student_tests').select('status').eq('studentId', currentStudent.id),
+            window.supabase.from('student_lessons').select('status, passedByAlternative').eq('studentId', currentStudent.id),
+            window.supabase.from('student_assignments').select('status').eq('studentId', currentStudent.id)
+        ]);
+
+        const studentTests = testsRes.data || [];
+        const studentLessons = lessonsRes.data || [];
+        const studentAssignments = assignmentsRes.data || [];
+
+        const pendingTests = studentTests.filter(t => t.status === 'pending').length;
+        const currentLessons = studentLessons.filter(l => ['pending', 'started', 'struggling', 'returned'].includes(l.status)).length;
+        const pendingAssignments = studentAssignments.filter(a => a.status === 'pending').length;
+
+        let progressPercentage = 0;
+        if (studentLessons.length > 0) {
+            const completed = studentLessons.filter(l => l.status === 'completed' || l.status === 'accelerated' || l.passedByAlternative).length;
+            progressPercentage = Math.round((completed / studentLessons.length) * 100);
+        }
+
+        if(document.getElementById('pendingTests')) document.getElementById('pendingTests').textContent = pendingTests;
+        if(document.getElementById('currentLessons')) document.getElementById('currentLessons').textContent = currentLessons;
+        if(document.getElementById('pendingAssignments')) document.getElementById('pendingAssignments').textContent = pendingAssignments;
+        
+        if(document.getElementById('progressPercentage')) document.getElementById('progressPercentage').textContent = `${progressPercentage}%`;
+        
+        const progressBar = document.getElementById('studentProgressBar') || document.querySelector('.progress-bar-fill');
+        if (progressBar) {
+            progressBar.style.width = progressPercentage + '%';
+            if (progressPercentage >= 80) progressBar.style.backgroundColor = '#28a745';
+            else if (progressPercentage >= 50) progressBar.style.backgroundColor = '#17a2b8';
+            else progressBar.style.backgroundColor = '#ffc107';
+        }
+    } catch (e) {
+        console.error("Error updating stats from cloud:", e);
     }
 }
 
 function loadRecentActivity() {
     const activityList = document.getElementById('activityList');
     if(!activityList) return;
-    const currentStudent = getCurrentUser();
-    if(!currentStudent) return;
-    const activities = getStudentRecentActivities(currentStudent.id);
-    
-    if (activities.length === 0) {
-        activityList.innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div><h3>لا يوجد نشاط حديث</h3><p>سيظهر نشاطك هنا عند بدء استخدام النظام</p></div>`;
-        return;
-    }
-    
-    activityList.innerHTML = activities.map(activity => `
-        <div class="activity-item">
-            <div class="activity-icon">${getActivityIcon(activity.type)}</div>
-            <div class="activity-content">
-                <div class="activity-title">${activity.title}</div>
-                <div class="activity-description">${activity.description}</div>
-            </div>
-            <div class="activity-time">${formatTimeAgo(activity.timestamp)}</div>
-        </div>
-    `).join('');
+    activityList.innerHTML = `<div class="empty-state"><div class="empty-icon">📊</div><h3>لا يوجد نشاط حديث</h3><p>سيظهر نشاطك هنا عند بدء استخدام النظام</p></div>`;
 }
 
 function openMyTests() { window.location.href = 'my-tests.html'; }
@@ -106,49 +104,6 @@ function openMyLessons() { window.location.href = 'my-lessons.html'; }
 function openMyAssignments() { window.location.href = 'my-assignments.html'; }
 function openMyIEP() { window.location.href = 'my-iep.html'; }
 function openMessages() { window.location.href = 'messages.html'; }
-
-function getPendingTestsCount(studentId) {
-    const studentTests = JSON.parse(localStorage.getItem('studentTests') || '[]');
-    return studentTests.filter(test => String(test.studentId) === String(studentId) && test.status === 'pending').length;
-}
-
-function getCurrentLessonsCount(studentId) {
-    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    return studentLessons.filter(lesson => String(lesson.studentId) === String(studentId) && (lesson.status === 'pending' || lesson.status === 'started' || lesson.status === 'struggling' || lesson.status === 'returned')).length;
-}
-
-function getPendingAssignmentsCount(studentId) {
-    const studentAssignments = JSON.parse(localStorage.getItem('studentAssignments') || '[]');
-    return studentAssignments.filter(assignment => String(assignment.studentId) === String(studentId) && assignment.status === 'pending').length;
-}
-
-// 🔥 دالة حساب التقدم الموحدة (المطابقة لتقرير نسب الإنجاز) 🔥
-function getStudentProgress(studentId) {
-    const studentLessons = JSON.parse(localStorage.getItem('studentLessons') || '[]');
-    const myLessons = studentLessons.filter(lesson => String(lesson.studentId) === String(studentId));
-    
-    if (myLessons.length === 0) return 0;
-    
-    const completed = myLessons.filter(l => l.status === 'completed' || l.status === 'accelerated' || l.passedByAlternative).length;
-    return Math.round((completed / myLessons.length) * 100);
-}
-
-function getStudentRecentActivities(studentId) {
-    const activities = JSON.parse(localStorage.getItem('studentActivities') || '[]');
-    return activities.filter(activity => String(activity.studentId) === String(studentId)).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)).slice(0, 5);
-}
-
-function getActivityIcon(activityType) {
-    const icons = { 'test': '📝', 'lesson': '📚', 'assignment': '📋', 'message': '💬', 'progress': '📊' };
-    return icons[activityType] || '📄';
-}
-
-function formatTimeAgo(timestamp) {
-    const now = new Date(); const time = new Date(timestamp); const diffInMinutes = Math.floor((now - time) / (1000 * 60));
-    if (diffInMinutes < 1) return 'الآن'; if (diffInMinutes < 60) return `قبل ${diffInMinutes} دقيقة`;
-    const diffInHours = Math.floor(diffInMinutes / 60); if (diffInHours < 24) return `قبل ${diffInHours} ساعة`;
-    const diffInDays = Math.floor(diffInHours / 24); return `قبل ${diffInDays} يوم`;
-}
 
 window.openMyTests = openMyTests;
 window.openMyLessons = openMyLessons;

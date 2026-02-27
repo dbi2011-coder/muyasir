@@ -422,7 +422,7 @@ async function generateAchievementReport(studentIds, container) {
 
     tableHTML += `</tbody></table>
             <div class="custom-footer">
-                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز العجلان بتاريخ ${printDate}
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
             </div>
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
                 <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقرير 🖨️</button>
@@ -496,7 +496,7 @@ async function generateAssignmentsReport(studentIds, container) {
 
     tableHTML += `</tbody></table>
             <div class="custom-footer">
-                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبد الله العجلان بتاريخ ${printDate}
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
             </div>
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
                 <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقرير 🖨️</button>
@@ -683,7 +683,7 @@ async function generateIEPReport(studentIds, container) {
             </div>
 
             <div class="custom-footer">
-                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز العجلان بتاريخ ${printDate}
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
             </div>
         </div>
         `;
@@ -943,7 +943,7 @@ async function generateScheduleReport(studentIds, container) {
             ${scheduleHTML}
             
             <div class="custom-footer">
-                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبد الله العجلان بتاريخ ${printDate}
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
             </div>
 
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
@@ -1027,7 +1027,7 @@ async function generateCreditReport(studentIds, container) {
             </div>
 
             <div class="custom-footer">
-                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبد الله العجلان بتاريخ ${printDate}
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
             </div>
 
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">

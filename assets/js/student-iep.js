@@ -286,7 +286,7 @@ function loadStudentIEP() {
 
         <div class="print-footer-container">
             <p class="print-footer-text">
-                تم طباعة الخطة التربوية الفردية من نظام ميسر التعلم لمعلم صعوبات التعلم أ/ صالح عبد العزيز العجلان
+                تم طباعة الخطة التربوية الفردية من منصة ميسر التعلم لمعلم صعوبات التعلم للاستاذ/ صالح عبد العزيز العجلان
             </p>
         </div>
     </div>
@@ -297,3 +297,4 @@ function loadStudentIEP() {
 
     iepContainer.innerHTML = iepHTML;
 }
+

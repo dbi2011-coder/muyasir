@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="../../assets/css/dashboard.css">
     <link rel="icon" type="image/png" href="../../assets/images/logo.png">
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../../assets/css/responsive.css">
     <style>
         /* --- تنسيقات القوائم المنسدلة --- */
@@ -49,8 +50,8 @@
         .general-notes-card .modern-feedback-input:focus { border-color: #007bff; box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1); }
         .input-label-hint { font-size: 0.85rem; color: #888; margin-bottom: 6px; display: block; }
 
-        /* --- باقي التنسيقات --- */
-        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+        /* --- النوافذ المنبثقة --- */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); align-items: center; justify-content: center; backdrop-filter: blur(3px); }
         .modal.show { display: flex !important; }
         .modal-content { background-color: #fefefe; margin: auto; padding: 0; border: none; width: 90%; max-width: 700px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden; }
         .modal-header { padding: 15px 20px; background: linear-gradient(135deg, #007bff, #0056b3); color: white; display: flex; justify-content: space-between; align-items: center; }
@@ -60,91 +61,38 @@
         
         .modern-card { background: #fff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 20px; margin-bottom: 20px; border: 1px solid #eee; }
         .modern-card h5 { color: #007bff; margin-top: 0; border-bottom: 2px solid #f0f2f5; padding-bottom: 10px; margin-bottom: 15px; font-size: 1.1rem; }
-        .signature-pad-container { position: relative; border: 2px dashed #ccc; background: #fff; border-radius: 8px; cursor: crosshair; }
+        .signature-pad-container { position: relative; border: 2px dashed #ccc; background: #fff; border-radius: 8px; cursor: crosshair; overflow: hidden; width: 100%; }
         canvas#signature-pad { width: 100%; height: 200px; display: block; touch-action: none; }
-        .clear-sig-btn { position: absolute; top: 10px; left: 10px; background: rgba(255, 255, 255, 0.8); border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px; font-size: 0.8rem; cursor: pointer; color: #d9534f; }
-        .saved-signature-img { max-width: 100%; height: auto; border: 1px solid #eee; padding: 5px; border-radius: 5px; }
+        .clear-sig-btn { position: absolute; top: 10px; left: 10px; background: rgba(255, 255, 255, 0.9); border: 1px solid #ccc; border-radius: 4px; padding: 6px 10px; font-size: 0.85rem; cursor: pointer; color: #d9534f; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .saved-signature-img { max-width: 100%; height: auto; border: 1px solid #eee; padding: 5px; border-radius: 5px; background: #fff; }
         
         .content-section { display: none; }
-        .content-section.active { display: block; }
-        .status-signed { color: green; font-weight: bold; background: #e8f5e9; padding: 2px 8px; border-radius: 10px; }
-        .status-pending { color: #d9534f; font-weight: bold; background: #fbe6e6; padding: 2px 8px; border-radius: 10px; }
-        .report-controls { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee; }
+        .content-section.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* ================================================= */
-        /* 🖨️ إعدادات الطباعة المضمونة (Fix White Page) */
-        /* ================================================= */
+        .status-signed { color: green; font-weight: bold; background: #e8f5e9; padding: 4px 10px; border-radius: 10px; font-size: 0.9rem; }
+        .status-pending { color: #d9534f; font-weight: bold; background: #fbe6e6; padding: 4px 10px; border-radius: 10px; font-size: 0.9rem; }
+        .report-controls { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #eee; box-shadow: 0 2px 10px rgba(0,0,0,0.02); }
+
         @media print {
-            /* 1. إخفاء كل شيء باستخدام visibility للحفاظ على التدفق */
-            body * {
-                visibility: hidden;
-            }
-
-            /* 2. إظهار النافذة المنبثقة ومحتوياتها فقط */
-            #signMeetingModal, #signMeetingModal * {
-                visibility: visible;
-            }
-
-            /* 3. ضبط تموضع النافذة في أعلى الصفحة */
-            #signMeetingModal {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                margin: 0;
-                padding: 0;
-                background: white;
-                display: block !important; /* ضمان العرض */
-                overflow: visible !important;
-            }
-
-            /* 4. إزالة التنسيقات التي تعيق الطباعة */
-            .modal-content {
-                border: none !important;
-                box-shadow: none !important;
-                width: 100% !important;
-                max-width: 100% !important;
-                background: white !important;
-            }
-            .modal-body {
-                padding: 0 !important;
-                margin: 0 !important;
-                max-height: none !important; /* السماح بالتمدد */
-                overflow: visible !important;
-            }
-
-            /* 5. إخفاء الأزرار والعناصر غير المطلوبة */
-            .no-print, .modal-header, .modal-close, button, .clear-sig-btn, #printBtnArea {
-                display: none !important;
-            }
-
-            /* 6. تحسين المظهر على الورق */
-            .modern-card, .student-feedback-card, .general-notes-card {
-                border: 1px solid #000 !important;
-                box-shadow: none !important;
-                margin-bottom: 20px;
-                page-break-inside: avoid; /* منع قص البطاقة في منتصفها */
-                background-color: #fff !important;
-                color: #000 !important;
-            }
-
-            /* 7. النصوص */
-            h1, h2, h3, h4, h5, p, span, label, div {
-                color: #000 !important;
-            }
-
-            /* 8. التعامل مع الحقول (ستقوم دالة JS بتحويلها لنص، هذا احتياط) */
-            textarea {
-                border: none !important;
-                resize: none;
-                overflow: visible !important;
-            }
+            body * { visibility: hidden; }
+            #signMeetingModal, #signMeetingModal * { visibility: visible; }
+            #signMeetingModal { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; background: white; display: block !important; overflow: visible !important; }
+            .modal-content { border: none !important; box-shadow: none !important; width: 100% !important; max-width: 100% !important; }
+            .modal-body { padding: 0 !important; margin: 0 !important; max-height: none !important; overflow: visible !important; }
+            .no-print, .modal-header, .modal-close, button, .clear-sig-btn, #printBtnArea { display: none !important; }
+            .modern-card, .student-feedback-card, .general-notes-card { border: 1px solid #000 !important; box-shadow: none !important; margin-bottom: 20px; page-break-inside: avoid; background-color: #fff !important; color: #000 !important; }
+            h1, h2, h3, h4, h5, p, span, label, div { color: #000 !important; }
+            textarea { border: none !important; resize: none; overflow: visible !important; }
         }
     </style>
 </head>
 <body>
+    <div class="sidebar-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
+
     <div class="dashboard-container">
-        <aside class="sidebar">
+        <aside class="sidebar" id="mainSidebar">
+            <button class="close-sidebar-btn" onclick="closeSidebar()"><i class="fas fa-times"></i></button>
             <div class="sidebar-header">
                 <div class="logo">
                     <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
@@ -152,29 +100,39 @@
                 </div>
             </div>
             <ul class="sidebar-menu">
-                <li><a href="#" onclick="switchMemberTab('meetings')" id="link-meetings" class="active">📅 اجتماعاتي</a></li>
-                <li><a href="#" onclick="switchMemberTab('reports')" id="link-reports">📊 مركز التقارير</a></li>
-                <li><a href="#" onclick="logout()">🚪 خروج</a></li>
+                <li><a href="#" onclick="switchMemberTab('meetings')" id="link-meetings" class="active"><i class="fas fa-calendar-check menu-icon"></i> اجتماعاتي</a></li>
+                <li><a href="#" onclick="switchMemberTab('reports')" id="link-reports"><i class="fas fa-chart-bar menu-icon"></i> مركز التقارير</a></li>
+                <li style="margin-top: auto;"><a href="#" onclick="logout()"><i class="fas fa-sign-out-alt menu-icon"></i> خروج</a></li>
             </ul>
         </aside>
 
         <main class="main-content-dashboard">
             <header class="dashboard-header">
+                <button class="mobile-menu-btn" onclick="openSidebar()"><i class="fas fa-bars"></i></button>
                 <div class="user-info">
-                    <div class="user-welcome"><div class="welcome-text" id="memberRoleDisplay">عضو اللجنة</div><div class="user-name" id="memberNameDisplay">...</div></div>
+                    <div class="user-welcome">
+                        <div class="welcome-text" id="memberRoleDisplay">عضو اللجنة</div>
+                        <div class="user-name" id="memberNameDisplay">...</div>
+                    </div>
                 </div>
             </header>
 
             <div class="dashboard-content">
                 <div id="section-meetings" class="content-section active">
-                    <div class="content-header"><h1>الاجتماعات والمحاضر</h1></div>
+                    <div class="content-header">
+                        <h1>الاجتماعات والمحاضر</h1>
+                        <p class="text-muted">الاجتماعات التي تمت دعوتك للمشاركة فيها واعتمادها.</p>
+                    </div>
                     <div id="myMeetingsContainer" class="grid-container"></div>
                 </div>
 
                 <div id="section-reports" class="content-section">
-                    <div class="content-header"><h1>تقارير الطلاب</h1></div>
+                    <div class="content-header">
+                        <h1>تقارير الطلاب</h1>
+                        <p class="text-muted">استخراج تقارير للطلاب المرتبطين بالمعلم المتابع لك.</p>
+                    </div>
                     <div class="report-controls no-print">
-                        <div style="display:flex; gap:15px; flex-wrap:wrap;">
+                        <div style="display:flex; gap:15px; flex-wrap:wrap; align-items: center;">
                             <div class="multi-select-container" id="studentMultiSelect">
                                 <div class="multi-select-display" onclick="toggleMultiSelect()">
                                     <span id="multiSelectLabel">-- اختر الطلاب --</span>
@@ -183,6 +141,7 @@
                             </div>
                             
                             <select id="memberReportType" class="form-control" style="flex:1;">
+                                <option value="" disabled selected>-- نوع التقرير --</option>
                                 <option value="attendance">تقرير الغياب</option>
                                 <option value="achievement">تقرير الإنجاز</option>
                                 <option value="assignments">تقرير الواجبات</option>
@@ -191,10 +150,16 @@
                                 <option value="schedule">تقرير الجدول الدراسي</option>
                             </select>
                             
-                            <button class="btn btn-primary" onclick="memberGenerateReport()">عرض التقرير</button>
+                            <button class="btn btn-primary" onclick="memberGenerateReport()"><i class="fas fa-file-invoice"></i> عرض التقرير</button>
                         </div>
                     </div>
-                    <div id="reportPreviewArea" style="background:white; min-height:400px; padding:20px; border:1px solid #ccc;"></div>
+                    <div id="reportPreviewArea" style="background:white; min-height:400px; padding:20px; border:1px solid #e1e4e8; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+                        <div class="text-center text-muted" style="margin-top: 100px;">
+                            <i class="fas fa-file-alt fa-4x mb-3" style="opacity: 0.2;"></i>
+                            <h4>منطقة عرض التقارير</h4>
+                            <p>يرجى اختيار الطلاب ونوع التقرير ثم الضغط على "عرض التقرير"</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </main>
@@ -218,34 +183,38 @@
                 
                 <div class="general-notes-card" id="generalNotesContainer">
                     <div class="general-notes-header">
-                        <span>📝</span>
+                        <i class="fas fa-pen-nib"></i>
                         <span>ملاحظات وتوصيات عامة</span>
                     </div>
-                    <label class="input-label-hint no-print">ملاحظات إضافية:</label>
-                    <textarea id="memberNoteInput" class="modern-feedback-input" rows="2" placeholder="أكتب ملاحظاتك العامة هنا..."></textarea>
-                    <div id="memberNotePrint" style="display:none; white-space:pre-wrap; border:1px solid #ddd; padding:10px;"></div>
+                    <label class="input-label-hint no-print">اكتب ما تراه مناسباً حول الاجتماع:</label>
+                    <textarea id="memberNoteInput" class="modern-feedback-input" rows="3" placeholder="أكتب ملاحظاتك العامة هنا..."></textarea>
+                    <div id="memberNotePrint" style="display:none; white-space:pre-wrap; border:1px solid #ddd; padding:15px; border-radius:8px; background:#f9f9f9; font-size:1.1rem; line-height:1.6;"></div>
                 </div>
 
                 <div class="modern-card" id="signingAreaCard">
-                    <h5>✍️ التوقيع والاعتماد</h5>
+                    <h5><i class="fas fa-signature"></i> التوقيع والاعتماد</h5>
                     <div class="form-group no-print">
-                        <label style="display:block; margin-bottom:5px;">ارسم توقيعك أدناه:</label>
+                        <label style="display:block; margin-bottom:10px; font-weight:bold; color:#555;">ارسم توقيعك أدناه:</label>
                         <div class="signature-pad-container" id="signatureContainer">
                             <canvas id="signature-pad"></canvas>
-                            <button type="button" class="clear-sig-btn" onclick="clearSignaturePad()">مسح وإعادة التوقيع ❌</button>
+                            <button type="button" class="clear-sig-btn" onclick="clearSignaturePad()"><i class="fas fa-eraser"></i> مسح وإعادة</button>
                         </div>
                     </div>
                     
-                    <div id="savedSignatureDisplay" style="display:none; text-align:center;"></div>
+                    <div id="savedSignatureDisplay" style="display:none; text-align:center; padding: 20px;"></div>
                     
-                    <div id="signatureActionArea" class="mt-3 no-print">
-                        <button class="btn btn-success w-100" style="padding: 12px; font-size: 1.1em;" onclick="submitSignature()">✅ حفظ واعتماد التوقيع</button>
+                    <div id="signatureActionArea" class="mt-4 no-print">
+                        <button class="btn btn-success w-100" style="padding: 15px; font-size: 1.1em; font-weight:bold; border-radius:10px; box-shadow:0 4px 10px rgba(40,167,69,0.3);" onclick="submitSignature()">
+                            <i class="fas fa-check-circle"></i> حفظ واعتماد التوقيع
+                        </button>
                     </div>
                 </div>
 
                 <div id="printBtnArea" class="mt-3 text-center no-print" style="padding-bottom: 20px;">
-                    <hr>
-                    <button class="btn btn-secondary w-100" onclick="printMeeting()">🖨️ طباعة المحضر</button>
+                    <hr style="border-top: 1px dashed #ccc; margin-bottom:20px;">
+                    <button class="btn btn-secondary btn-lg" onclick="printMeeting()" style="border-radius:10px; padding: 12px 30px;">
+                        <i class="fas fa-print"></i> طباعة المحضر رسمياً
+                    </button>
                 </div>
 
             </div>
@@ -257,50 +226,58 @@
     <script src="../../assets/js/member.js"></script>
     
     <script>
-        // ✅ دالة طباعة ذكية ومحسنة
+        // دوال فتح وإغلاق القائمة الجانبية للموبايل
+        function openSidebar() {
+            document.getElementById('mainSidebar').classList.add('active');
+            document.getElementById('mobileOverlay').classList.add('active');
+        }
+
+        function closeSidebar() {
+            document.getElementById('mainSidebar').classList.remove('active');
+            document.getElementById('mobileOverlay').classList.remove('active');
+        }
+
+        // إغلاق القائمة عند النقر على أي تبويب في الموبايل
+        function handleTabClick(tab) {
+            switchMemberTab(tab);
+            if (window.innerWidth <= 768) {
+                closeSidebar();
+            }
+        }
+
+        // دالة طباعة المحضر مع إخفاء الحقول وإظهار النصوص
         function printMeeting() {
-            // 1. التعامل مع الملاحظات العامة
             const noteInput = document.getElementById('memberNoteInput');
             const notePrint = document.getElementById('memberNotePrint');
             
-            // نسخ النص من الحقل إلى الـ Div المخصص للطباعة
             if(noteInput && notePrint) {
                 notePrint.textContent = noteInput.value || 'لا توجد ملاحظات.';
-                noteInput.style.display = 'none'; // إخفاء الحقل
-                notePrint.style.display = 'block'; // إظهار النص الثابت
+                noteInput.style.display = 'none';
+                notePrint.style.display = 'block';
             }
 
-            // 2. التعامل مع ملاحظات الطلاب (التكرار على جميع الحقول)
             const feedbackInputs = document.querySelectorAll('.feedback-input');
-            const originalFeedbackDisplays = []; // لتخزين الحالة الأصلية
-
             feedbackInputs.forEach(input => {
-                // إنشاء عنصر نصي بديل
                 const printDiv = document.createElement('div');
                 printDiv.textContent = input.value || 'لا توجد ملاحظات.';
-                printDiv.style.cssText = 'white-space: pre-wrap; padding: 10px; border: 1px solid #eee; margin-top:5px;';
+                printDiv.style.cssText = 'white-space: pre-wrap; padding: 10px; border: 1px solid #eee; margin-top:5px; background: #fafafa; border-radius: 5px;';
                 printDiv.className = 'temp-print-div';
-                
-                // إدخال العنصر الجديد وإخفاء القديم
                 input.parentNode.insertBefore(printDiv, input.nextSibling);
                 input.style.display = 'none';
             });
 
-            // 3. إضافة عنوان للطباعة
             const printHeader = document.querySelector('.print-header-show');
             if(printHeader) printHeader.style.display = 'block';
 
-            // 4. تنفيذ الطباعة
             setTimeout(() => {
                 window.print();
 
-                // 5. إعادة الوضع كما كان بعد الطباعة (تنظيف)
+                // استعادة الوضع الطبيعي بعد الطباعة
                 if(noteInput && notePrint) {
                     noteInput.style.display = 'block';
                     notePrint.style.display = 'none';
                 }
                 
-                // إزالة عناصر الـ Div المؤقتة وإظهار الحقول
                 document.querySelectorAll('.temp-print-div').forEach(el => el.remove());
                 feedbackInputs.forEach(input => input.style.display = 'block');
                 
@@ -308,15 +285,7 @@
             }, 500);
         }
     </script>
-    <script type="module" src="../../assets/js/supabase-config.js"></script>
     
-    <script src="../../assets/js/auth.js"></script>
-    <script src="../../assets/js/dashboard.js"></script>
-    </body>
+    <script type="module" src="../../assets/js/supabase-config.js"></script>
 </body>
 </html>
-
-
-
-
-

@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير الشامل (نسخة Supabase مع إصلاح تاريخ تحقق الأهداف في الخطة)
+// الوصف: نظام التقارير الشامل (نسخة Supabase مع إصلاح تاريخ تحقق الأهداف في الخطة ودعم عضو اللجنة)
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -114,6 +114,18 @@ function getReportUser() {
     }
 }
 
+// 🔥 إضافة دالة مساعدة لتحديد المعلم المستهدف (للمعلم أو لعضو اللجنة) 🔥
+function getTargetTeacherId() {
+    const user = getReportUser();
+    if (!user) return null;
+    // إذا كان المستخدم عضو لجنة، فإن المعلم المستهدف مخزن في ownerId
+    if (user.ownerId) {
+        return user.ownerId;
+    }
+    // وإلا فالمستخدم هو المعلم نفسه
+    return user.id;
+}
+
 window.toggleSelectAll = function() {
     const checkboxes = document.querySelectorAll('input[name="selectedStudents"]');
     const allChecked = Array.from(checkboxes).every(cb => cb.checked);
@@ -165,8 +177,9 @@ async function loadStudentsForSelection() {
     const container = document.getElementById('studentsListContainer');
     if (!container) return;
 
-    const user = getReportUser();
-    if (!user) return;
+    // 🔥 التحديث هنا لاستخدام الدالة الجديدة 🔥
+    const targetTeacherId = getTargetTeacherId();
+    if (!targetTeacherId) return;
 
     container.innerHTML = '<div class="text-center p-3">جاري جلب الطلاب من السحابة...</div>';
 
@@ -175,7 +188,7 @@ async function loadStudentsForSelection() {
             .from('users')
             .select('*')
             .eq('role', 'student')
-            .eq('teacherId', user.id);
+            .eq('teacherId', targetTeacherId); // تم التعديل
 
         if (error) throw error;
 
@@ -343,7 +356,7 @@ async function generateAttendanceReport(studentIds, container) {
 
     tableHTML += `</tbody></table>
             <div class="custom-footer">
-                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبدالعزيز العجلان بتاريخ ${printDate}
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/ ${teacherName} بتاريخ ${printDate}
             </div>
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
                 <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقرير 🖨️</button>
@@ -472,9 +485,9 @@ async function generateAssignmentsReport(studentIds, container) {
                 tableHTML += `
                     <tr>
                         <td style="font-weight:bold;">${student.name}</td>
-                        <td>${assign.title}</td>
-                        <td>${assignedDate}</td>
-                        <td>${statusContent}</td>
+                        <td style="text-align:center;">${assign.title}</td>
+                        <td style="text-align:center;">${assignedDate}</td>
+                        <td style="text-align:center;">${statusContent}</td>
                     </tr>
                 `;
             });
@@ -494,7 +507,8 @@ async function generateAssignmentsReport(studentIds, container) {
 
 // 🌟 تقرير الخطة التربوية مع إصلاح ظهور التواريخ 🌟
 async function generateIEPReport(studentIds, container) {
-    const teacherId = getReportUser().id;
+    // 🔥 التعديل هنا: استخدام الدالة الجديدة للحصول على رقم المعلم الصحيح
+    const teacherId = getTargetTeacherId(); 
     const teacherName = getReportUser()?.name || '';
     
     const [
@@ -689,7 +703,8 @@ async function generateIEPReport(studentIds, container) {
 }
 
 async function generateDiagnosticReport(studentIds, container) {
-    const teacherId = getReportUser().id;
+    // 🔥 التعديل هنا: استخدام الدالة الجديدة
+    const teacherId = getTargetTeacherId(); 
     const teacherName = getReportUser()?.name || '';
     
     const [
@@ -828,7 +843,8 @@ async function generateDiagnosticReport(studentIds, container) {
 }
 
 async function generateScheduleReport(studentIds, container) {
-    const teacherId = getReportUser().id;
+    // 🔥 التعديل هنا: استخدام الدالة الجديدة
+    const teacherId = getTargetTeacherId(); 
     const teacherName = getReportUser()?.name || '';
     
     const { data: allUsers } = await window.supabase.from('users').select('*').in('id', studentIds);
@@ -940,7 +956,8 @@ async function generateScheduleReport(studentIds, container) {
 }
 
 async function generateCreditReport(studentIds, container) {
-    const teacherId = getReportUser().id;
+    // 🔥 التعديل هنا: استخدام الدالة الجديدة
+    const teacherId = getTargetTeacherId(); 
     const teacherName = getReportUser()?.name || '';
 
     const [

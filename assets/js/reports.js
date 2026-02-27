@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير الشامل (نسخة Supabase مع إصلاح تاريخ تحقق الأهداف في الخطة ودعم عضو اللجنة)
+// الوصف: نظام التقارير الشامل (نسخة Supabase مع توحيد التذييل لجميع التقارير)
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -114,7 +114,7 @@ function getReportUser() {
     }
 }
 
-// 🔥 إضافة دالة مساعدة لتحديد المعلم المستهدف (للمعلم أو لعضو اللجنة) 🔥
+// 🔥 دالة مساعدة لتحديد المعلم المستهدف (للمعلم أو لعضو اللجنة) 🔥
 function getTargetTeacherId() {
     const user = getReportUser();
     if (!user) return null;
@@ -177,7 +177,6 @@ async function loadStudentsForSelection() {
     const container = document.getElementById('studentsListContainer');
     if (!container) return;
 
-    // 🔥 التحديث هنا لاستخدام الدالة الجديدة 🔥
     const targetTeacherId = getTargetTeacherId();
     if (!targetTeacherId) return;
 
@@ -188,7 +187,7 @@ async function loadStudentsForSelection() {
             .from('users')
             .select('*')
             .eq('role', 'student')
-            .eq('teacherId', targetTeacherId); // تم التعديل
+            .eq('teacherId', targetTeacherId); 
 
         if (error) throw error;
 
@@ -306,7 +305,6 @@ async function generateAttendanceReport(studentIds, container) {
     const { data: allEvents } = await window.supabase.from('student_events').select('*').in('studentId', studentIds);
     
     const printDate = new Date().toLocaleDateString('ar-SA');
-    const teacherName = getReportUser()?.name || '';
 
     let tableHTML = `
         <div style="background:white; padding:20px;">
@@ -370,7 +368,6 @@ async function generateAchievementReport(studentIds, container) {
     const { data: allLessons } = await window.supabase.from('student_lessons').select('*').in('studentId', studentIds);
     
     const printDate = new Date().toLocaleDateString('ar-SA');
-    const teacherName = getReportUser()?.name || '';
 
     let tableHTML = `
         <div style="background:white; padding:20px;">
@@ -436,7 +433,6 @@ async function generateAssignmentsReport(studentIds, container) {
     const { data: allAssignments } = await window.supabase.from('student_assignments').select('*').in('studentId', studentIds);
     
     const printDate = new Date().toLocaleDateString('ar-SA');
-    const teacherName = getReportUser()?.name || '';
 
     let tableHTML = `
         <div style="background:white; padding:20px;">
@@ -505,11 +501,9 @@ async function generateAssignmentsReport(studentIds, container) {
     container.innerHTML = tableHTML;
 }
 
-// 🌟 تقرير الخطة التربوية مع إصلاح ظهور التواريخ 🌟
+// 🌟 تقرير الخطة التربوية 🌟
 async function generateIEPReport(studentIds, container) {
-    // 🔥 التعديل هنا: استخدام الدالة الجديدة للحصول على رقم المعلم الصحيح
     const teacherId = getTargetTeacherId(); 
-    const teacherName = getReportUser()?.name || '';
     
     const [
         {data: allUsers},
@@ -534,7 +528,6 @@ async function generateIEPReport(studentIds, container) {
         const student = (allUsers || []).find(u => u.id == studentId);
         if (!student) return;
 
-        // جلب آخر تشخيص مكتمل
         const completedDiagnostic = (studentTests || [])
             .filter(t => t.studentId == studentId && t.status === 'completed')
             .sort((a, b) => new Date(b.completedDate || b.assignedDate) - new Date(a.completedDate || a.assignedDate))[0];
@@ -633,7 +626,6 @@ async function generateIEPReport(studentIds, container) {
             needsObjects.forEach(obj => {
                 if (obj.instructionalGoals) {
                     obj.instructionalGoals.forEach((iGoal, idx) => {
-                        // 🌟 فلتر ذكي لمطابقة الهدف بغض النظر عن المسافات
                         const lesson = (studentLessons || []).find(l => 
                             l.studentId == studentId && 
                             l.objective && 
@@ -681,19 +673,18 @@ async function generateIEPReport(studentIds, container) {
             <div style="border:1px solid #000; padding:10px; margin-top:10px; background:#f9f9f9; text-align:center;">
                 <strong>الهدف بعيد المدى:</strong> أن يتقن التلميذ مهارات المادة بنسبة إتقان 80%
             </div>
-
-            <div class="custom-footer">
-                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
-            </div>
-        </div>
-        `;
+        </div>`;
 
         if (index < studentIds.length - 1) {
             fullReportHTML += `<div class="page-break"></div>`;
         }
     });
 
+    // إضافة التذييل مرة واحدة في الأسفل + أزرار الطباعة
     fullReportHTML += `
+        <div class="custom-footer">
+            تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
+        </div>
         <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px; padding:20px;">
             <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقارير 🖨️</button>
         </div>
@@ -702,10 +693,9 @@ async function generateIEPReport(studentIds, container) {
     container.innerHTML = fullReportHTML;
 }
 
+// 🌟 تقرير الاختبار التشخيصي 🌟
 async function generateDiagnosticReport(studentIds, container) {
-    // 🔥 التعديل هنا: استخدام الدالة الجديدة
     const teacherId = getTargetTeacherId(); 
-    const teacherName = getReportUser()?.name || '';
     
     const [
         {data: allUsers},
@@ -821,19 +811,18 @@ async function generateDiagnosticReport(studentIds, container) {
             fullReportHTML += `</tbody></table>`;
         }
 
-        fullReportHTML += `
-            <div class="custom-footer">
-                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
-            </div>
-        </div>
-        `;
+        fullReportHTML += `</div>`;
 
         if (index < studentIds.length - 1) {
             fullReportHTML += `<div class="page-break"></div>`;
         }
     });
 
+    // إضافة التذييل مرة واحدة في الأسفل + أزرار الطباعة
     fullReportHTML += `
+        <div class="custom-footer">
+            تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
+        </div>
         <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px; padding:20px;">
             <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقارير 🖨️</button>
         </div>
@@ -843,9 +832,7 @@ async function generateDiagnosticReport(studentIds, container) {
 }
 
 async function generateScheduleReport(studentIds, container) {
-    // 🔥 التعديل هنا: استخدام الدالة الجديدة
     const teacherId = getTargetTeacherId(); 
-    const teacherName = getReportUser()?.name || '';
     
     const { data: allUsers } = await window.supabase.from('users').select('*').in('id', studentIds);
     const { data: scheduleData } = await window.supabase.from('teacher_schedule').select('*').eq('teacherId', teacherId);
@@ -956,9 +943,7 @@ async function generateScheduleReport(studentIds, container) {
 }
 
 async function generateCreditReport(studentIds, container) {
-    // 🔥 التعديل هنا: استخدام الدالة الجديدة
     const teacherId = getTargetTeacherId(); 
-    const teacherName = getReportUser()?.name || '';
 
     const [
         {data: allUsers},

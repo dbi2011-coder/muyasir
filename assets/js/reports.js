@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير الشامل (نسخة Supabase مع تثبيت التذييل أسفل الصفحة في الطباعة)
+// الوصف: نظام التقارير الشامل (نسخة Supabase مع تثبيت التذييل وتنظيف الرموز)
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -40,10 +40,10 @@
                 left: 0 !important;
                 top: 0 !important;
                 width: 100% !important;
-                min-height: 100vh !important; /* إجبار الحاوية لتأخذ كامل مساحة الورقة */
+                min-height: 100vh !important;
                 margin: 0 !important;
                 padding: 0 !important;
-                padding-bottom: 80px !important; /* مساحة أمان كي لا يغطي التذييل على المحتوى */
+                padding-bottom: 80px !important;
                 background: white !important;
                 direction: rtl !important;
                 z-index: 99999 !important;
@@ -365,7 +365,7 @@ async function generateAttendanceReport(studentIds, container) {
                 تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
             </div>
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
-                <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقرير 🖨️</button>
+                <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;"><i class="fas fa-print"></i> طباعة التقرير</button>
             </div>
         </div>`;
     container.innerHTML = tableHTML;
@@ -430,7 +430,7 @@ async function generateAchievementReport(studentIds, container) {
                 تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
             </div>
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
-                <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقرير 🖨️</button>
+                <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;"><i class="fas fa-print"></i> طباعة التقرير</button>
             </div>
         </div>`;
     container.innerHTML = tableHTML;
@@ -503,7 +503,7 @@ async function generateAssignmentsReport(studentIds, container) {
                 تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
             </div>
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
-                <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقرير 🖨️</button>
+                <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;"><i class="fas fa-print"></i> طباعة التقرير</button>
             </div>
         </div>`;
     container.innerHTML = tableHTML;
@@ -695,7 +695,7 @@ async function generateIEPReport(studentIds, container) {
 
     fullReportHTML += `
         <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px; padding:20px;">
-            <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقارير 🖨️</button>
+            <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;"><i class="fas fa-print"></i> طباعة التقارير</button>
         </div>
     </div>`;
 
@@ -766,4 +766,281 @@ async function generateDiagnosticReport(studentIds, container) {
                         الدرجة الموزونة: <span style="color:${percent >= 50 ? 'green' : 'red'}; font-weight:bold;">${percent}%</span>
                     </div>
                     <div style="font-size:0.9em; color:#555; margin-top:5px;">
-                        تاريخ الاختبار: ${new Date(completedDiagnostic.completedDate || completedDiagnostic.assignedDate).toLocaleDateString('
+                        تاريخ الاختبار: ${new Date(completedDiagnostic.completedDate || completedDiagnostic.assignedDate).toLocaleDateString('ar-SA')}
+                    </div>
+                </div>
+
+                <div class="section-title">تفاصيل الإجابات</div>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr style="background:#333; color:white;">
+                            <th style="width:5%;">#</th>
+                            <th style="width:40%;">السؤال</th>
+                            <th style="width:30%;">إجابة الطالب</th>
+                            <th style="width:10%;">التقييم</th>
+                            <th style="width:15%;">المهارة / الهدف</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            originalTest.questions.forEach((q, qIndex) => {
+                const answerObj = completedDiagnostic.answers ? completedDiagnostic.answers.find(a => a.questionId == q.id) : null;
+                
+                let studentAnswerContent = '<span style="color:#999;">لم يجب</span>';
+                if (answerObj && answerObj.answer !== undefined && answerObj.answer !== null) {
+                    const answerStr = String(answerObj.answer); 
+                    if (answerStr.startsWith('data:image') || answerStr.match(/\.(jpeg|jpg|gif|png)$/i)) {
+                        studentAnswerContent = `<img src="${answerStr}" class="answer-img" alt="إجابة الطالب">`;
+                    } else {
+                        studentAnswerContent = answerStr;
+                    }
+                }
+
+                const isCorrect = answerObj && answerObj.score > 0;
+                const statusIcon = isCorrect ? '<span style="color:green; font-size:1.2em;">✔️</span>' : '<span style="color:red; font-size:1.2em;">❌</span>';
+                
+                let skillName = '-';
+                if (q.linkedGoalId) {
+                    const obj = (allObjectives || []).find(o => o.id == q.linkedGoalId);
+                    if (obj) skillName = obj.shortTermGoal;
+                }
+
+                fullReportHTML += `
+                    <tr>
+                        <td style="text-align:center;">${qIndex + 1}</td>
+                        <td>${q.text}</td>
+                        <td style="text-align:center;">${studentAnswerContent}</td>
+                        <td style="text-align:center;">${statusIcon}</td>
+                        <td style="font-size:0.9em;">${skillName}</td>
+                    </tr>
+                `;
+            });
+
+            fullReportHTML += `</tbody></table>`;
+        }
+
+        fullReportHTML += `
+            <div class="custom-footer">
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
+            </div>
+        </div>
+        `;
+
+        if (index < studentIds.length - 1) {
+            fullReportHTML += `<div class="page-break"></div>`;
+        }
+    });
+
+    fullReportHTML += `
+        <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px; padding:20px;">
+            <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;"><i class="fas fa-print"></i> طباعة التقارير</button>
+        </div>
+    </div>`;
+
+    container.innerHTML = fullReportHTML;
+}
+
+// 🌟 تقرير الجدول الدراسي 🌟
+async function generateScheduleReport(studentIds, container) {
+    const teacherId = getTargetTeacherId(); 
+    
+    const { data: allUsers } = await window.supabase.from('users').select('*').in('id', studentIds);
+    const { data: scheduleData } = await window.supabase.from('teacher_schedule').select('*').eq('teacherId', teacherId);
+    
+    const printDate = new Date().toLocaleDateString('ar-SA');
+    const selectedStudents = allUsers || [];
+
+    let keyTableHTML = `
+        <div class="section-title" style="background:#444 !important; color:white; margin-bottom:0;">دليل رموز الطلاب</div>
+        <table class="table table-bordered key-table" style="margin-top:0;">
+            <thead>
+                <tr style="background:#f0f0f0;">
+                    <th style="width:10%;">م (الرمز)</th>
+                    <th style="width:50%;">اسم الطالب</th>
+                    <th style="width:40%;">الصف</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    const studentCodes = {};
+
+    selectedStudents.forEach((student, index) => {
+        const code = index + 1;
+        studentCodes[student.id] = code;
+        keyTableHTML += `
+            <tr>
+                <td style="font-weight:bold; font-size:1.2em;">${code}</td>
+                <td style="text-align:right; padding-right:15px !important;">${student.name}</td>
+                <td>${student.grade || '-'}</td>
+            </tr>
+        `;
+    });
+    keyTableHTML += `</tbody></table>`;
+
+    let scheduleHTML = `
+        <h2 style="text-align:center; margin-top:20px;">الجدول الدراسي</h2>
+        <table class="table table-bordered schedule-table" border="1" style="border: 2px solid black;">
+            <thead>
+                <tr style="background:#333; color:white;">
+                    <th style="width:12%;">اليوم / الحصة</th>
+                    <th style="width:12.5%;">1</th>
+                    <th style="width:12.5%;">2</th>
+                    <th style="width:12.5%;">3</th>
+                    <th style="width:12.5%;">4</th>
+                    <th style="width:12.5%;">5</th>
+                    <th style="width:12.5%;">6</th>
+                    <th style="width:12.5%;">7</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    const days = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس'];
+    
+    days.forEach(day => {
+        scheduleHTML += `<tr><td style="font-weight:bold; background:#f0f0f0; border:1px solid #000;">${day}</td>`;
+        
+        for (let period = 1; period <= 7; period++) {
+            const session = (scheduleData || []).find(s => 
+                normalizeText(s.day) === normalizeText(day) && 
+                s.period == period &&
+                s.students && 
+                s.students.some(id => studentIds.includes(String(id)))
+            );
+
+            let cellContent = '';
+
+            if (session && session.students && session.students.length > 0) {
+                const studentsInSession = session.students.map(String);
+                const codesToShow = [];
+                selectedStudents.forEach(s => {
+                    if (studentsInSession.includes(String(s.id))) {
+                        codesToShow.push(studentCodes[s.id]);
+                    }
+                });
+
+                if (codesToShow.length > 0) {
+                    cellContent = codesToShow.join(' ، ');
+                }
+            }
+            
+            scheduleHTML += `<td style="border:1px solid #000;">${cellContent}</td>`;
+        }
+        scheduleHTML += `</tr>`;
+    });
+
+    scheduleHTML += `</tbody></table>`;
+
+    let finalHTML = `
+        <div style="background:white; padding:10px;">
+            <h1 class="report-title-main">تقرير الجدول الدراسي</h1>
+            
+            ${keyTableHTML}
+            ${scheduleHTML}
+            
+            <div class="custom-footer">
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
+            </div>
+
+            <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
+                <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;"><i class="fas fa-print"></i> طباعة التقرير</button>
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = finalHTML;
+}
+
+async function generateCreditReport(studentIds, container) {
+    const teacherId = getTargetTeacherId(); 
+
+    const [
+        {data: allUsers},
+        {data: allLessons},
+        {data: allEvents},
+        {data: teacherSchedule}
+    ] = await Promise.all([
+        window.supabase.from('users').select('*').in('id', studentIds),
+        window.supabase.from('student_lessons').select('*').in('studentId', studentIds),
+        window.supabase.from('student_events').select('*').in('studentId', studentIds),
+        window.supabase.from('teacher_schedule').select('*').eq('teacherId', teacherId)
+    ]);
+
+    const printDate = new Date().toLocaleDateString('ar-SA');
+
+    let tableHTML = `
+        <div style="background:white; padding:20px;">
+            <div class="text-center mb-4">
+                <h1 class="report-title-main" style="text-align:center; color:#000;">تقرير رصيد الحصص</h1>
+            </div>
+            
+            <table class="table table-bordered" style="width:100%; direction:rtl;" border="1">
+                <thead>
+                    <tr style="background-color:#333; color:white;">
+                        <th style="width:60%;">اسم الطالب</th>
+                        <th style="width:40%;">رصيد الحصص</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    studentIds.forEach(studentId => {
+        const student = (allUsers || []).find(u => u.id == studentId);
+        if (!student) return;
+
+        const balance = calculateStudentBalance(studentId, allLessons || [], allEvents || [], teacherSchedule || [], student.teacherId); 
+
+        let balanceClass = 'balance-neutral';
+        let balanceText = balance;
+
+        if (balance > 0) {
+            balanceClass = 'balance-positive';
+            balanceText = `+${balance}`;
+        } else if (balance < 0) {
+            balanceClass = 'balance-negative';
+            balanceText = `${balance}`;
+        }
+
+        tableHTML += `
+            <tr>
+                <td style="font-weight:bold; font-size:1.1em; text-align:right; padding-right:20px;">${student.name}</td>
+                <td class="${balanceClass}" style="font-size:1.4em; direction:ltr;">${balanceText}</td>
+            </tr>
+        `;
+    });
+
+    tableHTML += `</tbody></table>
+            
+            <div style="margin-top:20px; font-size:0.9em; color:#555; border:1px solid #ccc; padding:10px; border-radius:5px;">
+                <strong>دليل التقرير:</strong>
+                <ul style="margin-top:5px; margin-bottom:0;">
+                    <li><span style="color:red; font-weight:bold;">الرقم السالب (-):</span> يعني أن الطالب يحتاج لتعويض حصص.</li>
+                    <li><span style="color:green; font-weight:bold;">الرقم الموجب (+):</span> يعني أن الطالب متقدم في الخطة.</li>
+                    <li><span style="color:black; font-weight:bold;">الصفر (0):</span> يعني أن الطالب يسير وفق الخطة تماماً.</li>
+                </ul>
+            </div>
+
+            <div class="custom-footer">
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
+            </div>
+
+            <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
+                <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;"><i class="fas fa-print"></i> طباعة التقرير</button>
+            </div>
+        </div>`;
+    
+    container.innerHTML = tableHTML;
+}
+
+// ----------------------------------------------------
+// تعريف الدوال عالمياً
+// ----------------------------------------------------
+window.generateAttendanceReport = generateAttendanceReport;
+window.generateAchievementReport = generateAchievementReport;
+window.generateAssignmentsReport = generateAssignmentsReport;
+window.generateIEPReport = generateIEPReport;
+window.generateDiagnosticReport = generateDiagnosticReport;
+window.generateScheduleReport = generateScheduleReport;
+window.generateCreditReport = generateCreditReport;

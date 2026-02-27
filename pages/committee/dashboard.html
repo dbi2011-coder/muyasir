@@ -1,171 +1,0 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة تحكم عضو اللجنة - ميسر التعلم</title>
-    <link rel="stylesheet" href="../../assets/css/main.css">
-    <link rel="stylesheet" href="../../assets/css/dashboard.css">
-    <link rel="stylesheet" href="../../assets/css/committee.css">
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../../assets/css/responsive.css">
-</head>
-<body>
-    <div class="dashboard-container">
-        <!-- الشريط الجانبي -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <div class="logo">
-                    <img src="../../assets/images/logo.png" alt="شعار ميسر التعلم">
-                    <h2>ميسر التعلم</h2>
-                </div>
-            </div>
-            
-            <ul class="sidebar-menu">
-                <li><a href="dashboard.html" class="active"><span class="menu-icon">🏠</span>الرئيسية</a></li>
-                <li><a href="reports.html"><span class="menu-icon">📊</span>التقارير والإحصائيات</a></li>
-                <li><a href="notes.html"><span class="menu-icon">📝</span>إرسال ملاحظات</a></li>
-                <li><a href="#" onclick="logout()"><span class="menu-icon">🚪</span>تسجيل الخروج</a></li>
-            </ul>
-        </aside>
-
-        <!-- المحتوى الرئيسي -->
-        <main class="main-content-dashboard">
-            <!-- رأس اللوحة -->
-            <header class="dashboard-header">
-                <button class="mobile-menu-btn">☰</button>
-                <div class="user-info">
-                    <div class="user-welcome">
-                        <div class="welcome-text">مرحباً</div>
-                        <div class="user-name" id="userName">عضو اللجنة</div>
-                    </div>
-                    <div class="user-avatar" id="userAvatar">ل</div>
-                </div>
-                <div class="header-actions">
-                    <button class="btn btn-primary" onclick="showNotifications()">🔔 الإشعارات</button>
-                </div>
-            </header>
-
-            <!-- محتوى اللوحة -->
-            <div class="dashboard-content">
-                <div class="content-header">
-                    <h1>لوحة تحكم عضو لجنة صعوبات التعلم</h1>
-                    <p>مرحباً بك في منصة ميسر التعلم - لوحة تحكم عضو اللجنة</p>
-                </div>
-
-                <!-- إحصائيات سريعة -->
-                <div class="stats-cards">
-                    <div class="stat-card">
-                        <div class="stat-icon">👨‍🏫</div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="assignedTeachers">0</div>
-                            <div class="stat-label">المعلمون المتابعون</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">👨‍🎓</div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="totalStudents">0</div>
-                            <div class="stat-label">إجمالي الطلاب</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">📊</div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="generatedReports">0</div>
-                            <div class="stat-label">تقارير منشأة</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon">📝</div>
-                        <div class="stat-info">
-                            <div class="stat-value" id="sentNotes">0</div>
-                            <div class="stat-label">ملاحظات مرسلة</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- الإجراءات السريعة -->
-                <div class="quick-actions">
-                    <h2>الإجراءات السريعة</h2>
-                    <div class="actions-grid">
-                        <div class="action-card" onclick="window.location.href='reports.html'">
-                            <div class="action-icon">📊</div>
-                            <div class="action-title">التقارير والإحصائيات</div>
-                            <div class="action-description">عرض وتوليد تقارير الطلاب</div>
-                        </div>
-                        <div class="action-card" onclick="window.location.href='notes.html'">
-                            <div class="action-icon">📝</div>
-                            <div class="action-title">إرسال ملاحظات</div>
-                            <div class="action-description">إرسال ملاحظات وتوصيات للمعلمين</div>
-                        </div>
-                        <div class="action-card" onclick="showAssignedTeachers()">
-                            <div class="action-icon">👨‍🏫</div>
-                            <div class="action-title">المعلمون المتابعون</div>
-                            <div class="action-description">عرض قائمة المعلمين المتابعين</div>
-                        </div>
-                        <div class="action-card" onclick="showRecentReports()">
-                            <div class="action-icon">📋</div>
-                            <div class="action-title">آخر التقارير</div>
-                            <div class="action-description">عرض التقارير المنشأة حديثاً</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- المعلمون المتابعون -->
-                <div class="assigned-teachers-section">
-                    <div class="section-header">
-                        <h2>المعلمون المتابعون</h2>
-                        <button class="btn btn-outline-primary" onclick="refreshTeachersList()">🔄 تحديث</button>
-                    </div>
-                    <div class="teachers-list" id="teachersList">
-                        <!-- سيتم تعبئته بواسطة JavaScript -->
-                    </div>
-                </div>
-
-                <!-- النشاط الأخير -->
-                <div class="recent-activity">
-                    <div class="section-header">
-                        <h2>النشاط الأخير</h2>
-                    </div>
-                    <div class="activity-list" id="activityList">
-                        <!-- سيتم تعبئته بواسطة JavaScript -->
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <!-- نموذج عرض المعلم -->
-    <div id="teacherDetailsModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="teacherModalTitle">تفاصيل المعلم</h3>
-                <button class="modal-close" onclick="closeTeacherModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="teacher-details" id="teacherDetailsContent">
-                    <!-- سيتم تعبئته بواسطة JavaScript -->
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeTeacherModal()">إغلاق</button>
-                <button type="button" class="btn btn-primary" onclick="generateTeacherReport()">إنشاء تقرير</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="../../assets/js/dashboard.js"></script>
-    <script src="../../assets/js/committee.js"></script>
-    <script src="../../assets/js/auth.js"></script>
-    <script type="module" src="../../assets/js/supabase-config.js"></script>
-    
-    <script src="../../assets/js/auth.js"></script>
-    <script src="../../assets/js/dashboard.js"></script>
-    </body>
-</body>
-
-</html>
-
-
-

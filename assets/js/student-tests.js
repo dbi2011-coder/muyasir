@@ -1,17 +1,17 @@
 // ============================================
 // 📁 المسار: assets/js/student-tests.js
-// الوصف: إدارة الاختبارات التشخيصية للطالب - واجهة أصلية مع ربط Supabase
+// الوصف: إدارة الاختبارات التشخيصية للطالب - واجهة كلاسيكية أصلية مع ربط Supabase
 // ============================================
 
 let currentTestSession = { questions: [], currentIndex: 0, answers: {}, startTime: null, testData: null };
 let currentAssignment = null;
 let testTimerInterval = null;
 
-// تهيئة Supabase (بافتراض أنك قمت بتهيئة window.supabase في ملف رئيسي مثل auth.js أو main.js)
-const supabase = window.supabase; 
-
-document.addEventListener('DOMContentLoaded', async function() {
-    await loadMyTests();
+document.addEventListener('DOMContentLoaded', function() {
+    // نضع تأخير بسيط (100 مللي ثانية) لضمان تحميل مكتبة Supabase وملف الاتصال (auth.js) أولاً
+    setTimeout(async () => {
+        await loadMyTests();
+    }, 100);
 });
 
 function getCurrentUser() {
@@ -23,39 +23,36 @@ async function loadMyTests() {
     if(!container) return;
 
     const currentUser = getCurrentUser();
-    if (!currentUser || !currentUser.id) {
-         container.innerHTML = '<div class="alert alert-danger text-center">يرجى تسجيل الدخول لعرض الاختبارات</div>';
-         return;
+    if (!currentUser || !currentUser.id) return;
+
+    // التحقق من أن Supabase تم تهيئته بشكل صحيح
+    if (!window.supabase) {
+        console.error("Supabase is not initialized!");
+        container.innerHTML = '<div class="alert alert-danger text-center">خطأ في الاتصال بقاعدة البيانات. تأكد من استدعاء Supabase.</div>';
+        return;
     }
 
     try {
         container.innerHTML = '<div class="text-center p-4">جاري التحميل...</div>';
 
-        // 1. جلب اختبارات الطالب من Supabase
-        const { data: studentTests, error: stError } = await supabase
+        // جلب الاختبارات المسندة للطالب من السحابة
+        const { data: myTests, error } = await window.supabase
             .from('student_tests')
             .select('*')
             .eq('studentId', currentUser.id)
             .order('assignedDate', { ascending: false });
 
-        if (stError) throw stError;
+        if (error) throw error;
 
-        if (!studentTests || studentTests.length === 0) {
+        if (!myTests || myTests.length === 0) {
             container.innerHTML = `<div style="text-align: center; padding: 40px; color: #777;"><h3>لا توجد اختبارات حالياً</h3></div>`;
             return;
         }
 
-        // 2. جلب تفاصيل الاختبارات (الأسئلة وغيرها) من Supabase
-        const testIds = studentTests.map(t => t.testId);
-        const { data: allTestsLib, error: tError } = await supabase
-            .from('tests')
-            .select('id, title, questions, objectivesLinked, linkedObjectiveId')
-            .in('id', testIds);
+        // جلب تفاصيل الاختبارات الأصلية من السحابة
+        const { data: allTestsLib } = await window.supabase.from('tests').select('id, title, questions');
 
-        if (tError) throw tError;
-
-        // 3. عرض البطاقات
-        container.innerHTML = studentTests.map(assignment => {
+        container.innerHTML = myTests.map(assignment => {
             const originalTest = allTestsLib.find(t => t.id == assignment.testId);
             if (!originalTest) return '';
 
@@ -64,10 +61,6 @@ async function loadMyTests() {
             if (assignment.status === 'completed') { 
                 statusText = 'مكتمل'; statusClass = 'status-completed'; btnText = 'تم الحل'; btnClass = 'btn-secondary'; 
             } 
-
-            // استخدام JSON.stringify لتمرير البيانات كمعامل للدالة بأمان
-            const assignmentDataStr = JSON.stringify(assignment).replace(/"/g, '&quot;');
-            const testDataStr = JSON.stringify(originalTest).replace(/"/g, '&quot;');
 
             return `
                 <div class="test-card" style="background:#fff; padding:20px; border-radius:10px; border:1px solid #eee; margin-bottom:15px;">
@@ -78,44 +71,37 @@ async function loadMyTests() {
                     <h3>${originalTest.title}</h3>
                     <div style="display:flex; justify-content:space-between; margin-top:20px;">
                         <span class="badge badge-secondary">${originalTest.questions?.length || 0} أسئلة</span>
-                        <button class="btn btn-sm ${btnClass}" 
-                                ${assignment.status === 'completed' ? 'disabled' : `onclick="initializeTestSession(${assignmentDataStr}, ${testDataStr})"`}>
-                                ${btnText}
-                        </button>
+                        <button class="btn btn-sm ${btnClass}" ${assignment.status === 'completed' ? 'disabled' : `onclick="initializeTestSession(${assignment.id})"`}>${btnText}</button>
                     </div>
                 </div>`;
         }).join('');
     } catch(e) { 
-        console.error("Error loading tests:", e); 
-        container.innerHTML = '<div class="alert alert-danger text-center">حدث خطأ أثناء جلب البيانات. الرجاء المحاولة لاحقاً.</div>';
+        console.error(e); 
+        container.innerHTML = '<div class="alert alert-danger text-center">حدث خطأ غير متوقع أثناء تحميل البيانات.</div>';
     }
 }
 
 // =========================================================
-// 🔥 بدء جلسة الاختبار (نفس الشكل القديم)
+// 🔥 واجهة الاختبار الأصلية الكلاسيكية (من الكود القديم تماماً) 🔥
 // =========================================================
 
-function initializeTestSession(assignmentData, testData) {
-    if (!testData || !testData.questions || testData.questions.length === 0) {
-        alert('هذا الاختبار لا يحتوي على أسئلة.');
-        return;
-    }
-
-    currentAssignment = assignmentData;
-    currentTestSession = { 
-        questions: testData.questions, 
-        currentIndex: 0, 
-        answers: {}, 
-        startTime: new Date(), 
-        testData: testData 
-    };
-    
-    // إخفاء أي نوافذ مفتوحة
-    const modals = document.querySelectorAll('.modal');
-    modals.forEach(m => m.classList.remove('show'));
-
-    showTestInterface(); 
-    renderCurrentQuestion();
+async function initializeTestSession(assignmentId) {
+    try {
+        const { data: assignment } = await window.supabase.from('student_tests').select('*').eq('id', assignmentId).single();
+        const { data: test } = await window.supabase.from('tests').select('*').eq('id', assignment.testId).single();
+        
+        currentAssignment = assignment;
+        currentTestSession = { 
+            questions: test.questions || [], 
+            currentIndex: 0, 
+            answers: {}, 
+            startTime: new Date(), 
+            testData: test 
+        };
+        
+        showTestInterface(); 
+        renderCurrentQuestion();
+    } catch (e) { console.error(e); }
 }
 
 function showTestInterface() {
@@ -137,47 +123,32 @@ function showTestInterface() {
         </div>`;
         
     document.body.appendChild(testUI);
-    
-    // منع التمرير في الخلفية
-    document.body.style.overflow = 'hidden'; 
-    
     startTimer();
 }
 
 function renderCurrentQuestion() {
     const q = currentTestSession.questions[currentTestSession.currentIndex];
-    
-    // التوافقية مع البيانات القديمة والجديدة:
-    // في النظام القديم كان النوع يسمى multiple-choice، الآن mcq
-    // في النظام القديم كان يسمى true-false
-    // في النظام القديم كان يسمى spelling-auto
-    const qType = q.type || 'multiple-choice'; 
+    const qType = q.type || 'multiple-choice';
     
     let html = `<div style="background:white; padding:30px; border-radius:10px; margin-bottom:20px; width:100%; max-width:700px; box-shadow:0 4px 10px rgba(0,0,0,0.05);">
                     <h4 style="margin-bottom:25px; font-size:1.4rem; color:#333;">${q.text}</h4>`;
     
-    // جلب الخيارات سواء كانت في الجذر (النسخة الجديدة) أو داخل data (النسخة القديمة)
     let choices = q.choices || (q.data && q.data.choices) || [];
     
-    // الخيارات المتعددة
     if(qType === 'multiple-choice' || qType === 'mcq') {
         choices.forEach((c, i) => {
             html += `<label style="display:block; padding:15px; border:1px solid #ddd; margin:10px 0; border-radius:5px; cursor:pointer; font-size:1.1rem; background:#fafafa;">
                         <input type="radio" name="ans" value="${i}" onchange="saveAnswer('${i}')" style="margin-left:10px; transform:scale(1.2);"> ${c}
                      </label>`;
         });
-    } 
-    // الصح والخطأ
-    else if(qType === 'true-false') {
+    } else if(qType === 'true-false') {
         html += `<label style="display:block; padding:15px; border:1px solid #ddd; margin:10px 0; border-radius:5px; cursor:pointer; font-size:1.1rem; background:#fafafa;">
                     <input type="radio" name="ans" value="true" onchange="saveAnswer('true')" style="margin-left:10px; transform:scale(1.2);"> صواب
                  </label>
                  <label style="display:block; padding:15px; border:1px solid #ddd; margin:10px 0; border-radius:5px; cursor:pointer; font-size:1.1rem; background:#fafafa;">
                     <input type="radio" name="ans" value="false" onchange="saveAnswer('false')" style="margin-left:10px; transform:scale(1.2);"> خطأ
                  </label>`;
-    } 
-    // الأسئلة النصية (إملاء، إكمال فراغ، أسئلة مفتوحة)
-    else {
+    } else {
         html += `<input type="text" class="form-control" style="padding:15px; font-size:1.1rem;" placeholder="اكتب الإجابة..." onkeyup="saveAnswer(this.value)" onchange="saveAnswer(this.value)">`;
     }
     
@@ -199,116 +170,69 @@ function nextQuestion() {
     }
 }
 
-// =========================================================
-// 🔥 إنهاء الاختبار والتصحيح وحفظ البيانات في Supabase 🔥
-// =========================================================
-
 async function finishTest() {
-    if(!confirm('هل أنت متأكد من تسليم الإجابات وإنهاء الاختبار؟')) return;
+    if(!confirm('تسليم؟')) return;
     
-    // إظهار رسالة تحميل لمنع الطالب من الضغط المتكرر
-    const activeTestUI = document.getElementById('activeTestUI');
-    if (activeTestUI) {
-        activeTestUI.innerHTML = `<div style="display:flex; justify-content:center; align-items:center; height:100%; flex-direction:column;">
-            <div class="loading-spinner" style="margin-bottom:20px;"></div>
-            <h3 style="color:#007bff;">جاري تصحيح الاختبار وحفظ النتيجة...</h3>
-        </div>`;
-    }
-
     let score = 0;
     let total = 0;
     let failedObjs = [];
     let formattedAnswers = [];
 
-    // عملية التصحيح
+    // التصحيح ومطابقة الإجابات
     currentTestSession.questions.forEach((q, i) => {
-        // تحديد الدرجة العظمى للسؤال
-        let maxQScore = parseFloat(q.passingScore || q.maxScore || q.points || 10);
+        let maxQScore = parseFloat(q.passingScore || q.maxScore || 10);
         total += maxQScore;
         
         const ans = currentTestSession.answers[i];
         let correct = false;
         
-        // تحديد الإجابة الصحيحة (دعم للبيانات القديمة والجديدة)
         let correctIdx = q.correctAnswer !== undefined ? q.correctAnswer : (q.data && q.data.correctIndex);
         let correctVal = q.correctAnswer !== undefined ? q.correctAnswer : (q.data && q.data.correctValue);
 
-        const qType = q.type || 'multiple-choice';
-
-        // التصحيح حسب نوع السؤال
-        if((qType === 'multiple-choice' || qType === 'mcq') && ans == correctIdx) {
-            correct = true;
-        }
-        else if(qType === 'true-false' && ans == correctVal) {
-            correct = true;
-        }
-        else if((qType === 'spelling-auto' || qType === 'open-ended') && ans && ans.trim() === q.text.trim()) {
-            correct = true;
-        }
+        if((q.type === 'multiple-choice' || q.type === 'mcq') && ans == correctIdx) correct = true;
+        if(q.type === 'true-false' && ans == correctVal) correct = true;
+        if((q.type === 'spelling-auto' || q.type === 'open-ended') && ans && ans.trim() === q.text.trim()) correct = true;
         
         let earnedScore = correct ? maxQScore : 0;
         if(correct) score += earnedScore;
         
-        // تسجيل الأهداف التي أخفق فيها الطالب لتوليد الخطة العلاجية (IEP)
+        // التقاط الأهداف المخفقة (كما في كودك القديم) لتوليد الخطة الفردية
         if(!correct) {
             if(q.linkedGoalId) failedObjs.push(q.linkedGoalId);
             else if(currentTestSession.testData.objectivesLinked) failedObjs.push(currentTestSession.testData.linkedObjectiveId);
         }
 
-        // تحضير مصفوفة الإجابات لتخزينها في Supabase
         formattedAnswers.push({
             questionId: q.id,
-            answer: ans || null,
+            answer: ans,
             score: earnedScore
         });
     });
     
-    // حساب النسبة المئوية
     const pct = total > 0 ? Math.round((score/total)*100) : 0;
     
     try {
-        // تحديث السجل في Supabase
-        const { error } = await supabase
-            .from('student_tests')
-            .update({
-                status: 'completed',
-                score: pct,
-                answers: formattedAnswers,
-                completedDate: new Date().toISOString()
-            })
-            .eq('id', currentAssignment.id);
+        // تحديث حالة الاختبار في السحابة
+        await window.supabase.from('student_tests').update({
+            status: 'completed',
+            score: pct,
+            answers: formattedAnswers,
+            completedDate: new Date().toISOString()
+        }).eq('id', currentAssignment.id);
 
-        if (error) throw error;
-
-        // إيقاف المؤقت وإزالة واجهة الاختبار
         clearInterval(testTimerInterval);
-        if(document.getElementById('activeTestUI')) {
-            document.getElementById('activeTestUI').remove();
-        }
+        document.getElementById('activeTestUI').remove();
         
-        // إعادة تفعيل التمرير
-        document.body.style.overflow = 'auto';
-
-        // إنشاء الخطة الفردية تلقائياً إذا كانت النتيجة أقل من 80% (أو كما هو محدد في ملف iep-generator)
+        // تشغيل دالة توليد الخطة التلقائية إذا كانت النتيجة أقل من 80
         if(pct < 80 && failedObjs.length > 0 && typeof generateAutoIEP === 'function') {
-            alert(`تم التسليم! نتيجتك هي ${pct}%. سيتم الآن إعداد خطة علاجية مخصصة لك.`);
-            // ملاحظة: دالة generateAutoIEP في ملف iep-generator.js يجب أن تكون محدثة لدعم Supabase أيضاً
-            generateAutoIEP(failedObjs); 
+            generateAutoIEP(failedObjs);
         } else { 
-            alert(`أحسنت! تم التسليم. النتيجة: ${pct}%`); 
+            alert(`تم التسليم! النتيجة: ${pct}%`); 
             window.location.reload(); 
         }
-
     } catch(e) {
-        console.error("Error saving test results:", e);
-        alert('حدث خطأ أثناء إرسال النتيجة إلى السحابة. يرجى إبلاغ المعلم.');
-        
-        // في حالة الخطأ، نخرج الطالب من الواجهة حتى لا يعلق
-        if(document.getElementById('activeTestUI')) {
-            document.getElementById('activeTestUI').remove();
-        }
-        document.body.style.overflow = 'auto';
-        clearInterval(testTimerInterval);
+        console.error(e);
+        alert('حدث خطأ أثناء إرسال النتيجة للسحابة');
     }
 }
 
@@ -318,8 +242,6 @@ function startTimer() {
     testTimerInterval = setInterval(() => { 
         s++; 
         let timerDiv = document.getElementById('testTimer');
-        if(timerDiv) {
-            timerDiv.innerText = `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`; 
-        }
+        if(timerDiv) timerDiv.innerText = `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`; 
     }, 1000);
 }

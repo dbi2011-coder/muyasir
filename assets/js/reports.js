@@ -1,14 +1,25 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير الشامل (نسخة Supabase مع تثبيت التذييل وتنظيف الرموز)
+// الوصف: نظام التقارير الشامل (نسخة احترافية مع تثبيت التذييل أسفل الصفحة لجميع التقارير)
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
 (function injectPrintStyles() {
     const style = document.createElement('style');
     style.innerHTML = `
-        /* تنسيق التذييل العام (يظهر في المعاينة) */
+        /* --- تقنية Flexbox لجعل التذييل في أسفل الصفحة دائماً --- */
+        .report-wrapper {
+            display: flex;
+            flex-direction: column;
+            min-height: 95vh; /* يأخذ 95% من طول الشاشة/الورقة */
+            background: white;
+            padding: 20px;
+        }
+        .report-content {
+            flex: 1 0 auto; /* يتمدد لدفع التذييل للأسفل */
+        }
         .custom-footer {
+            margin-top: auto; /* يلتصق بالأسفل تلقائياً */
             width: 100%;
             text-align: center;
             font-size: 11pt;
@@ -16,15 +27,14 @@
             color: #000 !important;
             border-top: 2px solid #000;
             padding-top: 10px;
-            margin-top: 30px;
             background: white;
+            page-break-inside: avoid; /* يمنع انقسام التذييل بين صفحتين */
         }
 
         @media print {
             @page {
                 size: A4;
                 margin: 10mm;
-                margin-bottom: 20mm;
             }
             body * {
                 visibility: hidden;
@@ -36,34 +46,20 @@
                 visibility: visible;
             }
             #reportPreviewArea {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 100% !important;
-                min-height: 100vh !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                padding-bottom: 80px !important;
-                background: white !important;
-                direction: rtl !important;
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                background: white;
+                direction: rtl;
                 z-index: 99999 !important;
             }
-
-            /* تثبيت التذييل أسفل ورقة الطباعة تماماً مهما كان حجم المحتوى */
-            .custom-footer {
-                position: fixed !important;
-                bottom: 0 !important;
-                left: 0 !important;
-                right: 0 !important;
-                width: 100% !important;
-                text-align: center !important;
-                background-color: white !important;
-                padding: 10px 0 !important;
-                margin: 0 !important;
-                z-index: 2147483647 !important;
-                border-top: 2px solid #000 !important;
+            .report-wrapper {
+                padding: 0 !important;
+                min-height: 95vh;
             }
-
             table {
                 width: 100% !important;
                 border-collapse: collapse !important;
@@ -315,19 +311,20 @@ async function generateAttendanceReport(studentIds, container) {
     const printDate = new Date().toLocaleDateString('ar-SA');
 
     let tableHTML = `
-        <div style="background:white; padding:20px;">
-            <div class="text-center mb-4">
-                <h1 class="report-title-main" style="text-align:center; color:#000;">تقرير متابعة الغياب</h1>
-            </div>
-            <table class="table table-bordered" style="width:100%; direction:rtl;" border="1">
-                <thead>
-                    <tr style="background-color:#f2f2f2;">
-                        <th style="width:30%;">اسم الطالب</th>
-                        <th style="width:15%;">عدد الأيام</th>
-                        <th style="width:55%;">تواريخ الغياب</th>
-                    </tr>
-                </thead>
-                <tbody>
+        <div class="report-wrapper">
+            <div class="report-content">
+                <div class="text-center mb-4">
+                    <h1 class="report-title-main" style="text-align:center; color:#000;">تقرير متابعة الغياب</h1>
+                </div>
+                <table class="table table-bordered" style="width:100%; direction:rtl;" border="1">
+                    <thead>
+                        <tr style="background-color:#f2f2f2;">
+                            <th style="width:30%;">اسم الطالب</th>
+                            <th style="width:15%;">عدد الأيام</th>
+                            <th style="width:55%;">تواريخ الغياب</th>
+                        </tr>
+                    </thead>
+                    <tbody>
     `;
 
     studentIds.forEach(studentId => {
@@ -360,14 +357,18 @@ async function generateAttendanceReport(studentIds, container) {
         `;
     });
 
-    tableHTML += `</tbody></table>
-            <div class="custom-footer">
-                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
-            </div>
-            <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
-                <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;"><i class="fas fa-print"></i> طباعة التقرير</button>
-            </div>
-        </div>`;
+    tableHTML += `
+                </tbody>
+            </table>
+        </div> <div class="custom-footer">
+            تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
+        </div>
+        
+        <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
+            <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;"><i class="fas fa-print"></i> طباعة التقرير</button>
+        </div>
+    </div>`;
+
     container.innerHTML = tableHTML;
 }
 
@@ -378,20 +379,21 @@ async function generateAchievementReport(studentIds, container) {
     const printDate = new Date().toLocaleDateString('ar-SA');
 
     let tableHTML = `
-        <div style="background:white; padding:20px;">
-            <div class="text-center mb-4">
-                <h1 class="report-title-main" style="text-align:center; color:#000;">تقرير نسب الإنجاز</h1>
-            </div>
-            <table class="table table-bordered" style="width:100%; direction:rtl;" border="1">
-                <thead>
-                    <tr style="background-color:#f2f2f2;">
-                        <th style="width:25%;">اسم الطالب</th>
-                        <th style="width:15%;">عدد الأهداف</th>
-                        <th style="width:15%;">المنجز</th>
-                        <th style="width:45%;">نسبة الإنجاز</th>
-                    </tr>
-                </thead>
-                <tbody>
+        <div class="report-wrapper">
+            <div class="report-content">
+                <div class="text-center mb-4">
+                    <h1 class="report-title-main" style="text-align:center; color:#000;">تقرير نسب الإنجاز</h1>
+                </div>
+                <table class="table table-bordered" style="width:100%; direction:rtl;" border="1">
+                    <thead>
+                        <tr style="background-color:#f2f2f2;">
+                            <th style="width:25%;">اسم الطالب</th>
+                            <th style="width:15%;">عدد الأهداف</th>
+                            <th style="width:15%;">المنجز</th>
+                            <th style="width:45%;">نسبة الإنجاز</th>
+                        </tr>
+                    </thead>
+                    <tbody>
     `;
 
     studentIds.forEach(studentId => {
@@ -425,14 +427,18 @@ async function generateAchievementReport(studentIds, container) {
         `;
     });
 
-    tableHTML += `</tbody></table>
-            <div class="custom-footer">
-                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
-            </div>
-            <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
-                <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;"><i class="fas fa-print"></i> طباعة التقرير</button>
-            </div>
-        </div>`;
+    tableHTML += `
+                </tbody>
+            </table>
+        </div> <div class="custom-footer">
+            تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
+        </div>
+        
+        <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
+            <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;"><i class="fas fa-print"></i> طباعة التقرير</button>
+        </div>
+    </div>`;
+
     container.innerHTML = tableHTML;
 }
 
@@ -443,20 +449,21 @@ async function generateAssignmentsReport(studentIds, container) {
     const printDate = new Date().toLocaleDateString('ar-SA');
 
     let tableHTML = `
-        <div style="background:white; padding:20px;">
-            <div class="text-center mb-4">
-                <h1 class="report-title-main" style="text-align:center; color:#000;">تقرير متابعة الواجبات</h1>
-            </div>
-            <table class="table table-bordered" style="width:100%; direction:rtl;" border="1">
-                <thead>
-                    <tr style="background-color:#f2f2f2;">
-                        <th style="width:25%;">اسم الطالب</th>
-                        <th style="width:30%;">اسم الواجب</th>
-                        <th style="width:20%;">تاريخ الإسناد</th>
-                        <th style="width:25%;">حالة التسليم / تاريخ الحل</th>
-                    </tr>
-                </thead>
-                <tbody>
+        <div class="report-wrapper">
+            <div class="report-content">
+                <div class="text-center mb-4">
+                    <h1 class="report-title-main" style="text-align:center; color:#000;">تقرير متابعة الواجبات</h1>
+                </div>
+                <table class="table table-bordered" style="width:100%; direction:rtl;" border="1">
+                    <thead>
+                        <tr style="background-color:#f2f2f2;">
+                            <th style="width:25%;">اسم الطالب</th>
+                            <th style="width:30%;">اسم الواجب</th>
+                            <th style="width:20%;">تاريخ الإسناد</th>
+                            <th style="width:25%;">حالة التسليم / تاريخ الحل</th>
+                        </tr>
+                    </thead>
+                    <tbody>
     `;
 
     studentIds.forEach(studentId => {
@@ -498,14 +505,18 @@ async function generateAssignmentsReport(studentIds, container) {
         }
     });
 
-    tableHTML += `</tbody></table>
-            <div class="custom-footer">
-                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
-            </div>
-            <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
-                <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;"><i class="fas fa-print"></i> طباعة التقرير</button>
-            </div>
-        </div>`;
+    tableHTML += `
+                </tbody>
+            </table>
+        </div> <div class="custom-footer">
+            تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
+        </div>
+        
+        <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
+            <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;"><i class="fas fa-print"></i> طباعة التقرير</button>
+        </div>
+    </div>`;
+
     container.innerHTML = tableHTML;
 }
 
@@ -530,7 +541,7 @@ async function generateIEPReport(studentIds, container) {
     ]);
 
     const printDate = new Date().toLocaleDateString('ar-SA');
-    let fullReportHTML = `<div style="background:white; padding:0;">`;
+    let fullReportHTML = `<div>`; // Container
 
     studentIds.forEach((studentId, index) => {
         const student = (allUsers || []).find(u => u.id == studentId);
@@ -577,56 +588,57 @@ async function generateIEPReport(studentIds, container) {
         }).join('');
 
         fullReportHTML += `
-        <div class="student-iep-page">
-            <h1 class="report-title-main">تقرير الخطط التربوية الفردية</h1>
-            
-            <table class="table table-bordered">
-                <tr>
-                    <th style="width:15%;">اسم الطالب</th>
-                    <td style="width:35%;">${student.name}</td>
-                    <th style="width:15%;">الصف</th>
-                    <td>${student.grade || 'غير محدد'}</td>
-                </tr>
-                <tr>
-                    <th>المادة</th>
-                    <td>${originalTest ? originalTest.subject : (student.subject || 'عام')}</td>
-                    <th>تاريخ الخطة</th>
-                    <td>${completedDiagnostic ? new Date(completedDiagnostic.assignedDate).toLocaleDateString('ar-SA') : printDate}</td>
-                </tr>
-            </table>
-
-            <div class="section-title">جدول الحصص الأسبوعي</div>
-            <table class="table table-bordered">
-                <thead>
-                    <tr><th>الأحد</th><th>الاثنين</th><th>الثلاثاء</th><th>الأربعاء</th><th>الخميس</th></tr>
-                </thead>
-                <tbody><tr>${scheduleCells}</tr></tbody>
-            </table>
-
-            <div style="display:flex; gap:10px; margin-top:10px;">
-                <div style="flex:1; border:1px solid #000; padding:10px;">
-                    <div style="font-weight:bold; border-bottom:1px solid #000; margin-bottom:5px; text-align:center; background:#eee;">نقاط القوة</div>
-                    <ul style="margin:0; padding-right:20px; font-size:0.9em;">${strengthHTML}</ul>
-                </div>
-                <div style="flex:1; border:1px solid #000; padding:10px;">
-                    <div style="font-weight:bold; border-bottom:1px solid #000; margin-bottom:5px; text-align:center; background:#eee;">نقاط الاحتياج (الأهداف)</div>
-                    <ul style="margin:0; padding-right:20px; font-size:0.9em;">
-                        ${needsObjects.length > 0 ? needsObjects.map(o => `<li>${o.shortTermGoal}</li>`).join('') : '<li>لا توجد خطة نشطة</li>'}
-                    </ul>
-                </div>
-            </div>
-
-            <div class="section-title">الخطة التدريسية التفصيلية</div>
-            <table class="table table-bordered" style="font-size:10pt;">
-                <thead>
-                    <tr style="background:#333; color:white;">
-                        <th style="width:5%;">#</th>
-                        <th style="width:35%;">الهدف قصير المدى</th>
-                        <th style="width:40%;">الهدف التدريسي (الدرس)</th>
-                        <th style="width:20%;">تاريخ التحقق</th>
+        <div class="report-wrapper">
+            <div class="report-content">
+                <h1 class="report-title-main">تقرير الخطط التربوية الفردية</h1>
+                
+                <table class="table table-bordered">
+                    <tr>
+                        <th style="width:15%;">اسم الطالب</th>
+                        <td style="width:35%;">${student.name}</td>
+                        <th style="width:15%;">الصف</th>
+                        <td>${student.grade || 'غير محدد'}</td>
                     </tr>
-                </thead>
-                <tbody>
+                    <tr>
+                        <th>المادة</th>
+                        <td>${originalTest ? originalTest.subject : (student.subject || 'عام')}</td>
+                        <th>تاريخ الخطة</th>
+                        <td>${completedDiagnostic ? new Date(completedDiagnostic.assignedDate).toLocaleDateString('ar-SA') : printDate}</td>
+                    </tr>
+                </table>
+
+                <div class="section-title">جدول الحصص الأسبوعي</div>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr><th>الأحد</th><th>الاثنين</th><th>الثلاثاء</th><th>الأربعاء</th><th>الخميس</th></tr>
+                    </thead>
+                    <tbody><tr>${scheduleCells}</tr></tbody>
+                </table>
+
+                <div style="display:flex; gap:10px; margin-top:10px;">
+                    <div style="flex:1; border:1px solid #000; padding:10px;">
+                        <div style="font-weight:bold; border-bottom:1px solid #000; margin-bottom:5px; text-align:center; background:#eee;">نقاط القوة</div>
+                        <ul style="margin:0; padding-right:20px; font-size:0.9em;">${strengthHTML}</ul>
+                    </div>
+                    <div style="flex:1; border:1px solid #000; padding:10px;">
+                        <div style="font-weight:bold; border-bottom:1px solid #000; margin-bottom:5px; text-align:center; background:#eee;">نقاط الاحتياج (الأهداف)</div>
+                        <ul style="margin:0; padding-right:20px; font-size:0.9em;">
+                            ${needsObjects.length > 0 ? needsObjects.map(o => `<li>${o.shortTermGoal}</li>`).join('') : '<li>لا توجد خطة نشطة</li>'}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="section-title">الخطة التدريسية التفصيلية</div>
+                <table class="table table-bordered" style="font-size:10pt;">
+                    <thead>
+                        <tr style="background:#333; color:white;">
+                            <th style="width:5%;">#</th>
+                            <th style="width:35%;">الهدف قصير المدى</th>
+                            <th style="width:40%;">الهدف التدريسي (الدرس)</th>
+                            <th style="width:20%;">تاريخ التحقق</th>
+                        </tr>
+                    </thead>
+                    <tbody>
         `;
 
         let rowCounter = 1;
@@ -675,18 +687,17 @@ async function generateIEPReport(studentIds, container) {
         }
 
         fullReportHTML += `
-                </tbody>
-            </table>
+                    </tbody>
+                </table>
 
-            <div style="border:1px solid #000; padding:10px; margin-top:10px; background:#f9f9f9; text-align:center;">
-                <strong>الهدف بعيد المدى:</strong> أن يتقن التلميذ مهارات المادة بنسبة إتقان 80%
-            </div>
+                <div style="border:1px solid #000; padding:10px; margin-top:10px; background:#f9f9f9; text-align:center;">
+                    <strong>الهدف بعيد المدى:</strong> أن يتقن التلميذ مهارات المادة بنسبة إتقان 80%
+                </div>
 
-            <div class="custom-footer">
+            </div> <div class="custom-footer">
                 تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
             </div>
-        </div>
-        `;
+        </div> `;
 
         if (index < studentIds.length - 1) {
             fullReportHTML += `<div class="page-break"></div>`;
@@ -719,7 +730,7 @@ async function generateDiagnosticReport(studentIds, container) {
     ]);
 
     const printDate = new Date().toLocaleDateString('ar-SA');
-    let fullReportHTML = `<div style="background:white; padding:0;">`;
+    let fullReportHTML = `<div>`;
 
     studentIds.forEach((studentId, index) => {
         const student = (allUsers || []).find(u => u.id == studentId);
@@ -732,17 +743,18 @@ async function generateDiagnosticReport(studentIds, container) {
         const originalTest = completedDiagnostic ? (allTests || []).find(t => t.id == completedDiagnostic.testId) : null;
 
         fullReportHTML += `
-        <div class="student-diagnostic-page">
-            <h1 class="report-title-main">تقرير الاختبار التشخيصي</h1>
-            
-            <table class="table table-bordered">
-                <tr>
-                    <th style="width:15%;">اسم الطالب</th>
-                    <td style="width:35%; font-weight:bold;">${student.name}</td>
-                    <th style="width:15%;">الصف</th>
-                    <td>${student.grade || 'غير محدد'}</td>
-                </tr>
-            </table>
+        <div class="report-wrapper">
+            <div class="report-content">
+                <h1 class="report-title-main">تقرير الاختبار التشخيصي</h1>
+                
+                <table class="table table-bordered">
+                    <tr>
+                        <th style="width:15%;">اسم الطالب</th>
+                        <td style="width:35%; font-weight:bold;">${student.name}</td>
+                        <th style="width:15%;">الصف</th>
+                        <td>${student.grade || 'غير محدد'}</td>
+                    </tr>
+                </table>
         `;
 
         if (!completedDiagnostic || !originalTest) {
@@ -821,11 +833,10 @@ async function generateDiagnosticReport(studentIds, container) {
         }
 
         fullReportHTML += `
-            <div class="custom-footer">
+            </div> <div class="custom-footer">
                 تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
             </div>
-        </div>
-        `;
+        </div> `;
 
         if (index < studentIds.length - 1) {
             fullReportHTML += `<div class="page-break"></div>`;
@@ -934,13 +945,13 @@ async function generateScheduleReport(studentIds, container) {
     scheduleHTML += `</tbody></table>`;
 
     let finalHTML = `
-        <div style="background:white; padding:10px;">
-            <h1 class="report-title-main">تقرير الجدول الدراسي</h1>
-            
-            ${keyTableHTML}
-            ${scheduleHTML}
-            
-            <div class="custom-footer">
+        <div class="report-wrapper">
+            <div class="report-content">
+                <h1 class="report-title-main">تقرير الجدول الدراسي</h1>
+                
+                ${keyTableHTML}
+                ${scheduleHTML}
+            </div> <div class="custom-footer">
                 تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
             </div>
 
@@ -971,19 +982,20 @@ async function generateCreditReport(studentIds, container) {
     const printDate = new Date().toLocaleDateString('ar-SA');
 
     let tableHTML = `
-        <div style="background:white; padding:20px;">
-            <div class="text-center mb-4">
-                <h1 class="report-title-main" style="text-align:center; color:#000;">تقرير رصيد الحصص</h1>
-            </div>
-            
-            <table class="table table-bordered" style="width:100%; direction:rtl;" border="1">
-                <thead>
-                    <tr style="background-color:#333; color:white;">
-                        <th style="width:60%;">اسم الطالب</th>
-                        <th style="width:40%;">رصيد الحصص</th>
-                    </tr>
-                </thead>
-                <tbody>
+        <div class="report-wrapper">
+            <div class="report-content">
+                <div class="text-center mb-4">
+                    <h1 class="report-title-main" style="text-align:center; color:#000;">تقرير رصيد الحصص</h1>
+                </div>
+                
+                <table class="table table-bordered" style="width:100%; direction:rtl;" border="1">
+                    <thead>
+                        <tr style="background-color:#333; color:white;">
+                            <th style="width:60%;">اسم الطالب</th>
+                            <th style="width:40%;">رصيد الحصص</th>
+                        </tr>
+                    </thead>
+                    <tbody>
     `;
 
     studentIds.forEach(studentId => {
@@ -1011,18 +1023,19 @@ async function generateCreditReport(studentIds, container) {
         `;
     });
 
-    tableHTML += `</tbody></table>
-            
-            <div style="margin-top:20px; font-size:0.9em; color:#555; border:1px solid #ccc; padding:10px; border-radius:5px;">
-                <strong>دليل التقرير:</strong>
-                <ul style="margin-top:5px; margin-bottom:0;">
-                    <li><span style="color:red; font-weight:bold;">الرقم السالب (-):</span> يعني أن الطالب يحتاج لتعويض حصص.</li>
-                    <li><span style="color:green; font-weight:bold;">الرقم الموجب (+):</span> يعني أن الطالب متقدم في الخطة.</li>
-                    <li><span style="color:black; font-weight:bold;">الصفر (0):</span> يعني أن الطالب يسير وفق الخطة تماماً.</li>
-                </ul>
-            </div>
-
-            <div class="custom-footer">
+    tableHTML += `
+                    </tbody>
+                </table>
+                
+                <div style="margin-top:20px; font-size:0.9em; color:#555; border:1px solid #ccc; padding:10px; border-radius:5px;">
+                    <strong>دليل التقرير:</strong>
+                    <ul style="margin-top:5px; margin-bottom:0;">
+                        <li><span style="color:red; font-weight:bold;">الرقم السالب (-):</span> يعني أن الطالب يحتاج لتعويض حصص.</li>
+                        <li><span style="color:green; font-weight:bold;">الرقم الموجب (+):</span> يعني أن الطالب متقدم في الخطة.</li>
+                        <li><span style="color:black; font-weight:bold;">الصفر (0):</span> يعني أن الطالب يسير وفق الخطة تماماً.</li>
+                    </ul>
+                </div>
+            </div> <div class="custom-footer">
                 تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
             </div>
 

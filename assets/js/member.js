@@ -1,14 +1,28 @@
 // ============================================
 // 📁 المسار: assets/js/member.js
-// الوصف: لوحة عضو اللجنة الحديثة (مع المرئيات والتوقيع - تعمل على IndexedDB المحلي وتتصل بـ Supabase لجلب الطلاب)
+// الوصف: لوحة عضو اللجنة الحديثة (مع المرئيات والتوقيع - سحابية 100%)
 // ============================================
 
-const DB_NAME = 'CommitteeAppDB';
-const DB_VERSION = 1;
-const STORE_NAME = 'meetings';
-let db;
 let canvas, ctx, isDrawing = false, hasSigned = false, lastX = 0, lastY = 0;
 let currentMeetingId = null;
+
+// --- دوال الاتصال المباشر بالسحابة (Supabase) للاجتماعات ---
+async function dbGetAll() {
+    const { data, error } = await window.supabase.from('meetings').select('*');
+    if (error) { console.error(error); return []; }
+    return data || [];
+}
+
+async function dbGet(id) {
+    const { data, error } = await window.supabase.from('meetings').select('*').eq('id', id).single();
+    if (error) { console.error(error); return null; }
+    return data;
+}
+
+async function dbPut(item) {
+    const { error } = await window.supabase.from('meetings').upsert([item]);
+    if (error) throw error;
+}
 
 document.addEventListener('DOMContentLoaded', async function() {
     const user = getCurrentUser();
@@ -17,9 +31,8 @@ document.addEventListener('DOMContentLoaded', async function() {
     if(document.getElementById('memberNameDisplay')) document.getElementById('memberNameDisplay').textContent = 'أ/ ' + user.name;
     if(document.getElementById('memberRoleDisplay')) document.getElementById('memberRoleDisplay').textContent = user.title || user.role;
 
-    await openDB();
     await loadMyMeetings();
-    await loadMemberStudentsMultiSelect(); // تم التحديث لتعمل بشكل غير متزامن مع Supabase
+    await loadMemberStudentsMultiSelect();
     setupSignaturePadEvents();
     
     document.addEventListener('click', function(e) {
@@ -28,21 +41,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (container && !container.contains(e.target) && list) list.classList.remove('show');
     });
 });
-
-function openDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-        request.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) db.createObjectStore(STORE_NAME, { keyPath: 'id' });
-        };
-        request.onsuccess = (e) => { db = e.target.result; resolve(db); };
-        request.onerror = (e) => reject('خطأ DB');
-    });
-}
-function dbGetAll() { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readonly'); const r = tx.objectStore(STORE_NAME).getAll(); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
-function dbGet(id) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readonly'); const r = tx.objectStore(STORE_NAME).get(id); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }); }
-function dbPut(item) { return new Promise((res, rej) => { const tx = db.transaction(STORE_NAME, 'readwrite'); const r = tx.objectStore(STORE_NAME).put(item); r.onsuccess = () => res(); r.onerror = () => rej(r.error); }); }
 
 function getCurrentUser() { try { return JSON.parse(sessionStorage.getItem('currentUser')); } catch (e) { return null; } }
 
@@ -69,7 +67,6 @@ async function loadMyMeetings() {
 
     try {
         const meetings = await dbGetAll();
-        // تصفية الاجتماعات لتظهر فقط التي دُعي إليها هذا العضو
         const myMeetings = meetings.filter(m => m.attendees && m.attendees.includes(user.id));
         
         if (myMeetings.length === 0) { container.innerHTML = '<div class="alert alert-info">لا توجد اجتماعات مجدولة لك حالياً.</div>'; return; }
@@ -87,7 +84,6 @@ async function loadMyMeetings() {
     } catch(e) { console.error(e); container.innerHTML = '<div class="alert alert-danger">خطأ في التحميل</div>'; }
 }
 
-// 🔥 النافذة الحديثة (فيها المرئيات والتوقيع) 🔥
 async function openSigningModal(id) {
     currentMeetingId = id;
     const user = getCurrentUser();
@@ -110,7 +106,6 @@ async function openSigningModal(id) {
         const isSigned = meeting.signatures && meeting.signatures[user.id];
 
         if (!isSigned) {
-            // التصويتات
             if(meeting.polls && meeting.polls.length > 0) {
                 html += `<hr><h5 style="color:#007bff;">📊 يرجى التصويت:</h5>`;
                 meeting.polls.forEach(poll => {
@@ -120,7 +115,6 @@ async function openSigningModal(id) {
                 });
             }
 
-            // 🌟 المرئيات المطلوبة عن الطلاب (الميزة الحديثة) 🌟
             if(meeting.requestedFeedback && meeting.requestedFeedback.length > 0) {
                 html += `<hr><h5 style="color:#28a745;">👨‍🎓 مرئياتك وتوصياتك عن الطلاب:</h5>`;
                 meeting.requestedFeedback.forEach(req => {
@@ -204,7 +198,6 @@ async function submitSignature() {
 
 function closeSigningModal() { document.getElementById('signMeetingModal').classList.remove('show'); }
 
-// --- دوال لوحة التوقيع (Canvas) ---
 function setupSignaturePadEvents() { canvas = document.getElementById('signature-pad'); ctx = canvas.getContext('2d'); ctx.strokeStyle = '#000'; ctx.lineWidth = 2; canvas.addEventListener('mousedown', startDrawing); canvas.addEventListener('mousemove', draw); canvas.addEventListener('mouseup', stopDrawing); canvas.addEventListener('touchstart', startDrawing); canvas.addEventListener('touchmove', draw); canvas.addEventListener('touchend', stopDrawing); }
 function initializeCanvas() { const c = document.getElementById('signatureContainer'); if(c&&canvas){canvas.width = c.offsetWidth-4; canvas.height=200; clearSignaturePad();} }
 function startDrawing(e) { isDrawing=true; hasSigned=true; const p=getPos(e); [lastX, lastY]=[p.x, p.y]; }
@@ -213,9 +206,6 @@ function stopDrawing() { isDrawing=false; }
 function clearSignaturePad() { ctx.clearRect(0,0,canvas.width,canvas.height); hasSigned=false; }
 function getPos(e) { const r=canvas.getBoundingClientRect(); return {x:(e.touches?e.touches[0].clientX:e.clientX)-r.left, y:(e.touches?e.touches[0].clientY:e.clientY)-r.top}; }
 
-// ============================================
-// 📊 قسم التقارير داخل حساب اللجنة (محدث ليعمل مع Supabase)
-// ============================================
 async function loadMemberStudentsMultiSelect() { 
     const list = document.getElementById('studentOptionsList'); 
     if(!list) return; 
@@ -224,10 +214,8 @@ async function loadMemberStudentsMultiSelect() {
     if (!user || !user.ownerId) return;
 
     try {
-        // إظهار رسالة تحميل ريثما تأتي البيانات من السحابة
         list.innerHTML = '<div style="padding:10px; color:#666; text-align:center;">جاري جلب الطلاب من السحابة... <i class="fas fa-spinner fa-spin"></i></div>';
 
-        // الجلب من سوبابيس (Supabase) بدلاً من المتصفح (localStorage)
         const { data: st, error } = await window.supabase
             .from('users')
             .select('id, name')
@@ -241,7 +229,6 @@ async function loadMemberStudentsMultiSelect() {
             return;
         } 
         
-        // بناء القائمة بناءً على البيانات القادمة من السحابة
         let h = `<div class="multi-select-option select-all-option" onclick="toggleSelectAllStudents(this)">
                     <input type="checkbox" id="selectAllCheckbox">
                     <label for="selectAllCheckbox">الكل</label>
@@ -278,7 +265,6 @@ window.memberGenerateReport = async function() {
     previewArea.innerHTML = '<div class="text-center p-5"><h3><i class="fas fa-spinner fa-spin"></i> جاري استخراج البيانات...</h3></div>'; 
     
     try {
-        // يتم استدعاء دوال التوليد من ملف reports.js الموجود في الصفحة
         if (reportType === 'attendance') await generateAttendanceReport(selectedStudentIds, previewArea);
         else if (reportType === 'achievement') await generateAchievementReport(selectedStudentIds, previewArea);
         else if (reportType === 'assignments') await generateAssignmentsReport(selectedStudentIds, previewArea);
@@ -292,7 +278,6 @@ window.memberGenerateReport = async function() {
     }
 };
 
-// التصدير
 window.switchMemberTab = switchMemberTab;
 window.openSigningModal = openSigningModal;
 window.submitSignature = submitSignature;

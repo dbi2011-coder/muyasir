@@ -343,7 +343,7 @@ async function generateAttendanceReport(studentIds, container) {
 
     tableHTML += `</tbody></table>
             <div class="custom-footer">
-                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/ ${teacherName} بتاريخ ${printDate}
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبدالعزيز العجلان بتاريخ ${printDate}
             </div>
             <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px;">
                 <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقرير 🖨️</button>

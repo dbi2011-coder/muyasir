@@ -1,6 +1,6 @@
 // ============================================
 // 📁 الملف: assets/js/reports.js
-// الوصف: نظام التقارير الشامل (نسخة Supabase مع توحيد التذييل لجميع التقارير)
+// الوصف: نظام التقارير الشامل (نسخة Supabase مع توحيد تذييل الطباعة لجميع التقارير)
 // ============================================
 
 // 1. حقن أنماط الطباعة (CSS)
@@ -16,15 +16,16 @@
             color: #000 !important;
             border-top: 2px solid #000;
             padding-top: 10px;
-            margin-top: 20px;
+            margin-top: 30px;
             background: white;
+            page-break-inside: avoid;
         }
 
         @media print {
             @page {
                 size: A4;
                 margin: 10mm;
-                margin-bottom: 20mm; /* مساحة للتذييل */
+                margin-bottom: 15mm;
             }
             body * {
                 visibility: hidden;
@@ -46,16 +47,6 @@
                 direction: rtl;
                 z-index: 99999 !important;
             }
-            
-            /* تثبيت التذييل أسفل كل صفحة في الطباعة */
-            .custom-footer {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                z-index: 2147483647; 
-                background-color: white !important;
-            }
 
             table {
                 width: 100% !important;
@@ -64,7 +55,7 @@
                 font-family: 'Times New Roman', serif;
                 font-size: 12pt;
                 margin-top: 15px;
-                margin-bottom: 30px;
+                margin-bottom: 20px;
             }
             th, td {
                 border: 1px solid #000 !important;
@@ -114,22 +105,24 @@ function getReportUser() {
     }
 }
 
-// 🔥 دالة مساعدة لتحديد المعلم المستهدف (للمعلم أو لعضو اللجنة) 🔥
+// دالة مساعدة لتحديد المعلم المستهدف (للمعلم أو لعضو اللجنة)
 function getTargetTeacherId() {
     const user = getReportUser();
     if (!user) return null;
-    // إذا كان المستخدم عضو لجنة، فإن المعلم المستهدف مخزن في ownerId
-    if (user.ownerId) {
-        return user.ownerId;
-    }
-    // وإلا فالمستخدم هو المعلم نفسه
-    return user.id;
+    if (user.ownerId) return user.ownerId; // إذا كان المستخدم عضو لجنة
+    return user.id; // إذا كان المستخدم المعلم نفسه
 }
 
-window.toggleSelectAll = function() {
+window.toggleSelectAll = function(forceState = null) {
     const checkboxes = document.querySelectorAll('input[name="selectedStudents"]');
-    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-    checkboxes.forEach(cb => cb.checked = !allChecked);
+    let isChecked = forceState !== null ? forceState : true;
+    
+    if (forceState === null) {
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        isChecked = !allChecked;
+    }
+    
+    checkboxes.forEach(cb => cb.checked = isChecked);
 };
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -187,7 +180,7 @@ async function loadStudentsForSelection() {
             .from('users')
             .select('*')
             .eq('role', 'student')
-            .eq('teacherId', targetTeacherId); 
+            .eq('teacherId', targetTeacherId);
 
         if (error) throw error;
 
@@ -501,7 +494,7 @@ async function generateAssignmentsReport(studentIds, container) {
     container.innerHTML = tableHTML;
 }
 
-// 🌟 تقرير الخطة التربوية 🌟
+// 🌟 تقرير الخطة التربوية الفردية 🌟
 async function generateIEPReport(studentIds, container) {
     const teacherId = getTargetTeacherId(); 
     
@@ -673,18 +666,19 @@ async function generateIEPReport(studentIds, container) {
             <div style="border:1px solid #000; padding:10px; margin-top:10px; background:#f9f9f9; text-align:center;">
                 <strong>الهدف بعيد المدى:</strong> أن يتقن التلميذ مهارات المادة بنسبة إتقان 80%
             </div>
-        </div>`;
+
+            <div class="custom-footer">
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
+            </div>
+        </div>
+        `;
 
         if (index < studentIds.length - 1) {
             fullReportHTML += `<div class="page-break"></div>`;
         }
     });
 
-    // إضافة التذييل مرة واحدة في الأسفل + أزرار الطباعة
     fullReportHTML += `
-        <div class="custom-footer">
-            تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
-        </div>
         <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px; padding:20px;">
             <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقارير 🖨️</button>
         </div>
@@ -811,18 +805,19 @@ async function generateDiagnosticReport(studentIds, container) {
             fullReportHTML += `</tbody></table>`;
         }
 
-        fullReportHTML += `</div>`;
+        fullReportHTML += `
+            <div class="custom-footer">
+                تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
+            </div>
+        </div>
+        `;
 
         if (index < studentIds.length - 1) {
             fullReportHTML += `<div class="page-break"></div>`;
         }
     });
 
-    // إضافة التذييل مرة واحدة في الأسفل + أزرار الطباعة
     fullReportHTML += `
-        <div class="custom-footer">
-            تم طباعة التقرير من منصة ميسر التعلم للاستاذ/صالح عبد العزيز عبدالله العجلان بتاريخ ${printDate}
-        </div>
         <div class="mt-4 text-left no-print" style="text-align:left; margin-top:20px; padding:20px;">
             <button onclick="window.print()" class="btn btn-primary" style="padding:10px 20px; font-size:1.1em;">طباعة التقارير 🖨️</button>
         </div>
@@ -831,6 +826,7 @@ async function generateDiagnosticReport(studentIds, container) {
     container.innerHTML = fullReportHTML;
 }
 
+// 🌟 تقرير الجدول الدراسي 🌟
 async function generateScheduleReport(studentIds, container) {
     const teacherId = getTargetTeacherId(); 
     

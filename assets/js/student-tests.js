@@ -1,39 +1,14 @@
 // ============================================
 // 📁 المسار: assets/js/student-tests.js
-// الوصف: إدارة الاختبارات + دعم شامل للأسئلة القديمة والجديدة بجميع أنواعها التفاعلية
+// الوصف: إدارة الاختبارات - واجهة الاختبار الأصلية (سؤال بسؤال) متصلة مع Supabase
 // ============================================
 
-let currentTest = null;
 let currentAssignment = null;
-let currentQuestionIndex = 0;
 let userAnswers = [];
-let selectedWordForDrop = null; 
-
-let mediaRecorder = null;
-let audioChunks = [];
-let activeRecordingId = null;
-
-function injectMobileStyles() {
-    if (document.getElementById('mobileTestStyles')) return;
-    const style = document.createElement('style');
-    style.id = 'mobileTestStyles';
-    style.innerHTML = `
-        .sentence-area { line-height: 2.8 !important; font-size: 1.25rem !important; padding: 15px !important; word-wrap: break-word; text-align: justify; }
-        .drop-zone { display: inline-block !important; min-width: 100px; height: 38px; line-height: 36px !important; vertical-align: bottom; margin: 0 5px; padding: 0 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; background: #f0f0f0; border-bottom: 2px solid #333; text-align: center; }
-        .draggable-word { cursor: pointer !important; touch-action: manipulation; transition: all 0.2s ease; display: inline-block; background: #fff; border: 2px solid #c5e1a5; padding: 8px 15px; border-radius: 20px; font-weight: bold; margin: 5px; }
-        .selected-word { background: #fff9c4 !important; border-color: #fbc02d !important; transform: scale(1.1); box-shadow: 0 0 15px rgba(253, 216, 53, 0.6) !important; z-index: 10; }
-        .answer-option { display: block; padding: 15px; border: 2px solid #eee; margin-bottom: 10px; border-radius: 10px; cursor: pointer; transition: 0.2s; font-size: 1.1rem; }
-        .answer-option:hover { background: #f8f9fa; }
-        .answer-option.selected { border-color: #2196f3; background: #e3f2fd; }
-        .question-card { display: none; background: #fff; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); max-width: 800px; margin: 0 auto; animation: slideIn 0.3s ease; }
-        .question-card.active { display: block; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-    `;
-    document.head.appendChild(style);
-}
+let currentTestSession = { questions: [], currentIndex: 0, testData: null };
+let testTimerInterval = null;
 
 document.addEventListener('DOMContentLoaded', async function() {
-    injectMobileStyles();
     await loadMyTests();
 });
 
@@ -104,6 +79,10 @@ async function loadMyTests() {
     }
 }
 
+// ---------------------------------------------------------
+// 🔥 واجهة الاختبار الأصلية (student-test-engine) 🔥
+// ---------------------------------------------------------
+
 async function openTestMode(assignmentId) {
     try {
         const { data: assignment } = await window.supabase.from('student_tests').select('*').eq('id', assignmentId).single();
@@ -113,195 +92,176 @@ async function openTestMode(assignmentId) {
         if (!test) return alert('نموذج الاختبار الأصلي غير موجود');
 
         currentAssignment = assignment;
-        currentTest = test;
         userAnswers = currentAssignment.answers || [];
         
-        document.getElementById('focusTestTitle').textContent = currentTest.title;
-        document.getElementById('testFocusMode').style.display = 'flex';
-        document.body.style.overflow = 'hidden';
+        currentTestSession = { 
+            questions: test.questions, 
+            currentIndex: 0, 
+            testData: test 
+        };
 
-        document.getElementById('testStartScreen').style.display = 'block';
-        document.getElementById('testQuestionsContainer').style.display = 'none';
-        document.getElementById('testFooterControls').style.display = 'none';
-    } catch (e) { console.error(e); }
+        if (currentAssignment.status === 'completed') {
+            alert('أنت الآن في وضع المراجعة. لا يمكنك التعديل على الإجابات.');
+        }
+
+        showTestInterface();
+        renderCurrentQuestion();
+    } catch (e) { 
+        console.error(e); 
+        alert('حدث خطأ أثناء تهيئة الاختبار.');
+    }
 }
 
-function startActualTest() {
-    document.getElementById('testStartScreen').style.display = 'none';
-    document.getElementById('testQuestionsContainer').style.display = 'block';
-    document.getElementById('testFooterControls').style.display = 'flex';
+function showTestInterface() {
+    let existingUI = document.getElementById('activeTestUI');
+    if (existingUI) existingUI.remove();
+
+    const testUI = document.createElement('div');
+    testUI.id = 'activeTestUI'; 
+    testUI.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:#f4f6f9; z-index:100000; display:flex; flex-direction:column; font-family:"Tajawal", sans-serif; direction:rtl;';
     
-    renderAllQuestions(); 
-    showQuestion(0);
+    testUI.innerHTML = `
+        <div style="background:white; padding:15px 20px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 2px 10px rgba(0,0,0,0.1); z-index:10;">
+            <h3 style="margin:0; color:#333;">${currentTestSession.testData.title}</h3>
+            <div style="display:flex; align-items:center; gap:15px;">
+                <div id="testTimer" style="font-weight:bold; font-size:1.2rem; color:#d32f2f; background:#ffebee; padding:5px 15px; border-radius:20px; display:${currentAssignment.status==='completed'?'none':'block'};">00:00</div>
+                <button class="btn btn-sm btn-outline-danger" onclick="closeTestInterface()" style="border-radius:5px; padding:8px 15px; border:1px solid #dc3545; background:white; color:#dc3545; cursor:pointer; font-weight:bold;">خروج ✕</button>
+            </div>
+        </div>
+        <div id="questionDisplayArea" style="flex:1; padding:40px 20px; overflow-y:auto; display:flex; flex-direction:column; align-items:center;">
+        </div>
+        <div style="background:white; padding:15px; text-align:center; box-shadow:0 -2px 10px rgba(0,0,0,0.05); z-index:10; display:flex; justify-content:center; gap:15px;">
+            <button class="btn btn-secondary btn-lg" id="prevQuestionBtn" onclick="prevQuestion()" style="min-width:120px; padding:12px; font-weight:bold; border-radius:8px; border:none; cursor:pointer; background:#eceff1; color:#333; display:none;">السابق ➡</button>
+            <button class="btn btn-primary btn-lg" id="nextQuestionBtn" onclick="nextQuestion()" style="min-width:200px; padding:12px; font-weight:bold; border-radius:8px; border:none; cursor:pointer; background:#007bff; color:white;">التالي ⬅</button>
+        </div>
+    `;
+    
+    document.body.appendChild(testUI);
+    document.body.style.overflow = 'hidden';
+    
+    if (currentAssignment.status !== 'completed') {
+        startTimer();
+    }
 }
 
-function closeTestMode() {
-    document.getElementById('testFocusMode').style.display = 'none';
-    document.body.style.overflow = 'auto';
-    loadMyTests();
-}
-
-// 🔥 الدالة السحرية: تدعم الأسئلة القديمة والجديدة معاً 🔥
-function renderAllQuestions() {
-    const container = document.getElementById('testQuestionsContainer');
-    container.innerHTML = '';
+function renderCurrentQuestion() {
+    const q = currentTestSession.questions[currentTestSession.currentIndex];
     const isReadOnly = (currentAssignment.status === 'completed');
-
-    currentTest.questions.forEach((q, index) => {
-        const savedAns = userAnswers.find(a => a.questionId == q.id); 
-        let ansValue = savedAns ? savedAns.answer : null;
-        if (typeof ansValue === 'string' && ansValue.startsWith('{')) {
-            try { ansValue = JSON.parse(ansValue); } catch(e){}
-        }
-
-        const qType = q.type || '';
-        let qHtml = `
-            <div class="question-card" id="q-card-${index}">
-                <div class="question-number" style="background:#e3f2fd; color:#1565c0; padding:5px 15px; border-radius:20px; display:inline-block; margin-bottom:15px; font-weight:bold;">سؤال ${index + 1}</div>
-                <h3 class="question-text" style="font-size:1.4rem; margin-bottom:25px;">${q.text || 'السؤال:'}</h3>
-        `;
-
-        if (q.attachment && q.attachment.startsWith('data:image')) {
-            qHtml += `<div style="text-align:center; margin-bottom:20px;"><img src="${q.attachment}" style="max-width:100%; max-height:200px; border-radius:10px; border:1px solid #eee;"></div>`;
-        }
-
-        // 1. أسئلة الخيارات (يدعم mcq الجديد و multiple-choice القديم و true-false القديم)
-        if (qType.includes('mcq') || qType === 'multiple-choice' || qType === 'true-false') {
-            qHtml += `<div class="options-list" style="${isReadOnly ? 'pointer-events: none;' : ''}">`;
-            
-            let choices = [];
-            if (qType === 'true-false') {
-                choices = ['صواب', 'خطأ'];
-            } else {
-                choices = q.choices || (q.data && q.data.choices) || [];
-            }
-
-            let savedValueForRadio = ansValue;
-            if(qType === 'true-false' && ansValue !== null) {
-                savedValueForRadio = (ansValue === 'true' || ansValue === true) ? 0 : 1;
-            }
-
-            choices.forEach((choice, i) => {
-                const isSel = (savedValueForRadio == i) ? 'background:#e3f2fd; border-color:#2196f3;' : 'background:#fff; border-color:#eee;';
-                
-                // تحديد القيمة المراد حفظها (رقم الخيار، أو true/false)
-                let valToSave = i;
-                if(qType === 'true-false') valToSave = (i === 0) ? 'true' : 'false';
-
-                qHtml += `<label class="answer-option" onclick="selectOption(this, ${index}, '${valToSave}')" style="display:block; padding:15px; border:2px solid #eee; margin-bottom:10px; border-radius:10px; cursor:pointer; transition:0.2s; ${isSel}">
-                            <input type="radio" name="q_${q.id}" value="${valToSave}" ${savedValueForRadio == i ? 'checked' : ''} style="transform:scale(1.2); margin-left:10px;"> ${choice}
-                          </label>`;
-            });
-            qHtml += `</div>`;
-        } 
-        // 2. السحب والإفلات
-        else if (qType === 'drag-drop') {
-            let allGaps = [];
-            let paragraphsHtml = '';
-
-            (q.paragraphs || []).forEach((p, pIdx) => {
-                let pText = p.text;
-                if (p.gaps && p.gaps.length > 0) {
-                    p.gaps.forEach((g, gIdx) => {
-                        allGaps.push(g.dragItem);
-                        let savedWord = (ansValue && ansValue[`p_${pIdx}_g_${gIdx}`]) ? ansValue[`p_${pIdx}_g_${gIdx}`] : '';
-                        let dropZone = `<span class="drop-zone" id="dz_${index}_${pIdx}_${gIdx}" onclick="handleDropClick(${index}, ${pIdx}, ${gIdx})" style="${isReadOnly ? 'pointer-events:none;' : ''}">${savedWord}</span>`;
-                        pText = pText.replace(g.dragItem, dropZone);
-                    });
-                }
-                paragraphsHtml += `<div class="sentence-area mb-4">${pText}</div>`;
-            });
-
-            allGaps = allGaps.sort(() => Math.random() - 0.5);
-            let wordBankHtml = `<div class="word-bank" id="wb_${index}" style="${isReadOnly ? 'display:none;' : ''}">`;
-            allGaps.forEach(word => {
-                wordBankHtml += `<span class="draggable-word" onclick="selectWordToDrop(this, ${index})">${word}</span>`;
-            });
-            wordBankHtml += `</div>`;
-
-            qHtml += wordBankHtml + paragraphsHtml;
-        }
-        // 3. الحرف الناقص
-        else if (qType === 'missing-char') {
-            qHtml += `<div style="display:flex; flex-direction:column; gap:15px; ${isReadOnly ? 'pointer-events: none;' : ''}">`;
-            (q.paragraphs || []).forEach((p, pIdx) => {
-                let savedChar = (ansValue && ansValue[`p_${pIdx}`]) ? ansValue[`p_${pIdx}`] : '';
-                qHtml += `<div style="display:flex; align-items:center; justify-content:center; gap:15px; font-size:1.8rem; background:#fafafa; padding:20px; border-radius:10px; border:1px solid #eee;">
-                   <span>${p.text}</span>
-                   <input type="text" maxlength="1" class="form-control text-center" style="width:60px; height:60px; font-size:1.8rem; font-weight:bold; border:2px solid #2196f3; border-radius:8px;" value="${savedChar}" onchange="saveComplexAnswer(${index}, 'p_${pIdx}', this.value)" ${isReadOnly ? 'readonly' : ''}>
-                </div>`;
-            });
-            qHtml += `</div>`;
-        }
-        // 4. القراءة
-        else if (qType === 'ai-reading' || qType === 'manual-reading') {
-            qHtml += `<div style="display:flex; flex-direction:column; gap:15px;">`;
-            (q.paragraphs || []).forEach((p) => {
-                qHtml += `<div style="font-size:1.8rem; line-height:2.5; background:#fff9c4; padding:20px; border-radius:10px; text-align:center; border:2px solid #fbc02d; color:#333;">${p.text}</div>`;
-            });
-            qHtml += `<div class="alert alert-info mt-3 text-center"><i class="fas fa-microphone"></i> يرجى قراءة النص بصوت واضح لمعلمك</div>`;
-            qHtml += `<textarea class="form-control mt-2" rows="2" placeholder="اكتب ما قرأته هنا..." onchange="saveSimpleAnswer(${index}, this.value)" ${isReadOnly ? 'readonly' : ''} style="border-radius:10px;">${ansValue || ''}</textarea></div>`;
-        }
-        // 5. الإملاء (يدعم الجديد والقديم spelling-auto)
-        else if (qType.includes('spelling') || qType === 'spelling-auto') {
-            qHtml += `<div class="alert alert-info text-center" style="font-size:1.1rem;"><i class="fas fa-headphones"></i> استمع للكلمة واكتبها في الخانة السفلية</div>`;
-            
-            // دعم النسخة القديمة (spelling-auto)
-            if (qType === 'spelling-auto') {
-                qHtml += `<input type="text" class="form-control text-center mt-3" style="font-size:1.5rem; padding:15px; border:2px solid #ccc; border-radius:10px;" placeholder="اكتب إجابتك هنا" value="${ansValue || ''}" onchange="saveSimpleAnswer(${index}, this.value)" ${isReadOnly ? 'readonly' : ''}>`;
-            } else {
-                // النسخة الجديدة (مصفوفة فقرات)
-                qHtml += `<div style="display:flex; flex-direction:column; gap:15px; margin-top:20px; ${isReadOnly ? 'pointer-events: none;' : ''}">`;
-                (q.paragraphs || []).forEach((p, pIdx) => {
-                    let savedSpell = (ansValue && ansValue[`p_${pIdx}`]) ? ansValue[`p_${pIdx}`] : '';
-                    qHtml += `<input type="text" class="form-control text-center" style="font-size:1.5rem; padding:15px; border:2px solid #ccc; border-radius:10px;" placeholder="اكتب الكلمة ${pIdx + 1} هنا" value="${savedSpell}" onchange="saveComplexAnswer(${index}, 'p_${pIdx}', this.value)" ${isReadOnly ? 'readonly' : ''}>`;
-                });
-                qHtml += `</div>`;
-            }
-        }
-        // 6. الأسئلة المفتوحة أو غير المعرفة
-        else {
-            qHtml += `<textarea class="form-control" rows="4" placeholder="اكتب إجابتك هنا..." onchange="saveSimpleAnswer(${index}, this.value)" ${isReadOnly ? 'readonly' : ''} style="width:100%; padding:15px; border-radius:10px; border:1px solid #ccc; font-size:1.1rem;">${ansValue || ''}</textarea>`;
-        }
-
-        qHtml += `</div>`;
-        container.insertAdjacentHTML('beforeend', qHtml);
-    });
-    updateNavigationButtons();
-}
-
-// 🔥 دوال مساعدة لأسئلة السحب والإفلات 🔥
-function selectWordToDrop(el, qIdx) {
-    if(currentAssignment.status === 'completed') return;
-    document.querySelectorAll(`#wb_${qIdx} .draggable-word`).forEach(w => w.classList.remove('selected-word'));
-    el.classList.add('selected-word');
-    selectedWordForDrop = el.innerText;
-}
-
-function handleDropClick(qIdx, pIdx, gIdx) {
-    if(currentAssignment.status === 'completed') return;
     
-    const dz = document.getElementById(`dz_${qIdx}_${pIdx}_${gIdx}`);
+    let savedAns = userAnswers.find(a => a.questionId == q.id);
+    let ansValue = savedAns ? savedAns.answer : null;
     
-    if (!selectedWordForDrop) {
-        if (dz.innerText !== '') {
-            dz.innerText = ''; 
-            saveComplexAnswer(qIdx, `p_${pIdx}_g_${gIdx}`, '');
-        }
-        return;
+    // إذا كانت الإجابة محفوظة كـ JSON (للأسئلة المتقدمة)
+    if (typeof ansValue === 'string' && ansValue.startsWith('{')) {
+        try { ansValue = JSON.parse(ansValue); } catch(e){}
     }
 
-    dz.innerText = selectedWordForDrop;
-    saveComplexAnswer(qIdx, `p_${pIdx}_g_${gIdx}`, selectedWordForDrop);
+    let html = `<div style="background:white; padding:30px; border-radius:15px; margin-bottom:20px; width:100%; max-width:800px; box-shadow:0 4px 15px rgba(0,0,0,0.05); border:1px solid #eee;">`;
+    
+    html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                <div style="color:#1565c0; font-weight:bold; background:#e3f2fd; padding:5px 15px; border-radius:20px;">سؤال ${currentTestSession.currentIndex + 1} من ${currentTestSession.questions.length}</div>
+             </div>`;
+             
+    html += `<h4 style="font-size:1.5rem; line-height:1.6; margin-bottom:25px; color:#222;">${q.text || 'أجب عن السؤال التالي:'}</h4>`;
 
-    document.querySelectorAll('.draggable-word').forEach(w => w.classList.remove('selected-word'));
-    selectedWordForDrop = null;
+    if (q.attachment && q.attachment.startsWith('data:image')) {
+        html += `<div style="text-align:center; margin-bottom:25px;"><img src="${q.attachment}" style="max-width:100%; max-height:250px; border-radius:10px; border:1px solid #ddd;"></div>`;
+    }
+
+    const qType = q.type || '';
+
+    // 1. خيارات متعددة (النمط الأصلي القديم يدعم mcq و multiple-choice)
+    if (qType === 'multiple-choice' || qType === 'mcq' || qType === 'mcq-media') {
+        const choices = q.choices || (q.data && q.data.choices) || [];
+        choices.forEach((c, i) => {
+            const isChecked = (ansValue == i) ? 'checked' : '';
+            const disabled = isReadOnly ? 'disabled' : '';
+            const bgColor = isChecked ? '#e3f2fd' : '#fafafa';
+            const borderColor = isChecked ? '#2196f3' : '#ddd';
+
+            html += `<label style="display:block; padding:15px; border:2px solid ${borderColor}; margin:10px 0; border-radius:8px; cursor:pointer; font-size:1.2rem; background:${bgColor}; transition:0.2s;" onclick="if(!${isReadOnly}) updateRadioStyle(this)">
+                        <input type="radio" name="ans" value="${i}" onchange="saveAnswer('${i}')" ${isChecked} ${disabled} style="transform:scale(1.3); margin-left:15px;"> ${c}
+                     </label>`;
+        });
+    } 
+    // 2. صح وخطأ (النسخة القديمة)
+    else if (qType === 'true-false') {
+        const trueChecked = (ansValue === 'true' || ansValue === true || ansValue == 0) ? 'checked' : '';
+        const falseChecked = (ansValue === 'false' || ansValue === false || ansValue == 1) ? 'checked' : '';
+        const disabled = isReadOnly ? 'disabled' : '';
+
+        const trueBg = trueChecked ? '#e3f2fd' : '#fafafa'; const trueBorder = trueChecked ? '#2196f3' : '#ddd';
+        const falseBg = falseChecked ? '#e3f2fd' : '#fafafa'; const falseBorder = falseChecked ? '#2196f3' : '#ddd';
+
+        html += `
+            <label style="display:block; padding:15px; border:2px solid ${trueBorder}; margin:10px 0; border-radius:8px; cursor:pointer; font-size:1.2rem; background:${trueBg}; transition:0.2s;" onclick="if(!${isReadOnly}) updateRadioStyle(this)">
+                <input type="radio" name="ans" value="true" onchange="saveAnswer('true')" ${trueChecked} ${disabled} style="transform:scale(1.3); margin-left:15px;"> صواب
+            </label>
+            <label style="display:block; padding:15px; border:2px solid ${falseBorder}; margin:10px 0; border-radius:8px; cursor:pointer; font-size:1.2rem; background:${falseBg}; transition:0.2s;" onclick="if(!${isReadOnly}) updateRadioStyle(this)">
+                <input type="radio" name="ans" value="false" onchange="saveAnswer('false')" ${falseChecked} ${disabled} style="transform:scale(1.3); margin-left:15px;"> خطأ
+            </label>`;
+    } 
+    // 3. الحرف الناقص
+    else if (qType === 'missing-char') {
+        (q.paragraphs || []).forEach((p, pIdx) => {
+            let savedChar = (ansValue && ansValue[`p_${pIdx}`]) ? ansValue[`p_${pIdx}`] : '';
+            html += `<div style="display:flex; align-items:center; justify-content:center; gap:15px; font-size:1.8rem; background:#fafafa; padding:20px; border-radius:10px; border:1px solid #eee; margin-bottom:15px;">
+               <span>${p.text}</span>
+               <input type="text" maxlength="1" class="form-control text-center" style="width:60px; height:60px; font-size:1.8rem; font-weight:bold; border:2px solid #2196f3; border-radius:8px;" value="${savedChar}" onchange="saveComplexAnswer('p_${pIdx}', this.value)" ${isReadOnly ? 'disabled' : ''}>
+            </div>`;
+        });
+    }
+    // 4. السؤال المفتوح الافتراضي
+    else {
+        const disabled = isReadOnly ? 'readonly style="background:#f1f5f9;"' : '';
+        html += `<input type="text" class="form-control" style="font-size:1.2rem; padding:15px; width:100%; border:2px solid #ccc; border-radius:8px;" placeholder="اكتب الإجابة هنا..." onkeyup="saveAnswer(this.value)" onchange="saveAnswer(this.value)" value="${ansValue || ''}" ${disabled}>`;
+    }
+
+    html += `</div>`;
+    document.getElementById('questionDisplayArea').innerHTML = html;
+
+    // تحديث أزرار التنقل (السابق والتالي)
+    const nextBtn = document.getElementById('nextQuestionBtn');
+    const prevBtn = document.getElementById('prevQuestionBtn');
+    
+    if (currentTestSession.currentIndex === 0) {
+        prevBtn.style.display = 'none';
+    } else {
+        prevBtn.style.display = 'inline-block';
+    }
+
+    if (currentTestSession.currentIndex === currentTestSession.questions.length - 1) {
+        nextBtn.innerHTML = isReadOnly ? 'إغلاق المراجعة ✖' : 'تسليم الاختبار ✅';
+        nextBtn.style.background = isReadOnly ? '#6c757d' : '#28a745';
+    } else {
+        nextBtn.innerHTML = 'التالي ⬅';
+        nextBtn.style.background = '#007bff';
+    }
 }
 
-function saveComplexAnswer(qIdx, key, val) {
-    if(currentAssignment.status === 'completed') return;
-    const qId = currentTest.questions[qIdx].id;
+// دالة تجميلية لتغيير لون الخيار عند النقر
+window.updateRadioStyle = function(label) {
+    const parent = label.parentElement;
+    parent.querySelectorAll('label').forEach(lbl => {
+        lbl.style.background = '#fafafa';
+        lbl.style.borderColor = '#ddd';
+    });
+    label.style.background = '#e3f2fd';
+    label.style.borderColor = '#2196f3';
+}
 
+function saveAnswer(val) {
+    if(currentAssignment.status === 'completed') return;
+    const qId = currentTestSession.questions[currentTestSession.currentIndex].id;
+    const idx = userAnswers.findIndex(a => a.questionId == qId);
+    if(idx !== -1) userAnswers[idx].answer = val;
+    else userAnswers.push({ questionId: qId, answer: val });
+}
+
+function saveComplexAnswer(key, val) {
+    if(currentAssignment.status === 'completed') return;
+    const qId = currentTestSession.questions[currentTestSession.currentIndex].id;
+    
     let ansIndex = userAnswers.findIndex(a => a.questionId == qId);
     let currentAnsObj = {};
 
@@ -321,85 +281,75 @@ function saveComplexAnswer(qIdx, key, val) {
     userAnswers[ansIndex].answer = JSON.stringify(currentAnsObj); 
 }
 
-function selectOption(el, qIdx, choiceVal) {
-    if(currentAssignment.status === 'completed') return;
-    const card = document.getElementById(`q-card-${qIdx}`);
-    card.querySelectorAll('.answer-option').forEach(e => { e.style.background = '#fff'; e.style.borderColor = '#eee'; });
-    el.style.background = '#e3f2fd'; el.style.borderColor = '#2196f3';
-    el.querySelector('input').checked = true;
-    updateUserAnswer(currentTest.questions[qIdx].id, choiceVal);
-}
-
-function saveSimpleAnswer(qIdx, val) {
-    if(currentAssignment.status === 'completed') return;
-    updateUserAnswer(currentTest.questions[qIdx].id, val);
-}
-
-function updateUserAnswer(qId, val) {
-    if(currentAssignment.status === 'completed') return;
-    const idx = userAnswers.findIndex(a => a.questionId == qId);
-    if(idx !== -1) userAnswers[idx].answer = val;
-    else userAnswers.push({ questionId: qId, answer: val });
-}
-
-function showQuestion(index) {
-    document.querySelectorAll('.question-card').forEach(c => c.classList.remove('active'));
-    const card = document.getElementById(`q-card-${index}`);
-    if(card) {
-        card.classList.add('active');
-        currentQuestionIndex = index;
-        document.getElementById('questionCounter').textContent = `سؤال ${index + 1} من ${currentTest.questions.length}`;
-        updateNavigationButtons();
+function nextQuestion() {
+    if (currentTestSession.currentIndex < currentTestSession.questions.length - 1) { 
+        currentTestSession.currentIndex++; 
+        renderCurrentQuestion(); 
+    } 
+    else { 
+        finishTest(); 
     }
 }
 
-function nextQuestion() { 
-    if (currentQuestionIndex < currentTest.questions.length - 1) showQuestion(currentQuestionIndex + 1); 
-}
-function prevQuestion() { 
-    if (currentQuestionIndex > 0) showQuestion(currentQuestionIndex - 1); 
-}
-
-function updateNavigationButtons() {
-    const isLast = currentQuestionIndex === currentTest.questions.length - 1;
-    const isReadOnly = (currentAssignment.status === 'completed');
-
-    let actionButtons = isReadOnly ? 
-        `<button class="btn-nav" style="background:#6c757d; color:white;" onclick="closeTestMode()">إغلاق المراجعة</button>` : 
-        `<button class="btn-nav btn-save" onclick="exitAndSaveTest()">خروج وحفظ مؤقت</button>
-         ${isLast ? `<button class="btn-nav btn-submit" onclick="finishTest()">تسليم الاختبار</button>` : ''}`;
-
-    document.getElementById('testFooterControls').innerHTML = `
-        <button class="btn-nav btn-prev" onclick="prevQuestion()" ${currentQuestionIndex === 0 ? 'disabled' : ''}>السابق</button>
-        <div style="display:flex; gap:10px;">
-            ${actionButtons}
-            ${(!isLast) ? `<button class="btn-nav btn-next" onclick="nextQuestion()">التالي</button>` : ''}
-        </div>`;
+function prevQuestion() {
+    if (currentTestSession.currentIndex > 0) { 
+        currentTestSession.currentIndex--; 
+        renderCurrentQuestion(); 
+    }
 }
 
-async function saveTestProgress(submit = false) {
-    if(currentAssignment.status === 'completed') return;
+async function finishTest() {
+    if (currentAssignment.status === 'completed') {
+        closeTestInterface();
+        return;
+    }
+
+    if(!confirm('هل أنت متأكد من رغبتك في تسليم الاختبار نهائياً؟')) return;
     
-    const updateData = { answers: userAnswers, status: submit ? 'completed' : 'in-progress' };
-    if (submit) updateData.completedDate = new Date().toISOString();
+    const updateData = { 
+        answers: userAnswers, 
+        status: 'completed',
+        completedDate: new Date().toISOString()
+    };
 
     try {
         const { error } = await window.supabase.from('student_tests').update(updateData).eq('id', currentAssignment.id);
         if (error) throw error;
 
-        if(!submit) {
-            window.showSuccess('تم حفظ إجاباتك مؤقتاً ✅');
-            closeTestMode();
-        } else {
-            window.showSuccess('تم التسليم بنجاح! 🎉 الاختبار الآن بانتظار تصحيح المعلم.');
-            closeTestMode();
-        }
-    } catch(e) { console.error(e); window.showError('حدث خطأ في الحفظ!'); }
+        alert('تم التسليم بنجاح! 🎉 الاختبار الآن بانتظار تصحيح المعلم.');
+        closeTestInterface();
+    } catch(e) { 
+        console.error(e); 
+        alert('حدث خطأ في الحفظ!'); 
+    }
 }
 
-function exitAndSaveTest() { saveTestProgress(false); }
-function finishTest() {
-    window.showConfirmModal('هل أنت متأكد من رغبتك في تسليم الاختبار نهائياً؟ لن تتمكن من التعديل بعد التسليم.', function() {
-        saveTestProgress(true);
-    });
+function closeTestInterface() {
+    // حفظ مسودة في حالة الخروج قبل الإكمال
+    if (currentAssignment && currentAssignment.status !== 'completed') {
+        window.supabase.from('student_tests')
+            .update({ answers: userAnswers, status: 'in-progress' })
+            .eq('id', currentAssignment.id)
+            .then(() => console.log('تم حفظ المسودة'));
+    }
+
+    const testUI = document.getElementById('activeTestUI');
+    if (testUI) testUI.remove();
+    document.body.style.overflow = 'auto';
+    clearInterval(testTimerInterval);
+    loadMyTests();
+}
+
+window.closeTestInterface = closeTestInterface;
+
+function startTimer() {
+    let s = 0; 
+    const timerDisplay = document.getElementById('testTimer');
+    clearInterval(testTimerInterval);
+    testTimerInterval = setInterval(() => { 
+        s++; 
+        if(timerDisplay) {
+            timerDisplay.innerText = `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`; 
+        }
+    }, 1000);
 }

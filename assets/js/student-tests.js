@@ -6,6 +6,7 @@ let currentTest = null;
 let currentAssignment = null;
 let currentQuestionIndex = 0;
 let userAnswers = [];
+let selectedWordForDrop = null; // متغير لحفظ الكلمة المحددة في سؤال السحب والإفلات
 
 document.addEventListener('DOMContentLoaded', async function() {
     await loadMyTests();
@@ -119,6 +120,7 @@ function closeTestMode() {
     loadMyTests();
 }
 
+// 🔥 تم إعادة بناء هذه الدالة بالكامل لتدعم جميع أنواع الأسئلة 🔥
 function renderAllQuestions() {
     const container = document.getElementById('testQuestionsContainer');
     container.innerHTML = '';
@@ -126,15 +128,27 @@ function renderAllQuestions() {
 
     currentTest.questions.forEach((q, index) => {
         const savedAns = userAnswers.find(a => a.questionId == q.id); 
-        const ansValue = savedAns ? savedAns.answer : null;
+        let ansValue = savedAns ? savedAns.answer : null;
+
+        // فك تشفير الإجابات المركبة إذا كانت محفوظة كنص JSON
+        if (typeof ansValue === 'string' && ansValue.startsWith('{')) {
+            try { ansValue = JSON.parse(ansValue); } catch(e){}
+        }
 
         let qHtml = `
             <div class="question-card" id="q-card-${index}" style="display:none; background:#fff; padding:30px; border-radius:15px; box-shadow:0 4px 15px rgba(0,0,0,0.05); max-width:800px; margin:0 auto;">
                 <div class="question-number" style="background:#e3f2fd; color:#1565c0; padding:5px 15px; border-radius:20px; display:inline-block; margin-bottom:15px; font-weight:bold;">سؤال ${index + 1}</div>
-                <h3 class="question-text" style="font-size:1.4rem; margin-bottom:25px;">${q.text || 'سؤال'}</h3>
+                <h3 class="question-text" style="font-size:1.4rem; margin-bottom:25px;">${q.text || 'السؤال:'}</h3>
         `;
 
+        // 1. عرض المرفقات (إن وجدت)
+        if (q.attachment && q.attachment.startsWith('data:image')) {
+            qHtml += `<div style="text-align:center; margin-bottom:20px;"><img src="${q.attachment}" style="max-width:100%; max-height:200px; border-radius:10px; border:1px solid #eee;"></div>`;
+        }
+
+        // 2. معالجة أنواع الأسئلة المختلفة
         if (q.type.includes('mcq')) {
+            // اختيار من متعدد
             qHtml += `<div class="options-list" style="${isReadOnly ? 'pointer-events: none;' : ''}">`;
             (q.choices || []).forEach((choice, i) => {
                 const isSel = (ansValue == i) ? 'background:#e3f2fd; border-color:#2196f3;' : 'background:#fff; border-color:#eee;';
@@ -143,14 +157,126 @@ function renderAllQuestions() {
                           </label>`;
             });
             qHtml += `</div>`;
-        } else {
-            qHtml += `<textarea class="form-control" rows="4" placeholder="اكتب إجابتك هنا..." onchange="saveSimpleAnswer(${index}, this.value)" ${isReadOnly ? 'readonly' : ''} style="width:100%; padding:15px; border-radius:10px; border:1px solid #ccc;">${ansValue || ''}</textarea>`;
+        } 
+        else if (q.type === 'drag-drop') {
+            // سحب وإفلات (الكلمات والجمل)
+            let allGaps = [];
+            let paragraphsHtml = '';
+
+            (q.paragraphs || []).forEach((p, pIdx) => {
+                let pText = p.text;
+                if (p.gaps && p.gaps.length > 0) {
+                    p.gaps.forEach((g, gIdx) => {
+                        allGaps.push(g.dragItem);
+                        let savedWord = (ansValue && ansValue[`p_${pIdx}_g_${gIdx}`]) ? ansValue[`p_${pIdx}_g_${gIdx}`] : '';
+                        let dropZone = `<span class="drop-zone" id="dz_${index}_${pIdx}_${gIdx}" onclick="handleDropClick(${index}, ${pIdx}, ${gIdx})" style="${isReadOnly ? 'pointer-events:none;' : ''}">${savedWord}</span>`;
+                        pText = pText.replace(g.dragItem, dropZone);
+                    });
+                }
+                paragraphsHtml += `<div class="sentence-area mb-4">${pText}</div>`;
+            });
+
+            // إنشاء بنك الكلمات عشوائياً
+            allGaps = allGaps.sort(() => Math.random() - 0.5);
+            let wordBankHtml = `<div class="word-bank" id="wb_${index}" style="${isReadOnly ? 'display:none;' : ''}">`;
+            allGaps.forEach(word => {
+                wordBankHtml += `<span class="draggable-word" onclick="selectWordToDrop(this, ${index})">${word}</span>`;
+            });
+            wordBankHtml += `</div>`;
+
+            qHtml += wordBankHtml + paragraphsHtml;
+        }
+        else if (q.type === 'missing-char') {
+            // أكمل الحرف الناقص
+            qHtml += `<div style="display:flex; flex-direction:column; gap:15px; ${isReadOnly ? 'pointer-events: none;' : ''}">`;
+            (q.paragraphs || []).forEach((p, pIdx) => {
+                let savedChar = (ansValue && ansValue[`p_${pIdx}`]) ? ansValue[`p_${pIdx}`] : '';
+                qHtml += `<div style="display:flex; align-items:center; justify-content:center; gap:15px; font-size:1.8rem; background:#fafafa; padding:20px; border-radius:10px; border:1px solid #eee;">
+                   <span>${p.text}</span>
+                   <input type="text" maxlength="1" class="form-control text-center" style="width:60px; height:60px; font-size:1.8rem; font-weight:bold; border:2px solid #2196f3; border-radius:8px;" value="${savedChar}" onchange="saveComplexAnswer(${index}, 'p_${pIdx}', this.value)" ${isReadOnly ? 'readonly' : ''}>
+                </div>`;
+            });
+            qHtml += `</div>`;
+        }
+        else if (q.type === 'ai-reading' || q.type === 'manual-reading') {
+            // القراءة
+            qHtml += `<div style="display:flex; flex-direction:column; gap:15px;">`;
+            (q.paragraphs || []).forEach((p) => {
+                qHtml += `<div style="font-size:1.8rem; line-height:2.5; background:#fff9c4; padding:20px; border-radius:10px; text-align:center; border:2px solid #fbc02d; color:#333;">${p.text}</div>`;
+            });
+            qHtml += `<div class="alert alert-info mt-3 text-center"><i class="fas fa-microphone"></i> يرجى قراءة النص بصوت واضح لمعلمك</div>`;
+            qHtml += `<textarea class="form-control mt-2" rows="2" placeholder="اكتب ما قرأته هنا (مؤقتاً حتى تفعيل المايكروفون)..." onchange="saveSimpleAnswer(${index}, this.value)" ${isReadOnly ? 'readonly' : ''} style="border-radius:10px;">${ansValue || ''}</textarea></div>`;
+        }
+        else if (q.type === 'ai-spelling' || q.type === 'manual-spelling') {
+            // الإملاء
+            qHtml += `<div class="alert alert-info text-center" style="font-size:1.1rem;"><i class="fas fa-headphones"></i> استمع للكلمات المحددة من معلمك واكتبها في الخانات السفلية</div>`;
+            qHtml += `<div style="display:flex; flex-direction:column; gap:15px; margin-top:20px; ${isReadOnly ? 'pointer-events: none;' : ''}">`;
+            (q.paragraphs || []).forEach((p, pIdx) => {
+                let savedSpell = (ansValue && ansValue[`p_${pIdx}`]) ? ansValue[`p_${pIdx}`] : '';
+                qHtml += `<input type="text" class="form-control text-center" style="font-size:1.5rem; padding:15px; border:2px solid #ccc; border-radius:10px;" placeholder="اكتب الكلمة ${pIdx + 1} هنا" value="${savedSpell}" onchange="saveComplexAnswer(${index}, 'p_${pIdx}', this.value)" ${isReadOnly ? 'readonly' : ''}>`;
+            });
+            qHtml += `</div>`;
+        }
+        else {
+            // الأسئلة المفتوحة (الافتراضي)
+            qHtml += `<textarea class="form-control" rows="4" placeholder="اكتب إجابتك هنا..." onchange="saveSimpleAnswer(${index}, this.value)" ${isReadOnly ? 'readonly' : ''} style="width:100%; padding:15px; border-radius:10px; border:1px solid #ccc; font-size:1.1rem;">${ansValue || ''}</textarea>`;
         }
 
         qHtml += `</div>`;
         container.insertAdjacentHTML('beforeend', qHtml);
     });
     updateNavigationButtons();
+}
+
+// 🔥 دوال مساعدة لأسئلة السحب والإفلات والأسئلة المركبة 🔥
+function selectWordToDrop(el, qIdx) {
+    if(currentAssignment.status === 'completed') return;
+    document.querySelectorAll(`#wb_${qIdx} .draggable-word`).forEach(w => w.classList.remove('selected-word'));
+    el.classList.add('selected-word');
+    selectedWordForDrop = el.innerText;
+}
+
+function handleDropClick(qIdx, pIdx, gIdx) {
+    if(currentAssignment.status === 'completed') return;
+    
+    const dz = document.getElementById(`dz_${qIdx}_${pIdx}_${gIdx}`);
+    
+    if (!selectedWordForDrop) {
+        if (dz.innerText !== '') {
+            dz.innerText = ''; // تفريغ الخانة إذا تم النقر عليها ولم يتم تحديد كلمة
+            saveComplexAnswer(qIdx, `p_${pIdx}_g_${gIdx}`, '');
+        }
+        return;
+    }
+
+    dz.innerText = selectedWordForDrop;
+    saveComplexAnswer(qIdx, `p_${pIdx}_g_${gIdx}`, selectedWordForDrop);
+
+    document.querySelectorAll('.draggable-word').forEach(w => w.classList.remove('selected-word'));
+    selectedWordForDrop = null;
+}
+
+function saveComplexAnswer(qIdx, key, val) {
+    if(currentAssignment.status === 'completed') return;
+    const qId = currentTest.questions[qIdx].id;
+
+    let ansIndex = userAnswers.findIndex(a => a.questionId == qId);
+    let currentAnsObj = {};
+
+    if (ansIndex !== -1) {
+        let existingAns = userAnswers[ansIndex].answer;
+        if (typeof existingAns === 'string' && existingAns.startsWith('{')) {
+            try { currentAnsObj = JSON.parse(existingAns); } catch(e){}
+        } else if (typeof existingAns === 'object' && existingAns !== null) {
+            currentAnsObj = existingAns;
+        }
+    } else {
+        ansIndex = userAnswers.length;
+        userAnswers.push({ questionId: qId, answer: '' });
+    }
+
+    currentAnsObj[key] = val;
+    userAnswers[ansIndex].answer = JSON.stringify(currentAnsObj); 
 }
 
 function selectOption(el, qIdx, choiceIdx) {

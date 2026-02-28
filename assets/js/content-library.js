@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/content-library.js
-// الوصف: مكتبة المحتوى + نافذة التصدير التفاعلية (ربط كامل بـ Supabase)
+// الوصف: مكتبة المحتوى + نافذة التصدير التفاعلية (ربط كامل بـ Supabase + توحيد التصميم)
 // ============================================
 
 // =========================================================
@@ -110,7 +110,10 @@ async function loadTests() {
         const { data: tests, error } = await window.supabase.from('tests').select('*').eq('teacherId', currentUser.id);
         if (error) throw error;
         
-        if(!tests || tests.length === 0) { grid.innerHTML = '<div class="text-center" style="grid-column:1/-1; padding:20px; color:#777;">لا توجد اختبارات تشخيصية</div>'; return; }
+        if(!tests || tests.length === 0) { 
+            grid.innerHTML = `<div class="empty-content-state" style="grid-column:1/-1;text-align:center;padding:20px;"><h3>لا توجد اختبارات تشخيصية</h3><button class="btn btn-success mt-2" onclick="showCreateTestModal()">+ اختبار جديد</button></div>`; 
+            return; 
+        }
         
         grid.innerHTML = tests.map(t => {
             const isLinked = t.questions && t.questions.some(q => q.linkedGoalId);
@@ -127,7 +130,10 @@ async function loadLessons() {
         const { data: lessons, error } = await window.supabase.from('lessons').select('*').eq('teacherId', currentUser.id);
         if (error) throw error;
         
-        if (!lessons || lessons.length === 0) { grid.innerHTML = `<div class="empty-content-state" style="grid-column:1/-1;text-align:center;"><h3>لا توجد دروس تفاعلية</h3></div>`; return; }
+        if (!lessons || lessons.length === 0) { 
+            grid.innerHTML = `<div class="empty-content-state" style="grid-column:1/-1;text-align:center;padding:20px;"><h3>لا توجد دروس تفاعلية</h3><button class="btn btn-success mt-2" onclick="showCreateLessonModal()">+ درس جديد</button></div>`; 
+            return; 
+        }
         
         grid.innerHTML = lessons.map(l => {
             const isLinked = !!l.linkedInstructionalGoal;
@@ -165,7 +171,7 @@ async function loadHomeworks() {
         const { data: homeworks, error } = await window.supabase.from('assignments').select('*').eq('teacherId', currentUser.id);
         if (error) throw error;
         
-        if (!homeworks || homeworks.length === 0) { grid.innerHTML = `<div class="empty-content-state" style="grid-column:1/-1;text-align:center;"><h3>لا توجد واجبات</h3><button class="btn btn-success mt-2" onclick="showCreateHomeworkModal()">+ واجب جديد</button></div>`; return; }
+        if (!homeworks || homeworks.length === 0) { grid.innerHTML = `<div class="empty-content-state" style="grid-column:1/-1;text-align:center;padding:20px;"><h3>لا توجد واجبات</h3><button class="btn btn-success mt-2" onclick="showCreateHomeworkModal()">+ واجب جديد</button></div>`; return; }
         
         grid.innerHTML = homeworks.map(h => {
             const isLinked = !!h.linkedInstructionalGoal;

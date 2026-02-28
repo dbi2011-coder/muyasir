@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/student-tests.js
-// الوصف: إدارة الاختبارات + عرض التقييم الجزئي للطالب (مربوط بـ Supabase)
+// الوصف: إدارة الاختبارات + عرض التقييم الجزئي للطالب + ربط كامل بـ Supabase
 // ============================================
 
 let currentTest = null;
@@ -133,7 +133,7 @@ if (!window.showInfoModal) {
 
 document.addEventListener('DOMContentLoaded', function() {
     injectMobileStyles();
-    // تأخير تحميل الاختبارات لضمان تهيئة Supabase من auth.js
+    // تأخير بسيط لضمان تحميل Supabase
     setTimeout(() => {
         loadMyTests();
     }, 100);
@@ -151,36 +151,34 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function getCurrentUser() {
-    return JSON.parse(sessionStorage.getItem('currentUser'));
+    try {
+        const sessionData = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
+        return sessionData.user ? sessionData.user : sessionData;
+    } catch(e) {
+        return null;
+    }
 }
 
 async function loadMyTests() {
     const container = document.getElementById('allTestsList');
     if(!container) return;
 
-    let currentUser = null;
-    try {
-        const sessionData = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
-        currentUser = sessionData.user || sessionData; 
-    } catch (e) {
-        console.error("Error reading user session", e);
-    }
+    const currentUser = getCurrentUser();
 
     if (!currentUser || !currentUser.id) {
         container.innerHTML = '<div class="alert alert-danger text-center">يرجى تسجيل الدخول لعرض الاختبارات</div>';
         return;
     }
-    
+
     if (!window.supabase) {
-        console.error("Supabase is not initialized!");
-        container.innerHTML = '<div class="alert alert-danger text-center">خطأ في الاتصال بقاعدة البيانات.</div>';
+        container.innerHTML = '<div class="alert alert-danger text-center">خطأ في الاتصال بالسحابة.</div>';
         return;
     }
 
     try {
         container.innerHTML = '<div class="text-center p-4">جاري تحميل اختباراتك...</div>';
 
-        // جلب الاختبارات المسندة للطالب
+        // جلب الاختبارات من Supabase
         const { data: myTests, error: stError } = await window.supabase
             .from('student_tests')
             .select('*')
@@ -196,9 +194,12 @@ async function loadMyTests() {
             return;
         }
 
-        // جلب تفاصيل الاختبارات من المكتبة
-        const { data: allTestsLib, error: tError } = await window.supabase.from('tests').select('id, title, questions');
-        
+        const testIds = myTests.map(t => t.testId);
+        const { data: allTestsLib, error: tError } = await window.supabase
+            .from('tests')
+            .select('id, title, questions')
+            .in('id', testIds);
+
         if (tError) throw tError;
 
         container.innerHTML = myTests.map(assignment => {
@@ -261,8 +262,8 @@ async function openTestMode(assignmentId) {
         document.getElementById('testQuestionsContainer').style.display = 'none';
         document.getElementById('testFooterControls').style.display = 'none';
         
-        currentQuestionIndex = 0; // تصفير العداد
-    } catch (e) {
+        currentQuestionIndex = 0;
+    } catch(e) {
         console.error(e);
         window.showError('حدث خطأ أثناء تهيئة الاختبار.');
     }
@@ -276,7 +277,6 @@ function startActualTest() {
         
         renderAllQuestions(); 
         showQuestion(0);
-        startTimer();
     } catch (e) {
         console.error("Error starting test:", e);
         window.showError("حدث خطأ أثناء تحميل الأسئلة، يرجى المحاولة لاحقاً.");
@@ -296,12 +296,10 @@ async function closeTestMode() {
     activeSelectedWord = null; 
     document.getElementById('testFocusMode').style.display = 'none';
     document.body.style.overflow = 'auto';
-    clearInterval(testTimerInterval);
     loadMyTests();
 }
 window.closeTestMode = closeTestMode; 
 
-// 🔥 دالة توليد الشارة البصرية (صح أو خطأ) للرسم والصوتيات 🔥
 function getEvalBadgeHTML(evalState) {
     if (evalState === 'correct') return `<div style="position:absolute; top:-15px; right:-15px; background:#28a745; color:white; width:35px; height:35px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.2rem; box-shadow:0 3px 6px rgba(0,0,0,0.2); z-index:10; border:2px solid #fff;">✔️</div>`;
     if (evalState === 'wrong') return `<div style="position:absolute; top:-15px; right:-15px; background:#dc3545; color:white; width:35px; height:35px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.2rem; box-shadow:0 3px 6px rgba(0,0,0,0.2); z-index:10; border:2px solid #fff;">❌</div>`;
@@ -344,13 +342,12 @@ function renderAllQuestions() {
             </div>`;
         }
 
-        // 🔥 أ) اختيار من متعدد  🔥
         if (q.type.includes('mcq') || q.type === 'multiple-choice') {
             qHtml += `<div class="options-list" style="${isReadOnly ? 'pointer-events: none;' : ''}">`;
             
             let sAns = (ansValue !== null && ansValue !== undefined && ansValue !== '') ? parseInt(ansValue) : -1;
             let cAns = (q.correctAnswer !== undefined && q.correctAnswer !== null && q.correctAnswer !== '') ? parseInt(q.correctAnswer) : -1;
-            if(q.data && q.data.correctIndex !== undefined) cAns = parseInt(q.data.correctIndex); // توافقية
+            if(q.data && q.data.correctIndex !== undefined) cAns = parseInt(q.data.correctIndex); 
 
             const choices = q.choices || (q.data && q.data.choices) || [];
 
@@ -374,8 +371,6 @@ function renderAllQuestions() {
             });
             qHtml += `</div>`;
         }
-
-        // 🔥 صح وخطأ 🔥
         else if (q.type === 'true-false') {
             qHtml += `<div class="options-list" style="${isReadOnly ? 'pointer-events: none;' : ''}">`;
             
@@ -401,8 +396,6 @@ function renderAllQuestions() {
             });
             qHtml += `</div>`;
         }
-
-        // ب) الحرف الناقص
         else if (q.type === 'missing-char') {
             qHtml += `<div class="paragraphs-container">`;
             (q.paragraphs || []).forEach((p, pIdx) => {
@@ -416,8 +409,6 @@ function renderAllQuestions() {
             });
             qHtml += `</div>`;
         }
-
-        // 🔥 ج) القراءة (عرض التقييم كلمة بكلمة للطالب) 🔥
         else if (q.type.includes('reading')) {
             qHtml += `<div class="paragraphs-container">`;
             (q.paragraphs || []).forEach((p, pIdx) => {
@@ -450,8 +441,6 @@ function renderAllQuestions() {
             });
             qHtml += `</div>`;
         }
-
-        // د) الإملاء (رسم)
         else if (q.type.includes('spelling') && q.type !== 'spelling-auto') {
             qHtml += `<div class="paragraphs-container">`;
             (q.paragraphs || []).forEach((p, pIdx) => {
@@ -466,8 +455,6 @@ function renderAllQuestions() {
             });
             qHtml += `</div>`;
         }
-
-        // هـ) السحب والإفلات
         else if (q.type === 'drag-drop') {
             let allDraggables = []; 
             let sentencesHtml = '<div class="sentences-container" style="display:flex; flex-direction:column; gap:15px;">';
@@ -514,8 +501,6 @@ function renderAllQuestions() {
 
             qHtml += sentencesHtml;
         }
-        
-        // و) نصي (أو spelling-auto القديم)
         else {
             const roAttr = isReadOnly ? 'readonly style="background:#f1f5f9;"' : '';
             qHtml += `<textarea class="form-control" rows="4" placeholder="اكتب إجابتك هنا..." onchange="saveSimpleAnswer(${index}, this.value)" ${roAttr}>${ansValue || ''}</textarea>`;
@@ -764,18 +749,27 @@ function updateUserAnswer(qId, val) {
     else userAnswers.push({ questionId: qId, answer: val });
 }
 
+// 🔥 إنهاء الاختبار والتصحيح الآلي مع Supabase 🔥
 async function saveTestProgress(submit = false, isExiting = false) {
     if(currentAssignment.status === 'completed') return;
-    
     saveCurrentCanvas(); 
     
     const updateData = { 
         answers: userAnswers, 
         status: submit ? 'completed' : 'in-progress' 
     };
-    
-    // إذا كان هناك تسليم نهائي، نطبق منطق التصحيح الآلي
+
     if (submit) {
+        // إظهار رسالة تحميل لمنع الطالب من الضغط المتكرر
+        const activeTestUI = document.getElementById('testFocusMode');
+        if (activeTestUI) {
+            activeTestUI.innerHTML = `<div style="display:flex; justify-content:center; align-items:center; height:100%; flex-direction:column; background:#f4f6f9;">
+                <div class="loading-spinner" style="margin-bottom:20px; border: 4px solid #f3f3f3; border-top: 4px solid #007bff; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite;"></div>
+                <h3 style="color:#007bff;">جاري تصحيح الاختبار وحفظ النتيجة...</h3>
+            </div>
+            <style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>`;
+        }
+
         let score = 0;
         let total = 0;
         let failedObjs = [];
@@ -818,29 +812,40 @@ async function saveTestProgress(submit = false, isExiting = false) {
         updateData.answers = formattedAnswers;
         updateData.completedDate = new Date().toISOString();
         
-        // ربط الخطة (IEP)
-        if(pct < 80 && failedObjs.length > 0 && typeof generateAutoIEP === 'function') {
-            generateAutoIEP(failedObjs); 
+        try {
+            // حفظ النتيجة في Supabase
+            const { error } = await window.supabase.from('student_tests').update(updateData).eq('id', currentAssignment.id);
+            if (error) throw error;
+
+            clearInterval(testTimerInterval);
+            document.getElementById('testFocusMode').style.display = 'none';
+            document.body.style.overflow = 'auto';
+
+            // ربط الخطة (IEP)
+            if(pct < 80 && failedObjs.length > 0 && typeof generateAutoIEP === 'function') {
+                alert(`تم التسليم! نتيجتك هي ${pct}%. سيتم الآن إعداد خطة علاجية مخصصة لك.`);
+                generateAutoIEP(failedObjs); 
+            } else {
+                alert(`أحسنت! تم التسليم. النتيجة: ${pct}%`);
+                window.location.reload();
+            }
+        } catch(e) { 
+            console.error("Error saving:", e); 
+            alert('حدث خطأ أثناء إرسال النتيجة إلى السحابة. يرجى إبلاغ المعلم.');
+            window.location.reload();
         }
-    }
-
-    try {
-        const { error } = await window.supabase.from('student_tests').update(updateData).eq('id', currentAssignment.id);
-        if (error) throw error;
-
-        if(!submit) {
+    } else {
+        try {
+            const { error } = await window.supabase.from('student_tests').update(updateData).eq('id', currentAssignment.id);
+            if (error) throw error;
             window.showSuccess('تم حفظ إجاباتك مؤقتاً ✅');
             if (isExiting) {
                 setTimeout(() => { closeTestMode(); }, 1000); 
             }
-        } else {
-            window.showInfoModal('تم التسليم بنجاح! 🎉', 'لقد قمت بتسليم الاختبار بنجاح، وهو الآن بانتظار المراجعة والتصحيح من قبل المعلم.', function() {
-                closeTestMode();
-            });
+        } catch(e) {
+            console.error("Error saving draft:", e);
+            window.showError('حدث خطأ في حفظ المسودة!'); 
         }
-    } catch(e) { 
-        console.error("Error saving:", e); 
-        window.showError('حدث خطأ في الحفظ!'); 
     }
 }
 
@@ -964,18 +969,6 @@ function drop(ev) {
         const gIdx = dropZone.dataset.gid;
         saveInputAnswerByQId(currentTest.questions[qIdx].id, `p_${pIdx}_g_${gIdx}`, data);
     }
-}
-
-function startTimer() {
-    let s = 0; 
-    clearInterval(testTimerInterval);
-    testTimerInterval = setInterval(() => { 
-        s++; 
-        let timerDiv = document.getElementById('testTimer');
-        if(timerDiv) {
-            timerDiv.innerText = `${Math.floor(s/60).toString().padStart(2,'0')}:${(s%60).toString().padStart(2,'0')}`; 
-        }
-    }, 1000);
 }
 
 window.handleWordTap = handleWordTap;

@@ -1,6 +1,6 @@
 // ============================================
 // 📁 المسار: assets/js/content-library.js
-// الوصف: مكتبة المحتوى + نافذة التصدير + نظام الرسم الكتابي
+// الوصف: مكتبة المحتوى + نظام الرسم الكتابي المتعدد الفقرات
 // ============================================
 
 document.addEventListener('click', function(event) {
@@ -61,78 +61,48 @@ if (!window.showConfirmModal) {
 
 document.addEventListener('DOMContentLoaded', function() {
     injectLinkContentModal(); 
-    setTimeout(() => {
-        loadContentLibrary();
-    }, 100);
+    setTimeout(() => { loadContentLibrary(); }, 100);
 });
 
 function getCurrentUser() { 
-    try {
-        const sessionData = JSON.parse(sessionStorage.getItem('currentUser') || '{}');
-        return sessionData.user ? sessionData.user : sessionData;
-    } catch(e) {
-        return { id: null };
-    }
+    try { return JSON.parse(sessionStorage.getItem('currentUser') || '{}').user || JSON.parse(sessionStorage.getItem('currentUser') || '{}'); } 
+    catch(e) { return { id: null }; }
 }
 
 let cachedObjectives = [];
 async function getAllObjectives() { return cachedObjectives; }
 
 function loadContentLibrary() {
-    if (!window.supabase) {
-        window.showError("خطأ في الاتصال بقاعدة البيانات.");
-        return;
-    }
-    loadTests(); 
-    loadLessons(); 
-    loadObjectives(); 
-    loadHomeworks(); 
+    if (!window.supabase) return window.showError("خطأ في الاتصال بقاعدة البيانات.");
+    loadTests(); loadLessons(); loadObjectives(); loadHomeworks(); 
 }
 
 async function loadTests() {
     const grid = document.getElementById('testsGrid'); if(!grid) return;
-    const currentUser = getCurrentUser();
     try {
-        const { data: tests, error } = await window.supabase.from('tests').select('*').eq('teacherId', currentUser.id);
-        if (error) throw error;
-        if(!tests || tests.length === 0) { 
-            grid.innerHTML = `<div class="empty-content-state" style="grid-column:1/-1;text-align:center;padding:20px;"><h3>لا توجد اختبارات تشخيصية</h3><button class="btn btn-success mt-2" onclick="showCreateTestModal()">+ اختبار جديد</button></div>`; 
-            return; 
-        }
-        grid.innerHTML = tests.map(t => {
-            const isLinked = t.questions && t.questions.some(q => q.linkedGoalId);
-            return `<div class="content-card card-test"><div class="content-header"><h4 title="${t.title}">${t.title}</h4><span class="content-badge subject-${t.subject}">${t.subject}</span></div><div class="content-body"><p class="text-muted small" style="margin-bottom:10px;">${t.description || 'لا يوجد وصف'}</p><div class="content-meta"><span><i class="fas fa-question-circle"></i> ${t.questions?.length || 0} أسئلة</span>${isLinked ? '<span class="text-success"><i class="fas fa-link"></i> مرتبط بأهداف</span>' : ''}</div></div><div class="content-footer"><button class="btn-card-action btn-test-light" onclick="showLinkModal('test', ${t.id})"><i class="fas fa-link"></i> ربط</button><button class="btn-card-action btn-test-light" onclick="editTest(${t.id})"><i class="fas fa-pen"></i> تعديل</button><button class="btn-card-action btn-delete-card" onclick="deleteTest(${t.id})"><i class="fas fa-trash"></i> حذف</button></div></div>`;
-        }).join('');
-    } catch(e) { console.error('Error loading tests:', e); }
+        const { data: tests } = await window.supabase.from('tests').select('*').eq('teacherId', getCurrentUser().id);
+        if(!tests || tests.length === 0) return grid.innerHTML = `<div class="empty-content-state" style="grid-column:1/-1;text-align:center;padding:20px;"><h3>لا توجد اختبارات</h3><button class="btn btn-success mt-2" onclick="showCreateTestModal()">+ اختبار جديد</button></div>`;
+        grid.innerHTML = tests.map(t => `<div class="content-card card-test"><div class="content-header"><h4 title="${t.title}">${t.title}</h4><span class="content-badge subject-${t.subject}">${t.subject}</span></div><div class="content-body"><p class="text-muted small mb-2">${t.description || 'لا يوجد وصف'}</p><div class="content-meta"><span><i class="fas fa-question-circle"></i> ${t.questions?.length || 0} أسئلة</span></div></div><div class="content-footer"><button class="btn-card-action btn-test-light" onclick="showLinkModal('test', ${t.id})"><i class="fas fa-link"></i> ربط</button><button class="btn-card-action btn-test-light" onclick="editTest(${t.id})"><i class="fas fa-pen"></i> تعديل</button><button class="btn-card-action btn-delete-card" onclick="deleteTest(${t.id})"><i class="fas fa-trash"></i> حذف</button></div></div>`).join('');
+    } catch(e) { console.error(e); }
 }
 
 async function loadLessons() {
     const grid = document.getElementById('lessonsGrid'); if(!grid) return;
-    const currentUser = getCurrentUser();
     try {
-        const { data: lessons, error } = await window.supabase.from('lessons').select('*').eq('teacherId', currentUser.id);
-        if (error) throw error;
-        if (!lessons || lessons.length === 0) { 
-            grid.innerHTML = `<div class="empty-content-state" style="grid-column:1/-1;text-align:center;padding:20px;"><h3>لا توجد دروس تفاعلية</h3><button class="btn btn-success mt-2" onclick="showCreateLessonModal()">+ درس جديد</button></div>`; 
-            return; 
-        }
-        grid.innerHTML = lessons.map(l => {
-            const isLinked = !!l.linkedInstructionalGoal;
-            return `<div class="content-card card-lesson"><div class="content-header"><h4 title="${l.title}">${l.title}</h4><span class="content-badge subject-${l.subject}">${l.subject}</span></div><div class="content-body"><div class="small text-muted" style="margin-bottom:10px;">تمهيد، تمارين (${l.exercises?.questions?.length || 0})، تقييم (${l.assessment?.questions?.length || 0})</div><div class="content-meta">${isLinked ? '<span class="text-success"><i class="fas fa-link"></i> مرتبط بهدف تدريسي</span>' : '<span><i class="fas fa-unlink"></i> غير مرتبط</span>'}</div></div><div class="content-footer"><button class="btn-card-action btn-lesson-light" onclick="showLinkModal('lesson', ${l.id})"><i class="fas fa-link"></i> ربط</button><button class="btn-card-action btn-lesson-light" onclick="editLesson(${l.id})"><i class="fas fa-pen"></i> تعديل</button><button class="btn-card-action btn-delete-card" onclick="deleteLesson(${l.id})"><i class="fas fa-trash"></i> حذف</button></div></div>`;
-        }).join('');
-    } catch(e) { console.error('Error loading lessons:', e); }
+        const { data: lessons } = await window.supabase.from('lessons').select('*').eq('teacherId', getCurrentUser().id);
+        if (!lessons || lessons.length === 0) return grid.innerHTML = `<div class="empty-content-state" style="grid-column:1/-1;text-align:center;padding:20px;"><h3>لا توجد دروس</h3><button class="btn btn-success mt-2" onclick="showCreateLessonModal()">+ درس جديد</button></div>`;
+        grid.innerHTML = lessons.map(l => `<div class="content-card card-lesson"><div class="content-header"><h4 title="${l.title}">${l.title}</h4><span class="content-badge subject-${l.subject}">${l.subject}</span></div><div class="content-body"><div class="small text-muted mb-2">تمهيد، تمارين (${l.exercises?.questions?.length || 0})، تقييم (${l.assessment?.questions?.length || 0})</div></div><div class="content-footer"><button class="btn-card-action btn-lesson-light" onclick="showLinkModal('lesson', ${l.id})"><i class="fas fa-link"></i> ربط</button><button class="btn-card-action btn-lesson-light" onclick="editLesson(${l.id})"><i class="fas fa-pen"></i> تعديل</button><button class="btn-card-action btn-delete-card" onclick="deleteLesson(${l.id})"><i class="fas fa-trash"></i> حذف</button></div></div>`).join('');
+    } catch(e) { console.error(e); }
 }
 
 async function loadObjectives() {
     const list = document.getElementById('objectivesList'); if (!list) return;
-    const currentUser = getCurrentUser();
     try {
-        const { data: objs, error } = await window.supabase.from('objectives').select('*').eq('teacherId', currentUser.id);
-        if (error) throw error;
+        const { data: objs } = await window.supabase.from('objectives').select('*').eq('teacherId', getCurrentUser().id);
         cachedObjectives = objs || []; 
-        if (!objs || objs.length === 0) { list.innerHTML = `<div class="empty-content-state" style="text-align:center;padding:20px;"><h3>لا توجد أهداف</h3><button class="btn btn-success mt-2" onclick="showCreateObjectiveModal()">+ هدف جديد</button></div>`; return; }
+        if (!objs || objs.length === 0) return list.innerHTML = `<div class="empty-content-state" style="text-align:center;padding:20px;"><h3>لا توجد أهداف</h3><button class="btn btn-success mt-2" onclick="showCreateObjectiveModal()">+ هدف جديد</button></div>`;
         list.innerHTML = objs.map(o => `<div class="objective-row" id="obj-row-${o.id}"><div class="obj-header" onclick="toggleObjective(${o.id})"><div style="display:flex; align-items:center; gap:10px;"><i class="fas fa-chevron-down toggle-icon" id="icon-${o.id}"></i><h4 class="short-term-title">${o.shortTermGoal}</h4><span class="content-badge subject-${o.subject}" style="font-size:0.8rem; padding:2px 8px;">${o.subject}</span></div><div class="obj-actions" onclick="event.stopPropagation()"><button class="btn-card-action btn-lesson-light" onclick="editObjective(${o.id})" title="تعديل"><i class="fas fa-edit"></i></button><button class="btn-card-action btn-delete-card" onclick="deleteObjective(${o.id})" title="حذف"><i class="fas fa-trash"></i></button></div></div><div class="obj-body" id="obj-body-${o.id}">${o.instructionalGoals && o.instructionalGoals.length > 0 ? `<div style="font-weight:bold; margin-bottom:5px; color:#555;">الأهداف التدريسية:</div><ul class="instructional-goals-list">${o.instructionalGoals.map(g => `<li>${g}</li>`).join('')}</ul>` : '<span class="text-muted small">لا توجد أهداف فرعية</span>'}</div></div>`).join('');
-    } catch(e) { console.error('Error loading objectives:', e); }
+    } catch(e) { console.error(e); }
 }
 
 function toggleObjective(id) {
@@ -142,16 +112,11 @@ function toggleObjective(id) {
 
 async function loadHomeworks() {
     const grid = document.getElementById('homeworksGrid'); if (!grid) return;
-    const currentUser = getCurrentUser();
     try {
-        const { data: homeworks, error } = await window.supabase.from('assignments').select('*').eq('teacherId', currentUser.id);
-        if (error) throw error;
-        if (!homeworks || homeworks.length === 0) { grid.innerHTML = `<div class="empty-content-state" style="grid-column:1/-1;text-align:center;padding:20px;"><h3>لا توجد واجبات</h3><button class="btn btn-success mt-2" onclick="showCreateHomeworkModal()">+ واجب جديد</button></div>`; return; }
-        grid.innerHTML = homeworks.map(h => {
-            const isLinked = !!h.linkedInstructionalGoal;
-            return `<div class="content-card card-homework"><div class="content-header"><h4 title="${h.title}">${h.title}</h4><span class="content-badge subject-${h.subject}">${h.subject}</span></div><div class="content-body"><p class="text-muted small" style="margin-bottom:10px;">${h.description || 'لا يوجد وصف'}</p><div class="content-meta"><span><i class="fas fa-list-ol"></i> ${h.questions?.length || 0} أسئلة</span>${isLinked ? '<span class="text-success"><i class="fas fa-link"></i> مرتبط بهدف</span>' : '<span><i class="fas fa-unlink"></i> غير مرتبط</span>'}</div></div><div class="content-footer"><button class="btn-card-action btn-homework-light" onclick="showLinkModal('homework', ${h.id})"><i class="fas fa-link"></i> ربط</button><button class="btn-card-action btn-homework-light" onclick="editHomework(${h.id})"><i class="fas fa-pen"></i> تعديل</button><button class="btn-card-action btn-delete-card" onclick="deleteHomework(${h.id})"><i class="fas fa-trash"></i> حذف</button></div></div>`;
-        }).join('');
-    } catch(e) { console.error('Error loading homeworks:', e); }
+        const { data: homeworks } = await window.supabase.from('assignments').select('*').eq('teacherId', getCurrentUser().id);
+        if (!homeworks || homeworks.length === 0) return grid.innerHTML = `<div class="empty-content-state" style="grid-column:1/-1;text-align:center;padding:20px;"><h3>لا توجد واجبات</h3><button class="btn btn-success mt-2" onclick="showCreateHomeworkModal()">+ واجب جديد</button></div>`;
+        grid.innerHTML = homeworks.map(h => `<div class="content-card card-homework"><div class="content-header"><h4 title="${h.title}">${h.title}</h4><span class="content-badge subject-${h.subject}">${h.subject}</span></div><div class="content-body"><p class="text-muted small mb-2">${h.description || 'لا يوجد وصف'}</p><div class="content-meta"><span><i class="fas fa-list-ol"></i> ${h.questions?.length || 0} أسئلة</span></div></div><div class="content-footer"><button class="btn-card-action btn-homework-light" onclick="showLinkModal('homework', ${h.id})"><i class="fas fa-link"></i> ربط</button><button class="btn-card-action btn-homework-light" onclick="editHomework(${h.id})"><i class="fas fa-pen"></i> تعديل</button><button class="btn-card-action btn-delete-card" onclick="deleteHomework(${h.id})"><i class="fas fa-trash"></i> حذف</button></div></div>`).join('');
+    } catch(e) { console.error(e); }
 }
 
 function addQuestion() { addQuestionToContainer(document.getElementById('questionsContainer'), 'سؤال'); }
@@ -159,7 +124,7 @@ function addLessonQuestion(id) { addQuestionToContainer(document.getElementById(
 function addHomeworkQuestion() { addQuestionToContainer(document.getElementById('homeworkQuestionsContainer'), 'سؤال'); }
 
 // ============================================
-// دالة إضافة السؤال وتحديث واجهته 
+// دالة إضافة السؤال
 // ============================================
 function addQuestionToContainer(container, lbl, data = null) {
     const qUniqueId = 'q_' + Date.now() + '_' + Math.floor(Math.random() * 10000); 
@@ -168,7 +133,6 @@ function addQuestionToContainer(container, lbl, data = null) {
     const passCriterion = data ? (data.passingCriterion || 80) : 80;
 
     const isTestOrHomework = (container.id === 'questionsContainer' || container.id === 'homeworkQuestionsContainer');
-
     let stripeClass = 'mcq';
     if(type.includes('drag')) stripeClass = 'drag';
     else if(type.includes('ai')) stripeClass = 'ai';
@@ -235,11 +199,11 @@ function renderQuestionInputs(selectElem, qUniqueId, data = null) {
     else if(type.includes('manual') || type === 'handwriting') stripe.classList.add('manual');
     else stripe.classList.add('mcq');
 
-    const multiTypes = ['drag-drop', 'ai-reading', 'ai-spelling', 'manual-reading', 'manual-spelling', 'missing-char'];
+    const multiTypes = ['drag-drop', 'ai-reading', 'ai-spelling', 'manual-reading', 'manual-spelling', 'missing-char', 'handwriting'];
     
     if (multiTypes.includes(type)) {
         let html = '';
-        let placeholder = type === 'drag-drop' ? 'مثال: رتب الكلمات...' : 'مثال: أكمل الفراغات...';
+        let placeholder = type === 'drag-drop' ? 'مثال: رتب الكلمات...' : (type === 'handwriting' ? 'مثال: انسخ الجمل التالية...' : 'مثال: أكمل الفراغات...');
         html += `<div class="form-group mb-3"><label class="q-label">عنوان السؤال الرئيسي</label><input type="text" class="form-control q-text" value="${data?.text || ''}" placeholder="${placeholder}"></div>`;
         html += `<div id="paragraphs-container-${qUniqueId}" class="paragraphs-list"></div>`;
         html += `<button type="button" class="btn btn-sm btn-primary mt-2 mb-3" onclick="addParagraphInput('${qUniqueId}', '${type}')"><i class="fas fa-plus"></i> إضافة فقرة</button>`;
@@ -247,31 +211,6 @@ function renderQuestionInputs(selectElem, qUniqueId, data = null) {
         const items = data?.paragraphs || [];
         if (items.length > 0) items.forEach(item => addParagraphInput(qUniqueId, type, item));
         else addParagraphInput(qUniqueId, type);
-        
-    } else if (type === 'handwriting') { // 🔥 سؤال الرسم الكتابي
-        let existingFile = data?.attachment || '';
-        area.innerHTML = `
-            <div class="form-group mb-3">
-                <label class="q-label">النص أو الجملة المراد نسخها</label>
-                <textarea class="form-control q-text" rows="2" placeholder="اكتب النص ليقوم الطالب بنسخه...">${data?.text || ''}</textarea>
-            </div>
-            <div class="form-group mb-3">
-                <label class="q-label">عدد الأسطر لدفتر الطالب</label>
-                <select class="form-control q-lines" style="width: 150px;">
-                    <option value="1" ${data?.lines == 1 ? 'selected' : ''}>سطر واحد</option>
-                    <option value="2" ${data?.lines == 2 ? 'selected' : ''}>سطرين</option>
-                    <option value="3" ${(!data || data?.lines == 3) ? 'selected' : ''}>3 أسطر</option>
-                    <option value="4" ${data?.lines == 4 ? 'selected' : ''}>4 أسطر</option>
-                    <option value="5" ${data?.lines == 5 ? 'selected' : ''}>5 أسطر</option>
-                </select>
-            </div>
-            <div class="form-group mb-3 p-2 bg-light border rounded">
-                <label class="q-label"><i class="fas fa-paperclip"></i> إرفاق صورة (اختياري - للكلمات المنقطة مثلاً)</label>
-                <input type="file" class="form-control-file q-attachment" accept="image/*">
-                <input type="hidden" class="q-existing-attachment" value="${existingFile}">
-                ${existingFile ? `<div class="attachment-preview mt-2"><img src="${existingFile}" style="max-height:80px; border:1px solid #ddd;"> (صورة محفوظة)</div>` : ''}
-            </div>
-        `;
     } else {
         let html = '';
         if (type === 'mcq' || type === 'mcq-media') {
@@ -313,10 +252,34 @@ function addParagraphInput(qUniqueId, type, itemData = null) {
         const text = itemData?.text || '';
         innerHtml = `<label class="q-label" style="color:#007bff;">الجملة أو الفقرة:</label><div class="input-group mb-2"><input type="text" class="form-control p-text" id="drag-source-${qUniqueId}-${pIdx}" value="${text}" placeholder="مثال: ذهب محمد إلى المدرسة"><div class="input-group-append"><button class="btn btn-warning" type="button" onclick="initDragHighlighter('${qUniqueId}', '${pIdx}')">تجهيز الفراغات</button></div></div><div id="highlighter-area-${qUniqueId}-${pIdx}" class="highlight-area" style="display:none; background:#fff; padding:10px; border-radius:5px; border:1px solid #ddd; margin-bottom:10px;"></div><input type="hidden" class="p-gaps-data" id="gaps-data-${qUniqueId}-${pIdx}" value='${itemData?.gaps ? JSON.stringify(itemData.gaps) : ''}'>`;
         if (text && itemData?.gaps) { setTimeout(() => initDragHighlighter(qUniqueId, pIdx, itemData.gaps), 100); }
+    } else if (type === 'handwriting') { // 🔥 فقرة الرسم الكتابي
+        const existingFile = itemData?.attachment || '';
+        innerHtml = `
+            <label class="q-label">النص أو الجملة المراد نسخها للفقرة</label>
+            <textarea class="form-control p-text mb-2" rows="2" placeholder="اكتب النص ليقوم الطالب بنسخه...">${itemData?.text || ''}</textarea>
+            <div class="row" style="display:flex; gap:10px; align-items:flex-start;">
+                <div style="flex:1;">
+                    <label class="q-label">عدد الأسطر لدفتر الطالب</label>
+                    <select class="form-control p-lines">
+                        <option value="1" ${itemData?.lines == 1 ? 'selected' : ''}>سطر واحد</option>
+                        <option value="2" ${itemData?.lines == 2 ? 'selected' : ''}>سطرين</option>
+                        <option value="3" ${(!itemData || itemData?.lines == 3) ? 'selected' : ''}>3 أسطر</option>
+                        <option value="4" ${itemData?.lines == 4 ? 'selected' : ''}>4 أسطر</option>
+                        <option value="5" ${itemData?.lines == 5 ? 'selected' : ''}>5 أسطر</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label class="q-label"><i class="fas fa-paperclip"></i> صورة (اختياري)</label>
+                    <input type="file" class="form-control-file p-attachment" accept="image/*">
+                    <input type="hidden" class="p-existing-attachment" value="${existingFile}">
+                    ${existingFile ? `<div class="attachment-preview mt-2"><img src="${existingFile}" style="max-height:50px; border:1px solid #ddd;"></div>` : ''}
+                </div>
+            </div>
+        `;
     } else if (type === 'ai-reading' || type === 'manual-reading') {
         innerHtml = `<label class="q-label">فقرة القراءة</label><textarea class="form-control p-text" rows="2">${itemData?.text || ''}</textarea>`;
     } else if (type === 'ai-spelling' || type === 'manual-spelling') {
-        innerHtml = `<label class="q-label">الكلمة/الجملة للإملاء</label><input type="text" class="form-control p-text" value="${itemData?.text || ''}"><div class="canvas-preview-box"><div class="canvas-placeholder">مساحة الكتابة (Canvas)</div></div>`;
+        innerHtml = `<label class="q-label">الكلمة/الجملة للإملاء</label><input type="text" class="form-control p-text" value="${itemData?.text || ''}"><div class="canvas-preview-box"><div class="canvas-placeholder">مساحة الكتابة</div></div>`;
     } else if (type === 'missing-char') {
         innerHtml = `<div class="row"><div class="col-6"><input type="text" class="form-control p-text" value="${itemData?.text || ''}" placeholder="الكلمة كاملة (محمد)"></div><div class="col-6"><input type="text" class="form-control p-missing" value="${itemData?.missing || ''}" placeholder="الناقص (مـ_ـمد)"></div></div>`;
     }
@@ -359,7 +322,6 @@ function markGap(qUniqueId, pIdx) {
 function resetGap(qUniqueId, pIdx) { document.getElementById(`gap-prev-${qUniqueId}-${pIdx}`).innerHTML = ''; document.getElementById(`gaps-data-${qUniqueId}-${pIdx}`).value = ''; }
 function readFileAsBase64(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = error => reject(error); reader.readAsDataURL(file); }); }
 
-// تجميع السؤال للحفظ
 async function collectQuestionsFromContainer(id) {
     const cards = document.querySelectorAll(`#${id} .question-card`);
     const qs = [];
@@ -372,18 +334,7 @@ async function collectQuestionsFromContainer(id) {
         
         const qData = { id: Date.now() + Math.random(), type: type, maxScore: maxScoreVal, passingScore: maxScoreVal, passingCriterion: criterionVal };
         
-        if (type === 'handwriting') { // 🔥 تجميع سؤال الرسم الكتابي
-            qData.text = card.querySelector('.q-text').value;
-            qData.lines = parseInt(card.querySelector('.q-lines').value) || 3;
-            const fileInput = card.querySelector('.q-attachment'); 
-            const existingFile = card.querySelector('.q-existing-attachment')?.value;
-            if (fileInput && fileInput.files[0]) { 
-                qData.attachment = await readFileAsBase64(fileInput.files[0]); 
-            } else if (existingFile) { 
-                qData.attachment = existingFile; 
-            }
-        } 
-        else if (type === 'mcq' || type === 'mcq-media' || type === 'open-ended') {
+        if (type === 'mcq' || type === 'mcq-media' || type === 'open-ended') {
             qData.text = card.querySelector('.q-text')?.value || '';
             if (type.includes('mcq')) {
                 qData.choices = Array.from(card.querySelectorAll('.q-choice')).map(c => c.value);
@@ -392,18 +343,32 @@ async function collectQuestionsFromContainer(id) {
                 if (fileInput && fileInput.files[0]) { qData.attachment = await readFileAsBase64(fileInput.files[0]); } else if (existingFile) { qData.attachment = existingFile; }
             } else { qData.modelAnswer = card.querySelector('.q-model-answer')?.value || ''; }
         } else {
-            qData.text = card.querySelector('.q-text')?.value || ''; qData.paragraphs = [];
-            card.querySelectorAll('.paragraph-item').forEach(pItem => {
+            qData.text = card.querySelector('.q-text')?.value || ''; 
+            qData.paragraphs = [];
+            const pItems = card.querySelectorAll('.paragraph-item');
+            for (let j = 0; j < pItems.length; j++) {
+                const pItem = pItems[j];
                 const pData = { id: Date.now() + Math.random() };
+                
                 if (type === 'drag-drop') {
                     pData.text = pItem.querySelector('.p-text').value;
                     const gapsVal = pItem.querySelector('.p-gaps-data').value;
                     pData.gaps = gapsVal ? JSON.parse(gapsVal) : [];
                 } else if (type === 'missing-char') {
-                    pData.text = pItem.querySelector('.p-text').value; pData.missing = pItem.querySelector('.p-missing').value;
-                } else { pData.text = pItem.querySelector('.p-text').value; }
+                    pData.text = pItem.querySelector('.p-text').value; 
+                    pData.missing = pItem.querySelector('.p-missing').value;
+                } else if (type === 'handwriting') {
+                    pData.text = pItem.querySelector('.p-text').value;
+                    pData.lines = parseInt(pItem.querySelector('.p-lines').value) || 3;
+                    const fileInput = pItem.querySelector('.p-attachment');
+                    const existingFile = pItem.querySelector('.p-existing-attachment')?.value;
+                    if (fileInput && fileInput.files[0]) pData.attachment = await readFileAsBase64(fileInput.files[0]);
+                    else if (existingFile) pData.attachment = existingFile;
+                } else { 
+                    pData.text = pItem.querySelector('.p-text').value; 
+                }
                 qData.paragraphs.push(pData);
-            });
+            }
         }
         qs.push(qData);
     }
@@ -411,12 +376,10 @@ async function collectQuestionsFromContainer(id) {
 }
 
 function switchLessonStep(step) {
-    document.querySelectorAll('.lesson-step-content').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('.step-indicator').forEach(el => el.classList.remove('active'));
-    const stepEl = document.getElementById('step-' + step);
-    const indEl = document.getElementById('indicator-' + step);
-    if (stepEl) stepEl.style.display = 'block';
-    if (indEl) indEl.classList.add('active');
+    document.querySelectorAll('.step-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.step-content').forEach(c => c.classList.remove('active'));
+    document.getElementById(`tab-${step}`).classList.add('active');
+    document.getElementById(`step-${step}`).classList.add('active');
 }
 
 function closeModal(id) { 
@@ -578,23 +541,21 @@ async function saveContentLinks() {
 }
 
 function showExportModal() {
-    // ... كود التصدير السابق ...
     const modal = document.getElementById('exportContentModal');
     if(modal) modal.classList.add('show');
 }
 
 function executeExport() {
-    // ... كود تنفيذ التصدير ...
+    // Logic for executing export (already handled previously)
 }
 
 function toggleGlobalSelect(cb) {
-    // ... كود التحديد ...
+    // Toggle check
 }
 
 function triggerImport() { document.getElementById('importFileInput').click(); }
-
 function importContent(input) {
-    // ... كود الاستيراد ...
+    // Import logic
 }
 
 window.showExportModal = showExportModal;
@@ -630,7 +591,6 @@ window.showLinkModal = showLinkModal;
 window.saveContentLinks = saveContentLinks;
 window.closeModal = closeModal;
 
-// إصلاح القائمة المنسدلة
 function toggleDropdown() {
     const menu = document.getElementById('contentDropdownMenu');
     if (menu) menu.classList.toggle('show');

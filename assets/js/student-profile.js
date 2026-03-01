@@ -60,9 +60,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadStudentData();
 });
 
-function getCurrentUser() { 
-    return JSON.parse(sessionStorage.getItem('currentUser')); 
-}
+function getCurrentUser() { return JSON.parse(sessionStorage.getItem('currentUser')); }
 
 async function loadStudentData() {
     try {
@@ -832,8 +830,288 @@ function printProgressLog() {
 }
 
 // ----------------------------------------------------
-// 6. المراجعة والتصحيح (التحديث الجديد للمراجعة)
+// 6. المراجعة والتصحيح (Review Modal)
 // ----------------------------------------------------
+function buildTeacherReviewItem(q, index, studentAnsObj) {
+    let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
+    let evaluations = (studentAnsObj && studentAnsObj.evaluations) ? studentAnsObj.evaluations : {};
+    let maxScore = parseFloat(q.maxScore || q.passingScore || 1);
+    let currentScore = studentAnsObj ? studentAnsObj.score : 0;
+    let teacherNote = studentAnsObj ? (studentAnsObj.teacherNote || '') : '';
+    let html = '';
+
+    if (q.type === 'handwriting') { // 🔥 مراجعة الرسم الكتابي
+        html += `<div class="paragraphs-container" style="display:flex; flex-direction:column; gap:20px;">`;
+        (q.paragraphs || []).forEach((p, pIdx) => {
+            let pKey = `p_${pIdx}`;
+            let studentImg = (rawAnswer && typeof rawAnswer === 'object') ? rawAnswer[pKey] : null;
+            let existingCorrection = evaluations[`${pKey}_teacherCorrection`] || '';
+            
+            html += `<div style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:15px; text-align:center;">`;
+            html += `<h5 style="color:#333; margin-bottom:10px; font-size:1.8rem;">${p.text}</h5>`;
+            
+            if(studentImg) {
+                html += `
+                <div class="correction-toolbar mb-3" style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap; background:#f8f9fa; padding:10px; border-radius:8px;">
+                    <button type="button" class="btn btn-sm btn-danger" id="tc-pen-${q.id}-${pIdx}" onclick="setCorrectionMode('${q.id}', '${pIdx}', 'pen')"><i class="fas fa-pen"></i> قلم أحمر</button>
+                    <button type="button" class="btn btn-sm btn-outline-success" id="tc-stamp-c-${q.id}-${pIdx}" onclick="setCorrectionMode('${q.id}', '${pIdx}', 'stamp-correct')">✔️ ختم (صح)</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger" id="tc-stamp-w-${q.id}-${pIdx}" onclick="setCorrectionMode('${q.id}', '${pIdx}', 'stamp-wrong')">❌ ختم (خطأ)</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="clearCorrection('${q.id}', '${pIdx}', '${studentImg}')"><i class="fas fa-undo"></i> تراجع/مسح</button>
+                </div>
+                <div style="position:relative; display:inline-block; border:2px solid #ccc; border-radius:8px; overflow:hidden; max-width:100%;">
+                    <canvas id="tc-canvas-${q.id}-${pIdx}" style="cursor:crosshair; touch-action:none; display:block; max-width:100%;"></canvas>
+                </div>
+                <input type="hidden" name="correction_img_${q.id}_${pIdx}" id="tc-output-${q.id}-${pIdx}" value="${existingCorrection}">
+                `;
+                setTimeout(()=> initTeacherCorrectionCanvas(q.id, pIdx, studentImg, existingCorrection), 100);
+            } else {
+                html += '<span class="text-muted p-3 border rounded d-block bg-light">لم يُجب الطالب</span>';
+            }
+            html += `</div>`;
+        });
+        html += `</div>`;
+    }
+    else if (q.type.includes('mcq')) {
+        let sAns = (rawAnswer !== null && rawAnswer !== undefined && rawAnswer !== '') ? parseInt(rawAnswer) : -1;
+        let cAns = (q.correctAnswer !== undefined && q.correctAnswer !== null && q.correctAnswer !== '') ? parseInt(q.correctAnswer) : -1;
+        html += `<div style="display:flex; flex-direction:column; gap:8px;">`;
+        (q.choices || []).forEach((choice, i) => {
+            let isStudent = (sAns === i); let isCorrect = (cAns === i);
+            let bg = isCorrect ? '#d4edda' : (isStudent ? '#f8d7da' : '#f8f9fa'); let border = isCorrect ? '#c3e6cb' : (isStudent ? '#f5c6cb' : '#eee'); let icon = isCorrect ? '✅' : (isStudent ? '❌' : '');
+            html += `<div style="padding:10px; border:2px solid ${border}; border-radius:8px; background:${bg}; display:flex; justify-content:space-between; align-items:center; font-weight:bold;"><span>${icon} ${choice}</span>${isStudent && !isCorrect ? '<span class="badge badge-danger">إجابة الطالب</span>' : ''}${isStudent && isCorrect ? '<span class="badge badge-success">إجابة الطالب</span>' : ''}</div>`;
+        });
+        html += `</div>`;
+    } else if (q.type === 'drag-drop') {
+        if (!q.paragraphs || q.paragraphs.length === 0) html += '<span class="text-muted">لا توجد جمل لعرضها</span>';
+        else {
+            let sentencesHtml = '<div style="display:flex; flex-direction:column; gap:15px; margin-top:10px;">';
+            q.paragraphs.forEach((p, pIdx) => {
+                let processedText = p.text;
+                if (p.gaps) {
+                    p.gaps.forEach((g, gIdx) => {
+                        let studentWord = (rawAnswer && typeof rawAnswer === 'object' && rawAnswer[`p_${pIdx}_g_${gIdx}`]) ? rawAnswer[`p_${pIdx}_g_${gIdx}`] : '';
+                        let isCorrect = studentWord.trim() === g.dragItem.trim();
+                        let color = isCorrect ? '#155724' : '#721c24'; let bg = isCorrect ? '#d4edda' : '#f8d7da'; let border = isCorrect ? '#c3e6cb' : '#f5c6cb';
+                        let displayWord = studentWord ? studentWord : '<span style="color:#999; font-size:0.95rem;">(لم يُجب)</span>';
+                        let wordBadge = `<span style="background:${bg}; color:${color}; padding:2px 15px; border-radius:8px; border-bottom:3px solid ${border}; font-weight:bold; margin:0 5px;">${displayWord}</span>`;
+                        processedText = processedText.replace(g.dragItem, wordBadge);
+                    });
+                }
+                sentencesHtml += `<div style="background:#fff; padding:15px; border:1px solid #e2e8f0; border-radius:10px; font-size:1.2rem; line-height:2.6;">${processedText}</div>`;
+            });
+            html += sentencesHtml + '</div>';
+        }
+    } else if (q.paragraphs && q.paragraphs.length > 0) {
+        if (q.type === 'manual-reading') {
+            html += `<div style="display:flex; flex-direction:column; gap:15px;">`;
+            q.paragraphs.forEach((p, pIdx) => {
+                let pKey = `p_${pIdx}`; let words = (p.text || '').trim().split(/\s+/);
+                let wordsHtml = words.map((w, wIdx) => {
+                    let wKey = `${pKey}_w_${wIdx}`; let wEval = evaluations[wKey] || '';
+                    let wClass = wEval === 'correct' ? 'word-correct' : (wEval === 'wrong' ? 'word-wrong' : 'word-neutral'); let icon = wEval === 'correct' ? ' ✔️' : (wEval === 'wrong' ? ' ❌' : '');
+                    return `<span class="reading-word-eval ${wClass}" onclick="toggleReadingWord(this, '${q.id}', '${wKey}')" data-state="${wEval}">${w}${icon}<input type="hidden" name="eval_${q.id}_${wKey}" value="${wEval}"></span>`;
+                }).join(' ');
+                html += `<div style="border:1px solid #e2e8f0; padding:15px; border-radius:8px; background:#fff;"><div style="font-weight:bold; margin-bottom:10px; color:#007bff;"><i class="fas fa-hand-pointer"></i> اضغط على الكلمة لتصحيحها:</div><div style="background:#f8f9fa; padding:15px; border-radius:5px; line-height:2.8; text-align:justify;">${wordsHtml}</div></div>`;
+            });
+            html += `</div>`;
+        } else {
+            html += `<div style="display:flex; flex-direction:column; gap:15px;">`;
+            q.paragraphs.forEach((p, pIdx) => {
+                let pKey = `p_${pIdx}`; let pAns = (rawAnswer && typeof rawAnswer === 'object') ? rawAnswer[pKey] : null; let evalState = evaluations[pKey] || ''; 
+                let displayAns = pAns ? (pAns.startsWith('data:image') ? `<img src="${pAns}" style="max-height:100px;">` : pAns) : '<span class="text-muted">لم يُجب</span>';
+                let btnCorrect = `<button type="button" class="btn btn-sm ${evalState === 'correct' ? 'btn-success' : 'btn-outline-success'}" onclick="setEvalState(this, '${q.id}', '${pKey}', 'correct')">✔️ صحيح</button>`;
+                let btnWrong = `<button type="button" class="btn btn-sm ${evalState === 'wrong' ? 'btn-danger' : 'btn-outline-danger'}" onclick="setEvalState(this, '${q.id}', '${pKey}', 'wrong')">❌ خاطئ</button>`;
+                html += `<div style="border:1px solid #e2e8f0; padding:15px; border-radius:8px; background:#fff; text-align:center;">${displayAns}<br><div class="mt-2">${btnCorrect} ${btnWrong}</div><input type="hidden" name="eval_${q.id}_${pKey}" value="${evalState}"></div>`;
+            });
+            html += `</div>`;
+        }
+    } else {
+        html += `<div style="background:#f8f9fa; padding:15px; border-radius:8px; border:1px solid #eee;">${rawAnswer || 'لم يُجب'}</div>`;
+    }
+    
+    return `<div class="review-question-item" id="q-review-item-${q.id}">
+        <div class="review-q-header" style="background:#e3f2fd; border-bottom:2px solid #90caf9;">
+            <div style="flex:1; font-size:1.1rem; color:#1565c0;"><strong>س${index+1}: ${q.text}</strong></div>
+            <div class="score-input-container">
+                <input type="number" step="0.5" class="score-input" name="score_${q.id}" value="${currentScore}" max="${maxScore}" min="0">
+                <span class="text-muted"> / ${maxScore} درجة</span>
+            </div>
+        </div>
+        <div class="student-answer-box" style="${q.type==='handwriting'?'background:transparent; border:none; padding:0;':''}">${html}</div>
+        <div class="teacher-feedback-box mt-3">
+            <label>ملاحظات المعلم (تظهر للطالب):</label>
+            <textarea class="form-control" name="note_${q.id}">${teacherNote}</textarea>
+        </div>
+    </div>`;
+}
+
+let tcContexts = {};
+function initTeacherCorrectionCanvas(qId, pIdx, originalImgBase64, existingCorrection) {
+    const canvasId = `tc-canvas-${qId}-${pIdx}`;
+    const canvas = document.getElementById(canvasId);
+    if(!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+        canvas.width = img.width; canvas.height = img.height;
+        ctx.drawImage(img, 0, 0);
+        
+        tcContexts[canvasId] = { ctx: ctx, canvas: canvas, mode: 'pen', baseImg: img };
+        
+        ctx.strokeStyle = '#dc3545'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        setCorrectionMode(qId, pIdx, 'pen');
+
+        let isDrawing = false; let lastX = 0, lastY = 0;
+        const getPosTC = (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
+        };
+
+        const handleDown = (e) => {
+            if(e.type === 'touchstart') e.preventDefault();
+            const pos = getPosTC(e);
+            const mode = tcContexts[canvasId].mode;
+            if(mode === 'pen') {
+                isDrawing = true; lastX = pos.x; lastY = pos.y;
+                ctx.beginPath(); ctx.moveTo(lastX, lastY);
+            } else if (mode === 'stamp-correct' || mode === 'stamp-wrong') {
+                ctx.font = 'bold 50px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                ctx.fillStyle = mode === 'stamp-correct' ? '#28a745' : '#dc3545';
+                ctx.fillText(mode === 'stamp-correct' ? '✔️' : '❌', pos.x, pos.y);
+                updateOutput(qId, pIdx);
+            }
+        };
+
+        const handleMove = (e) => {
+            if(!isDrawing || tcContexts[canvasId].mode !== 'pen') return;
+            e.preventDefault(); const pos = getPosTC(e);
+            ctx.lineTo(pos.x, pos.y); ctx.stroke();
+            lastX = pos.x; lastY = pos.y;
+        };
+
+        const handleUp = () => { if(isDrawing) { isDrawing = false; ctx.closePath(); updateOutput(qId, pIdx); } };
+
+        canvas.addEventListener('mousedown', handleDown); canvas.addEventListener('touchstart', handleDown, { passive: false });
+        canvas.addEventListener('mousemove', handleMove); canvas.addEventListener('touchmove', handleMove, { passive: false });
+        canvas.addEventListener('mouseup', handleUp); canvas.addEventListener('touchend', handleUp); canvas.addEventListener('mouseout', handleUp);
+    };
+    img.src = existingCorrection ? existingCorrection : originalImgBase64;
+}
+
+window.setCorrectionMode = function(qId, pIdx, mode) {
+    const key = `${qId}-${pIdx}`;
+    if(!tcContexts[key]) return;
+    tcContexts[key].mode = mode;
+    
+    document.getElementById(`tc-pen-${key}`).className = 'btn btn-sm btn-outline-danger';
+    document.getElementById(`tc-stamp-c-${key}`).className = 'btn btn-sm btn-outline-success';
+    document.getElementById(`tc-stamp-w-${key}`).className = 'btn btn-sm btn-outline-danger';
+
+    if (mode === 'pen') document.getElementById(`tc-pen-${key}`).classList.replace('btn-outline-danger', 'btn-danger');
+    else if (mode === 'stamp-correct') document.getElementById(`tc-stamp-c-${key}`).classList.replace('btn-outline-success', 'btn-success');
+    else if (mode === 'stamp-wrong') document.getElementById(`tc-stamp-w-${key}`).classList.replace('btn-outline-danger', 'btn-danger');
+}
+
+window.clearCorrection = function(qId, pIdx) {
+    const key = `${qId}-${pIdx}`;
+    if(!tcContexts[key]) return;
+    tcContexts[key].ctx.clearRect(0, 0, tcContexts[key].canvas.width, tcContexts[key].canvas.height);
+    tcContexts[key].ctx.drawImage(tcContexts[key].baseImg, 0, 0);
+    updateOutput(qId, pIdx);
+}
+
+function updateOutput(qId, pIdx) {
+    const canvas = document.getElementById(`tc-canvas-${qId}-${pIdx}`);
+    const output = document.getElementById(`tc-output-${qId}-${pIdx}`);
+    if(canvas && output) output.value = canvas.toDataURL('image/png');
+}
+
+async function saveTestReview() {
+    const id = parseInt(document.getElementById('reviewAssignmentId').value);
+    const type = document.getElementById('reviewAssignmentId').getAttribute('data-type');
+    let tableName = type === 'test' ? 'student_tests' : (type === 'lesson' ? 'student_lessons' : 'student_assignments');
+
+    try {
+        const { data: record } = await window.supabase.from(tableName).select('*').eq('id', id).single();
+        if (!record) return showError('السجل غير موجود');
+
+        const container = document.getElementById('reviewQuestionsContainer');
+        let totalScore = 0, maxTotalScore = 0, questions = [];
+        
+        if (type === 'assignment') {
+            const { data: orig } = await window.supabase.from('assignments').select('*').eq('title', record.title).single();
+            questions = record.questions || (orig ? orig.questions : []);
+        } else if (type === 'test') {
+            const { data: orig } = await window.supabase.from('tests').select('*').eq('id', record.testId).single();
+            if(orig) questions = orig.questions;
+        } else if (type === 'lesson') {
+            const { data: orig } = await window.supabase.from('lessons').select('*').eq('id', record.originalLessonId).single();
+            if(orig) questions = [...(orig.exercises?.questions || []), ...(orig.assessment?.questions || [])];
+        }
+
+        let updatedAnswers = record.answers || [];
+
+        if(questions && questions.length > 0) {
+            questions.forEach(q => {
+                const scoreInp = container.querySelector(`input[name="score_${q.id}"]`);
+                const noteInp = container.querySelector(`textarea[name="note_${q.id}"]`);
+                let ansIdx = updatedAnswers.findIndex(a => a.questionId == q.id);
+                let newScore = scoreInp && scoreInp.value !== '' ? parseFloat(scoreInp.value) : 0;
+                
+                if(ansIdx === -1) { updatedAnswers.push({ questionId: q.id, answer: null }); ansIdx = updatedAnswers.length - 1; }
+                
+                updatedAnswers[ansIdx].score = newScore;
+                updatedAnswers[ansIdx].teacherNote = noteInp ? noteInp.value : '';
+                if (!updatedAnswers[ansIdx].evaluations) updatedAnswers[ansIdx].evaluations = {};
+                
+                if (q.type === 'handwriting' && q.paragraphs) {
+                    q.paragraphs.forEach((p, pIdx) => {
+                        const correctionInput = container.querySelector(`#tc-output-${q.id}-${pIdx}`);
+                        if (correctionInput && correctionInput.value) {
+                            updatedAnswers[ansIdx].evaluations[`p_${pIdx}_teacherCorrection`] = correctionInput.value;
+                        }
+                    });
+                }
+
+                const evalInputs = container.querySelectorAll(`input[type="hidden"][name^="eval_${q.id}_"]`);
+                evalInputs.forEach(inp => { let pKey = inp.name.replace(`eval_${q.id}_`, ''); updatedAnswers[ansIdx].evaluations[pKey] = inp.value; });
+
+                totalScore += newScore; 
+                let maxQScore = parseFloat(q.maxScore || q.passingScore || 1);
+                maxTotalScore += maxQScore;
+            });
+            record.score = maxTotalScore > 0 ? Math.round((totalScore / maxTotalScore) * 100) : 0;
+        }
+        
+        let updateData = { answers: updatedAnswers, score: record.score };
+
+        if (type === 'lesson') {
+            const { data: orig } = await window.supabase.from('lessons').select('exercises').eq('id', record.originalLessonId).single();
+            const passScore = orig?.exercises?.passScore ? parseFloat(orig.exercises.passScore) : 80;
+            
+            if (record.score >= passScore) {
+                updateData.status = 'completed'; updateData.completedDate = new Date().toISOString();
+                showSuccess('تم حفظ التصحيح. الطالب اجتاز المحك واكتمل الدرس بنجاح!');
+            } else {
+                updateData.status = 'returned'; 
+                showError(`تم حفظ التقييم. نتيجة الطالب (${record.score}%) لم تحقق المحك (${passScore}%). أُعيد الدرس للطالب.`);
+            }
+        } else {
+            updateData.status = 'completed'; showSuccess('تم حفظ التصحيح واعتماد الدرجة بنجاح.');
+        }
+
+        await window.supabase.from(tableName).update(updateData).eq('id', id);
+        closeModal('reviewTestModal');
+        
+        if (type === 'assignment') loadAssignmentsTab(); 
+        else if (type === 'test') loadDiagnosticTab(); 
+        else if (type === 'lesson') { loadLessonsTab(); calculateAndSetStudentProgress(); }
+    } catch(e) { console.error(e); showError('حدث خطأ أثناء الحفظ'); }
+}
 
 async function openReviewModal(targetId, type = 'assignment') {
     document.getElementById('reviewAssignmentId').value = targetId;

@@ -41,9 +41,6 @@ function injectHomeworkModal() {
     document.body.insertAdjacentHTML('beforeend', html); 
 }
 
-// =========================================================
-// التحميل الأساسي
-// =========================================================
 document.addEventListener('DOMContentLoaded', function() {
     injectAdminEventModal(); 
     injectHomeworkModal(); 
@@ -100,12 +97,10 @@ async function calculateAndSetStudentProgress() {
     try {
         const { data: myLessons } = await window.supabase.from('student_lessons').select('status, passedByAlternative').eq('studentId', currentStudentId);
         let progressPct = 0;
-
         if (myLessons && myLessons.length > 0) {
             const completed = myLessons.filter(l => l.status === 'completed' || l.status === 'accelerated' || l.passedByAlternative).length;
             progressPct = Math.round((completed / myLessons.length) * 100);
         }
-
         document.querySelectorAll('.progress-percentage, .progress-text, #progressPercentage, #studentProgressText, #sideProgress').forEach(el => el.innerText = progressPct + '%');
         document.querySelectorAll('.progress-bar, .progress-bar-fill, #studentProgressBar, #sideProgressBar').forEach(el => {
             el.style.width = progressPct + '%';
@@ -113,7 +108,6 @@ async function calculateAndSetStudentProgress() {
             else if (progressPct >= 50) el.style.backgroundColor = '#17a2b8'; 
             else el.style.backgroundColor = '#ffc107'; 
         });
-
         await window.supabase.from('users').update({ progress: progressPct }).eq('id', currentStudentId);
         return progressPct;
     } catch(e) { console.error(e); return 0; }
@@ -131,707 +125,8 @@ function getEvalBadgeHTML(evalState) {
 }
 
 // ============================================
-// 1. التبويب: الاختبار التشخيصي
+// دالة بناء واجهة المراجعة والتصحيح
 // ============================================
-async function loadDiagnosticTab() {
-    try {
-        const { data: studentTests } = await window.supabase.from('student_tests').select('*').eq('studentId', currentStudentId).eq('type', 'diagnostic');
-        if (studentTests && studentTests.length > 0) {
-            let assignedTest = studentTests[0]; 
-            document.getElementById('noDiagnosticTest').style.display = 'none'; 
-            const detailsDiv = document.getElementById('diagnosticTestDetails'); 
-            detailsDiv.style.display = 'block'; 
-
-            const { data: originalTest } = await window.supabase.from('tests').select('*').eq('id', assignedTest.testId).single();
-            let finalPercentage = assignedTest.score || 0;
-            
-            let statusBadge = '', actionContent = '';
-            if(assignedTest.status === 'completed') {
-                statusBadge = '<span class="badge badge-success">مكتمل</span>';
-                actionContent = `<div style="margin-top:15px; padding:15px; background:#f0fff4; border:1px solid #c3e6cb; border-radius:8px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="font-size:1.1rem;">الدرجة الحالية: <span style="font-size:1.4rem; color:#28a745; font-weight:900;">${finalPercentage}%</span></strong>
-                    </div>
-                    <div style="margin-top:15px; display:flex; gap:10px;">
-                        <button class="btn btn-warning" onclick="openReviewModal(${assignedTest.id}, 'test')">🔍 مراجعة وتصحيح</button>
-                        <button class="btn btn-primary" onclick="autoGenerateLessons()">⚡ توليد الخطة والدروس</button>
-                    </div>
-                </div>`;
-            } else if (assignedTest.status === 'returned') { 
-                statusBadge = '<span class="badge badge-warning">معاد للتعديل</span>'; 
-                actionContent = `<div class="alert alert-warning mt-2">تم إعادة الاختبار للطالب ليقوم بتعديله.</div>`; 
-            } else { 
-                statusBadge = '<span class="badge badge-secondary">بانتظار حل الطالب</span>'; 
-            }
-            
-            detailsDiv.innerHTML = `
-                <div class="card" style="border:1px solid #eee; box-shadow:0 4px 10px rgba(0,0,0,0.05); padding:20px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <h3>${originalTest ? originalTest.title : 'اختبار (محذوف)'}</h3>
-                        <div style="display:flex; gap:5px; align-items:center;">
-                            ${statusBadge}
-                            <button class="btn btn-sm btn-outline-danger" onclick="deleteAssignedTest(${assignedTest.id})" title="حذف الاختبار"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </div>
-                    <p class="text-muted" style="margin-top:5px;"><i class="fas fa-calendar-alt"></i> تاريخ التعيين: ${new Date(assignedTest.assignedDate).toLocaleDateString('ar-SA')}</p>
-                    ${actionContent}
-                </div>`;
-        } else { 
-            document.getElementById('noDiagnosticTest').style.display = 'block'; 
-            document.getElementById('diagnosticTestDetails').style.display = 'none'; 
-        }
-    } catch(e) { console.error(e); }
-}
-
-async function showAssignTestModal() { 
-    const user = getCurrentUser();
-    const { data: allTests } = await window.supabase.from('tests').select('*').eq('teacherId', user.id);
-    const select = document.getElementById('testSelect'); 
-    select.innerHTML = '<option value="">اختر اختباراً...</option>'; 
-    (allTests || []).forEach(t => select.innerHTML += `<option value="${t.id}">${t.title}</option>`); 
-    document.getElementById('assignTestModal').classList.add('show'); 
-}
-
-async function assignTest() { 
-    const testId = parseInt(document.getElementById('testSelect').value); 
-    if(!testId) return; 
-    try {
-        const { data: existing } = await window.supabase.from('student_tests').select('id').eq('studentId', currentStudentId).eq('type', 'diagnostic');
-        if(existing && existing.length > 0) return alert('يوجد اختبار معين مسبقاً لهذا الطالب.'); 
-
-        await window.supabase.from('student_tests').insert([{ id: Date.now(), studentId: currentStudentId, testId: testId, type: 'diagnostic', status: 'pending' }]);
-        closeModal('assignTestModal'); 
-        loadDiagnosticTab(); 
-        showSuccess('تم تعيين الاختبار بنجاح.');
-    } catch(e) { console.error(e); alert('حدث خطأ'); }
-}
-
-async function deleteAssignedTest(id) { 
-    if(confirm('هل أنت متأكد من حذف هذا الاختبار المعين؟')) { 
-        await window.supabase.from('student_tests').delete().eq('id', id);
-        loadDiagnosticTab(); 
-        showSuccess('تم الحذف بنجاح.'); 
-    } 
-}
-
-// ============================================
-// 2. التبويب: الخطة التربوية (IEP)
-// ============================================
-async function loadIEPTab() {
-    const iepContainer = document.getElementById('iepContent'); 
-    const wordModel = document.querySelector('.iep-word-model'); 
-    if (!iepContainer) return;
-
-    try {
-        const { data: diagTests } = await window.supabase.from('student_tests').select('*').eq('studentId', currentStudentId).eq('type', 'diagnostic').eq('status', 'completed');
-        if (!diagTests || diagTests.length === 0) { 
-            if(wordModel) wordModel.style.display = 'none'; 
-            iepContainer.innerHTML = `<div class="empty-state"><h3>الخطة غير جاهزة</h3><p>يجب إكمال وتصحيح اختبار تشخيصي أولاً.</p></div>`; 
-            return; 
-        }
-
-        const completedDiagnostic = diagTests[0];
-        if(wordModel) wordModel.style.display = 'block';
-
-        const { data: originalTest } = await window.supabase.from('tests').select('*').eq('id', completedDiagnostic.testId).single();
-        const { data: allObjectives } = await window.supabase.from('objectives').select('*').eq('teacherId', getCurrentUser().id);
-        const { data: studentLessons } = await window.supabase.from('student_lessons').select('*').eq('studentId', currentStudentId);
-
-        let strengthHTML = '', needsHTML = ''; let needsObjects = [];
-        if (originalTest && originalTest.questions) {
-            originalTest.questions.forEach(q => {
-                const ans = completedDiagnostic.answers ? completedDiagnostic.answers.find(a => a.questionId == q.id) : null;
-                const score = ans ? parseFloat(ans.score || 0) : 0; 
-                const maxScore = parseFloat(q.maxScore || q.passingScore || 1); 
-                const criterion = parseFloat(q.passingCriterion || 80); 
-                let percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
-
-                if (q.linkedGoalId) {
-                    const obj = (allObjectives || []).find(o => o.id == q.linkedGoalId);
-                    if (obj) {
-                        if (percentage >= criterion) { if (!strengthHTML.includes(obj.shortTermGoal)) strengthHTML += `<li>${obj.shortTermGoal}</li>`; } 
-                        else { if (!needsObjects.find(o => o.id == obj.id)) { needsObjects.push(obj); needsHTML += `<li>${obj.shortTermGoal}</li>`; } }
-                    }
-                }
-            });
-        }
-        if(!strengthHTML) strengthHTML = '<li>لا توجد نقاط مسجلة.</li>'; if(!needsHTML) needsHTML = '<li>لا توجد نقاط احتياج مسجلة.</li>';
-
-        const completedLessonsMap = {}, acceleratedLessonsMap = {};
-        (studentLessons || []).forEach(l => { 
-            if (l.status === 'completed') completedLessonsMap[l.objective] = l.completedDate || 'مكتمل'; 
-            if (l.status === 'accelerated') acceleratedLessonsMap[l.objective] = l.completedDate || 'مكتمل بتفوق'; 
-        });
-
-        let objectivesRows = ''; let stgCounter = 1;
-        needsObjects.forEach(obj => {
-            objectivesRows += `<tr style="background-color:#dbeeff !important;"><td class="text-center" style="font-weight:bold; color:#0056b3;">${stgCounter++}</td><td colspan="2" style="font-weight:bold; color:#0056b3;">الهدف: ${obj.shortTermGoal}</td></tr>`;
-            if (obj.instructionalGoals) obj.instructionalGoals.forEach(iGoal => {
-                const compDate = completedLessonsMap[iGoal], accelDate = acceleratedLessonsMap[iGoal]; 
-                let dateDisplay = '', rowStyle = '';
-                if (accelDate) { dateDisplay = `<span style="font-weight:bold; color:#856404;">⚡ ${new Date(accelDate).toLocaleDateString('ar-SA')} (تسريع)</span>`; rowStyle = 'background-color:#fff3cd !important;'; }
-                else if (compDate) { dateDisplay = `<span class="text-success font-weight-bold">✔ ${new Date(compDate).toLocaleDateString('ar-SA')}</span>`; }
-                else { dateDisplay = `<span style="color:#ccc;">--/--/----</span>`; }
-                objectivesRows += `<tr style="${rowStyle}"><td class="text-center">-</td><td>${iGoal}</td><td>${dateDisplay}</td></tr>`;
-            });
-        });
-
-        const subjectName = originalTest ? originalTest.subject : 'عام';
-        iepContainer.innerHTML = `
-        <div class="iep-printable" style="background:#fff; padding:20px; border:1px solid #ccc;">
-            <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #333;"><h3>الخطة التربوية الفردية</h3></div>
-            <table class="table table-bordered mb-4"><tr><td style="background:#f5f5f5; width:15%;">اسم الطالب:</td><td style="width:35%;">${currentStudent.name}</td><td style="background:#f5f5f5; width:15%;">الصف:</td><td>${currentStudent.grade}</td></tr><tr><td style="background:#f5f5f5;">المادة:</td><td>${subjectName}</td><td style="background:#f5f5f5;">التاريخ:</td><td>${new Date().toLocaleDateString('ar-SA')}</td></tr></table>
-            <div style="display:flex; gap:20px; margin-bottom:20px; flex-wrap:wrap;"><div style="flex:1; min-width:250px; border:1px solid #ddd; padding:10px;"><h6 style="background:#28a745; color:white; padding:5px; text-align:center;">نقاط القوة</h6><ul>${strengthHTML}</ul></div><div style="flex:1; min-width:250px; border:1px solid #ddd; padding:10px;"><h6 style="background:#dc3545; color:white; padding:5px; text-align:center;">نقاط الاحتياج</h6><ul>${needsHTML}</ul></div></div>
-            <div class="alert alert-secondary text-center mb-4">الهدف بعيد المدى: أن يتقن التلميذ مهارات مادة <strong>${subjectName}</strong> بنسبة 80%</div>
-            <h5>الأهداف التدريسية:</h5>
-            <table class="table table-bordered"><thead style="background:#333; color:white;"><tr><th>#</th><th>الهدف</th><th>التحقق</th></tr></thead><tbody>${objectivesRows}</tbody></table>
-        </div>`;
-    } catch(e) { console.error(e); }
-}
-
-// ============================================
-// 3. التبويب: إدارة الدروس
-// ============================================
-function regenerateLessons() { autoGenerateLessons(); }
-
-async function loadLessonsTab() {
-    try {
-        const { data: myLessons } = await window.supabase.from('student_lessons').select('*').eq('studentId', currentStudentId).order('orderIndex', { ascending: true });
-        const container = document.getElementById('studentLessonsGrid');
-
-        if (!myLessons || myLessons.length === 0) { container.innerHTML = `<div class="empty-state"><h3>لا توجد دروس</h3><button class="btn btn-primary" onclick="autoGenerateLessons()">⚡ توليد تلقائي</button></div>`; return; }
-
-        container.innerHTML = myLessons.map((l, index) => {
-            const prevCompleted = index === 0 || ['completed', 'accelerated'].includes(myLessons[index-1].status);
-            const isLockedForStudent = !prevCompleted;
-            let statusBadge = '', cardStyle = '';
-            
-            if (l.status === 'completed') { 
-                statusBadge = l.passedByAlternative ? '<span class="badge badge-info">✅ مجتاز ببديل</span>' : '<span class="badge badge-success">✅ مكتمل</span>'; 
-                cardStyle = 'border-right: 5px solid #28a745;'; 
-            } 
-            else if (l.status === 'accelerated') { statusBadge = '<span class="badge badge-warning">⚡ مسرع</span>'; cardStyle = 'border-right: 5px solid #ffc107; background:#fffbf0;'; } 
-            else if (l.status === 'pending_review') { statusBadge = '<span class="badge badge-warning">⏳ بانتظار التصحيح</span>'; cardStyle = 'border-right: 5px solid #fd7e14; background:#fffaf6;'; }
-            else if (l.status === 'struggling') { statusBadge = '<span class="badge badge-danger">🙋‍♂️ يطلب المساعدة</span>'; cardStyle = 'border-right: 5px solid #dc3545; background:#fff5f5;'; }
-            else if (isLockedForStudent) { statusBadge = '<span class="badge badge-secondary">🔒 مغلق</span>'; cardStyle = 'border-right: 5px solid #6c757d; opacity:0.8;'; } 
-            else { statusBadge = '<span class="badge badge-primary">🔓 نشط حالياً</span>'; cardStyle = 'border-right: 5px solid #007bff;'; }
-
-            let controls = '';
-            if (l.status === 'completed' || l.status === 'accelerated') {
-                controls = `<button class="btn btn-outline-success btn-sm w-100 mb-2" onclick="openReviewModal(${l.id}, 'lesson')">🔍 مراجعة الإجابات</button><button class="btn btn-warning btn-sm" onclick="resetLesson(${l.id})">🔄 إعادة فتح</button>`;
-            } else if (l.status === 'pending_review') {
-                controls = `<button class="btn btn-warning btn-sm w-100 mb-2" style="color:#000; font-weight:bold;" onclick="openReviewModal(${l.id}, 'lesson')">📝 تصحيح ورصد الدرجة</button><button class="btn btn-danger btn-sm" onclick="resetLesson(${l.id})">إعادة فتح</button>`;
-            } else {
-                controls = `<button class="btn btn-info btn-sm" style="background:#ffc107; border:none; color:#000;" onclick="accelerateLesson(${l.id})">⚡ تسريع (تفوق)</button>`;
-            }
-
-            const isFirst = index === 0; const isLast = index === myLessons.length - 1;
-            let orderBtns = '';
-            if (!isFirst) orderBtns += `<button class="btn-order" style="width:auto; height:auto; padding:2px 8px; border-radius:4px; margin-left:5px;" onclick="moveLesson(${l.id}, 'up')">تقديم</button>`;
-            if (!isLast) orderBtns += `<button class="btn-order" style="width:auto; height:auto; padding:2px 8px; border-radius:4px;" onclick="moveLesson(${l.id}, 'down')">تأخير</button>`;
-
-            return `<div class="content-card" style="${cardStyle} position:relative;"><div style="position:absolute; top:50px; left:10px; display:flex; z-index:5;">${orderBtns}</div><div style="display:flex; justify-content:space-between;"><div style="margin-right:20px;"><h4 style="margin:0;">${index+1}. ${l.title}</h4><small class="text-muted">${l.objective}</small></div><div>${statusBadge}</div></div><div style="margin-top:10px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap;"><div class="lesson-actions" style="width:100%; display:flex; gap:5px; margin-top:25px;">${controls}<button class="btn btn-danger btn-sm" onclick="deleteLesson(${l.id})">حذف</button></div></div></div>`;
-        }).join('');
-    } catch(e) { console.error(e); }
-}
-
-async function autoGenerateLessons() {
-    showConfirmModal('توليد الخطة العلاجية تلقائياً؟<br><small>سيتم حذف الدروس الحالية وتوليد قائمة جديدة بناءً على نتيجة التشخيص.</small>', async function() {
-        try {
-            const { data: diagTests } = await window.supabase.from('student_tests').select('*').eq('studentId', currentStudentId).eq('type', 'diagnostic').eq('status', 'completed');
-            if (!diagTests || diagTests.length === 0) return showError('يجب إكمال وتصحيح الاختبار التشخيصي أولاً.'); 
-            
-            const compDiag = diagTests[0];
-            const teacherId = getCurrentUser().id;
-
-            const [testsRes, objsRes, lessRes, assignsRes] = await Promise.all([
-                window.supabase.from('tests').select('*').eq('id', compDiag.testId).single(),
-                window.supabase.from('objectives').select('*').eq('teacherId', teacherId),
-                window.supabase.from('lessons').select('*').eq('teacherId', teacherId),
-                window.supabase.from('assignments').select('*').eq('teacherId', teacherId)
-            ]);
-
-            const originalTest = testsRes.data;
-            const allObjectives = objsRes.data || [];
-            const allLessons = lessRes.data || [];
-            const allLibraryAssignments = assignsRes.data || [];
-
-            let newLessons = []; let newAssignments = []; 
-
-            if(originalTest && originalTest.questions) {
-                originalTest.questions.forEach(q => {
-                    const ans = compDiag.answers ? compDiag.answers.find(a => a.questionId == q.id) : null;
-                    const score = ans ? parseFloat(ans.score || 0) : 0;
-                    const maxScore = parseFloat(q.maxScore || q.passingScore || 1);
-                    const criterion = parseFloat(q.passingCriterion || 80);
-                    const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
-                    
-                    if(percentage < criterion && q.linkedGoalId) {
-                        const obj = allObjectives.find(o => o.id == q.linkedGoalId);
-                        if(obj) {
-                            const targetGoals = [obj.shortTermGoal, ...(obj.instructionalGoals || [])].filter(g => g).map(g => String(g).trim());
-                            const matches = allLessons.filter(l => l.linkedInstructionalGoal && targetGoals.includes(String(l.linkedInstructionalGoal).trim()));
-                            
-                            matches.forEach(m => {
-                                if(!newLessons.find(x => x.originalLessonId == m.id)) {
-                                    newLessons.push({ id: Date.now() + Math.floor(Math.random()*10000), studentId: currentStudentId, title: m.title, objective: m.linkedInstructionalGoal, originalLessonId: m.id, status: 'pending', orderIndex: newLessons.length });
-                                    const linkedHomework = allLibraryAssignments.find(h => h.linkedInstructionalGoal && String(h.linkedInstructionalGoal).trim() === String(m.linkedInstructionalGoal).trim());
-                                    if (linkedHomework && !newAssignments.find(a => a.title === linkedHomework.title)) {
-                                        newAssignments.push({ id: Date.now() + Math.floor(Math.random()*10000) + 1, studentId: currentStudentId, title: linkedHomework.title, status: 'pending' });
-                                    } 
-                                }
-                            });
-                        }
-                    }
-                });
-            }
-            
-            if(newLessons.length === 0) { showInfoModal('الخطة العلاجية', 'الطالب متفوق! جميع المهارات محققة.'); return; }
-
-            await window.supabase.from('student_lessons').delete().eq('studentId', currentStudentId);
-            await window.supabase.from('student_lessons').insert(newLessons);
-
-            if (newAssignments.length > 0) {
-                await window.supabase.from('student_assignments').delete().eq('studentId', currentStudentId);
-                await window.supabase.from('student_assignments').insert(newAssignments);
-            }
-
-            showSuccess(`تم إسناد ${newLessons.length} درس و ${newAssignments.length} واجب.`);
-            loadLessonsTab(); loadAssignmentsTab(); calculateAndSetStudentProgress();
-        } catch(e) { console.error(e); showError('خطأ أثناء التوليد'); }
-    });
-}
-
-async function saveAndReindexLessons(myList) {
-    myList.forEach((l, i) => l.orderIndex = i);
-    try {
-        await window.supabase.from('student_lessons').delete().eq('studentId', currentStudentId);
-        if (myList.length > 0) await window.supabase.from('student_lessons').insert(myList);
-        loadLessonsTab();
-    } catch(e) { console.error(e); }
-}
-
-async function moveLesson(lessonId, direction) {
-    try {
-        const { data: myLessons } = await window.supabase.from('student_lessons').select('*').eq('studentId', currentStudentId).order('orderIndex', { ascending: true });
-        if(!myLessons) return;
-        const idx = myLessons.findIndex(l => l.id == lessonId);
-        if (idx === -1) return;
-        if (direction === 'up' && idx > 0) [myLessons[idx], myLessons[idx-1]] = [myLessons[idx-1], myLessons[idx]];
-        else if (direction === 'down' && idx < myLessons.length - 1) [myLessons[idx], myLessons[idx+1]] = [myLessons[idx+1], myLessons[idx]];
-        await saveAndReindexLessons(myLessons);
-    } catch(e) { console.error(e); }
-}
-
-function accelerateLesson(id) {
-    showConfirmModal('تسريع هذا الدرس؟<br><small>سيتم اعتباره منجزاً.</small>', async function() {
-        try {
-            await window.supabase.from('student_lessons').update({ status: 'accelerated', completedDate: new Date().toISOString() }).eq('id', id);
-            loadLessonsTab(); calculateAndSetStudentProgress(); showSuccess('تم التسريع بنجاح');
-        } catch(e) { console.error(e); }
-    });
-}
-
-function resetLesson(id) {
-    showConfirmModal('إعادة فتح الدرس؟<br><small>ستُمسح النتيجة ليعيد الطالب الحل.</small>', async function() {
-        try {
-            await window.supabase.from('student_lessons').update({ status: 'pending', completedDate: null, answers: null, passedByAlternative: false }).eq('id', id);
-            loadLessonsTab(); calculateAndSetStudentProgress(); showSuccess('تمت إعادة فتح الدرس');
-        } catch(e) { console.error(e); }
-    });
-}
-
-function deleteLesson(id) {
-    showConfirmModal('حذف هذا الدرس؟', async function() {
-        try {
-            await window.supabase.from('student_lessons').delete().eq('id', id);
-            loadLessonsTab(); calculateAndSetStudentProgress(); showSuccess('تم الحذف');
-        } catch(e) { console.error(e); }
-    });
-}
-
-async function showAssignLibraryLessonModal() {
-    const select = document.getElementById('libraryLessonSelect');
-    if (!select) return;
-    try {
-        const { data: allLessons } = await window.supabase.from('lessons').select('*').eq('teacherId', getCurrentUser().id);
-        select.innerHTML = '<option value="">اختر درساً...</option>';
-        if (!allLessons || allLessons.length === 0) { select.innerHTML += '<option value="" disabled>المكتبة فارغة</option>'; } 
-        else { allLessons.forEach(l => { select.innerHTML += `<option value="${l.id}">${l.title} ${l.subject ? `(${l.subject})` : ''}</option>`; }); }
-        document.getElementById('assignLibraryLessonModal').classList.add('show');
-    } catch(e) { console.error(e); }
-}
-
-async function assignLibraryLesson() {
-    const select = document.getElementById('libraryLessonSelect');
-    const lessonId = select.value;
-    if (!lessonId) return showError('يرجى اختيار درس');
-    
-    try {
-        const { data: targetLesson } = await window.supabase.from('lessons').select('*').eq('id', lessonId).single();
-        if (!targetLesson) return showError('الدرس غير موجود');
-
-        const { data: myLessons } = await window.supabase.from('student_lessons').select('*').eq('studentId', currentStudentId).order('orderIndex', { ascending: true });
-        let list = myLessons || [];
-        let strugglingIdx = list.findIndex(l => l.status === 'struggling');
-        let insertIndex = list.length;
-        let rescueId = null;
-
-        if (strugglingIdx !== -1) {
-            insertIndex = strugglingIdx + 1; 
-            rescueId = list[strugglingIdx].id;
-        }
-
-        const newStudentLesson = { 
-            id: Date.now(), 
-            studentId: currentStudentId, 
-            title: targetLesson.title, 
-            objective: targetLesson.linkedInstructionalGoal || 'درس إضافي', 
-            originalLessonId: targetLesson.id, 
-            status: 'pending', 
-            isAdditional: true,
-            rescueLessonId: rescueId, 
-            assignedDate: new Date().toISOString(), 
-            orderIndex: 0 
-        };
-
-        list.splice(insertIndex, 0, newStudentLesson);
-        await saveAndReindexLessons(list);
-        
-        closeModal('assignLibraryLessonModal');
-        showSuccess('تم إسناد الدرس الإضافي');
-    } catch(e) { console.error(e); }
-}
-
-// ============================================
-// 4. التبويب: الواجبات
-// ============================================
-async function loadAssignmentsTab() {
-    try {
-        const { data: list } = await window.supabase.from('student_assignments').select('*').eq('studentId', currentStudentId).order('id', { ascending: false });
-        const container = document.getElementById('studentAssignmentsGrid');
-
-        if (!list || list.length === 0) { container.innerHTML = `<div class="empty-state"><h3>لا توجد واجبات حالياً</h3><button class="btn btn-primary" onclick="showAssignHomeworkModal()"><i class="fas fa-plus-circle"></i> إسناد واجب جديد</button></div>`; return; }
-        
-        container.innerHTML = list.map(a => `<div class="content-card"><div style="display:flex; justify-content:space-between;"><h4 style="margin:0;">${a.title}</h4><span class="badge ${a.status === 'completed' ? 'badge-success' : 'badge-primary'}">${a.status === 'completed' ? 'مكتمل' : 'جديد'}</span></div><div class="content-meta" style="margin-top:10px;"><span>📅 التسليم: ${a.dueDate || 'مفتوح'}</span><span>تاريخ الإسناد: ${new Date(a.assignedDate).toLocaleDateString('ar-SA')}</span></div><div style="margin-top:15px; border-top:1px solid #eee; padding-top:10px;">${a.status === 'completed' ? `<button class="btn btn-sm btn-outline-success" onclick="openReviewModal(${a.id}, 'assignment')">🔍 مراجعة الحل</button>` : '<span class="text-muted text-sm">بانتظار الحل...</span>'}<button class="btn btn-sm btn-outline-danger" style="float:left;" onclick="deleteAssignment(${a.id})">حذف</button></div></div>`).join('');
-    } catch(e) { console.error(e); }
-}
-
-async function showAssignHomeworkModal() { 
-    const select = document.getElementById('homeworkSelect');
-    if (!select) { injectHomeworkModal(); setTimeout(showAssignHomeworkModal, 50); return; }
-    try {
-        const { data: allAssignments } = await window.supabase.from('assignments').select('*').eq('teacherId', getCurrentUser().id);
-        select.innerHTML = '<option value="">اختر من قائمة الواجبات...</option>';
-        if (allAssignments && allAssignments.length > 0) { allAssignments.forEach(a => select.innerHTML += `<option value="${a.title}">${a.title}</option>`); } 
-        else { select.innerHTML += `<option value="" disabled>لا توجد واجبات في المكتبة</option>`; }
-        document.getElementById('homeworkDueDate').valueAsDate = new Date();
-        document.getElementById('assignHomeworkModal').classList.add('show'); 
-    } catch(e) { console.error(e); }
-}
-
-async function assignHomework() { 
-    const select = document.getElementById('homeworkSelect'); 
-    if(!select || !select.value) return showError('الرجاء اختيار واجب'); 
-    try {
-        await window.supabase.from('student_assignments').insert([{ id: Date.now(), studentId: currentStudentId, title: select.value, status: 'pending', dueDate: document.getElementById('homeworkDueDate').value }]);
-        closeModal('assignHomeworkModal'); 
-        loadAssignmentsTab(); 
-        showSuccess('تم إسناد الواجب بنجاح'); 
-    } catch(e) { console.error(e); }
-}
-
-function deleteAssignment(id) { 
-    showConfirmModal('هل أنت متأكد من حذف هذا الواجب؟', async function() {
-        try {
-            await window.supabase.from('student_assignments').delete().eq('id', id);
-            loadAssignmentsTab(); 
-            showSuccess('تم الحذف بنجاح');
-        } catch(e) { console.error(e); }
-    });
-}
-
-// ============================================
-// 5. التبويب: سجل التقدم (Progress Tab)
-// ============================================
-async function loadProgressTab() {
-    injectAdminEventModal();
-    const container = document.getElementById('section-progress');
-    
-    container.innerHTML = `
-        <div class="content-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
-            <div>
-                <h2 style="margin:0;">سجل المتابعة اليومي</h2>
-                <span id="progressBalanceBadge" class="badge badge-success" style="font-size:1.1rem; padding:8px 15px; border-radius:8px;">الرصيد: جاري الحساب...</span>
-            </div>
-            <div class="no-print" style="display:flex; gap:10px;">
-                <button class="btn btn-secondary" onclick="printProgressLog()" style="background: #475569;"><i class="fas fa-print"></i> طباعة السجل</button>
-                <button class="btn btn-primary" onclick="openAdminEventModal()"><i class="fas fa-plus-circle"></i> تسجيل حدث</button>
-            </div>
-        </div>
-        <div class="table-responsive" id="printableProgressArea" style="overflow-x: auto; -webkit-overflow-scrolling: touch; background: white; padding: 15px; border-radius: 10px; border: 1px solid #eee; box-shadow: 0 4px 10px rgba(0,0,0,0.03);">
-            <table class="word-table" style="min-width: 850px; width: 100%;">
-                <thead>
-                    <tr>
-                        <th style="width: 30%;">اسم الدرس (الهدف)</th>
-                        <th style="width: 15%;">حالة الدرس</th>
-                        <th style="width: 15%;">حالة الطالب</th>
-                        <th style="width: 15%;">نوع الحصة</th>
-                        <th style="width: 15%;">التاريخ</th>
-                        <th style="width: 10%;" class="no-print">إجراءات</th>
-                    </tr>
-                </thead>
-                <tbody id="progressTableBody">
-                    <tr><td colspan="6" class="text-center p-4">جاري التحميل من السحابة...</td></tr>
-                </tbody>
-            </table>
-        </div>`;
-
-    try {
-        const [lessonsRes, eventsRes, scheduleRes] = await Promise.all([
-            window.supabase.from('student_lessons').select('*').eq('studentId', currentStudentId),
-            window.supabase.from('student_events').select('*').eq('studentId', currentStudentId),
-            window.supabase.from('teacher_schedule').select('*').eq('teacherId', currentStudent.teacherId)
-        ]);
-
-        let myList = lessonsRes.data || [];
-        let adminEvents = eventsRes.data || [];
-        let teacherSchedule = scheduleRes.data || [];
-        let holidays = JSON.parse(localStorage.getItem('academicCalendar') || '[]') || [];
-
-        const tbody = document.getElementById('progressTableBody');
-        const badge = document.getElementById('progressBalanceBadge');
-
-        if (myList.length === 0) { 
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4 text-muted">لم تبدأ الخطة بعد أو لا توجد دروس مسندة.</td></tr>';
-            badge.textContent = 'الرصيد: 0 حصة'; badge.className = 'badge badge-secondary';
-            return; 
-        }
-
-        myList.sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0)); 
-        const sortedByDate = [...myList].sort((a, b) => new Date(a.assignedDate) - new Date(b.assignedDate)); 
-        let planStartDate = sortedByDate.length > 0 ? new Date(sortedByDate[0].assignedDate) : new Date();
-        
-        let myEvents = await syncMissingDaysToArchive(myList, adminEvents, teacherSchedule, planStartDate, holidays);
-
-        let rawLogs = [];
-        myList.forEach(l => { 
-            if (l.historyLog && Array.isArray(l.historyLog)) { 
-                l.historyLog.forEach(log => { 
-                    if(log && log.date) {
-                        rawLogs.push({ dateObj: new Date(log.date), dateStr: new Date(log.date).toDateString(), type: 'lesson', status: log.status, title: l.title, lessonId: l.id, cachedType: log.cachedSessionType || null }); 
-                    }
-                }); 
-            } 
-        });
-        myEvents.forEach(e => { 
-            if(e && e.date) {
-                rawLogs.push({ dateObj: new Date(e.date), dateStr: new Date(e.date).toDateString(), type: e.type === 'auto-absence' ? 'auto-absence' : 'event', status: e.type, title: e.title || (e.type === 'auto-absence' ? 'درس غير محدد' : 'حدث إداري'), id: e.id, note: e.note }); 
-            }
-        });
-
-        let finalTimeline = []; let balance = 0; 
-        rawLogs.sort((a, b) => a.dateObj - b.dateObj);
-        
-        rawLogs.forEach(log => {
-            if (log.status === 'started' || log.status === 'extension') { 
-                const hasFinalStateToday = rawLogs.some(l => l.dateStr === log.dateStr && l.lessonId === log.lessonId && ['completed', 'accelerated', 'passed_by_alternative', 'struggling', 'returned', 'pending_review'].includes(l.status)); 
-                if (hasFinalStateToday) return; 
-            }
-            
-            let displayStatus = '', displayType = '', rowClass = '', studentState = '';
-            if (log.type === 'event' || log.type === 'auto-absence') {
-                if (log.status === 'vacation') { studentState = 'إجازة'; displayStatus = 'توقف مؤقت'; rowClass = 'bg-info-light'; }
-                else if (log.status === 'excused') { studentState = 'معفى'; displayStatus = 'مؤجل'; rowClass = 'bg-warning-light'; balance--; }
-                else if (log.type === 'auto-absence' || log.status === 'absence') { studentState = '<span class="text-danger font-weight-bold">غائب</span>'; displayStatus = 'لم ينفذ'; displayType = 'أساسية'; rowClass = 'bg-danger-light'; balance--; }
-            } else {
-                studentState = 'حاضر';
-                if (log.status === 'started') displayStatus = 'بدأ';
-                else if (log.status === 'extension') displayStatus = 'تمديد';
-                else if (log.status === 'completed') { displayStatus = '<span class="text-success font-weight-bold">✔ متحقق</span>'; rowClass = 'bg-success-light'; }
-                else if (log.status === 'accelerated') { displayStatus = '<span class="text-warning font-weight-bold">⚡ تسريع</span>'; rowClass = 'bg-warning-light'; }
-                else if (log.status === 'pending_review') { displayStatus = '<span class="text-warning font-weight-bold">⏳ بانتظار تصحيح</span>'; rowClass = 'bg-warning-light'; }
-                else if (log.status === 'passed_by_alternative' || log.status === 'struggling' || log.status === 'returned') { displayStatus = '<span class="text-danger font-weight-bold">لم يتحقق - يعاد الدرس</span>'; rowClass = 'bg-danger-light'; }
-                
-                if (log.cachedType) { 
-                    if (log.cachedType === 'basic') displayType = 'أساسية'; 
-                    else if (log.cachedType === 'compensation') { displayType = '<span class="text-primary font-weight-bold">تعويضية</span>'; balance++; } 
-                    else if (log.cachedType === 'additional') { displayType = 'إضافية'; balance++; } 
-                } else { displayType = 'أساسية'; }
-            }
-            finalTimeline.push({ title: log.title, lessonStatus: displayStatus, studentStatus: studentState, sessionType: displayType || '-', date: log.dateObj.toLocaleDateString('ar-SA'), rawDate: log.dateObj, actions: (log.type === 'event' || log.type === 'auto-absence') ? log.id : null, note: log.note, rowClass: rowClass });
-        });
-        
-        let rowsHtml = finalTimeline.map(item => {
-            let actionsHtml = '-'; 
-            if (item.actions) { 
-                actionsHtml = `<button class="btn-icon text-danger no-print" onclick="deleteAdminEvent(${item.actions})"><i class="fas fa-trash"></i></button>`; 
-                if (item.rowClass !== 'bg-danger-light') { 
-                    actionsHtml = `<button class="btn-icon text-primary no-print" onclick="editAdminEvent(${item.actions})"><i class="fas fa-edit"></i></button> ` + actionsHtml; 
-                } 
-            }
-            let noteHtml = item.note ? `<br><small class="text-muted" style="font-size:0.85rem;">[${item.note}]</small>` : ''; 
-            return `<tr class="${item.rowClass || ''}"><td style="padding: 12px; vertical-align: middle;"><strong>${item.title}</strong>${noteHtml}</td><td class="text-center" style="vertical-align: middle;">${item.lessonStatus}</td><td class="text-center" style="vertical-align: middle;">${item.studentStatus}</td><td class="text-center" style="vertical-align: middle;">${item.sessionType}</td><td class="text-center" style="vertical-align: middle;">${item.date}</td><td class="text-center no-print" style="vertical-align: middle;">${actionsHtml}</td></tr>`;
-        }).join('');
-
-        tbody.innerHTML = rowsHtml;
-        if(badge) { badge.className = `badge ${balance < 0 ? 'badge-danger' : 'badge-success'}`; badge.textContent = `الرصيد الحالي: ${balance > 0 ? '+' + balance : balance} حصة`; }
-
-    } catch(e) {
-        console.error(e);
-        document.getElementById('progressTableBody').innerHTML = '<tr><td colspan="6" class="text-center text-danger font-weight-bold p-4">حدث خطأ أثناء تحميل السجل. يرجى التأكد من الاتصال.</td></tr>';
-    }
-}
-
-async function syncMissingDaysToArchive(myList, myEvents, teacherSchedule, planStartDate, holidays) {
-    if (!planStartDate) return myEvents || []; 
-    
-    myList = Array.isArray(myList) ? myList : [];
-    myEvents = Array.isArray(myEvents) ? myEvents : [];
-    teacherSchedule = Array.isArray(teacherSchedule) ? teacherSchedule : [];
-    holidays = Array.isArray(holidays) ? holidays : [];
-    
-    const today = new Date(); today.setHours(23, 59, 59, 999); 
-    const dayMap = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']; 
-    
-    let newEvents = []; 
-    let pendingLesson = myList.find(l => l.status === 'pending'); 
-    let lessonTitleForAbsence = pendingLesson ? pendingLesson.title : 'درس غير محدد';
-    
-    for (let d = new Date(planStartDate); d < today; d.setDate(d.getDate() + 1)) {
-        if (d.toDateString() === new Date().toDateString()) continue; 
-        
-        const isHoliday = holidays.some(h => { 
-            if(!h.startDate || !h.endDate) return false;
-            const start = new Date(h.startDate); const end = new Date(h.endDate); 
-            start.setHours(0, 0, 0, 0); end.setHours(23, 59, 59, 999); 
-            const checkDate = new Date(d); checkDate.setHours(12, 0, 0, 0); 
-            return checkDate >= start && checkDate <= end; 
-        }); 
-        if (isHoliday) continue;
-        
-        const dateStr = d.toDateString(); 
-        const hasLesson = myList.some(l => l.historyLog && Array.isArray(l.historyLog) && l.historyLog.some(log => log.date && new Date(log.date).toDateString() === dateStr)); 
-        const hasEvent = myEvents.some(e => e.date && new Date(e.date).toDateString() === dateStr); 
-        
-        if (hasLesson || hasEvent) continue; 
-        
-        const dayKey = dayMap[d.getDay()]; 
-        const isScheduledDay = teacherSchedule.some(s => normalizeText(s.day) === normalizeText(dayKey) && (s.students && Array.isArray(s.students) && s.students.includes(currentStudentId)));
-        
-        if (isScheduledDay) { 
-            newEvents.push({ id: Date.now() + Math.floor(Math.random()*10000), studentId: currentStudentId, date: new Date(d).toISOString(), type: 'auto-absence', title: lessonTitleForAbsence, note: `غياب تلقائي عن درس: ${lessonTitleForAbsence}` }); 
-        }
-    }
-    
-    if (newEvents.length > 0) { 
-        await window.supabase.from('student_events').insert(newEvents);
-        return [...myEvents, ...newEvents];
-    } 
-    return myEvents;
-}
-
-function openAdminEventModal() { 
-    document.getElementById('editingEventId').value = ''; 
-    document.getElementById('manualEventDate').valueAsDate = new Date(); 
-    document.getElementById('manualEventType').value = 'excused'; 
-    document.getElementById('manualEventNote').value = ''; 
-    document.getElementById('adminEventModal').classList.add('show'); 
-}
-function closeAdminEventModal() { document.getElementById('adminEventModal').classList.remove('show'); }
-
-async function editAdminEvent(id) { 
-    try {
-        const { data: event } = await window.supabase.from('student_events').select('*').eq('id', id).single();
-        if (!event) return; 
-        document.getElementById('editingEventId').value = id; 
-        document.getElementById('manualEventType').value = event.type; 
-        document.getElementById('manualEventDate').value = event.date.split('T')[0]; 
-        document.getElementById('manualEventNote').value = event.note || ''; 
-        document.getElementById('adminEventModal').classList.add('show');
-    } catch(e) { console.error(e); } 
-}
-
-async function saveAdminEvent() { 
-    const id = document.getElementById('editingEventId').value;
-    const type = document.getElementById('manualEventType').value; 
-    const dateInput = document.getElementById('manualEventDate').value; 
-    const note = document.getElementById('manualEventNote').value; 
-    
-    if (!dateInput) return showError('يرجى اختيار التاريخ'); 
-    const eventData = { studentId: currentStudentId, date: new Date(dateInput).toISOString(), type: type, note: note };
-    
-    try {
-        if (id) await window.supabase.from('student_events').update(eventData).eq('id', id);
-        else { eventData.id = Date.now(); await window.supabase.from('student_events').insert([eventData]); }
-        closeAdminEventModal(); loadProgressTab(); showSuccess('تم حفظ الحدث بنجاح');
-    } catch(e) { console.error(e); }
-}
-
-async function deleteAdminEvent(id) { 
-    showConfirmModal('هل أنت متأكد من حذف هذا السجل؟', async function() {
-        try {
-            await window.supabase.from('student_events').delete().eq('id', id);
-            loadProgressTab(); showSuccess('تم الحذف بنجاح');
-        } catch(e) { console.error(e); }
-    });
-}
-
-function printProgressLog() {
-    const area = document.getElementById('printableProgressArea');
-    if (!currentStudent || !area) return showError('البيانات غير جاهزة'); 
-    const tableContent = area.outerHTML; 
-    const today = new Date().toLocaleDateString('ar-SA'); 
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-        <html dir="rtl" lang="ar">
-        <head>
-            <title>سجل متابعة - ${currentStudent.name}</title>
-            <style>
-                @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap');
-                body { font-family: 'Tajawal', serif; padding: 40px; color: #333; }
-                .print-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
-                .header-side { width: 30%; font-size: 13px; line-height: 1.6; }
-                .header-mid { width: 40%; text-align: center; }
-                .header-mid h2 { margin: 0; font-size: 22px; }
-                .student-info-box { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #f9f9f9; padding: 15px; border: 1px solid #000; margin-bottom: 20px; border-radius: 5px; }
-                .student-info-box div { font-size: 14px; }
-                .word-table { width: 100%; border-collapse: collapse; border: 2px solid #000; }
-                .word-table th, .word-table td { border: 1px solid #000; padding: 10px; text-align: center; font-size: 13px; }
-                .word-table th { background-color: #eee !important; font-weight: bold; -webkit-print-color-adjust: exact; }
-                .bg-success-light { background-color: #e8f5e9 !important; -webkit-print-color-adjust: exact; }
-                .bg-danger-light { background-color: #ffebee !important; -webkit-print-color-adjust: exact; }
-                .bg-warning-light { background-color: #fff3e0 !important; -webkit-print-color-adjust: exact; }
-                .bg-info-light { background-color: #e3f2fd !important; -webkit-print-color-adjust: exact; }
-                .no-print { display: none !important; }
-                .footer-signatures { margin-top: 50px; display: flex; justify-content: space-between; text-align: center; font-weight: bold; }
-                .footer-signatures div { width: 30%; border-top: 1px solid #000; padding-top: 10px; }
-            </style>
-        </head>
-        <body>
-            <div class="print-header">
-                <div class="header-side">المملكة العربية السعودية<br>برنامج صعوبات التعلم<br>نظام ميسر التعلم</div>
-                <div class="header-mid"><h2>سجل المتابعة اليومي</h2><p>تقرير التقدم الدراسي</p></div>
-                <div class="header-side" style="text-align: left;">التاريخ: ${today}</div>
-            </div>
-            <div class="student-info-box">
-                <div><strong>اسم الطالب:</strong> ${currentStudent.name}</div>
-                <div><strong>الصف الدراسي:</strong> ${currentStudent.grade}</div>
-                <div><strong>المادة:</strong> ${currentStudent.subject}</div>
-                <div><strong>حالة الخطة:</strong> مستمرة</div>
-            </div>
-            ${tableContent}
-            <div class="footer-signatures"><div>توقيع معلم صعوبات التعلم</div><div>توقيع مدير المدرسة</div></div>
-            <script>window.onload = function() { window.print(); window.close(); }<\/script>
-        </body>
-        </html>
-    `);
-    printWindow.document.close();
-}
-
-// ----------------------------------------------------
-// 6. المراجعة والتصحيح (Review Modal)
-// ----------------------------------------------------
 function buildTeacherReviewItem(q, index, studentAnsObj) {
     let rawAnswer = studentAnsObj ? (studentAnsObj.answer || studentAnsObj.value) : null;
     let evaluations = (studentAnsObj && studentAnsObj.evaluations) ? studentAnsObj.evaluations : {};
@@ -851,12 +146,13 @@ function buildTeacherReviewItem(q, index, studentAnsObj) {
             html += `<h5 style="color:#333; margin-bottom:10px; font-size:1.8rem;">${p.text}</h5>`;
             
             if(studentImg) {
+                // إزالة تمرير الصورة كنص للزر لتجنب أخطاء HTML Parsing
                 html += `
                 <div class="correction-toolbar mb-3" style="display:flex; justify-content:center; gap:10px; flex-wrap:wrap; background:#f8f9fa; padding:10px; border-radius:8px;">
                     <button type="button" class="btn btn-sm btn-danger" id="tc-pen-${q.id}-${pIdx}" onclick="setCorrectionMode('${q.id}', '${pIdx}', 'pen')"><i class="fas fa-pen"></i> قلم أحمر</button>
                     <button type="button" class="btn btn-sm btn-outline-success" id="tc-stamp-c-${q.id}-${pIdx}" onclick="setCorrectionMode('${q.id}', '${pIdx}', 'stamp-correct')">✔️ ختم (صح)</button>
                     <button type="button" class="btn btn-sm btn-outline-danger" id="tc-stamp-w-${q.id}-${pIdx}" onclick="setCorrectionMode('${q.id}', '${pIdx}', 'stamp-wrong')">❌ ختم (خطأ)</button>
-                    <button type="button" class="btn btn-sm btn-secondary" onclick="clearCorrection('${q.id}', '${pIdx}', '${studentImg}')"><i class="fas fa-undo"></i> تراجع/مسح</button>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="clearCorrection('${q.id}', '${pIdx}')"><i class="fas fa-undo"></i> تراجع/مسح</button>
                 </div>
                 <div style="position:relative; display:inline-block; border:2px solid #ccc; border-radius:8px; overflow:hidden; max-width:100%;">
                     <canvas id="tc-canvas-${q.id}-${pIdx}" style="cursor:crosshair; touch-action:none; display:block; max-width:100%;"></canvas>
@@ -945,9 +241,14 @@ function buildTeacherReviewItem(q, index, studentAnsObj) {
     </div>`;
 }
 
+// ============================================
+// لوحة تصحيح المعلم للرسم الكتابي (Teacher Canvas)
+// ============================================
 let tcContexts = {};
+
 function initTeacherCorrectionCanvas(qId, pIdx, originalImgBase64, existingCorrection) {
     const canvasId = `tc-canvas-${qId}-${pIdx}`;
+    const key = `${qId}-${pIdx}`; // استخدام المفتاح الصحيح
     const canvas = document.getElementById(canvasId);
     if(!canvas) return;
 
@@ -958,7 +259,7 @@ function initTeacherCorrectionCanvas(qId, pIdx, originalImgBase64, existingCorre
         canvas.width = img.width; canvas.height = img.height;
         ctx.drawImage(img, 0, 0);
         
-        tcContexts[canvasId] = { ctx: ctx, canvas: canvas, mode: 'pen', baseImg: img };
+        tcContexts[key] = { ctx: ctx, canvas: canvas, mode: 'pen', baseImg: img }; // حفظ باستخدام المفتاح الموحد
         
         ctx.strokeStyle = '#dc3545'; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
         setCorrectionMode(qId, pIdx, 'pen');
@@ -974,7 +275,7 @@ function initTeacherCorrectionCanvas(qId, pIdx, originalImgBase64, existingCorre
         const handleDown = (e) => {
             if(e.type === 'touchstart') e.preventDefault();
             const pos = getPosTC(e);
-            const mode = tcContexts[canvasId].mode;
+            const mode = tcContexts[key].mode;
             if(mode === 'pen') {
                 isDrawing = true; lastX = pos.x; lastY = pos.y;
                 ctx.beginPath(); ctx.moveTo(lastX, lastY);
@@ -987,7 +288,7 @@ function initTeacherCorrectionCanvas(qId, pIdx, originalImgBase64, existingCorre
         };
 
         const handleMove = (e) => {
-            if(!isDrawing || tcContexts[canvasId].mode !== 'pen') return;
+            if(!isDrawing || tcContexts[key].mode !== 'pen') return;
             e.preventDefault(); const pos = getPosTC(e);
             ctx.lineTo(pos.x, pos.y); ctx.stroke();
             lastX = pos.x; lastY = pos.y;
@@ -1030,6 +331,9 @@ function updateOutput(qId, pIdx) {
     if(canvas && output) output.value = canvas.toDataURL('image/png');
 }
 
+// ============================================
+// حفظ المراجعة والتقييم
+// ============================================
 async function saveTestReview() {
     const id = parseInt(document.getElementById('reviewAssignmentId').value);
     const type = document.getElementById('reviewAssignmentId').getAttribute('data-type');
@@ -1167,7 +471,62 @@ async function returnTestForResubmission() {
         showSuccess('تمت الإعادة للطالب بنجاح');
     });
 }
+
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// ============================================
+// التبويب: التشخيص والإجراءات الإضافية
+// ============================================
+
+async function loadDiagnosticTab() {
+    try {
+        const { data: studentTests } = await window.supabase.from('student_tests').select('*').eq('studentId', currentStudentId).eq('type', 'diagnostic');
+        if (studentTests && studentTests.length > 0) {
+            let assignedTest = studentTests[0]; 
+            document.getElementById('noDiagnosticTest').style.display = 'none'; 
+            const detailsDiv = document.getElementById('diagnosticTestDetails'); 
+            detailsDiv.style.display = 'block'; 
+
+            const { data: originalTest } = await window.supabase.from('tests').select('*').eq('id', assignedTest.testId).single();
+            let finalPercentage = assignedTest.score || 0;
+            
+            let statusBadge = '', actionContent = '';
+            if(assignedTest.status === 'completed') {
+                statusBadge = '<span class="badge badge-success">مكتمل</span>';
+                actionContent = `<div style="margin-top:15px; padding:15px; background:#f0fff4; border:1px solid #c3e6cb; border-radius:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="font-size:1.1rem;">الدرجة الحالية: <span style="font-size:1.4rem; color:#28a745; font-weight:900;">${finalPercentage}%</span></strong>
+                    </div>
+                    <div style="margin-top:15px; display:flex; gap:10px;">
+                        <button class="btn btn-warning" onclick="openReviewModal(${assignedTest.id}, 'test')">🔍 مراجعة وتصحيح</button>
+                        <button class="btn btn-primary" onclick="autoGenerateLessons()">⚡ توليد الخطة والدروس</button>
+                    </div>
+                </div>`;
+            } else if (assignedTest.status === 'returned') { 
+                statusBadge = '<span class="badge badge-warning">معاد للتعديل</span>'; 
+                actionContent = `<div class="alert alert-warning mt-2">تم إعادة الاختبار للطالب ليقوم بتعديله.</div>`; 
+            } else { 
+                statusBadge = '<span class="badge badge-secondary">بانتظار حل الطالب</span>'; 
+            }
+            
+            detailsDiv.innerHTML = `
+                <div class="card" style="border:1px solid #eee; box-shadow:0 4px 10px rgba(0,0,0,0.05); padding:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h3>${originalTest ? originalTest.title : 'اختبار (محذوف)'}</h3>
+                        <div style="display:flex; gap:5px; align-items:center;">
+                            ${statusBadge}
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteAssignedTest(${assignedTest.id})" title="حذف الاختبار"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>
+                    <p class="text-muted" style="margin-top:5px;"><i class="fas fa-calendar-alt"></i> تاريخ التعيين: ${new Date(assignedTest.assignedDate).toLocaleDateString('ar-SA')}</p>
+                    ${actionContent}
+                </div>`;
+        } else { 
+            document.getElementById('noDiagnosticTest').style.display = 'block'; 
+            document.getElementById('diagnosticTestDetails').style.display = 'none'; 
+        }
+    } catch(e) { console.error(e); }
+}
 
 window.toggleReadingWord = function(span, qId, wKey) { let currentState = span.getAttribute('data-state'); let hiddenInput = span.querySelector('input'); let newState = currentState === '' ? 'correct' : (currentState === 'correct' ? 'wrong' : ''); let newClass = newState === 'correct' ? 'word-correct' : (newState === 'wrong' ? 'word-wrong' : 'word-neutral'); let textOnly = span.innerText.replace(/✔️|❌/g, '').trim(); span.setAttribute('data-state', newState); hiddenInput.value = newState; span.className = `reading-word-eval ${newClass}`; span.innerHTML = `${textOnly}${newState === 'correct' ? ' ✔️' : (newState === 'wrong' ? ' ❌' : '')}<input type="hidden" name="eval_${qId}_${wKey}" value="${newState}">`; }
 window.setEvalState = function(btn, qId, pKey, state) { const container = btn.closest('.mt-2'); const hiddenInput = container.parentElement.querySelector(`input[name="eval_${qId}_${pKey}"]`); const btns = container.querySelectorAll('button'); btns[0].className = 'btn btn-sm btn-outline-success'; btns[1].className = 'btn btn-sm btn-outline-danger'; if (hiddenInput.value === state) { hiddenInput.value = ''; } else { hiddenInput.value = state; if (state === 'correct') btns[0].className = 'btn btn-sm btn-success'; else btns[1].className = 'btn btn-sm btn-danger'; } }
